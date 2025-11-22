@@ -216,6 +216,7 @@ function HomeContent() {
         color: preset.color,
         notes: preset.notes || "",
         presetId: preset.id,
+        isAllDay: preset.isAllDay || false,
       };
       createShift(shiftData);
     }
@@ -373,13 +374,19 @@ function HomeContent() {
                           : "#3b82f620",
                         borderLeft: `2px solid ${shift.color || "#3b82f6"}`,
                       }}
-                      title={`${shift.title} (${shift.startTime} - ${shift.endTime})`}
+                      title={`${shift.title} ${
+                        shift.isAllDay
+                          ? "(All day)"
+                          : `(${shift.startTime} - ${shift.endTime})`
+                      }`}
                     >
                       <div className="font-medium truncate leading-tight">
                         {shift.title}
                       </div>
                       <div className="text-[9px] sm:text-[10px] opacity-70 leading-tight">
-                        {shift.startTime.substring(0, 5)}
+                        {shift.isAllDay
+                          ? "All day"
+                          : shift.startTime.substring(0, 5)}
                       </div>
                     </div>
                   ))}
@@ -513,6 +520,7 @@ function HomeContent() {
         onSubmit={handleShiftSubmit}
         selectedDate={selectedDate}
         onPresetsChange={fetchPresets}
+        calendarId={selectedCalendar}
       />
     </div>
   );

@@ -34,9 +34,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { calendarId, title, startTime, endTime, color, notes } = body;
+    const {
+      calendarId,
+      title,
+      startTime,
+      endTime,
+      color,
+      notes,
+      isSecondary,
+      isAllDay,
+    } = body;
 
-    if (!calendarId || !title || !startTime || !endTime) {
+    if (!calendarId || !title) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -48,10 +57,12 @@ export async function POST(request: NextRequest) {
       .values({
         calendarId,
         title,
-        startTime,
-        endTime,
+        startTime: isAllDay ? "00:00" : startTime,
+        endTime: isAllDay ? "23:59" : endTime,
         color: color || "#3b82f6",
         notes: notes || null,
+        isSecondary: isSecondary || false,
+        isAllDay: isAllDay || false,
       })
       .returning();
 

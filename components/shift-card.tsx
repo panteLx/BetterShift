@@ -22,9 +22,15 @@ export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
             {shift.title}
           </h3>
           <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
-            <span className="font-medium">{shift.startTime}</span>
-            <span>→</span>
-            <span className="font-medium">{shift.endTime}</span>
+            {shift.isAllDay ? (
+              <span className="font-medium">All day</span>
+            ) : (
+              <>
+                <span className="font-medium">{shift.startTime}</span>
+                <span>→</span>
+                <span className="font-medium">{shift.endTime}</span>
+              </>
+            )}
           </div>
           {shift.notes && (
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5 line-clamp-2">

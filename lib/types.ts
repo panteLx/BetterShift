@@ -24,6 +24,7 @@ export interface ShiftWithCalendar {
   title: string;
   color: string;
   notes?: string | null;
+  isAllDay?: boolean;
   createdAt: Date | null;
   updatedAt: Date | null;
 }

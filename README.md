@@ -48,7 +48,7 @@ A modern shift management application built with Next.js and SQLite. BetterShift
 
    ```bash
    # Generate and apply database migrations
-   npm run db:push
+   npm run db:migrate
    ```
 
 4. **Start the development server**
@@ -76,7 +76,7 @@ A modern shift management application built with Next.js and SQLite. BetterShift
    docker-compose up -d --build
 
    # Generate and apply database migrations
-   docker compose exec bettershift npm run db:push
+   docker compose exec bettershift npm run db:migrate
    ```
 
 3. **Access the application**

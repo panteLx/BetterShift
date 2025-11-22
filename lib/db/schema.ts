@@ -31,6 +31,10 @@ export const shifts = sqliteTable("shifts", {
   title: text("title").notNull(),
   color: text("color").notNull().default("#3b82f6"),
   notes: text("notes"),
+  isAllDay: integer("is_all_day", { mode: "boolean" }).notNull().default(false),
+  isSecondary: integer("is_secondary", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -51,6 +55,10 @@ export const shiftPresets = sqliteTable("shift_presets", {
   endTime: text("end_time").notNull(),
   color: text("color").notNull().default("#3b82f6"),
   notes: text("notes"),
+  isSecondary: integer("is_secondary", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  isAllDay: integer("is_all_day", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

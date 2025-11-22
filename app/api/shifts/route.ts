@@ -27,6 +27,8 @@ export async function GET(request: Request) {
         title: shifts.title,
         color: shifts.color,
         notes: shifts.notes,
+        isAllDay: shifts.isAllDay,
+        isSecondary: shifts.isSecondary,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,
         calendar: {
@@ -77,9 +79,11 @@ export async function POST(request: Request) {
       color,
       notes,
       presetId,
+      isAllDay,
+      isSecondary,
     } = body;
 
-    if (!calendarId || !date || !startTime || !endTime || !title) {
+    if (!calendarId || !date || !title) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -92,11 +96,13 @@ export async function POST(request: Request) {
         calendarId,
         presetId: presetId || null,
         date: new Date(date),
-        startTime,
-        endTime,
+        startTime: isAllDay ? "00:00" : startTime,
+        endTime: isAllDay ? "23:59" : endTime,
         title,
         color: color || "#3b82f6",
         notes: notes || null,
+        isAllDay: isAllDay || false,
+        isSecondary: isSecondary || false,
       })
       .returning();
 

@@ -22,6 +22,18 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ColorPicker } from "@/components/ui/color-picker";
+
+const PRESET_COLORS = [
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Green", value: "#10b981" },
+  { name: "Amber", value: "#f59e0b" },
+  { name: "Violet", value: "#8b5cf6" },
+  { name: "Pink", value: "#ec4899" },
+  { name: "Cyan", value: "#06b6d4" },
+  { name: "Orange", value: "#f97316" },
+];
 
 interface ShiftDialogProps {
   open: boolean;
@@ -30,6 +42,7 @@ interface ShiftDialogProps {
   selectedDate?: Date;
   shift?: ShiftWithCalendar;
   onPresetsChange?: () => void;
+  calendarId?: string;
 }
 
 export interface ShiftFormData {
@@ -40,6 +53,7 @@ export interface ShiftFormData {
   color?: string;
   notes?: string;
   presetId?: string;
+  isAllDay?: boolean;
 }
 
 export function ShiftDialog({
@@ -49,6 +63,7 @@ export function ShiftDialog({
   selectedDate,
   shift,
   onPresetsChange,
+  calendarId,
 }: ShiftDialogProps) {
   const [formData, setFormData] = useState<ShiftFormData>({
     date:
@@ -61,6 +76,8 @@ export function ShiftDialog({
     endTime: shift?.endTime || "17:00",
     title: shift?.title || "",
     notes: shift?.notes || "",
+    color: shift?.color || "#3b82f6",
+    isAllDay: false,
   });
 
   const [presets, setPresets] = useState<ShiftPreset[]>([]);
@@ -86,6 +103,8 @@ export function ShiftDialog({
         endTime: shift?.endTime || "17:00",
         title: shift?.title || "",
         notes: shift?.notes || "",
+        color: shift?.color || "#3b82f6",
+        isAllDay: shift?.isAllDay || false,
       });
       setSaveAsPreset(!shift); // Enable auto-save for new shifts
       setPresetName("");
@@ -103,18 +122,20 @@ export function ShiftDialog({
   };
 
   const handleSaveAsPreset = async (shiftData: ShiftFormData) => {
-    if (!presetName.trim()) return;
+    if (!presetName.trim() || !calendarId) return;
 
     try {
       const response = await fetch("/api/presets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: presetName,
+          calendarId,
+          title: presetName,
           startTime: shiftData.startTime,
           endTime: shiftData.endTime,
-          title: shiftData.title,
+          color: shiftData.color,
           notes: shiftData.notes,
+          isAllDay: shiftData.isAllDay,
         }),
       });
       await response.json();
@@ -135,17 +156,26 @@ export function ShiftDialog({
       endTime: preset.endTime,
       title: preset.title,
       notes: preset.notes || "",
+      color: preset.color,
+      isAllDay: preset.isAllDay || false,
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.title.trim()) {
-      onSubmit(formData);
+      // If all-day, set default times for backend
+      const submitData = {
+        ...formData,
+        startTime: formData.isAllDay ? "00:00" : formData.startTime,
+        endTime: formData.isAllDay ? "23:59" : formData.endTime,
+      };
+
+      onSubmit(submitData);
 
       // Save as preset if enabled and it's a new shift
       if (!shift && saveAsPreset && presetName.trim()) {
-        handleSaveAsPreset(formData);
+        handleSaveAsPreset(submitData);
       }
 
       if (!shift) {
@@ -157,6 +187,8 @@ export function ShiftDialog({
           endTime: "17:00",
           title: "",
           notes: "",
+          color: "#3b82f6",
+          isAllDay: false,
         });
         setPresetName("");
       }
@@ -208,30 +240,49 @@ export function ShiftDialog({
               }
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={formData.startTime}
-                onChange={(e) =>
-                  setFormData({ ...formData, startTime: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={formData.endTime}
-                onChange={(e) =>
-                  setFormData({ ...formData, endTime: e.target.value })
-                }
-              />
-            </div>
+
+          <div className="flex items-center space-x-2 py-2">
+            <Checkbox
+              id="allDay"
+              checked={formData.isAllDay}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, isAllDay: !!checked })
+              }
+            />
+            <Label
+              htmlFor="allDay"
+              className="text-sm font-medium cursor-pointer"
+            >
+              All-day shift
+            </Label>
           </div>
+
+          {!formData.isAllDay && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Start Time</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={formData.startTime}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startTime: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endTime: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
@@ -256,6 +307,12 @@ export function ShiftDialog({
               rows={3}
             />
           </div>
+          <ColorPicker
+            color={formData.color || "#3b82f6"}
+            onChange={(color) => setFormData({ ...formData, color })}
+            label="Color"
+            presetColors={PRESET_COLORS}
+          />
 
           {/* Auto-Save as Preset */}
           {!shift && (

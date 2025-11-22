@@ -11,16 +11,19 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, startTime, endTime, color, notes } = body;
+    const { title, startTime, endTime, color, notes, isSecondary, isAllDay } =
+      body;
 
     const [updatedPreset] = await db
       .update(shiftPresets)
       .set({
         title,
-        startTime,
-        endTime,
+        startTime: isAllDay ? "00:00" : startTime,
+        endTime: isAllDay ? "23:59" : endTime,
         color,
         notes: notes || null,
+        isSecondary: isSecondary !== undefined ? isSecondary : undefined,
+        isAllDay: isAllDay !== undefined ? isAllDay : undefined,
         updatedAt: new Date(),
       })
       .where(eq(shiftPresets.id, id))
@@ -31,10 +34,11 @@ export async function PATCH(
       .update(shifts)
       .set({
         title,
-        startTime,
-        endTime,
+        startTime: isAllDay ? "00:00" : startTime,
+        endTime: isAllDay ? "23:59" : endTime,
         color,
         notes: notes || null,
+        isAllDay: isAllDay !== undefined ? isAllDay : undefined,
         updatedAt: new Date(),
       })
       .where(eq(shifts.presetId, id));

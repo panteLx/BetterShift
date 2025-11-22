@@ -18,7 +18,10 @@ export async function GET(
         startTime: shifts.startTime,
         endTime: shifts.endTime,
         title: shifts.title,
+        color: shifts.color,
         notes: shifts.notes,
+        isAllDay: shifts.isAllDay,
+        isSecondary: shifts.isSecondary,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,
         calendar: {
@@ -53,15 +56,26 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { date, startTime, endTime, title, color, notes } = body;
+    const {
+      date,
+      startTime,
+      endTime,
+      title,
+      color,
+      notes,
+      isAllDay,
+      isSecondary,
+    } = body;
 
     const updateData: any = {};
     if (date) updateData.date = new Date(date);
-    if (startTime) updateData.startTime = startTime;
-    if (endTime) updateData.endTime = endTime;
+    if (startTime !== undefined) updateData.startTime = startTime;
+    if (endTime !== undefined) updateData.endTime = endTime;
     if (title) updateData.title = title;
     if (color) updateData.color = color;
     if (notes !== undefined) updateData.notes = notes;
+    if (isAllDay !== undefined) updateData.isAllDay = isAllDay;
+    if (isSecondary !== undefined) updateData.isSecondary = isSecondary;
 
     const [shift] = await db
       .update(shifts)

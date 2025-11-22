@@ -2,7 +2,7 @@
 
 import { ShiftPreset } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
-import { Check, Settings, Plus } from "lucide-react";
+import { Check, Settings, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -13,6 +13,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ColorPicker } from "@/components/ui/color-picker";
 
 interface PresetSelectorProps {
   presets: ShiftPreset[];
@@ -51,7 +53,10 @@ export function PresetSelector({
     endTime: "17:00",
     color: PRESET_COLORS[0].value,
     notes: "",
+    isSecondary: false,
+    isAllDay: false,
   });
+  const [showSecondary, setShowSecondary] = useState(false);
 
   const resetForm = () => {
     setFormData({
@@ -60,6 +65,8 @@ export function PresetSelector({
       endTime: "17:00",
       color: PRESET_COLORS[0].value,
       notes: "",
+      isSecondary: false,
+      isAllDay: false,
     });
   };
 
@@ -78,6 +85,8 @@ export function PresetSelector({
       endTime: preset.endTime,
       color: preset.color,
       notes: preset.notes || "",
+      isSecondary: preset.isSecondary || false,
+      isAllDay: preset.isAllDay || false,
     });
   };
 
@@ -153,52 +162,141 @@ export function PresetSelector({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {presets.map((preset) => (
+        <div className="space-y-2">
+          {/* Primary Presets */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            {presets
+              .filter((p) => !p.isSecondary)
+              .map((preset) => (
+                <Button
+                  key={preset.id}
+                  variant={
+                    selectedPresetId === preset.id ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() =>
+                    onSelectPreset(
+                      selectedPresetId === preset.id ? undefined : preset.id
+                    )
+                  }
+                  className="relative text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+                  style={{
+                    backgroundColor:
+                      selectedPresetId === preset.id ? preset.color : undefined,
+                    borderColor: preset.color,
+                  }}
+                >
+                  {selectedPresetId === preset.id && (
+                    <Check className="mr-1 h-3 w-3" />
+                  )}
+                  <span className="font-medium truncate max-w-[80px] sm:max-w-none">
+                    {preset.title}
+                  </span>
+                  <span className="ml-1 text-[10px] sm:text-xs opacity-70">
+                    {preset.isAllDay ? (
+                      <span>All day</span>
+                    ) : (
+                      <>
+                        <span className="sm:hidden">{preset.startTime}</span>
+                        <span className="hidden sm:inline">
+                          {preset.startTime} - {preset.endTime}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                </Button>
+              ))}
             <Button
-              key={preset.id}
-              variant={selectedPresetId === preset.id ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() =>
-                onSelectPreset(
-                  selectedPresetId === preset.id ? undefined : preset.id
-                )
-              }
-              className="relative text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
-              style={{
-                backgroundColor:
-                  selectedPresetId === preset.id ? preset.color : undefined,
-                borderColor: preset.color,
-              }}
+              onClick={handleCreateNew}
+              className="gap-1 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
             >
-              {selectedPresetId === preset.id && (
-                <Check className="mr-1 h-3 w-3" />
-              )}
-              <span className="font-medium truncate max-w-[80px] sm:max-w-none">
-                {preset.title}
-              </span>
-              <span className="ml-1 text-[10px] sm:text-xs opacity-70 hidden sm:inline">
-                {preset.startTime} - {preset.endTime}
-              </span>
+              <Plus className="h-3 sm:h-4 w-3 sm:w-4" />
+              <span className="hidden xs:inline sm:inline">New Preset</span>
             </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCreateNew}
-            className="gap-1 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
-          >
-            <Plus className="h-3 sm:h-4 w-3 sm:w-4" />
-            <span className="hidden xs:inline sm:inline">New Preset</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowManageDialog(true)}
-            className="h-8 sm:h-9 w-8 sm:w-9 p-0"
-          >
-            <Settings className="h-3 sm:h-4 w-3 sm:w-4" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowManageDialog(true)}
+              className="h-8 sm:h-9 w-8 sm:w-9 p-0"
+            >
+              <Settings className="h-3 sm:h-4 w-3 sm:w-4" />
+            </Button>
+          </div>
+
+          {/* Secondary Presets - Collapsible */}
+          {presets.some((p) => p.isSecondary) && (
+            <div className="space-y-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSecondary(!showSecondary)}
+                className="gap-1 text-xs text-muted-foreground h-6 px-2"
+              >
+                {showSecondary ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+                <span>
+                  Secondary Presets (
+                  {presets.filter((p) => p.isSecondary).length})
+                </span>
+              </Button>
+              {showSecondary && (
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pl-2">
+                  {presets
+                    .filter((p) => p.isSecondary)
+                    .map((preset) => (
+                      <Button
+                        key={preset.id}
+                        variant={
+                          selectedPresetId === preset.id ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          onSelectPreset(
+                            selectedPresetId === preset.id
+                              ? undefined
+                              : preset.id
+                          )
+                        }
+                        className="relative text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+                        style={{
+                          backgroundColor:
+                            selectedPresetId === preset.id
+                              ? preset.color
+                              : undefined,
+                          borderColor: preset.color,
+                        }}
+                      >
+                        {selectedPresetId === preset.id && (
+                          <Check className="mr-1 h-3 w-3" />
+                        )}
+                        <span className="font-medium truncate max-w-[80px] sm:max-w-none">
+                          {preset.title}
+                        </span>
+                        <span className="ml-1 text-[10px] sm:text-xs opacity-70">
+                          {preset.isAllDay ? (
+                            <span>All day</span>
+                          ) : (
+                            <>
+                              <span className="sm:hidden">
+                                {preset.startTime}
+                              </span>
+                              <span className="hidden sm:inline">
+                                {preset.startTime} - {preset.endTime}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -226,7 +324,13 @@ export function PresetSelector({
                 <div className="flex-1">
                   <div className="font-medium">{preset.title}</div>
                   <div className="text-sm text-muted-foreground">
-                    {preset.startTime} - {preset.endTime}
+                    {preset.isAllDay ? (
+                      <span>All day</span>
+                    ) : (
+                      <>
+                        {preset.startTime} - {preset.endTime}
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -262,27 +366,47 @@ export function PresetSelector({
           }
         }}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] max-w-[500px] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {isCreatingNew ? "Create New Preset" : "Edit Preset"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="preset-title">Title</Label>
+          <div className="space-y-4 pb-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="preset-title" className="text-sm">
+                Title
+              </Label>
               <Input
                 id="preset-title"
-                placeholder="e.g., Morning Shift, Evening Shift"
+                placeholder="e.g., Morning Shift"
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
+                className="text-base"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="preset-start">Start Time</Label>
+            <div className="flex items-center space-x-2 py-1">
+              <Checkbox
+                id="preset-allday"
+                checked={formData.isAllDay}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isAllDay: !!checked })
+                }
+              />
+              <Label
+                htmlFor="preset-allday"
+                className="text-sm font-medium cursor-pointer"
+              >
+                All-day shift
+              </Label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="preset-start" className="text-sm">
+                  Start Time
+                </Label>
                 <Input
                   id="preset-start"
                   type="time"
@@ -290,10 +414,14 @@ export function PresetSelector({
                   onChange={(e) =>
                     setFormData({ ...formData, startTime: e.target.value })
                   }
+                  disabled={formData.isAllDay}
+                  className="text-base"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="preset-end">End Time</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="preset-end" className="text-sm">
+                  End Time
+                </Label>
                 <Input
                   id="preset-end"
                   type="time"
@@ -301,34 +429,21 @@ export function PresetSelector({
                   onChange={(e) =>
                     setFormData({ ...formData, endTime: e.target.value })
                   }
+                  disabled={formData.isAllDay}
+                  className="text-base"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="preset-color">Color</Label>
-              <div className="grid grid-cols-8 gap-2">
-                {PRESET_COLORS.map((colorOption) => (
-                  <button
-                    key={colorOption.value}
-                    type="button"
-                    onClick={() =>
-                      setFormData({ ...formData, color: colorOption.value })
-                    }
-                    className={`h-10 w-10 rounded-md transition-all hover:scale-110 ${
-                      formData.color === colorOption.value
-                        ? "ring-2 ring-offset-2 ring-foreground"
-                        : ""
-                    }`}
-                    style={{
-                      backgroundColor: colorOption.value,
-                    }}
-                    title={colorOption.name}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="preset-notes">Notes (optional)</Label>
+            <ColorPicker
+              color={formData.color}
+              onChange={(color) => setFormData({ ...formData, color })}
+              label="Color"
+              presetColors={PRESET_COLORS}
+            />
+            <div className="space-y-1.5">
+              <Label htmlFor="preset-notes" className="text-sm">
+                Notes (optional)
+              </Label>
               <Input
                 id="preset-notes"
                 placeholder="Additional information..."
@@ -336,9 +451,25 @@ export function PresetSelector({
                 onChange={(e) =>
                   setFormData({ ...formData, notes: e.target.value })
                 }
+                className="text-base"
               />
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex items-center space-x-2 py-1">
+              <Checkbox
+                id="preset-secondary"
+                checked={formData.isSecondary}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isSecondary: !!checked })
+                }
+              />
+              <Label
+                htmlFor="preset-secondary"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Mark as secondary (collapsed by default)
+              </Label>
+            </div>
+            <div className="flex gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
@@ -347,6 +478,7 @@ export function PresetSelector({
                   setIsCreatingNew(false);
                   resetForm();
                 }}
+                className="flex-1"
               >
                 Cancel
               </Button>
@@ -354,6 +486,7 @@ export function PresetSelector({
                 type="button"
                 onClick={handleSave}
                 disabled={!formData.title.trim()}
+                className="flex-1"
               >
                 {isCreatingNew ? "Create" : "Save"}
               </Button>
