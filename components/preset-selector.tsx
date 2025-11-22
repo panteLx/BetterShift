@@ -23,6 +23,7 @@ interface PresetSelectorProps {
   onPresetsChange: () => void;
   onShiftsChange?: () => void;
   calendarId: string;
+  onPasswordRequired: (action: () => Promise<void>) => void;
 }
 
 const PRESET_COLORS = [
@@ -43,6 +44,7 @@ export function PresetSelector({
   onPresetsChange,
   onShiftsChange,
   calendarId,
+  onPasswordRequired,
 }: PresetSelectorProps) {
   const [showManageDialog, setShowManageDialog] = useState(false);
   const [editingPreset, setEditingPreset] = useState<ShiftPreset | null>(null);
@@ -70,28 +72,85 @@ export function PresetSelector({
     });
   };
 
-  const handleCreateNew = () => {
-    resetForm();
-    setIsCreatingNew(true);
-    setEditingPreset(null);
+  const handleCreateNew = async () => {
+    // Check password before opening dialog
+    const password = localStorage.getItem(`calendar_password_${calendarId}`);
+
+    const checkAndCreate = async () => {
+      const pwd = localStorage.getItem(`calendar_password_${calendarId}`);
+      // Verify password by trying to fetch presets with it
+      const response = await fetch(
+        `/api/calendars/${calendarId}/verify-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pwd }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.protected && !data.valid) {
+        // Password required or invalid
+        localStorage.removeItem(`calendar_password_${calendarId}`);
+        await onPasswordRequired(checkAndCreate);
+        return;
+      }
+
+      // Password valid or not required, open dialog
+      resetForm();
+      setIsCreatingNew(true);
+      setEditingPreset(null);
+    };
+
+    await checkAndCreate();
   };
 
-  const handleEditPreset = (preset: ShiftPreset) => {
-    setIsCreatingNew(false);
-    setEditingPreset(preset);
-    setFormData({
-      title: preset.title,
-      startTime: preset.startTime,
-      endTime: preset.endTime,
-      color: preset.color,
-      notes: preset.notes || "",
-      isSecondary: preset.isSecondary || false,
-      isAllDay: preset.isAllDay || false,
-    });
+  const handleEditPreset = async (preset: ShiftPreset) => {
+    // Check password before opening dialog
+    const checkAndEdit = async () => {
+      const password = localStorage.getItem(`calendar_password_${calendarId}`);
+      // Verify password
+      const response = await fetch(
+        `/api/calendars/${calendarId}/verify-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.protected && !data.valid) {
+        // Password required or invalid
+        localStorage.removeItem(`calendar_password_${calendarId}`);
+        await onPasswordRequired(checkAndEdit);
+        return;
+      }
+
+      // Password valid or not required, open dialog
+      setIsCreatingNew(false);
+      setEditingPreset(preset);
+      setFormData({
+        title: preset.title,
+        startTime: preset.startTime,
+        endTime: preset.endTime,
+        color: preset.color,
+        notes: preset.notes || "",
+        isSecondary: preset.isSecondary || false,
+        isAllDay: preset.isAllDay || false,
+      });
+    };
+
+    await checkAndEdit();
   };
 
   const handleSave = async () => {
     try {
+      // Get stored password from localStorage (already verified)
+      const password = localStorage.getItem(`calendar_password_${calendarId}`);
+
       if (isCreatingNew) {
         // Create new preset
         await fetch("/api/presets", {
@@ -100,6 +159,7 @@ export function PresetSelector({
           body: JSON.stringify({
             calendarId,
             ...formData,
+            password,
           }),
         });
       } else if (editingPreset) {
@@ -107,8 +167,9 @@ export function PresetSelector({
         await fetch(`/api/presets/${editingPreset.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({ ...formData, password }),
         });
+
         // Refresh shifts as they may have been updated
         if (onShiftsChange) onShiftsChange();
       }
@@ -122,24 +183,55 @@ export function PresetSelector({
   };
 
   const handleDeletePreset = async (id: string) => {
-    if (
-      !confirm(
-        "Delete this preset? This will also delete all shifts created from this preset."
-      )
-    )
-      return;
+    // Check password first
+    const checkAndDelete = async () => {
+      const password = localStorage.getItem(`calendar_password_${calendarId}`);
+      // Verify password
+      const verifyResponse = await fetch(
+        `/api/calendars/${calendarId}/verify-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        }
+      );
 
-    try {
-      await fetch(`/api/presets/${id}`, { method: "DELETE" });
-      if (selectedPresetId === id) {
-        onSelectPreset(undefined);
+      const data = await verifyResponse.json();
+
+      if (data.protected && !data.valid) {
+        // Password required or invalid
+        localStorage.removeItem(`calendar_password_${calendarId}`);
+        await onPasswordRequired(() => handleDeletePreset(id));
+        return;
       }
-      onPresetsChange();
-      // Refresh shifts as they may have been deleted
-      if (onShiftsChange) onShiftsChange();
-    } catch (error) {
-      console.error("Failed to delete preset:", error);
-    }
+
+      // Password valid, confirm deletion
+      if (
+        !confirm(
+          "Delete this preset? This will also delete all shifts created from this preset."
+        )
+      )
+        return;
+
+      try {
+        const url = password
+          ? `/api/presets/${id}?password=${encodeURIComponent(password)}`
+          : `/api/presets/${id}`;
+
+        await fetch(url, { method: "DELETE" });
+
+        if (selectedPresetId === id) {
+          onSelectPreset(undefined);
+        }
+        onPresetsChange();
+        // Refresh shifts as they may have been deleted
+        if (onShiftsChange) onShiftsChange();
+      } catch (error) {
+        console.error("Failed to delete preset:", error);
+      }
+    };
+
+    await checkAndDelete();
   };
 
   return (

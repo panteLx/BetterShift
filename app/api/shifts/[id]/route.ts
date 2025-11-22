@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 
 // GET single shift
 export async function GET(
@@ -65,7 +66,41 @@ export async function PATCH(
       notes,
       isAllDay,
       isSecondary,
+      password,
     } = body;
+
+    // Fetch shift to get calendar ID
+    const [existingShift] = await db
+      .select()
+      .from(shifts)
+      .where(eq(shifts.id, id));
+
+    if (!existingShift) {
+      return NextResponse.json({ error: "Shift not found" }, { status: 404 });
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, existingShift.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
 
     const updateData: any = {};
     if (date) updateData.date = new Date(date);
@@ -82,12 +117,6 @@ export async function PATCH(
       .set(updateData)
       .where(eq(shifts.id, id))
       .returning();
-
-    // Fetch calendar info
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, shift.calendarId));
 
     return NextResponse.json({ ...shift, calendar });
   } catch (error) {
@@ -106,6 +135,39 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
+
+    // Fetch shift to get calendar ID
+    const [shift] = await db.select().from(shifts).where(eq(shifts.id, id));
+
+    if (!shift) {
+      return NextResponse.json({ error: "Shift not found" }, { status: 404 });
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, shift.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
+
     await db.delete(shifts).where(eq(shifts.id, id));
 
     return NextResponse.json({ success: true });

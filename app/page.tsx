@@ -8,6 +8,8 @@ import { CalendarDialog } from "@/components/calendar-dialog";
 import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { ShiftCard } from "@/components/shift-card";
 import { PresetSelector } from "@/components/preset-selector";
+import { PasswordDialog } from "@/components/password-dialog";
+import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -46,6 +48,15 @@ function HomeContent() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showCalendarDialog, setShowCalendarDialog] = useState(false);
   const [showShiftDialog, setShowShiftDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showManagePasswordDialog, setShowManagePasswordDialog] =
+    useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    type: "delete" | "edit";
+    shiftId?: string;
+    formData?: ShiftFormData;
+    presetAction?: () => Promise<void>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch calendars on mount
@@ -125,12 +136,16 @@ function HomeContent() {
     }
   };
 
-  const createCalendar = async (name: string, color: string) => {
+  const createCalendar = async (
+    name: string,
+    color: string,
+    password?: string
+  ) => {
     try {
       const response = await fetch("/api/calendars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color }),
+        body: JSON.stringify({ name, color, password }),
       });
       const newCalendar = await response.json();
       setCalendars([...calendars, newCalendar]);
@@ -161,11 +176,24 @@ function HomeContent() {
 
   const updateShift = async (id: string, formData: ShiftFormData) => {
     try {
+      // Get stored password from localStorage
+      const password = selectedCalendar
+        ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
+        : null;
+
       const response = await fetch(`/api/shifts/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, password }),
       });
+
+      if (response.status === 401) {
+        // Password required or invalid
+        setPendingAction({ type: "edit", shiftId: id, formData });
+        setShowPasswordDialog(true);
+        return;
+      }
+
       const updatedShift = await response.json();
       setShifts(shifts.map((s) => (s.id === id ? updatedShift : s)));
     } catch (error) {
@@ -175,11 +203,76 @@ function HomeContent() {
 
   const deleteShift = async (id: string) => {
     try {
-      await fetch(`/api/shifts/${id}`, { method: "DELETE" });
+      // Get stored password from localStorage
+      const password = selectedCalendar
+        ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
+        : null;
+
+      const url = password
+        ? `/api/shifts/${id}?password=${encodeURIComponent(password)}`
+        : `/api/shifts/${id}`;
+
+      const response = await fetch(url, { method: "DELETE" });
+
+      if (response.status === 401) {
+        // Password required or invalid
+        setPendingAction({ type: "delete", shiftId: id });
+        setShowPasswordDialog(true);
+        return;
+      }
+
       setShifts(shifts.filter((s) => s.id !== id));
     } catch (error) {
       console.error("Failed to delete shift:", error);
     }
+  };
+
+  const handlePasswordSuccess = async (password: string) => {
+    if (!pendingAction) return;
+
+    try {
+      if (pendingAction.type === "delete" && pendingAction.shiftId) {
+        const response = await fetch(
+          `/api/shifts/${pendingAction.shiftId}?password=${encodeURIComponent(
+            password
+          )}`,
+          { method: "DELETE" }
+        );
+        if (response.ok) {
+          setShifts(shifts.filter((s) => s.id !== pendingAction.shiftId));
+        }
+      } else if (
+        pendingAction.type === "edit" &&
+        pendingAction.shiftId &&
+        pendingAction.formData
+      ) {
+        const response = await fetch(`/api/shifts/${pendingAction.shiftId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...pendingAction.formData, password }),
+        });
+        if (response.ok) {
+          const updatedShift = await response.json();
+          setShifts(
+            shifts.map((s) =>
+              s.id === pendingAction.shiftId ? updatedShift : s
+            )
+          );
+        }
+      } else if (pendingAction.presetAction) {
+        // Execute the pending preset action
+        await pendingAction.presetAction();
+      }
+    } catch (error) {
+      console.error("Failed to execute pending action:", error);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handlePresetPasswordRequired = async (action: () => Promise<void>) => {
+    setPendingAction({ type: "edit", presetAction: action });
+    setShowPasswordDialog(true);
   };
 
   const handleShiftSubmit = (formData: ShiftFormData) => {
@@ -193,33 +286,68 @@ function HomeContent() {
     const preset = presets.find((p) => p.id === selectedPresetId);
     if (!preset) return;
 
-    // Check if a shift with the same preset already exists on this date
-    const existingShift = shifts.find(
-      (shift) =>
-        shift.date &&
-        isSameDay(new Date(shift.date), date) &&
-        shift.title === preset.title &&
-        shift.startTime === preset.startTime &&
-        shift.endTime === preset.endTime
-    );
+    // Check password before adding/deleting shift
+    const checkAndToggle = async () => {
+      const password = selectedCalendar
+        ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
+        : null;
 
-    if (existingShift) {
-      // Toggle: remove the existing shift
-      await deleteShift(existingShift.id);
-    } else {
-      // Toggle: add the shift
-      const shiftData: ShiftFormData = {
-        date: formatDateToLocal(date),
-        startTime: preset.startTime,
-        endTime: preset.endTime,
-        title: preset.title,
-        color: preset.color,
-        notes: preset.notes || "",
-        presetId: preset.id,
-        isAllDay: preset.isAllDay || false,
-      };
-      createShift(shiftData);
-    }
+      // Verify password if calendar is protected
+      if (selectedCalendar) {
+        const response = await fetch(
+          `/api/calendars/${selectedCalendar}/verify-password`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.protected && !data.valid) {
+          // Password required or invalid
+          localStorage.removeItem(`calendar_password_${selectedCalendar}`);
+          setPendingAction({
+            type: "edit",
+            presetAction: () => handleAddShift(date),
+          });
+          setShowPasswordDialog(true);
+          return;
+        }
+      }
+
+      // Password valid or not required, proceed with toggle
+      // Check if a shift with the same preset already exists on this date
+      const existingShift = shifts.find(
+        (shift) =>
+          shift.date &&
+          isSameDay(new Date(shift.date), date) &&
+          shift.title === preset.title &&
+          shift.startTime === preset.startTime &&
+          shift.endTime === preset.endTime
+      );
+
+      if (existingShift) {
+        // Toggle: remove the existing shift
+        await deleteShift(existingShift.id);
+      } else {
+        // Toggle: add the shift
+        const shiftData: ShiftFormData = {
+          date: formatDateToLocal(date),
+          startTime: preset.startTime,
+          endTime: preset.endTime,
+          title: preset.title,
+          color: preset.color,
+          notes: preset.notes || "",
+          presetId: preset.id,
+          isAllDay: preset.isAllDay || false,
+        };
+        createShift(shiftData);
+      }
+    };
+
+    await checkAndToggle();
   };
 
   // Calendar grid calculations
@@ -280,6 +408,7 @@ function HomeContent() {
             selectedId={selectedCalendar}
             onSelect={setSelectedCalendar}
             onCreateNew={() => setShowCalendarDialog(true)}
+            onManagePassword={() => setShowManagePasswordDialog(true)}
           />
           <PresetSelector
             presets={presets}
@@ -288,6 +417,7 @@ function HomeContent() {
             onPresetsChange={fetchPresets}
             onShiftsChange={fetchShifts}
             calendarId={selectedCalendar || ""}
+            onPasswordRequired={handlePresetPasswordRequired}
           />
         </div>
       </div>
@@ -522,6 +652,33 @@ function HomeContent() {
         onPresetsChange={fetchPresets}
         calendarId={selectedCalendar}
       />
+      {selectedCalendar && (
+        <PasswordDialog
+          open={showPasswordDialog}
+          onOpenChange={setShowPasswordDialog}
+          calendarId={selectedCalendar}
+          calendarName={
+            calendars.find((c) => c.id === selectedCalendar)?.name || ""
+          }
+          onSuccess={handlePasswordSuccess}
+        />
+      )}
+      {selectedCalendar && (
+        <ManagePasswordDialog
+          open={showManagePasswordDialog}
+          onOpenChange={setShowManagePasswordDialog}
+          calendarId={selectedCalendar}
+          calendarName={
+            calendars.find((c) => c.id === selectedCalendar)?.name || ""
+          }
+          hasPassword={
+            !!calendars.find((c) => c.id === selectedCalendar)?.passwordHash
+          }
+          onSuccess={() => {
+            fetchCalendars();
+          }}
+        />
+      )}
     </div>
   );
 }

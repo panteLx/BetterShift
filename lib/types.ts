@@ -5,6 +5,7 @@ export interface CalendarWithCount {
   id: string;
   name: string;
   color: string;
+  passwordHash?: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;
   _count?: number;

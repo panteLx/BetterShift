@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shiftPresets, shifts } from "@/lib/db/schema";
+import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 
 // PATCH update a preset
 export async function PATCH(
@@ -11,8 +12,49 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, startTime, endTime, color, notes, isSecondary, isAllDay } =
-      body;
+    const {
+      title,
+      startTime,
+      endTime,
+      color,
+      notes,
+      isSecondary,
+      isAllDay,
+      password,
+    } = body;
+
+    // Fetch preset to get calendar ID
+    const [existingPreset] = await db
+      .select()
+      .from(shiftPresets)
+      .where(eq(shiftPresets.id, id));
+
+    if (!existingPreset) {
+      return NextResponse.json({ error: "Preset not found" }, { status: 404 });
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, existingPreset.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
 
     const [updatedPreset] = await db
       .update(shiftPresets)
@@ -60,6 +102,41 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
+
+    // Fetch preset to get calendar ID
+    const [preset] = await db
+      .select()
+      .from(shiftPresets)
+      .where(eq(shiftPresets.id, id));
+
+    if (!preset) {
+      return NextResponse.json({ error: "Preset not found" }, { status: 404 });
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, preset.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
 
     // Delete all shifts that were created from this preset
     await db.delete(shifts).where(eq(shifts.presetId, id));

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
+import { hashPassword } from "@/lib/password-utils";
 
 // GET all calendars
 export async function GET() {
@@ -11,6 +12,7 @@ export async function GET() {
         id: calendars.id,
         name: calendars.name,
         color: calendars.color,
+        passwordHash: calendars.passwordHash,
         createdAt: calendars.createdAt,
         updatedAt: calendars.updatedAt,
         _count:
@@ -35,7 +37,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, password } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
       .values({
         name,
         color: color || "#3b82f6",
+        passwordHash: password ? hashPassword(password) : null,
       })
       .returning();
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shiftPresets } from "@/lib/db/schema";
+import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 
 // GET all presets for a calendar
 export async function GET(request: NextRequest) {
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
       notes,
       isSecondary,
       isAllDay,
+      password,
     } = body;
 
     if (!calendarId || !title) {
@@ -50,6 +52,29 @@ export async function POST(request: NextRequest) {
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     const [preset] = await db

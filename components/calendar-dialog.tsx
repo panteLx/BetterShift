@@ -10,11 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CalendarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (name: string, color: string) => void;
+  onSubmit: (name: string, color: string, password?: string) => void;
 }
 
 const PRESET_COLORS = [
@@ -35,13 +36,21 @@ export function CalendarDialog({
 }: CalendarDialogProps) {
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [password, setPassword] = useState("");
+  const [usePassword, setUsePassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      onSubmit(name.trim(), selectedColor);
+      onSubmit(
+        name.trim(),
+        selectedColor,
+        usePassword && password ? password : undefined
+      );
       setName("");
       setSelectedColor(PRESET_COLORS[0]);
+      setPassword("");
+      setUsePassword(false);
       onOpenChange(false);
     }
   };
@@ -80,6 +89,36 @@ export function CalendarDialog({
                 />
               ))}
             </div>
+          </div>
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="usePassword"
+                checked={usePassword}
+                onCheckedChange={(checked) => setUsePassword(!!checked)}
+              />
+              <Label
+                htmlFor="usePassword"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Protect with password (optional)
+              </Label>
+            </div>
+            {usePassword && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Password will be required to edit or delete shifts
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-3">
             <Button

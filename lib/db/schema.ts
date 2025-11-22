@@ -7,6 +7,7 @@ export const calendars = sqliteTable("calendars", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   color: text("color").notNull().default("#3b82f6"),
+  passwordHash: text("password_hash"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

@@ -9,13 +9,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
   selectedId?: string;
   onSelect: (id: string) => void;
   onCreateNew: () => void;
+  onManagePassword?: () => void;
 }
 
 export function CalendarSelector({
@@ -23,6 +24,7 @@ export function CalendarSelector({
   selectedId,
   onSelect,
   onCreateNew,
+  onManagePassword,
 }: CalendarSelectorProps) {
   return (
     <div className="flex gap-2 items-center">
@@ -44,6 +46,17 @@ export function CalendarSelector({
           ))}
         </SelectContent>
       </Select>
+      {onManagePassword && selectedId && (
+        <Button
+          onClick={onManagePassword}
+          size="icon"
+          variant="outline"
+          className="h-9 w-9 sm:h-10 sm:w-10"
+          title="Manage password"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
       <Button
         onClick={onCreateNew}
         size="icon"
