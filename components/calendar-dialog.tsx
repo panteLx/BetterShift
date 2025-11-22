@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ export function CalendarDialog({
   onOpenChange,
   onSubmit,
 }: CalendarDialogProps) {
+  const t = useTranslations();
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [password, setPassword] = useState("");
@@ -59,21 +61,21 @@ export function CalendarDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Calendar</DialogTitle>
+          <DialogTitle>{t("calendar.create")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Calendar Name</Label>
+            <Label htmlFor="name">{t("calendar.name")}</Label>
             <Input
               id="name"
-              placeholder="e.g., My Shifts"
+              placeholder={t("calendar.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
             />
           </div>
           <div className="space-y-2">
-            <Label>Color</Label>
+            <Label>{t("calendar.color")}</Label>
             <div className="grid grid-cols-8 gap-2">
               {PRESET_COLORS.map((color) => (
                 <button
@@ -101,22 +103,19 @@ export function CalendarDialog({
                 htmlFor="usePassword"
                 className="text-sm font-normal cursor-pointer"
               >
-                Protect with password (optional)
+                {t("password.optional")}
               </Label>
             </div>
             {usePassword && (
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("password.password")}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter password"
+                  placeholder={t("password.passwordPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Password will be required to edit or delete shifts
-                </p>
               </div>
             )}
           </div>
@@ -126,10 +125,10 @@ export function CalendarDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={!name.trim()}>
-              Create Calendar
+              {t("common.create")} {t("calendar.title")}
             </Button>
           </div>
         </form>

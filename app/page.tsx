@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import { ShiftWithCalendar, CalendarWithCount } from "@/lib/types";
 import { CalendarSelector } from "@/components/calendar-selector";
 import { CalendarDialog } from "@/components/calendar-dialog";
@@ -10,6 +11,7 @@ import { ShiftCard } from "@/components/shift-card";
 import { PresetSelector } from "@/components/preset-selector";
 import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -29,12 +31,16 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
+import { de, enUS } from "date-fns/locale";
 import { ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations();
+  const locale = useLocale();
+  const dateLocale = locale === "de" ? de : enUS;
   const [calendars, setCalendars] = useState<CalendarWithCount[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<
     string | undefined
@@ -398,11 +404,11 @@ function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="container max-w-4xl mx-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
-          <h1 className="text-xl sm:text-2xl font-bold">BetterShift</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t("app.title")}</h1>
           <CalendarSelector
             calendars={calendars}
             selectedId={selectedCalendar}
@@ -423,7 +429,7 @@ function HomeContent() {
       </div>
 
       {/* Month Navigation */}
-      <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4">
+      <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
         <div className="flex items-center justify-between mb-3 sm:mb-4 px-2 sm:px-0">
           <Button
             variant="outline"
@@ -434,7 +440,7 @@ function HomeContent() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-base sm:text-xl font-semibold">
-            {format(currentDate, "MMMM yyyy")}
+            {format(currentDate, "MMMM yyyy", { locale: dateLocale })}
           </h2>
           <Button
             variant="outline"
@@ -448,7 +454,15 @@ function HomeContent() {
 
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-px sm:gap-1 mb-6">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+          {[
+            t("calendar_grid.monday"),
+            t("calendar_grid.tuesday"),
+            t("calendar_grid.wednesday"),
+            t("calendar_grid.thursday"),
+            t("calendar_grid.friday"),
+            t("calendar_grid.saturday"),
+            t("calendar_grid.sunday"),
+          ].map((day) => (
             <div
               key={day}
               className="text-center text-xs sm:text-xs font-medium text-muted-foreground p-0.5 sm:p-2"
@@ -506,7 +520,7 @@ function HomeContent() {
                       }}
                       title={`${shift.title} ${
                         shift.isAllDay
-                          ? "(All day)"
+                          ? `(${t("shift.allDay")})`
                           : `(${shift.startTime} - ${shift.endTime})`
                       }`}
                     >
@@ -515,7 +529,7 @@ function HomeContent() {
                       </div>
                       <div className="text-[9px] sm:text-[10px] opacity-70 leading-tight">
                         {shift.isAllDay
-                          ? "All day"
+                          ? t("shift.allDay")
                           : shift.startTime.substring(0, 5)}
                       </div>
                     </div>
@@ -534,7 +548,7 @@ function HomeContent() {
         {/* Shifts List */}
         <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h3 className="text-lg sm:text-xl font-bold">All Shifts</h3>
+            <h3 className="text-lg sm:text-xl font-bold">{t("shift.title")}</h3>
             {shifts.length > 0 && (
               <div className="flex gap-2 sm:gap-3 text-xs sm:text-sm">
                 <div className="px-2 sm:px-3 py-1 bg-primary/10 rounded-full">
@@ -551,8 +565,10 @@ function HomeContent() {
                     }
                   </span>
                   <span className="text-muted-foreground ml-1">
-                    <span className="hidden sm:inline">shifts this month</span>
-                    <span className="sm:hidden">shifts</span>
+                    <span className="hidden sm:inline">
+                      {t("shift.shiftsThisMonth")}
+                    </span>
+                    <span className="sm:hidden">{t("shift.shifts")}</span>
                   </span>
                 </div>
               </div>
@@ -568,12 +584,12 @@ function HomeContent() {
               </div>
               <div className="space-y-1 sm:space-y-2">
                 <h4 className="font-semibold text-base sm:text-lg">
-                  No shifts yet
+                  {t("shift.noShifts")}
                 </h4>
                 <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
                   {presets.length === 0
-                    ? "Create a preset first, then click on any day in the calendar to add your shifts."
-                    : "Select a preset above and click on any day in the calendar to add your shifts."}
+                    ? t("shift.createPresetFirst")
+                    : t("shift.noShiftsDescription")}
                 </p>
               </div>
             </div>
@@ -613,12 +629,15 @@ function HomeContent() {
                         {dayShifts[0].date &&
                           format(
                             new Date(dayShifts[0].date),
-                            "EEEE, MMMM d, yyyy"
+                            "EEEE, MMMM d, yyyy",
+                            { locale: dateLocale }
                           )}
                       </div>
                       <div className="text-[10px] sm:text-xs text-muted-foreground">
                         {dayShifts.length}{" "}
-                        {dayShifts.length === 1 ? "shift" : "shifts"}
+                        {dayShifts.length === 1
+                          ? t("shift.shift_one")
+                          : t("shift.shifts")}
                       </div>
                     </div>
                   </div>
@@ -679,6 +698,13 @@ function HomeContent() {
           }}
         />
       )}
+
+      {/* Footer */}
+      <div className="border-t bg-background mt-auto">
+        <div className="container max-w-4xl mx-auto p-3 sm:p-4 flex justify-center">
+          <LanguageSwitcher />
+        </div>
+      </div>
     </div>
   );
 }

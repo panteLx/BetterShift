@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +66,7 @@ export function ShiftDialog({
   onPresetsChange,
   calendarId,
 }: ShiftDialogProps) {
+  const t = useTranslations();
   const [formData, setFormData] = useState<ShiftFormData>({
     date:
       shift?.date && shift.date instanceof Date
@@ -200,13 +202,15 @@ export function ShiftDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{shift ? "Edit Shift" : "New Shift"}</DialogTitle>
+          <DialogTitle>
+            {shift ? t("shift.edit") : t("shift.create")}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Preset Selection */}
           {!shift && presets.length > 0 && (
             <div className="space-y-2">
-              <Label>Select Preset</Label>
+              <Label>{t("shift.selectPreset")}</Label>
               <div className="flex gap-2">
                 <Select
                   onValueChange={(value) => {
@@ -215,7 +219,7 @@ export function ShiftDialog({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder={t("shift.none")} />
                   </SelectTrigger>
                   <SelectContent>
                     {presets.map((preset) => (
@@ -230,7 +234,7 @@ export function ShiftDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">{t("shift.date")}</Label>
             <Input
               id="date"
               type="date"
@@ -253,14 +257,14 @@ export function ShiftDialog({
               htmlFor="allDay"
               className="text-sm font-medium cursor-pointer"
             >
-              All-day shift
+              {t("shift.allDayShift")}
             </Label>
           </div>
 
           {!formData.isAllDay && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time</Label>
+                <Label htmlFor="startTime">{t("shift.startTime")}</Label>
                 <Input
                   id="startTime"
                   type="time"
@@ -271,7 +275,7 @@ export function ShiftDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endTime">End Time</Label>
+                <Label htmlFor="endTime">{t("shift.endTime")}</Label>
                 <Input
                   id="endTime"
                   type="time"
@@ -284,10 +288,10 @@ export function ShiftDialog({
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t("shift.titleLabel")}</Label>
             <Input
               id="title"
-              placeholder="e.g., Morning Shift"
+              placeholder={t("shift.titlePlaceholder")}
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -296,10 +300,10 @@ export function ShiftDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
+            <Label htmlFor="notes">{t("shift.notesOptional")}</Label>
             <Textarea
               id="notes"
-              placeholder="Additional information..."
+              placeholder={t("shift.notesPlaceholder")}
               value={formData.notes}
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
@@ -310,7 +314,7 @@ export function ShiftDialog({
           <ColorPicker
             color={formData.color || "#3b82f6"}
             onChange={(color) => setFormData({ ...formData, color })}
-            label="Color"
+            label={t("shift.color")}
             presetColors={PRESET_COLORS}
           />
 
@@ -329,15 +333,15 @@ export function ShiftDialog({
                   htmlFor="savePreset"
                   className="text-sm font-normal cursor-pointer"
                 >
-                  Save as Preset
+                  {t("preset.saveAsPreset")}
                 </Label>
               </div>
               {saveAsPreset && (
                 <div className="space-y-2">
-                  <Label htmlFor="presetName">Preset Name</Label>
+                  <Label htmlFor="presetName">{t("preset.presetName")}</Label>
                   <Input
                     id="presetName"
-                    placeholder="e.g., Morning Shift, Evening Shift..."
+                    placeholder={t("preset.presetNamePlaceholder")}
                     value={presetName}
                     onChange={(e) => setPresetName(e.target.value)}
                   />
@@ -352,10 +356,10 @@ export function ShiftDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={!formData.title.trim()}>
-              {shift ? "Save Changes" : "Add Shift"}
+              {shift ? t("shift.saveChanges") : t("shift.addShift")}
             </Button>
           </div>
         </form>

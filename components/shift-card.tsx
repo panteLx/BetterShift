@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ShiftWithCalendar } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ interface ShiftCardProps {
 }
 
 export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
+  const t = useTranslations();
+
   return (
     <Card
       className="p-2 sm:p-3 hover:shadow-md transition-all group relative overflow-hidden"
@@ -23,7 +26,7 @@ export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
           </h3>
           <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
             {shift.isAllDay ? (
-              <span className="font-medium">All day</span>
+              <span className="font-medium">{t("shift.allDay")}</span>
             ) : (
               <>
                 <span className="font-medium">{shift.startTime}</span>

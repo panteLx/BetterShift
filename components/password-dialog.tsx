@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ export function PasswordDialog({
   calendarName,
   onSuccess,
 }: PasswordDialogProps) {
+  const t = useTranslations();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,11 +63,11 @@ export function PasswordDialog({
         onSuccess(password);
         onOpenChange(false);
       } else {
-        setError("Invalid password");
+        setError(t("password.errorIncorrect"));
       }
     } catch (error) {
       console.error("Failed to verify password:", error);
-      setError("Failed to verify password");
+      setError(t("password.errorIncorrect"));
     } finally {
       setLoading(false);
     }
@@ -75,21 +77,22 @@ export function PasswordDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Password Required</DialogTitle>
+          <DialogTitle>
+            {t("password.password")} {t("common.required")}
+          </DialogTitle>
           <DialogDescription>
-            Please enter the password for calendar &quot;{calendarName}&quot; to
-            edit or delete shifts.
+            {t("password.enter", { name: calendarName })}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("password.password")}</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter calendar password"
+              placeholder={t("password.enterCalendarPassword")}
               autoFocus
             />
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -100,10 +103,10 @@ export function PasswordDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading || !password}>
-              {loading ? "Verifying..." : "Submit"}
+              {loading ? t("common.loading") : t("password.unlock")}
             </Button>
           </div>
         </form>

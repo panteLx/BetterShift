@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ShiftPreset } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Check, Settings, Plus, ChevronDown, ChevronUp } from "lucide-react";
@@ -46,6 +47,7 @@ export function PresetSelector({
   calendarId,
   onPasswordRequired,
 }: PresetSelectorProps) {
+  const t = useTranslations();
   const [showManageDialog, setShowManageDialog] = useState(false);
   const [editingPreset, setEditingPreset] = useState<ShiftPreset | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -206,12 +208,7 @@ export function PresetSelector({
       }
 
       // Password valid, confirm deletion
-      if (
-        !confirm(
-          "Delete this preset? This will also delete all shifts created from this preset."
-        )
-      )
-        return;
+      if (!confirm(t("preset.deleteConfirm"))) return;
 
       try {
         const url = password
@@ -241,16 +238,17 @@ export function PresetSelector({
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Plus className="h-4 sm:h-5 w-4 sm:w-5" />
             <p className="text-xs sm:text-sm font-medium">
-              No shift presets yet
+              {t("preset.noPresets")}
             </p>
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground max-w-md mx-auto">
-            Create your first preset to quickly add shifts to your calendar.
-            Presets save your frequently used shift times and details.
+            {t("preset.createFirstDescription")}
           </p>
           <Button onClick={handleCreateNew} size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
-            <span className="text-xs sm:text-sm">Create Your First Preset</span>
+            <span className="text-xs sm:text-sm">
+              {t("preset.createYourFirst")}
+            </span>
           </Button>
         </div>
       ) : (
@@ -286,7 +284,7 @@ export function PresetSelector({
                   </span>
                   <span className="ml-1 text-[10px] sm:text-xs opacity-70">
                     {preset.isAllDay ? (
-                      <span>All day</span>
+                      <span>{t("shift.allDay")}</span>
                     ) : (
                       <>
                         <span className="sm:hidden">{preset.startTime}</span>
@@ -305,7 +303,9 @@ export function PresetSelector({
               className="gap-1 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
             >
               <Plus className="h-3 sm:h-4 w-3 sm:w-4" />
-              <span className="hidden xs:inline sm:inline">New Preset</span>
+              <span className="hidden xs:inline sm:inline">
+                {t("preset.create")}
+              </span>
             </Button>
             <Button
               variant="ghost"
@@ -332,7 +332,7 @@ export function PresetSelector({
                   <ChevronDown className="h-3 w-3" />
                 )}
                 <span>
-                  Secondary Presets (
+                  {t("preset.secondaryPresets")} (
                   {presets.filter((p) => p.isSecondary).length})
                 </span>
               </Button>
@@ -371,7 +371,7 @@ export function PresetSelector({
                         </span>
                         <span className="ml-1 text-[10px] sm:text-xs opacity-70">
                           {preset.isAllDay ? (
-                            <span>All day</span>
+                            <span>{t("shift.allDay")}</span>
                           ) : (
                             <>
                               <span className="sm:hidden">
@@ -396,7 +396,7 @@ export function PresetSelector({
       <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
         <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Manage Presets</DialogTitle>
+            <DialogTitle>{t("preset.manage")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 overflow-y-auto flex-1 pr-2">
             <Button
@@ -405,7 +405,7 @@ export function PresetSelector({
               variant="outline"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Create New Preset
+              {t("preset.createNew")}
             </Button>
             {presets.map((preset) => (
               <div
@@ -417,7 +417,7 @@ export function PresetSelector({
                   <div className="font-medium">{preset.title}</div>
                   <div className="text-sm text-muted-foreground">
                     {preset.isAllDay ? (
-                      <span>All day</span>
+                      <span>{t("shift.allDay")}</span>
                     ) : (
                       <>
                         {preset.startTime} - {preset.endTime}
@@ -431,7 +431,7 @@ export function PresetSelector({
                     size="sm"
                     onClick={() => handleEditPreset(preset)}
                   >
-                    Edit
+                    {t("common.edit")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -461,17 +461,17 @@ export function PresetSelector({
         <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] max-w-[500px] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg">
-              {isCreatingNew ? "Create New Preset" : "Edit Preset"}
+              {isCreatingNew ? t("preset.createNew") : t("preset.edit")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pb-2">
             <div className="space-y-1.5">
               <Label htmlFor="preset-title" className="text-sm">
-                Title
+                {t("shift.titleLabel")}
               </Label>
               <Input
                 id="preset-title"
-                placeholder="e.g., Morning Shift"
+                placeholder={t("preset.namePlaceholder")}
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
@@ -491,13 +491,13 @@ export function PresetSelector({
                 htmlFor="preset-allday"
                 className="text-sm font-medium cursor-pointer"
               >
-                All-day shift
+                {t("shift.allDayShift")}
               </Label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="preset-start" className="text-sm">
-                  Start Time
+                  {t("shift.startTime")}
                 </Label>
                 <Input
                   id="preset-start"
@@ -512,7 +512,7 @@ export function PresetSelector({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="preset-end" className="text-sm">
-                  End Time
+                  {t("shift.endTime")}
                 </Label>
                 <Input
                   id="preset-end"
@@ -529,16 +529,16 @@ export function PresetSelector({
             <ColorPicker
               color={formData.color}
               onChange={(color) => setFormData({ ...formData, color })}
-              label="Color"
+              label={t("shift.color")}
               presetColors={PRESET_COLORS}
             />
             <div className="space-y-1.5">
               <Label htmlFor="preset-notes" className="text-sm">
-                Notes (optional)
+                {t("shift.notesOptional")}
               </Label>
               <Input
                 id="preset-notes"
-                placeholder="Additional information..."
+                placeholder={t("shift.notesPlaceholder")}
                 value={formData.notes}
                 onChange={(e) =>
                   setFormData({ ...formData, notes: e.target.value })
@@ -558,7 +558,7 @@ export function PresetSelector({
                 htmlFor="preset-secondary"
                 className="text-sm font-normal cursor-pointer"
               >
-                Mark as secondary (collapsed by default)
+                {t("preset.markAsSecondary")}
               </Label>
             </div>
             <div className="flex gap-2 pt-2">
@@ -572,7 +572,7 @@ export function PresetSelector({
                 }}
                 className="flex-1"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -580,7 +580,7 @@ export function PresetSelector({
                 disabled={!formData.title.trim()}
                 className="flex-1"
               >
-                {isCreatingNew ? "Create" : "Save"}
+                {isCreatingNew ? t("common.create") : t("common.save")}
               </Button>
             </div>
           </div>

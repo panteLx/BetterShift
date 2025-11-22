@@ -10,6 +10,7 @@ A modern shift management application built with Next.js and SQLite. BetterShift
 - 📋 **Shift Presets**: Create reusable shift templates for faster scheduling
 - 🗓️ **Calendar View**: Interactive monthly calendar with week-based layout
 - 🔒 **Password Protection**: Secure calendars with optional passwords
+- 🌐 **Internationalization (i18n)**: Supports multiple languages with automatic detection and manual switching
 - 💾 **SQLite Database**: Lightweight, file-based database with Drizzle ORM
 - 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
 

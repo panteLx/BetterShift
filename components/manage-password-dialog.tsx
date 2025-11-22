@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ export function ManagePasswordDialog({
   hasPassword,
   onSuccess,
 }: ManagePasswordDialogProps) {
+  const t = useTranslations();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,17 +55,17 @@ export function ManagePasswordDialog({
 
     // Validate inputs
     if (hasPassword && !currentPassword) {
-      setError("Current password is required");
+      setError(t("password.errorRequired"));
       return;
     }
 
     if (!removePassword) {
       if (!newPassword) {
-        setError("New password is required");
+        setError(t("password.errorRequired"));
         return;
       }
       if (newPassword !== confirmPassword) {
-        setError("Passwords do not match");
+        setError(t("password.errorMatch"));
         return;
       }
     }
@@ -81,13 +83,13 @@ export function ManagePasswordDialog({
       });
 
       if (response.status === 401) {
-        setError("Current password is incorrect");
+        setError(t("password.errorIncorrect"));
         setLoading(false);
         return;
       }
 
       if (!response.ok) {
-        setError("Failed to update password");
+        setError(t("password.errorIncorrect"));
         setLoading(false);
         return;
       }
@@ -104,7 +106,7 @@ export function ManagePasswordDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to update password:", error);
-      setError("Failed to update password");
+      setError(t("password.errorIncorrect"));
     } finally {
       setLoading(false);
     }
@@ -114,23 +116,27 @@ export function ManagePasswordDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Manage Password</DialogTitle>
+          <DialogTitle>
+            {t("password.manage", { name: calendarName })}
+          </DialogTitle>
           <DialogDescription>
             {hasPassword
-              ? `Update or remove password for "${calendarName}"`
-              : `Set a password for "${calendarName}"`}
+              ? t("password.currentlyProtected")
+              : t("password.notProtected")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {hasPassword && (
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
+              <Label htmlFor="currentPassword">
+                {t("password.currentPassword")}
+              </Label>
               <Input
                 id="currentPassword"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
+                placeholder={t("password.currentPasswordPlaceholder")}
                 autoFocus
               />
             </div>
@@ -147,7 +153,7 @@ export function ManagePasswordDialog({
                 htmlFor="removePassword"
                 className="text-sm font-normal cursor-pointer"
               >
-                Remove password protection
+                {t("password.removePassword")}
               </Label>
             </div>
           )}
@@ -156,26 +162,30 @@ export function ManagePasswordDialog({
             <>
               <div className="space-y-2">
                 <Label htmlFor="newPassword">
-                  {hasPassword ? "New Password" : "Password"}
+                  {hasPassword
+                    ? t("password.newPassword")
+                    : t("password.password")}
                 </Label>
                 <Input
                   id="newPassword"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
+                  placeholder={t("password.newPasswordPlaceholder")}
                   autoFocus={!hasPassword}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">
+                  {t("password.confirmPassword")}
+                </Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
+                  placeholder={t("password.confirmPasswordPlaceholder")}
                 />
               </div>
             </>
@@ -189,10 +199,10 @@ export function ManagePasswordDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? t("common.loading") : t("common.save")}
             </Button>
           </div>
         </form>

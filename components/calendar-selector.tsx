@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CalendarWithCount } from "@/lib/types";
 import {
   Select,
@@ -26,11 +27,13 @@ export function CalendarSelector({
   onCreateNew,
   onManagePassword,
 }: CalendarSelectorProps) {
+  const t = useTranslations();
+
   return (
     <div className="flex gap-2 items-center">
       <Select value={selectedId} onValueChange={onSelect}>
         <SelectTrigger className="flex-1 h-9 sm:h-10 text-sm">
-          <SelectValue placeholder="Select a calendar" />
+          <SelectValue placeholder={t("calendar.title")} />
         </SelectTrigger>
         <SelectContent>
           {calendars.map((calendar) => (
@@ -52,7 +55,7 @@ export function CalendarSelector({
           size="icon"
           variant="outline"
           className="h-9 w-9 sm:h-10 sm:w-10"
-          title="Manage password"
+          title={t("calendar.managePassword")}
         >
           <Settings className="h-4 w-4" />
         </Button>
