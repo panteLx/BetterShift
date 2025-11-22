@@ -133,5 +133,14 @@
     "pink": "Pink",
     "cyan": "Cyan",
     "orange": "Orange"
+  },
+  "stats": {
+    "title": "Schichtenstatistik",
+    "week": "Woche",
+    "month": "Monat",
+    "year": "Jahr",
+    "total": "Gesamt",
+    "noData": "Keine Schichten in diesem Zeitraum",
+    "shiftsTotal": "Schichten"
   }
 }

@@ -133,5 +133,14 @@
     "pink": "Pink",
     "cyan": "Cyan",
     "orange": "Orange"
+  },
+  "stats": {
+    "title": "Shift Statistics",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year",
+    "total": "Total",
+    "noData": "No shifts in this period",
+    "shiftsTotal": "shifts"
   }
 }

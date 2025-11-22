@@ -12,6 +12,7 @@ import { PresetSelector } from "@/components/preset-selector";
 import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ShiftStats } from "@/components/shift-stats";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -72,6 +73,7 @@ function HomeContent() {
     presetAction?: () => Promise<void>;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
 
   // Fetch calendars on mount
   useEffect(() => {
@@ -183,6 +185,7 @@ function HomeContent() {
       });
       const newShift = await response.json();
       setShifts([...shifts, newShift]);
+      setStatsRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       console.error("Failed to create shift:", error);
     }
@@ -210,6 +213,7 @@ function HomeContent() {
 
       const updatedShift = await response.json();
       setShifts(shifts.map((s) => (s.id === id ? updatedShift : s)));
+      setStatsRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       console.error("Failed to update shift:", error);
     }
@@ -236,6 +240,7 @@ function HomeContent() {
       }
 
       setShifts(shifts.filter((s) => s.id !== id));
+      setStatsRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       console.error("Failed to delete shift:", error);
     }
@@ -254,6 +259,7 @@ function HomeContent() {
         );
         if (response.ok) {
           setShifts(shifts.filter((s) => s.id !== pendingAction.shiftId));
+          setStatsRefreshTrigger((prev) => prev + 1); // Refresh stats
         }
       } else if (
         pendingAction.type === "edit" &&
@@ -272,6 +278,7 @@ function HomeContent() {
               s.id === pendingAction.shiftId ? updatedShift : s
             )
           );
+          setStatsRefreshTrigger((prev) => prev + 1);
         }
       } else if (pendingAction.presetAction) {
         // Execute the pending preset action
@@ -655,6 +662,13 @@ function HomeContent() {
 
         {/* Shifts List */}
         <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
+          {/* Shift Statistics */}
+          <ShiftStats
+            calendarId={selectedCalendar}
+            currentDate={currentDate}
+            refreshTrigger={statsRefreshTrigger}
+          />
+
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="text-lg sm:text-xl font-bold">{t("shift.title")}</h3>
             {shifts.length > 0 && (
