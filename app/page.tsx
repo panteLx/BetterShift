@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { ShiftWithCalendar, CalendarWithCount } from "@/lib/types";
@@ -11,6 +11,7 @@ import { ShiftCard } from "@/components/shift-card";
 import { PresetSelector } from "@/components/preset-selector";
 import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
+import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ShiftStats } from "@/components/shift-stats";
 import { NoteDialog } from "@/components/note-dialog";
@@ -70,6 +71,11 @@ function HomeContent() {
   const [showMobileCalendarDialog, setShowMobileCalendarDialog] =
     useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [showDeleteCalendarDialog, setShowDeleteCalendarDialog] =
+    useState(false);
+  const [calendarToDelete, setCalendarToDelete] = useState<
+    string | undefined
+  >();
   const [selectedNote, setSelectedNote] = useState<CalendarNote | undefined>();
   const [notes, setNotes] = useState<CalendarNote[]>([]);
   const [pendingAction, setPendingAction] = useState<{
@@ -80,10 +86,18 @@ function HomeContent() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
+  const [isTogglingShift, setIsTogglingShift] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch calendars on mount
+  // Fetch calendars on mount and setup cleanup
   useEffect(() => {
     fetchCalendars();
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, []);
 
   // Update URL when selected calendar changes
@@ -93,16 +107,34 @@ function HomeContent() {
     }
   }, [selectedCalendar, router]);
 
-  // Fetch shifts and presets when calendar changes
+  // Fetch shifts and presets when calendar changes and setup polling
   useEffect(() => {
     if (selectedCalendar) {
       fetchShifts();
       fetchPresets();
       fetchNotes();
+
+      // Setup polling for live sync (every 5 seconds)
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      const interval = setInterval(() => {
+        fetchShifts();
+        fetchPresets();
+        fetchNotes();
+      }, 5000);
+      pollingIntervalRef.current = interval;
+
+      return () => {
+        clearInterval(interval);
+      };
     } else {
       setShifts([]);
       setPresets([]);
       setNotes([]);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
     }
   }, [selectedCalendar]);
 
@@ -191,8 +223,71 @@ function HomeContent() {
     }
   };
 
+  const initiateDeleteCalendar = (id: string) => {
+    setCalendarToDelete(id);
+    setShowDeleteCalendarDialog(true);
+  };
+
+  const deleteCalendar = async (password?: string) => {
+    if (!calendarToDelete) return;
+
+    try {
+      const url = password
+        ? `/api/calendars/${calendarToDelete}?password=${encodeURIComponent(
+            password
+          )}`
+        : `/api/calendars/${calendarToDelete}`;
+
+      const response = await fetch(url, { method: "DELETE" });
+
+      if (response.status === 401) {
+        alert(t("password.errorIncorrect"));
+        return;
+      }
+
+      if (response.ok) {
+        const remainingCalendars = calendars.filter(
+          (c) => c.id !== calendarToDelete
+        );
+        setCalendars(remainingCalendars);
+        localStorage.removeItem(`calendar_password_${calendarToDelete}`);
+
+        // If deleting the selected calendar, select the first remaining one or undefined
+        if (selectedCalendar === calendarToDelete) {
+          setSelectedCalendar(
+            remainingCalendars.length > 0 ? remainingCalendars[0].id : undefined
+          );
+        }
+
+        setShowDeleteCalendarDialog(false);
+        setCalendarToDelete(undefined);
+      }
+    } catch (error) {
+      console.error("Failed to delete calendar:", error);
+    }
+  };
+
   const createShift = async (formData: ShiftFormData) => {
     if (!selectedCalendar) return;
+
+    // Optimistic update: add shift immediately with temporary ID
+    const tempId = `temp-${Date.now()}`;
+    const optimisticShift: ShiftWithCalendar = {
+      id: tempId,
+      date: new Date(formData.date),
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      title: formData.title,
+      color: formData.color || "#000000",
+      notes: formData.notes || null,
+      isAllDay: formData.isAllDay || false,
+      calendarId: selectedCalendar,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    setShifts([...shifts, optimisticShift]);
+    setStatsRefreshTrigger((prev) => prev + 1);
 
     try {
       const response = await fetch("/api/shifts", {
@@ -204,10 +299,15 @@ function HomeContent() {
         }),
       });
       const newShift = await response.json();
-      setShifts([...shifts, newShift]);
-      setStatsRefreshTrigger((prev) => prev + 1);
+      // Replace optimistic shift with real one
+      setShifts((shifts) =>
+        shifts.map((s) => (s.id === tempId ? newShift : s))
+      );
     } catch (error) {
       console.error("Failed to create shift:", error);
+      // Rollback optimistic update on error
+      setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
+      setStatsRefreshTrigger((prev) => prev + 1);
     }
   };
 
@@ -414,6 +514,9 @@ function HomeContent() {
   };
 
   const handleAddShift = async (date: Date) => {
+    // Prevent multiple simultaneous toggles (debouncing)
+    if (isTogglingShift) return;
+
     // Only proceed if a preset is selected
     if (!selectedPresetId) return;
 
@@ -422,62 +525,94 @@ function HomeContent() {
 
     // Check password before adding/deleting shift
     const checkAndToggle = async () => {
-      const password = selectedCalendar
-        ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
-        : null;
+      setIsTogglingShift(true);
 
-      // Verify password if calendar is protected
-      if (selectedCalendar) {
-        const response = await fetch(
-          `/api/calendars/${selectedCalendar}/verify-password`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password }),
+      try {
+        const password = selectedCalendar
+          ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
+          : null;
+
+        // Verify password if calendar is protected
+        if (selectedCalendar) {
+          const response = await fetch(
+            `/api/calendars/${selectedCalendar}/verify-password`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ password }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.protected && !data.valid) {
+            // Password required or invalid
+            localStorage.removeItem(`calendar_password_${selectedCalendar}`);
+            setPendingAction({
+              type: "edit",
+              presetAction: () => handleAddShift(date),
+            });
+            setShowPasswordDialog(true);
+            setIsTogglingShift(false);
+            return;
           }
+        }
+
+        // Password valid or not required, proceed with toggle
+        // Check if a shift with the same preset already exists on this date
+        const existingShift = shifts.find(
+          (shift) =>
+            shift.date &&
+            isSameDay(new Date(shift.date), date) &&
+            shift.title === preset.title &&
+            shift.startTime === preset.startTime &&
+            shift.endTime === preset.endTime
         );
 
-        const data = await response.json();
+        if (existingShift) {
+          // Toggle: remove the existing shift
+          // Optimistic delete
+          setShifts(shifts.filter((s) => s.id !== existingShift.id));
+          setStatsRefreshTrigger((prev) => prev + 1);
 
-        if (data.protected && !data.valid) {
-          // Password required or invalid
-          localStorage.removeItem(`calendar_password_${selectedCalendar}`);
-          setPendingAction({
-            type: "edit",
-            presetAction: () => handleAddShift(date),
-          });
-          setShowPasswordDialog(true);
-          return;
+          try {
+            const password = selectedCalendar
+              ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
+              : null;
+            const url = password
+              ? `/api/shifts/${existingShift.id}?password=${encodeURIComponent(
+                  password
+                )}`
+              : `/api/shifts/${existingShift.id}`;
+            const response = await fetch(url, { method: "DELETE" });
+
+            if (!response.ok) {
+              // Rollback on error
+              setShifts(shifts);
+              setStatsRefreshTrigger((prev) => prev + 1);
+            }
+          } catch (error) {
+            console.error("Failed to delete shift:", error);
+            // Rollback on error
+            setShifts(shifts);
+            setStatsRefreshTrigger((prev) => prev + 1);
+          }
+        } else {
+          // Toggle: add the shift
+          const shiftData: ShiftFormData = {
+            date: formatDateToLocal(date),
+            startTime: preset.startTime,
+            endTime: preset.endTime,
+            title: preset.title,
+            color: preset.color,
+            notes: preset.notes || "",
+            presetId: preset.id,
+            isAllDay: preset.isAllDay || false,
+          };
+          await createShift(shiftData);
         }
-      }
-
-      // Password valid or not required, proceed with toggle
-      // Check if a shift with the same preset already exists on this date
-      const existingShift = shifts.find(
-        (shift) =>
-          shift.date &&
-          isSameDay(new Date(shift.date), date) &&
-          shift.title === preset.title &&
-          shift.startTime === preset.startTime &&
-          shift.endTime === preset.endTime
-      );
-
-      if (existingShift) {
-        // Toggle: remove the existing shift
-        await deleteShift(existingShift.id);
-      } else {
-        // Toggle: add the shift
-        const shiftData: ShiftFormData = {
-          date: formatDateToLocal(date),
-          startTime: preset.startTime,
-          endTime: preset.endTime,
-          title: preset.title,
-          color: preset.color,
-          notes: preset.notes || "",
-          presetId: preset.id,
-          isAllDay: preset.isAllDay || false,
-        };
-        createShift(shiftData);
+      } finally {
+        setIsTogglingShift(false);
       }
     };
 
@@ -510,17 +645,24 @@ function HomeContent() {
 
   if (calendars.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <CalendarIcon className="h-16 w-16 mx-auto text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Welcome to BetterShift</h1>
-          <p className="text-muted-foreground">
-            Get started by creating your first calendar to track your shifts.
-          </p>
-          <Button onClick={() => setShowCalendarDialog(true)} size="lg">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Calendar
-          </Button>
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center space-y-4 max-w-md">
+            <CalendarIcon className="h-16 w-16 mx-auto text-muted-foreground" />
+            <h1 className="text-2xl font-bold">{t("onboarding.welcome")}</h1>
+            <p className="text-muted-foreground">
+              {t("onboarding.description")}
+            </p>
+            <Button onClick={() => setShowCalendarDialog(true)} size="lg">
+              <Plus className="mr-2 h-4 w-4" />
+              {t("onboarding.createCalendar")}
+            </Button>
+          </div>
+        </div>
+        <div className="border-t bg-background">
+          <div className="container max-w-4xl mx-auto p-3 sm:p-4 flex justify-center">
+            <LanguageSwitcher />
+          </div>
         </div>
         <CalendarDialog
           open={showCalendarDialog}
@@ -567,6 +709,7 @@ function HomeContent() {
                     onSelect={setSelectedCalendar}
                     onCreateNew={() => setShowCalendarDialog(true)}
                     onManagePassword={() => setShowManagePasswordDialog(true)}
+                    onDelete={initiateDeleteCalendar}
                   />
                 </div>
               </div>
@@ -656,6 +799,7 @@ function HomeContent() {
                 setShowMobileCalendarDialog(false);
                 setShowManagePasswordDialog(true);
               }}
+              onDelete={initiateDeleteCalendar}
             />
           </div>
         </DialogContent>
@@ -817,6 +961,31 @@ function HomeContent() {
           })}
         </div>
 
+        {/* Note Hint */}
+        <div className="px-2 sm:px-0 mb-3">
+          <div className="bg-muted/30 border border-muted/50 rounded-md p-2 sm:p-2.5">
+            <div className="flex items-start gap-2">
+              <StickyNote className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                {/* Mobile hint */}
+                <p className="text-[11px] sm:hidden text-muted-foreground leading-snug">
+                  {t("note.hintMobile", {
+                    default:
+                      "Long press on a day to open notes. The note icon shows existing notes.",
+                  })}
+                </p>
+                {/* Desktop hint */}
+                <p className="hidden sm:block text-xs text-muted-foreground leading-snug">
+                  {t("note.hintDesktop", {
+                    default:
+                      "Right-click on a day to open notes. The note icon shows existing notes.",
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Shifts List */}
         <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
           {/* Shift Statistics */}
@@ -869,9 +1038,6 @@ function HomeContent() {
                   {presets.length === 0
                     ? t("shift.createPresetFirst")
                     : t("shift.noShiftsDescription")}
-                </p>
-                <p className="text-xs text-muted-foreground/70 mt-2">
-                  💡 {t("note.rightClick")}
                 </p>
               </div>
             </div>
@@ -988,6 +1154,19 @@ function HomeContent() {
         selectedDate={selectedDate}
         note={selectedNote}
       />
+      {calendarToDelete && (
+        <DeleteCalendarDialog
+          open={showDeleteCalendarDialog}
+          onOpenChange={setShowDeleteCalendarDialog}
+          calendarName={
+            calendars.find((c) => c.id === calendarToDelete)?.name || ""
+          }
+          hasPassword={
+            !!calendars.find((c) => c.id === calendarToDelete)?.passwordHash
+          }
+          onConfirm={deleteCalendar}
+        />
+      )}
 
       {/* Footer */}
       <div className="border-t bg-background mt-auto">

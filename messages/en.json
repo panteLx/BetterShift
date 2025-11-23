@@ -26,7 +26,11 @@
     "noCalendars": "No calendars yet",
     "createFirst": "Create your first calendar",
     "managePassword": "Manage Password",
-    "select": "Your BetterShift Calendar"
+    "select": "Your BetterShift Calendar",
+    "deleteCalendar": "Delete Calendar",
+    "deleteConfirm": "Really delete calendar \"{name}\"? All shifts, presets and notes will also be deleted.",
+    "deleteWarning": "This action cannot be undone. All shifts, presets, and notes will be permanently deleted.",
+    "deleteSuccess": "Calendar deleted successfully"
   },
   "password": {
     "use": "Use password",
@@ -48,8 +52,8 @@
     "currentlyProtected": "This calendar is currently password protected.",
     "notProtected": "This calendar is currently not password protected.",
     "errorMatch": "Passwords do not match",
-    "errorRequired": "Password is required",
     "errorIncorrect": "Incorrect password",
+    "errorRequired": "Password required",
     "unlock": "Unlock"
   },
   "note": {
@@ -58,8 +62,10 @@
     "edit": "Edit Note",
     "delete": "Delete Note",
     "note": "Note",
-    "notePlaceholder": "e.g., Morning shift because afternoon hairdresser...",
-    "rightClick": "Right-click / Long press on a day or click the note icon"
+    "notePlaceholder": "e.g., Early shift because appointment in the afternoon...",
+    "hint": "Add notes to days",
+    "hintMobile": "Long press on a day to open notes. The note icon shows existing notes.",
+    "hintDesktop": "Right-click on a day to open notes. The note icon shows existing notes."
   },
   "shift": {
     "title": "Shifts",
@@ -157,6 +163,11 @@
     "year": "Year",
     "total": "Total",
     "noData": "No shifts in this period",
-    "shiftsTotal": "shifts"
+    "shiftsTotal": "Shifts"
+  },
+  "onboarding": {
+    "welcome": "Welcome to BetterShift",
+    "description": "Get started by creating your first calendar to track your shifts.",
+    "createCalendar": "Create Calendar"
   }
 }

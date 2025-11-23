@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Settings, Trash2 } from "lucide-react";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
@@ -18,6 +18,7 @@ interface CalendarSelectorProps {
   onSelect: (id: string) => void;
   onCreateNew: () => void;
   onManagePassword?: () => void;
+  onDelete?: (id: string) => void;
 }
 
 export function CalendarSelector({
@@ -26,6 +27,7 @@ export function CalendarSelector({
   onSelect,
   onCreateNew,
   onManagePassword,
+  onDelete,
 }: CalendarSelectorProps) {
   const t = useTranslations();
 
@@ -58,6 +60,17 @@ export function CalendarSelector({
           title={t("calendar.managePassword")}
         >
           <Settings className="h-4 w-4" />
+        </Button>
+      )}
+      {onDelete && selectedId && (
+        <Button
+          onClick={() => onDelete(selectedId)}
+          size="icon"
+          variant="outline"
+          className="h-9 w-9 sm:h-10 sm:w-10 text-destructive hover:text-destructive"
+          title={t("calendar.deleteCalendar")}
+        >
+          <Trash2 className="h-4 w-4" />
         </Button>
       )}
       <Button
