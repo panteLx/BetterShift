@@ -985,7 +985,7 @@ function HomeContent() {
               </motion.div>
             </div>
 
-            {/* Mobile: Logo Icon + Calendar Card */}
+            {/* Mobile: Logo Icon + Calendar Card + Add Button */}
             <div className="sm:hidden flex items-center gap-2">
               {/* Logo Icon Only */}
               <div className="relative shrink-0">
@@ -1031,6 +1031,23 @@ function HomeContent() {
                   <CalendarIcon className="h-4 w-4 text-primary" />
                 </div>
               </button>
+
+              {/* Mobile Add Shift Button */}
+              {selectedCalendar && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                >
+                  <Button
+                    size="icon"
+                    onClick={handleManualShiftCreation}
+                    className="h-10 w-10 rounded-xl shadow-lg shadow-primary/30 shrink-0"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </motion.div>
+              )}
             </div>
 
             {/* Preset Selector - Aligned properly */}
@@ -1465,20 +1482,20 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* Floating Action Button for Manual Shift Creation */}
+      {/* Floating Action Button for Manual Shift Creation - Desktop Only */}
       {selectedCalendar && (
         <motion.div
-          className="fixed bottom-6 right-6 z-50"
+          className="hidden sm:block fixed bottom-6 right-6 z-50"
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
         >
           <Button
             size="lg"
-            className="h-14 w-14 sm:h-16 sm:w-16 rounded-full shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all"
+            className="h-16 w-16 rounded-full shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all"
             onClick={handleManualShiftCreation}
           >
-            <Plus className="h-6 w-6 sm:h-7 sm:w-7" />
+            <Plus className="h-7 w-7" />
           </Button>
         </motion.div>
       )}
