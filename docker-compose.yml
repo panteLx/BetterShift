@@ -11,9 +11,8 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=file:./data/sqlite.db
+    env_file:
+      - .env
     healthcheck:
       test:
         [

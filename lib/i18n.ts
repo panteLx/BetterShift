@@ -4,7 +4,13 @@ import { cookies, headers } from "next/headers";
 export const locales = ["de", "en"] as const;
 export type Locale = (typeof locales)[number];
 
-export const defaultLocale: Locale = "en";
+const configuredDefaultLocale = process.env.DEFAULT_LOCALE as
+  | Locale
+  | undefined;
+export const defaultLocale: Locale =
+  configuredDefaultLocale && locales.includes(configuredDefaultLocale)
+    ? configuredDefaultLocale
+    : "en";
 
 function getLocaleFromNavigator(acceptLanguage: string | null): Locale {
   if (!acceptLanguage) return defaultLocale;
