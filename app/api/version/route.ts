@@ -9,8 +9,11 @@ let cachedVersion: {
   timestamp: number;
 } | null = null;
 
-const CACHE_DURATION =
-  parseInt(process.env.VERSION_CACHE_DURATION || "3600", 10) * 1000; // Default: 1 hour in seconds, converted to milliseconds
+const CACHE_SECONDS = parseInt(
+  process.env.VERSION_CACHE_DURATION || "3600",
+  10
+); // Default: 1 hour in seconds
+const CACHE_DURATION = CACHE_SECONDS * 1000; // Convert to milliseconds for in-memory TTL
 const GITHUB_API_REVALIDATE = parseInt(
   process.env.GITHUB_API_REVALIDATE || "3600",
   10
@@ -68,7 +71,7 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "public, max-age=3600",
+          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
         },
       }
     );
@@ -88,7 +91,7 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "public, max-age=3600",
+          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
         },
       }
     );
