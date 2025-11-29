@@ -2,7 +2,7 @@
 
 # Stage 1: Builder
 FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ git
 WORKDIR /app
 
 # Copy package files and install ALL dependencies
@@ -18,6 +18,11 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Generate version information
+RUN mkdir -p scripts public
+COPY scripts/generate-version.sh scripts/
+RUN chmod +x scripts/generate-version.sh && scripts/generate-version.sh
+
 # Build the application
 RUN npm run build
 
@@ -32,6 +37,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Copy necessary files from builder
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/package.json ./package.json

@@ -154,5 +154,8 @@
     "welcome": "Welcome to BetterShift",
     "description": "Create your first calendar to manage your shifts.",
     "createCalendar": "Create Calendar"
+  },
+  "version": {
+    "label": "Version"
   }
 }

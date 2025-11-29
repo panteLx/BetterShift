@@ -48,3 +48,6 @@ data/
 
 # docker
 docker-compose.override.yml
+
+# version info (generated at build time)
+public/version.json

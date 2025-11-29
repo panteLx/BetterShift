@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "scripts/generate-version.sh && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",

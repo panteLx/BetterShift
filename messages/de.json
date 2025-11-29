@@ -154,5 +154,8 @@
     "welcome": "Willkommen bei BetterShift",
     "description": "Erstelle deinen ersten Kalender, um deine Schichten zu verwalten.",
     "createCalendar": "Kalender erstellen"
+  },
+  "version": {
+    "label": "Version"
   }
 }

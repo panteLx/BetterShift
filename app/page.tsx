@@ -96,10 +96,23 @@ function HomeContent() {
   const [isConnected, setIsConnected] = useState(true);
   const lastSyncTimeRef = useRef<number>(Date.now());
   const disconnectTimeRef = useRef<number | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
+
+  // Fetch version information
+  const fetchVersion = async () => {
+    try {
+      const response = await fetch("/api/version");
+      const data = await response.json();
+      setVersion(data.version);
+    } catch (error) {
+      console.error("Failed to fetch version:", error);
+    }
+  };
 
   // Fetch calendars on mount and setup cleanup
   useEffect(() => {
     fetchCalendars();
+    fetchVersion();
 
     return () => {
       if (eventSourceRef.current) {
@@ -1565,8 +1578,13 @@ function HomeContent() {
 
       {/* Footer */}
       <div className="border-t bg-background mt-auto">
-        <div className="container max-w-4xl mx-auto p-3 sm:p-4 flex justify-center">
+        <div className="container max-w-4xl mx-auto p-3 sm:p-4 flex justify-between items-center">
           <LanguageSwitcher />
+          {version && (
+            <div className="text-xs text-muted-foreground font-mono">
+              {t("version.label")}: {version}
+            </div>
+          )}
         </div>
       </div>
     </div>
