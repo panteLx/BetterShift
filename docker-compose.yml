@@ -1,16 +1,15 @@
 services:
   bettershift:
-    # Use the following line to pull the image from GitHub Container Registry
-    # image: ghcr.io/pantelx/bettershift:latest
+    image: ghcr.io/pantelx/bettershift:latest
     # Or build the image locally using the Dockerfile
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: bettershift
     restart: unless-stopped
-    # Ports are defined in the override file
+    ports:
+      - "3000:3000"
     volumes:
-      # Mount data directory for persistent SQLite database
       - ./data:/app/data
     environment:
       - NODE_ENV=production

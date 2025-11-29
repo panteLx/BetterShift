@@ -57,25 +57,17 @@ A modern shift management application built with Next.js and SQLite. BetterShift
 
 ### Docker Deployment
 
-1. **Create override configuration**
-
-   ```bash
-   cp docker-compose.override.yml.example docker-compose.override.yml
-   ```
-
-   Edit `docker-compose.override.yml` to customize ports or other settings.
-
 2. **Build and run with Docker Compose**
 
    ```bash
-   docker-compose up -d --build
+   docker-compose up -d
 
    # Generate and apply database migrations
    docker compose exec bettershift npm run db:migrate
    ```
 
 3. **Access the application**
-   The application will be available at the port specified in your override file (default: 3000)
+   The application will be available at the port specified in your docker-compose file (default: 3000)
 
 ### Building for Production
 
@@ -111,7 +103,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is private and not yet licensed for public use.
+This project is licensed under the MIT License.
 
 ## Support
 
