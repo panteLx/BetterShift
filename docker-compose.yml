@@ -1,5 +1,8 @@
 services:
   bettershift:
+    # Use the following line to pull the image from GitHub Container Registry
+    # image: ghcr.io/pantelx/bettershift:latest
+    # Or build the image locally using the Dockerfile
     build:
       context: .
       dockerfile: Dockerfile
