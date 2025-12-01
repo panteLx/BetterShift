@@ -157,5 +157,13 @@
   },
   "version": {
     "label": "Version"
+  },
+  "demo": {
+    "mode": "Demo-Modus",
+    "disabledAction": "Diese Aktion ist im Demo-Modus deaktiviert",
+    "disabledDelete": "Löschen im Demo-Modus deaktiviert",
+    "disabledEdit": "Bearbeiten im Demo-Modus deaktiviert",
+    "disabledPassword": "Passwortverwaltung im Demo-Modus deaktiviert",
+    "bannerMessage": "Kalender löschen, bearbeiten und Passwörter verwalten ist deaktiviert"
   }
 }

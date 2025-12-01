@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Plus, KeyRound, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
@@ -19,6 +20,7 @@ interface CalendarSelectorProps {
   onCreateNew: () => void;
   onManagePassword?: () => void;
   onDelete?: (id: string) => void;
+  demoMode?: boolean;
 }
 
 export function CalendarSelector({
@@ -28,8 +30,25 @@ export function CalendarSelector({
   onCreateNew,
   onManagePassword,
   onDelete,
+  demoMode = false,
 }: CalendarSelectorProps) {
   const t = useTranslations();
+
+  const handleManagePassword = () => {
+    if (demoMode) {
+      toast.error(t("demo.disabledPassword"));
+      return;
+    }
+    onManagePassword?.();
+  };
+
+  const handleDelete = (id: string) => {
+    if (demoMode) {
+      toast.error(t("demo.disabledDelete"));
+      return;
+    }
+    onDelete?.(id);
+  };
 
   return (
     <div className="flex gap-2 items-center">
@@ -53,22 +72,24 @@ export function CalendarSelector({
       </Select>
       {onManagePassword && selectedId && (
         <Button
-          onClick={onManagePassword}
+          onClick={handleManagePassword}
           size="icon"
           variant="outline"
           className="h-9 w-9 sm:h-10 sm:w-10"
           title={t("calendar.managePassword")}
+          disabled={demoMode}
         >
           <KeyRound className="h-4 w-4" />
         </Button>
       )}
       {onDelete && selectedId && (
         <Button
-          onClick={() => onDelete(selectedId)}
+          onClick={() => handleDelete(selectedId)}
           size="icon"
           variant="outline"
           className="h-9 w-9 sm:h-10 sm:w-10 text-destructive hover:text-destructive"
           title={t("calendar.deleteCalendar")}
+          disabled={demoMode}
         >
           <Trash2 className="h-4 w-4" />
         </Button>

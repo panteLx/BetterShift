@@ -115,6 +115,28 @@ $ docker compose exec bettershift npm run db:migrate
 # Access the application at http://localhost:3000 (or your configured port)
 ```
 
+### 🎭 Demo Mode
+
+Demo mode can be enabled to prevent calendar deletion, editing, and password changes. This is useful for public demonstrations or testing environments.
+
+**Enable Demo Mode:**
+
+Set the environment variable `DEMO_MODE=true` in your configuration:
+
+```bash
+# In .env file
+DEMO_MODE=true
+```
+
+**Demo Mode Restrictions:**
+
+- Calendar deletion is disabled
+- Calendar editing (name, color) is disabled
+- Password management is disabled
+- User-friendly toast notifications inform users of these restrictions
+
+**Note:** Shifts, presets, and notes can still be created, edited, and deleted in demo mode.
+
 ### 🏗️ Production Build
 
 ```bash

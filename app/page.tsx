@@ -112,6 +112,7 @@ function HomeContent() {
   const [isTogglingShift, setIsTogglingShift] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
   const [version, setVersion] = useState<string | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
 
   // SSE Connection for real-time updates
   useSSEConnection({
@@ -135,8 +136,20 @@ function HomeContent() {
     }
   };
 
+  // Fetch config (demo mode)
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch("/api/config");
+      const data = await response.json();
+      setDemoMode(data.demoMode);
+    } catch (error) {
+      console.error("Failed to fetch config:", error);
+    }
+  };
+
   useEffect(() => {
     fetchVersion();
+    fetchConfig();
   }, []);
 
   // Update URL when selected calendar changes
@@ -556,6 +569,15 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {demoMode && (
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white py-2.5 px-4 text-center text-sm font-medium shadow-lg">
+          <span className="inline-flex items-center gap-2 flex-wrap justify-center">
+            <span className="text-base">🎭</span>
+            <span className="font-semibold">{t("demo.mode")}:</span>
+            <span>{t("demo.bannerMessage")}</span>
+          </span>
+        </div>
+      )}
       <AppHeader
         calendars={calendars}
         selectedCalendar={selectedCalendar}
@@ -563,6 +585,7 @@ function HomeContent() {
         selectedPresetId={selectedPresetId}
         isConnected={isConnected}
         showMobileCalendarDialog={showMobileCalendarDialog}
+        demoMode={demoMode}
         onSelectCalendar={setSelectedCalendar}
         onSelectPreset={setSelectedPresetId}
         onCreateCalendar={() => setShowCalendarDialog(true)}
@@ -725,6 +748,7 @@ function HomeContent() {
             !!calendars.find((c) => c.id === selectedCalendar)?.passwordHash
           }
           onSuccess={refetchCalendars}
+          demoMode={demoMode}
         />
       )}
       <NoteDialog
@@ -746,6 +770,7 @@ function HomeContent() {
             !!calendars.find((c) => c.id === calendarToDelete)?.passwordHash
           }
           onConfirm={handleDeleteCalendar}
+          demoMode={demoMode}
         />
       )}
 
