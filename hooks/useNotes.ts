@@ -124,12 +124,12 @@ export function useNotes(calendarId: string | undefined) {
         ? localStorage.getItem(`calendar_password_${calendarId}`)
         : null;
 
-      const url = password
-        ? `/api/notes/${noteId}?password=${encodeURIComponent(password)}`
-        : `/api/notes/${noteId}`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`/api/notes/${noteId}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
       });
 
       if (response.status === 401) {

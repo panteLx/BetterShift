@@ -25,6 +25,8 @@ export function useSSEConnection({
   const eventSourceRef = useRef<EventSource | null>(null);
   const lastSyncTimeRef = useRef<number>(Date.now());
   const disconnectTimeRef = useRef<number | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Refs to avoid stale closures in SSE handlers
   const shiftUpdateRef = useRef(onShiftUpdate);
@@ -169,30 +171,56 @@ export function useSSEConnection({
       console.error("SSE connection error:", error);
       setIsConnectedRef.current(false);
       disconnectTimeRef.current = Date.now();
-      eventSource.close();
 
-      const errorTimeout = setTimeout(() => {
+      // Clear any existing timeouts
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      if (resyncTimeoutRef.current) {
+        clearTimeout(resyncTimeoutRef.current);
+        resyncTimeoutRef.current = null;
+      }
+
+      // Show error toast after delay if offline
+      errorTimeoutRef.current = setTimeout(() => {
         if (!navigator.onLine) {
           toast.error(tRef.current("sync.disconnected"), {
             duration: Infinity,
           });
         }
+        errorTimeoutRef.current = null;
       }, 5000);
 
-      setTimeout(() => {
-        clearTimeout(errorTimeout);
+      // Attempt resync after delay (EventSource will auto-reconnect)
+      resyncTimeoutRef.current = setTimeout(() => {
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
         if (calendarId && navigator.onLine) {
-          console.log("Attempting to reconnect and resync...");
+          console.log("Attempting to resync data...");
           shiftUpdateRef.current();
           presetUpdateRef.current();
           noteUpdateRef.current();
         }
+        resyncTimeoutRef.current = null;
       }, 3000);
     };
 
     eventSourceRef.current = eventSource;
 
     return () => {
+      // Clear all timeouts on cleanup
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      if (resyncTimeoutRef.current) {
+        clearTimeout(resyncTimeoutRef.current);
+        resyncTimeoutRef.current = null;
+      }
+      // Close EventSource on unmount or calendarId change
       eventSource.close();
     };
   }, [calendarId]);

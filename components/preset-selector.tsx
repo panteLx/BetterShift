@@ -122,11 +122,14 @@ export function PresetSelector({
 
       try {
         const password = getPassword();
-        const url = password
-          ? `/api/presets/${id}?password=${encodeURIComponent(password)}`
-          : `/api/presets/${id}`;
 
-        const response = await fetch(url, { method: "DELETE" });
+        const response = await fetch(`/api/presets/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ password }),
+        });
 
         if (!response.ok) {
           const errorText = await response.text();

@@ -66,13 +66,13 @@ export function useCalendars(initialCalendarId?: string | null) {
 
   const deleteCalendar = async (calendarId: string, password?: string) => {
     try {
-      const url = password
-        ? `/api/calendars/${calendarId}?password=${encodeURIComponent(
-            password
-          )}`
-        : `/api/calendars/${calendarId}`;
-
-      const response = await fetch(url, { method: "DELETE" });
+      const response = await fetch(`/api/calendars/${calendarId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
 
       if (response.status === 401) {
         toast.error(t("password.errorIncorrect"));

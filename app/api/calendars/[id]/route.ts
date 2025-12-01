@@ -105,8 +105,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get("password");
+
+    // Read password from request body
+    let password: string | null = null;
+    const contentType = request.headers.get("content-type");
+
+    if (contentType?.includes("application/json")) {
+      try {
+        const body = await request.json();
+        password = body.password || null;
+      } catch (e) {
+        // If body parsing fails, continue with null password
+      }
+    }
 
     // Fetch calendar to check password
     const [calendar] = await db

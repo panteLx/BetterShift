@@ -166,12 +166,13 @@ function HomeContent() {
 
     try {
       if (pendingAction.type === "delete" && pendingAction.shiftId) {
-        const response = await fetch(
-          `/api/shifts/${pendingAction.shiftId}?password=${encodeURIComponent(
-            password
-          )}`,
-          { method: "DELETE" }
-        );
+        const response = await fetch(`/api/shifts/${pendingAction.shiftId}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ password }),
+        });
         if (response.ok) {
           setShifts(shifts.filter((s) => s.id !== pendingAction.shiftId));
           setStatsRefreshTrigger((prev) => prev + 1);
@@ -430,12 +431,13 @@ function HomeContent() {
         setStatsRefreshTrigger((prev) => prev + 1);
 
         try {
-          const url = password
-            ? `/api/shifts/${existingShift.id}?password=${encodeURIComponent(
-                password
-              )}`
-            : `/api/shifts/${existingShift.id}`;
-          const response = await fetch(url, { method: "DELETE" });
+          const response = await fetch(`/api/shifts/${existingShift.id}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ password }),
+          });
 
           if (!response.ok) {
             setShifts(shifts);

@@ -121,11 +121,13 @@ export function useShifts(calendarId: string | undefined) {
         ? localStorage.getItem(`calendar_password_${calendarId}`)
         : null;
 
-      const url = password
-        ? `/api/shifts/${id}?password=${encodeURIComponent(password)}`
-        : `/api/shifts/${id}`;
-
-      const response = await fetch(url, { method: "DELETE" });
+      const response = await fetch(`/api/shifts/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
 
       if (response.status === 401) {
         onPasswordRequired?.();

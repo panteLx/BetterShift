@@ -200,18 +200,20 @@ export function AppHeader({
               )}
             </div>
 
-            {/* Preset Selector - Aligned properly */}
-            <div className="px-0.5 sm:px-0">
-              <PresetSelector
-                presets={presets}
-                selectedPresetId={selectedPresetId}
-                onSelectPreset={onSelectPreset}
-                onPresetsChange={onPresetsChange}
-                onShiftsChange={onShiftsChange}
-                calendarId={selectedCalendar || ""}
-                onPasswordRequired={onPasswordRequired}
-              />
-            </div>
+            {/* Preset Selector */}
+            {selectedCalendar && (
+              <div className="px-0.5 sm:px-0">
+                <PresetSelector
+                  presets={presets}
+                  selectedPresetId={selectedPresetId}
+                  onSelectPreset={onSelectPreset}
+                  onPresetsChange={onPresetsChange}
+                  onShiftsChange={onShiftsChange}
+                  calendarId={selectedCalendar}
+                  onPasswordRequired={onPasswordRequired}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
