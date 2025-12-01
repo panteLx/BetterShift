@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "@/lib/password-utils";
+import { isDemoMode } from "@/lib/utils";
 
 // GET single calendar
 export async function GET(
@@ -45,6 +46,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (isDemoMode()) {
+      return NextResponse.json(
+        { error: "Calendar editing is disabled in demo mode" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { name, color, password, currentPassword } = body;
@@ -104,6 +112,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (isDemoMode()) {
+      return NextResponse.json(
+        { error: "Calendar deletion is disabled in demo mode" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
 
     // Read password from request body

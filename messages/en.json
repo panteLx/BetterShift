@@ -157,5 +157,13 @@
   },
   "version": {
     "label": "Version"
+  },
+  "demo": {
+    "mode": "Demo Mode",
+    "disabledAction": "This action is disabled in demo mode",
+    "disabledDelete": "Deletion disabled in demo mode",
+    "disabledEdit": "Editing disabled in demo mode",
+    "disabledPassword": "Password management disabled in demo mode",
+    "bannerMessage": "Calendar deletion, editing and password management are disabled"
   }
 }
