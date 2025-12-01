@@ -103,7 +103,10 @@ export function CalendarGrid({
           <motion.button
             key={idx}
             onClick={() => onDayClick(day)}
-            onContextMenu={(e) => onDayRightClick(e, day)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onDayRightClick(e, day);
+            }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchEnd}
