@@ -26,10 +26,16 @@ export function useNotes(calendarId: string | undefined) {
     }
   };
 
-  const createNote = async (noteText: string, date: Date) => {
-    if (!calendarId) return;
+  const createNote = async (
+    noteText: string,
+    date: Date,
+    onPasswordRequired?: () => void
+  ) => {
+    if (!calendarId) return false;
 
     try {
+      const password = localStorage.getItem(`calendar_password_${calendarId}`);
+
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,8 +43,14 @@ export function useNotes(calendarId: string | undefined) {
           calendarId: calendarId,
           date: formatDateToLocal(date),
           note: noteText,
+          password,
         }),
       });
+
+      if (response.status === 401) {
+        onPasswordRequired?.();
+        return false;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -47,25 +59,40 @@ export function useNotes(calendarId: string | undefined) {
           errorText
         );
         toast.error(t("note.createError"));
-        return;
+        return false;
       }
 
       const newNote = await response.json();
       setNotes((prev) => [...prev, newNote]);
       toast.success(t("note.created"));
+      return true;
     } catch (error) {
       console.error("Failed to create note:", error);
       toast.error(t("note.createError"));
+      return false;
     }
   };
 
-  const updateNote = async (noteId: string, noteText: string) => {
+  const updateNote = async (
+    noteId: string,
+    noteText: string,
+    onPasswordRequired?: () => void
+  ) => {
     try {
+      const password = calendarId
+        ? localStorage.getItem(`calendar_password_${calendarId}`)
+        : null;
+
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: noteText }),
+        body: JSON.stringify({ note: noteText, password }),
       });
+
+      if (response.status === 401) {
+        onPasswordRequired?.();
+        return false;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -74,23 +101,41 @@ export function useNotes(calendarId: string | undefined) {
           errorText
         );
         toast.error(t("note.updateError"));
-        return;
+        return false;
       }
 
       const updatedNote = await response.json();
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
       toast.success(t("note.updated"));
+      return true;
     } catch (error) {
       console.error("Failed to update note:", error);
       toast.error(t("note.updateError"));
+      return false;
     }
   };
 
-  const deleteNote = async (noteId: string) => {
+  const deleteNote = async (
+    noteId: string,
+    onPasswordRequired?: () => void
+  ) => {
     try {
-      const response = await fetch(`/api/notes/${noteId}`, {
+      const password = calendarId
+        ? localStorage.getItem(`calendar_password_${calendarId}`)
+        : null;
+
+      const url = password
+        ? `/api/notes/${noteId}?password=${encodeURIComponent(password)}`
+        : `/api/notes/${noteId}`;
+
+      const response = await fetch(url, {
         method: "DELETE",
       });
+
+      if (response.status === 401) {
+        onPasswordRequired?.();
+        return false;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -99,14 +144,16 @@ export function useNotes(calendarId: string | undefined) {
           errorText
         );
         toast.error(t("note.deleteError"));
-        return;
+        return false;
       }
 
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
       toast.success(t("note.deleted"));
+      return true;
     } catch (error) {
       console.error("Failed to delete note:", error);
       toast.error(t("note.deleteError"));
+      return false;
     }
   };
 

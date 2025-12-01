@@ -106,6 +106,7 @@ function HomeContent() {
     shiftId?: string;
     formData?: ShiftFormData;
     presetAction?: () => Promise<void>;
+    noteAction?: () => Promise<void>;
   } | null>(null);
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
   const [isTogglingShift, setIsTogglingShift] = useState(false);
@@ -196,6 +197,9 @@ function HomeContent() {
         }
       } else if (pendingAction.presetAction) {
         await pendingAction.presetAction();
+      } else if (pendingAction.noteAction) {
+        await pendingAction.noteAction();
+        setShowNoteDialog(false);
       }
     } catch (error) {
       console.error("Failed to execute pending action:", error);
@@ -209,17 +213,71 @@ function HomeContent() {
     setShowPasswordDialog(true);
   };
 
-  const handleNoteSubmit = (noteText: string) => {
+  const handleNoteSubmit = async (noteText: string) => {
+    const handlePasswordRequired = () => {
+      setPendingAction({
+        type: "edit",
+        noteAction: async () => {
+          if (selectedNote) {
+            await updateNoteHook(
+              selectedNote.id,
+              noteText,
+              handlePasswordRequired
+            );
+          } else if (selectedDate) {
+            await createNoteHook(
+              noteText,
+              selectedDate,
+              handlePasswordRequired
+            );
+          }
+        },
+      });
+      setShowPasswordDialog(true);
+    };
+
     if (selectedNote) {
-      updateNoteHook(selectedNote.id, noteText);
+      const success = await updateNoteHook(
+        selectedNote.id,
+        noteText,
+        handlePasswordRequired
+      );
+      if (success) {
+        setShowNoteDialog(false);
+      }
     } else if (selectedDate) {
-      createNoteHook(noteText, selectedDate);
+      const success = await createNoteHook(
+        noteText,
+        selectedDate,
+        handlePasswordRequired
+      );
+      if (success) {
+        setShowNoteDialog(false);
+      }
     }
   };
 
-  const handleNoteDelete = () => {
-    if (selectedNote) {
-      deleteNoteHook(selectedNote.id);
+  const handleNoteDelete = async () => {
+    if (!selectedNote) return;
+
+    const handlePasswordRequired = () => {
+      setPendingAction({
+        type: "delete",
+        noteAction: async () => {
+          if (selectedNote) {
+            await deleteNoteHook(selectedNote.id, handlePasswordRequired);
+          }
+        },
+      });
+      setShowPasswordDialog(true);
+    };
+
+    const success = await deleteNoteHook(
+      selectedNote.id,
+      handlePasswordRequired
+    );
+    if (success) {
+      setShowNoteDialog(false);
     }
   };
 

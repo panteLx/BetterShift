@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendarNotes } from "@/lib/db/schema";
+import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { verifyPassword } from "@/lib/password-utils";
 
 // GET single calendar note
 export async function GET(
@@ -41,10 +42,46 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { note } = body;
+    const { note, password } = body;
 
     if (!note) {
       return NextResponse.json({ error: "Note is required" }, { status: 400 });
+    }
+
+    // Fetch existing note to get calendar ID
+    const [existingNote] = await db
+      .select()
+      .from(calendarNotes)
+      .where(eq(calendarNotes.id, id));
+
+    if (!existingNote) {
+      return NextResponse.json(
+        { error: "Calendar note not found" },
+        { status: 404 }
+      );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, existingNote.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     const [updated] = await db
@@ -88,6 +125,44 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
+
+    // Fetch existing note to get calendar ID
+    const [existingNote] = await db
+      .select()
+      .from(calendarNotes)
+      .where(eq(calendarNotes.id, id));
+
+    if (!existingNote) {
+      return NextResponse.json(
+        { error: "Calendar note not found" },
+        { status: 404 }
+      );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, existingNote.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
 
     const result = await db
       .delete(calendarNotes)
