@@ -1,0 +1,105 @@
+import { useState, useEffect } from "react";
+import { CalendarWithCount } from "@/lib/types";
+import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+
+export function useCalendars(initialCalendarId?: string | null) {
+  const t = useTranslations();
+  const [calendars, setCalendars] = useState<CalendarWithCount[]>([]);
+  const [selectedCalendar, setSelectedCalendar] = useState<
+    string | undefined
+  >();
+  const [loading, setLoading] = useState(true);
+
+  const fetchCalendars = async () => {
+    try {
+      const response = await fetch("/api/calendars");
+      const data = await response.json();
+      setCalendars(data);
+
+      if (
+        initialCalendarId &&
+        data.some((cal: CalendarWithCount) => cal.id === initialCalendarId)
+      ) {
+        setSelectedCalendar(initialCalendarId);
+      } else if (data.length > 0 && !selectedCalendar) {
+        setSelectedCalendar(data[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to fetch calendars:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createCalendar = async (
+    name: string,
+    color: string,
+    password?: string
+  ) => {
+    try {
+      const response = await fetch("/api/calendars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color, password }),
+      });
+      const newCalendar = await response.json();
+      setCalendars([...calendars, newCalendar]);
+      setSelectedCalendar(newCalendar.id);
+      toast.success(t("calendar.created"));
+    } catch (error) {
+      console.error("Failed to create calendar:", error);
+      toast.error(t("calendar.createError"));
+    }
+  };
+
+  const deleteCalendar = async (calendarId: string, password?: string) => {
+    try {
+      const url = password
+        ? `/api/calendars/${calendarId}?password=${encodeURIComponent(
+            password
+          )}`
+        : `/api/calendars/${calendarId}`;
+
+      const response = await fetch(url, { method: "DELETE" });
+
+      if (response.status === 401) {
+        toast.error(t("password.errorIncorrect"));
+        return false;
+      }
+
+      if (response.ok) {
+        const remainingCalendars = calendars.filter((c) => c.id !== calendarId);
+        setCalendars(remainingCalendars);
+        localStorage.removeItem(`calendar_password_${calendarId}`);
+
+        if (selectedCalendar === calendarId) {
+          setSelectedCalendar(
+            remainingCalendars.length > 0 ? remainingCalendars[0].id : undefined
+          );
+        }
+
+        toast.success(t("calendar.deleted"));
+        return true;
+      }
+    } catch (error) {
+      console.error("Failed to delete calendar:", error);
+      toast.error(t("calendar.deleteError"));
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    fetchCalendars();
+  }, []);
+
+  return {
+    calendars,
+    selectedCalendar,
+    setSelectedCalendar,
+    loading,
+    createCalendar,
+    deleteCalendar,
+    refetchCalendars: fetchCalendars,
+  };
+}
