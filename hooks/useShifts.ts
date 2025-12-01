@@ -38,7 +38,7 @@ export function useShifts(calendarId: string | undefined) {
       updatedAt: new Date(),
     };
 
-    setShifts([...shifts, optimisticShift]);
+    setShifts((prev) => [...prev, optimisticShift]);
 
     try {
       const response = await fetch("/api/shifts", {
@@ -49,6 +49,18 @@ export function useShifts(calendarId: string | undefined) {
           calendarId: calendarId,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to create shift: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
+        toast.error(t("shift.createError"));
+        return;
+      }
+
       const newShift = await response.json();
       setShifts((shifts) =>
         shifts.map((s) => (s.id === tempId ? newShift : s))
@@ -82,8 +94,18 @@ export function useShifts(calendarId: string | undefined) {
         return false;
       }
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to update shift: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("shift.updateError"));
+        return false;
+      }
+
       const updatedShift = await response.json();
-      setShifts(shifts.map((s) => (s.id === id ? updatedShift : s)));
+      setShifts((prev) => prev.map((s) => (s.id === id ? updatedShift : s)));
       toast.success(t("shift.updated"));
       return true;
     } catch (error) {
@@ -110,7 +132,17 @@ export function useShifts(calendarId: string | undefined) {
         return false;
       }
 
-      setShifts(shifts.filter((s) => s.id !== id));
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to delete shift: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("shift.deleteError"));
+        return false;
+      }
+
+      setShifts((prev) => prev.filter((s) => s.id !== id));
       toast.success(t("shift.deleted"));
       return true;
     } catch (error) {

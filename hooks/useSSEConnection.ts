@@ -26,6 +26,31 @@ export function useSSEConnection({
   const lastSyncTimeRef = useRef<number>(Date.now());
   const disconnectTimeRef = useRef<number | null>(null);
 
+  // Refs to avoid stale closures in SSE handlers
+  const shiftUpdateRef = useRef(onShiftUpdate);
+  const presetUpdateRef = useRef(onPresetUpdate);
+  const noteUpdateRef = useRef(onNoteUpdate);
+  const statsRefreshRef = useRef(onStatsRefresh);
+  const setIsConnectedRef = useRef(setIsConnected);
+  const tRef = useRef(t);
+
+  // Update refs when callbacks or translations change
+  useEffect(() => {
+    shiftUpdateRef.current = onShiftUpdate;
+    presetUpdateRef.current = onPresetUpdate;
+    noteUpdateRef.current = onNoteUpdate;
+    statsRefreshRef.current = onStatsRefresh;
+    setIsConnectedRef.current = setIsConnected;
+    tRef.current = t;
+  }, [
+    onShiftUpdate,
+    onPresetUpdate,
+    onNoteUpdate,
+    onStatsRefresh,
+    setIsConnected,
+    t,
+  ]);
+
   // Handle page visibility changes
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -35,11 +60,11 @@ export function useSSEConnection({
 
         if (timeSinceLastSync > 30000 || disconnectTimeRef.current) {
           console.log("Tab became visible, resyncing data...");
-          toast.info(t("sync.refreshing"), { duration: Infinity });
-          onShiftUpdate();
-          onPresetUpdate();
-          onNoteUpdate();
-          onStatsRefresh();
+          toast.info(tRef.current("sync.refreshing"), { duration: Infinity });
+          shiftUpdateRef.current();
+          presetUpdateRef.current();
+          noteUpdateRef.current();
+          statsRefreshRef.current();
           lastSyncTimeRef.current = now;
           disconnectTimeRef.current = null;
           setTimeout(() => toast.dismiss(), 1000);
@@ -50,13 +75,13 @@ export function useSSEConnection({
     const handleOnline = () => {
       console.log("Network connection restored");
       toast.dismiss();
-      toast.success(t("sync.reconnected"));
-      setIsConnected(true);
+      toast.success(tRef.current("sync.reconnected"));
+      setIsConnectedRef.current(true);
       if (calendarId) {
-        onShiftUpdate();
-        onPresetUpdate();
-        onNoteUpdate();
-        onStatsRefresh();
+        shiftUpdateRef.current();
+        presetUpdateRef.current();
+        noteUpdateRef.current();
+        statsRefreshRef.current();
         lastSyncTimeRef.current = Date.now();
         disconnectTimeRef.current = null;
       }
@@ -64,8 +89,8 @@ export function useSSEConnection({
 
     const handleOffline = () => {
       console.log("Network connection lost");
-      toast.error(t("sync.offline"), { duration: Infinity });
-      setIsConnected(false);
+      toast.error(tRef.current("sync.offline"), { duration: Infinity });
+      setIsConnectedRef.current(false);
       disconnectTimeRef.current = Date.now();
     };
 
@@ -78,7 +103,7 @@ export function useSSEConnection({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [calendarId, t]);
+  }, [calendarId]);
 
   // Setup SSE connection
   useEffect(() => {
@@ -98,18 +123,18 @@ export function useSSEConnection({
     );
 
     eventSource.onopen = () => {
-      setIsConnected(true);
+      setIsConnectedRef.current(true);
       toast.dismiss();
 
       if (disconnectTimeRef.current) {
         const disconnectDuration = Date.now() - disconnectTimeRef.current;
         if (disconnectDuration > 10000) {
           console.log("Reconnected after long disconnect, resyncing...");
-          toast.info(t("sync.resyncing"), { duration: Infinity });
-          onShiftUpdate();
-          onPresetUpdate();
-          onNoteUpdate();
-          onStatsRefresh();
+          toast.info(tRef.current("sync.resyncing"), { duration: Infinity });
+          shiftUpdateRef.current();
+          presetUpdateRef.current();
+          noteUpdateRef.current();
+          statsRefreshRef.current();
         }
         disconnectTimeRef.current = null;
       }
@@ -126,12 +151,12 @@ export function useSSEConnection({
         }
 
         if (data.type === "shift") {
-          onShiftUpdate();
-          onStatsRefresh();
+          shiftUpdateRef.current();
+          statsRefreshRef.current();
         } else if (data.type === "preset") {
-          onPresetUpdate();
+          presetUpdateRef.current();
         } else if (data.type === "note") {
-          onNoteUpdate();
+          noteUpdateRef.current();
         }
 
         lastSyncTimeRef.current = Date.now();
@@ -142,13 +167,15 @@ export function useSSEConnection({
 
     eventSource.onerror = (error) => {
       console.error("SSE connection error:", error);
-      setIsConnected(false);
+      setIsConnectedRef.current(false);
       disconnectTimeRef.current = Date.now();
       eventSource.close();
 
       const errorTimeout = setTimeout(() => {
         if (!navigator.onLine) {
-          toast.error(t("sync.disconnected"), { duration: Infinity });
+          toast.error(tRef.current("sync.disconnected"), {
+            duration: Infinity,
+          });
         }
       }, 5000);
 
@@ -156,9 +183,9 @@ export function useSSEConnection({
         clearTimeout(errorTimeout);
         if (calendarId && navigator.onLine) {
           console.log("Attempting to reconnect and resync...");
-          onShiftUpdate();
-          onPresetUpdate();
-          onNoteUpdate();
+          shiftUpdateRef.current();
+          presetUpdateRef.current();
+          noteUpdateRef.current();
         }
       }, 3000);
     };

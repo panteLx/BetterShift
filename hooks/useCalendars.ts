@@ -43,8 +43,19 @@ export function useCalendars(initialCalendarId?: string | null) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, color, password }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to create calendar: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("calendar.createError"));
+        return;
+      }
+
       const newCalendar = await response.json();
-      setCalendars([...calendars, newCalendar]);
+      setCalendars((prev) => [...prev, newCalendar]);
       setSelectedCalendar(newCalendar.id);
       toast.success(t("calendar.created"));
     } catch (error) {
@@ -69,18 +80,31 @@ export function useCalendars(initialCalendarId?: string | null) {
       }
 
       if (response.ok) {
-        const remainingCalendars = calendars.filter((c) => c.id !== calendarId);
-        setCalendars(remainingCalendars);
-        localStorage.removeItem(`calendar_password_${calendarId}`);
+        setCalendars((prev) => {
+          const remainingCalendars = prev.filter((c) => c.id !== calendarId);
 
-        if (selectedCalendar === calendarId) {
-          setSelectedCalendar(
-            remainingCalendars.length > 0 ? remainingCalendars[0].id : undefined
-          );
-        }
+          if (selectedCalendar === calendarId) {
+            setSelectedCalendar(
+              remainingCalendars.length > 0
+                ? remainingCalendars[0].id
+                : undefined
+            );
+          }
+
+          return remainingCalendars;
+        });
+        localStorage.removeItem(`calendar_password_${calendarId}`);
 
         toast.success(t("calendar.deleted"));
         return true;
+      } else {
+        const errorText = await response.text();
+        console.error(
+          `Failed to delete calendar: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("calendar.deleteError"));
+        return false;
       }
     } catch (error) {
       console.error("Failed to delete calendar:", error);

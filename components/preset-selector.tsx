@@ -5,7 +5,10 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PresetList } from "@/components/preset-list";
-import { PresetEditDialog, PresetFormData } from "@/components/preset-edit-dialog";
+import {
+  PresetEditDialog,
+  PresetFormData,
+} from "@/components/preset-edit-dialog";
 import { PresetManageDialog } from "@/components/preset-manage-dialog";
 import { usePasswordProtection } from "@/hooks/usePasswordProtection";
 
@@ -60,7 +63,7 @@ export function PresetSelector({
       const password = getPassword();
 
       if (isCreatingNew) {
-        await fetch("/api/presets", {
+        const response = await fetch("/api/presets", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -69,13 +72,35 @@ export function PresetSelector({
             password,
           }),
         });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `Failed to create preset: ${response.status} ${response.statusText}`,
+            errorText
+          );
+          toast.error(t("preset.saveError"));
+          return;
+        }
+
         toast.success(t("preset.created"));
       } else if (editingPreset) {
-        await fetch(`/api/presets/${editingPreset.id}`, {
+        const response = await fetch(`/api/presets/${editingPreset.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...formData, password }),
         });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `Failed to update preset: ${response.status} ${response.statusText}`,
+            errorText
+          );
+          toast.error(t("preset.saveError"));
+          return;
+        }
+
         toast.success(t("preset.updated"));
 
         if (onShiftsChange) onShiftsChange();
@@ -101,7 +126,17 @@ export function PresetSelector({
           ? `/api/presets/${id}?password=${encodeURIComponent(password)}`
           : `/api/presets/${id}`;
 
-        await fetch(url, { method: "DELETE" });
+        const response = await fetch(url, { method: "DELETE" });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `Failed to delete preset: ${response.status} ${response.statusText}`,
+            errorText
+          );
+          toast.error(t("preset.deleteError"));
+          return;
+        }
 
         if (selectedPresetId === id) {
           onSelectPreset(undefined);

@@ -134,7 +134,15 @@ export function AppHeader({
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30 ring-2 ring-primary/20">
                   <CalendarIcon className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
+                {/* Connection Status Indicator */}
+                <div
+                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background transition-colors ${
+                    isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+                  }`}
+                  title={
+                    isConnected ? t("sync.reconnected") : t("sync.disconnected")
+                  }
+                ></div>
               </div>
 
               {/* Calendar Selection Card */}

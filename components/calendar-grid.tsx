@@ -4,6 +4,7 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 import { isToday } from "date-fns";
 import { useTranslations } from "next-intl";
+import { useRef, useEffect } from "react";
 
 interface CalendarGridProps {
   calendarDays: Date[];
@@ -31,6 +32,17 @@ export function CalendarGrid({
   onLongPress,
 }: CalendarGridProps) {
   const t = useTranslations();
+  const pressTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(pressTimerRef.current).forEach((timer) => {
+        if (timer) clearTimeout(timer);
+      });
+      pressTimerRef.current = {};
+    };
+  }, []);
 
   const getShiftsForDate = (date: Date) => {
     return shifts.filter(
@@ -72,12 +84,19 @@ export function CalendarGrid({
         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
         const isTodayDate = isToday(day);
 
-        let pressTimer: NodeJS.Timeout | null = null;
+        const dayKey = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+
         const handleTouchStart = (e: React.TouchEvent) => {
-          pressTimer = setTimeout(() => onLongPress(day), 500);
+          pressTimerRef.current[dayKey] = setTimeout(
+            () => onLongPress(day),
+            500
+          );
         };
         const handleTouchEnd = () => {
-          if (pressTimer) clearTimeout(pressTimer);
+          if (pressTimerRef.current[dayKey]) {
+            clearTimeout(pressTimerRef.current[dayKey]);
+            delete pressTimerRef.current[dayKey];
+          }
         };
 
         return (

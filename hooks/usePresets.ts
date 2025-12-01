@@ -9,10 +9,16 @@ export function usePresets(calendarId: string | undefined) {
 
     try {
       const response = await fetch(`/api/presets?calendarId=${calendarId}`);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch presets: ${response.status} ${response.statusText}`
+        );
+      }
       const data = await response.json();
       setPresets(data);
     } catch (error) {
       console.error("Failed to fetch presets:", error);
+      setPresets([]);
     }
   };
 

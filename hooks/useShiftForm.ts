@@ -3,6 +3,7 @@ import { ShiftFormData } from "@/components/shift-dialog";
 import { ShiftPreset } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
+import { usePresets } from "@/hooks/usePresets";
 
 interface UseShiftFormOptions {
   open: boolean;
@@ -32,28 +33,12 @@ export function useShiftForm({
     isAllDay: false,
   });
 
-  const [presets, setPresets] = useState<ShiftPreset[]>([]);
+  const { presets, refetchPresets } = usePresets(calendarId);
   const [saveAsPreset, setSaveAsPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
 
-  const fetchPresets = async () => {
-    if (!calendarId) {
-      setPresets([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/presets?calendarId=${calendarId}`);
-      const data = await response.json();
-      setPresets(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to fetch presets:", error);
-      setPresets([]);
-    }
-  };
-
   const saveAsPresetHandler = async (shiftData: ShiftFormData) => {
-    if (!presetName.trim() || !calendarId) return;
+    if (!presetName.trim() || !calendarId) return false;
 
     try {
       const response = await fetch("/api/presets", {
@@ -69,8 +54,18 @@ export function useShiftForm({
           isAllDay: shiftData.isAllDay,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to save preset: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        return false;
+      }
+
       await response.json();
-      await fetchPresets();
+      await refetchPresets();
       return true;
     } catch (error) {
       console.error("Failed to save preset:", error);
@@ -106,11 +101,6 @@ export function useShiftForm({
     setSaveAsPreset(false);
   };
 
-  // Fetch presets when calendarId changes
-  useEffect(() => {
-    fetchPresets();
-  }, [calendarId]);
-
   // Update form data when dialog opens or shift/date changes
   useEffect(() => {
     if (open) {
@@ -144,6 +134,6 @@ export function useShiftForm({
     applyPreset,
     saveAsPresetHandler,
     resetForm,
-    refetchPresets: fetchPresets,
+    refetchPresets,
   };
 }

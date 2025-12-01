@@ -13,10 +13,16 @@ export function useNotes(calendarId: string | undefined) {
 
     try {
       const response = await fetch(`/api/notes?calendarId=${calendarId}`);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch notes: ${response.status} ${response.statusText}`
+        );
+      }
       const data = await response.json();
       setNotes(data);
     } catch (error) {
       console.error("Failed to fetch notes:", error);
+      setNotes([]);
     }
   };
 
@@ -33,8 +39,19 @@ export function useNotes(calendarId: string | undefined) {
           note: noteText,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to create note: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("note.createError"));
+        return;
+      }
+
       const newNote = await response.json();
-      setNotes([...notes, newNote]);
+      setNotes((prev) => [...prev, newNote]);
       toast.success(t("note.created"));
     } catch (error) {
       console.error("Failed to create note:", error);
@@ -49,8 +66,19 @@ export function useNotes(calendarId: string | undefined) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note: noteText }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to update note: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("note.updateError"));
+        return;
+      }
+
       const updatedNote = await response.json();
-      setNotes(notes.map((n) => (n.id === noteId ? updatedNote : n)));
+      setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
       toast.success(t("note.updated"));
     } catch (error) {
       console.error("Failed to update note:", error);
@@ -60,8 +88,21 @@ export function useNotes(calendarId: string | undefined) {
 
   const deleteNote = async (noteId: string) => {
     try {
-      await fetch(`/api/notes/${noteId}`, { method: "DELETE" });
-      setNotes(notes.filter((n) => n.id !== noteId));
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Failed to delete note: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        toast.error(t("note.deleteError"));
+        return;
+      }
+
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
       toast.success(t("note.deleted"));
     } catch (error) {
       console.error("Failed to delete note:", error);
