@@ -20,7 +20,7 @@
 
 **Discord Server:** [Join our Discord for community discussions and support](https://discord.gg/Ma4SnagqwE)
 
-**Self-Hosting:** [Check out the Deployment Guide](#-deployment-guide)
+**Self-Hosting:** [Check out the Deployment Guide](#%EF%B8%8F-deployment-guide)
 
 **Support the Project:** [Buy Me A Coffee](https://www.buymeacoffee.com/pantel) or [Become a GitHub Sponsor](https://github.com/sponsors/pantelx)
 
