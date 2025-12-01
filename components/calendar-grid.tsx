@@ -177,9 +177,19 @@ export function CalendarGrid({
                     {shift.title}
                   </div>
                   <div className="text-[9px] sm:text-[10px] opacity-70 leading-tight">
-                    {shift.isAllDay
-                      ? t("shift.allDay")
-                      : shift.startTime.substring(0, 5)}
+                    {shift.isAllDay ? (
+                      t("shift.allDay")
+                    ) : (
+                      <>
+                        <span className="sm:hidden">
+                          {shift.startTime.substring(0, 5)}
+                        </span>
+                        <span className="hidden sm:inline">
+                          {shift.startTime.substring(0, 5)} -{" "}
+                          {shift.endTime.substring(0, 5)}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
