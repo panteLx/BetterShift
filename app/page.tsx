@@ -8,6 +8,8 @@ import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
+import { ICloudSyncManageDialog } from "@/components/icloud-sync-manage-dialog";
+import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ShiftStats } from "@/components/shift-stats";
 import { NoteDialog } from "@/components/note-dialog";
@@ -35,6 +37,7 @@ import {
 } from "date-fns";
 import { de, enUS } from "date-fns/locale";
 import { CalendarNote, ShiftPreset } from "@/lib/db/schema";
+import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { motion } from "motion/react";
@@ -97,6 +100,12 @@ function HomeContent() {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showDeleteCalendarDialog, setShowDeleteCalendarDialog] =
     useState(false);
+  const [showICloudSyncDialog, setShowICloudSyncDialog] = useState(false);
+  const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
+  const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
+  const [selectedDayShifts, setSelectedDayShifts] = useState<
+    ShiftWithCalendar[]
+  >([]);
   const [calendarToDelete, setCalendarToDelete] = useState<
     string | undefined
   >();
@@ -149,6 +158,56 @@ function HomeContent() {
   const initiateDeleteCalendar = (id: string) => {
     setCalendarToDelete(id);
     setShowDeleteCalendarDialog(true);
+  };
+
+  const handleICloudSyncClick = async () => {
+    if (!selectedCalendar) return;
+
+    const calendar = calendars.find((c) => c.id === selectedCalendar);
+    if (!calendar) return;
+
+    // Check if calendar is password protected
+    if (calendar.passwordHash) {
+      const storedPassword = localStorage.getItem(
+        `calendar_password_${selectedCalendar}`
+      );
+
+      if (storedPassword) {
+        // Verify stored password
+        try {
+          const response = await fetch(
+            `/api/calendars/${selectedCalendar}/verify-password`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ password: storedPassword }),
+            }
+          );
+
+          if (response.ok) {
+            setShowICloudSyncDialog(true);
+            return;
+          } else {
+            // Password invalid, remove from storage
+            localStorage.removeItem(`calendar_password_${selectedCalendar}`);
+          }
+        } catch (error) {
+          console.error("Password verification failed:", error);
+        }
+      }
+
+      // Show password dialog
+      setPendingAction({
+        type: "edit",
+        presetAction: async () => {
+          setShowICloudSyncDialog(true);
+        },
+      });
+      setShowPasswordDialog(true);
+    } else {
+      // No password protection
+      setShowICloudSyncDialog(true);
+    }
   };
 
   const handleDeleteCalendar = async (password?: string) => {
@@ -384,6 +443,19 @@ function HomeContent() {
     }
   };
 
+  const handleShowAllShifts = (date: Date, dayShifts: ShiftWithCalendar[]) => {
+    setSelectedDayDate(date);
+    setSelectedDayShifts(dayShifts);
+    setShowDayShiftsDialog(true);
+  };
+
+  const handleDeleteShiftFromDayDialog = async (shiftId: string) => {
+    setShowDayShiftsDialog(false);
+    await handleDeleteShift(shiftId);
+    // Refresh the shifts after deletion
+    refetchShifts();
+  };
+
   const handleAddShift = async (date: Date) => {
     if (!selectedPresetId) return;
 
@@ -596,6 +668,7 @@ function HomeContent() {
         onCreateCalendar={() => setShowCalendarDialog(true)}
         onManagePassword={() => setShowManagePasswordDialog(true)}
         onDeleteCalendar={initiateDeleteCalendar}
+        onICloudSync={handleICloudSyncClick}
         onPresetsChange={refetchPresets}
         onShiftsChange={refetchShifts}
         onPasswordRequired={handlePresetPasswordRequired}
@@ -650,6 +723,7 @@ function HomeContent() {
           onDayRightClick={handleDayRightClick}
           onNoteIconClick={handleNoteIconClick}
           onLongPress={handleLongPressDay}
+          onShowAllShifts={handleShowAllShifts}
         />
 
         {/* Note Hint */}
@@ -776,6 +850,28 @@ function HomeContent() {
           onConfirm={handleDeleteCalendar}
         />
       )}
+      {selectedCalendar && (
+        <ICloudSyncManageDialog
+          open={showICloudSyncDialog}
+          onOpenChange={setShowICloudSyncDialog}
+          calendarId={selectedCalendar}
+          onSyncComplete={() => {
+            refetchShifts();
+            refetchCalendars();
+            setStatsRefreshTrigger((prev) => prev + 1);
+          }}
+        />
+      )}
+
+      {/* Day Shifts Dialog */}
+      <DayShiftsDialog
+        open={showDayShiftsDialog}
+        onOpenChange={setShowDayShiftsDialog}
+        date={selectedDayDate}
+        shifts={selectedDayShifts}
+        locale={locale}
+        onDeleteShift={handleDeleteShiftFromDayDialog}
+      />
 
       {/* Footer */}
       <div className="border-t bg-background mt-auto">

@@ -36,6 +36,7 @@
 - **Shift Presets**: Create reusable shift templates with custom times, colors, and labels
 - **Drag & Drop**: Reorder calendars and presets with intuitive drag-and-drop functionality
 - **Calendar Notes**: Right-click any day to add custom notes (e.g., "Morning shift because afternoon hairdresser")
+- **ICloud Sync**: Import shifts from multiple iCloud calendars with individual sync management
 
 ### 🎨 Customization & Organization
 

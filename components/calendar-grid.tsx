@@ -18,6 +18,7 @@ interface CalendarGridProps {
   onDayRightClick: (e: React.MouseEvent, date: Date) => void;
   onNoteIconClick: (e: React.MouseEvent, date: Date) => void;
   onLongPress: (date: Date) => void;
+  onShowAllShifts?: (date: Date, shifts: ShiftWithCalendar[]) => void;
 }
 
 export function CalendarGrid({
@@ -31,6 +32,7 @@ export function CalendarGrid({
   onDayRightClick,
   onNoteIconClick,
   onLongPress,
+  onShowAllShifts,
 }: CalendarGridProps) {
   const t = useTranslations();
   const pressTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -201,7 +203,13 @@ export function CalendarGrid({
                 </div>
               ))}
               {dayShifts.length > 2 && (
-                <div className="text-[10px] sm:text-xs text-muted-foreground font-medium text-center pt-0.5">
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowAllShifts?.(day, dayShifts);
+                  }}
+                  className="text-[10px] sm:text-xs text-primary hover:text-primary/80 font-semibold text-center pt-0.5 hover:underline transition-colors cursor-pointer"
+                >
                   +{dayShifts.length - 2}
                 </div>
               )}

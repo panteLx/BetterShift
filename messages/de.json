@@ -157,5 +157,38 @@
   },
   "version": {
     "label": "Version"
+  },
+  "icloud": {
+    "manageTitle": "iCloud-Synchronisierungen verwalten",
+    "manageDescription": "Füge mehrere iCloud-Kalendersynchronisierungen für diesen Kalender hinzu und verwalte sie",
+    "addSync": "Synchronisierung hinzufügen",
+    "addNewSync": "Neue iCloud-Synchronisierung hinzufügen",
+    "editSync": "iCloud-Synchronisierung bearbeiten",
+    "nameLabel": "Synchronisierungsname",
+    "namePlaceholder": "z.B. Arbeitskalender, Privatkalender",
+    "urlLabel": "iCloud-Kalender URL",
+    "urlPlaceholder": "webcal://p108-caldav.icloud.com/published/2/...",
+    "urlHint": "Füge die webcal:// URL von iCloud ein (beginnt mit webcal://)",
+    "urlAlreadyExists": "Diese URL wurde bereits hinzugefügt",
+    "colorLabel": "Schichten-Farbe",
+    "colorHint": "Wähle die Farbe für alle importierten Schichten",
+    "lastSynced": "Zuletzt synchronisiert",
+    "syncError": "Kalender konnte nicht synchronisiert werden",
+    "createError": "Synchronisierung konnte nicht erstellt werden",
+    "createSuccess": "Synchronisierung erfolgreich erstellt",
+    "updateError": "Synchronisierung konnte nicht aktualisiert werden",
+    "updateSuccess": "Synchronisierung erfolgreich aktualisiert",
+    "deleteError": "Synchronisierung konnte nicht gelöscht werden",
+    "deleteSuccess": "Synchronisierung erfolgreich gelöscht",
+    "deleteConfirm": "Diese iCloud-Synchronisierung löschen? Alle synchronisierten Schichten werden entfernt.",
+    "syncSuccess": "Synchronisierung erfolgreich",
+    "statsCreated": "erstellt",
+    "statsUpdated": "aktualisiert",
+    "statsDeleted": "gelöscht",
+    "howToTitle": "So erhältst du deine iCloud-Kalender URL:",
+    "howToStep1": "Öffne iCloud.com und gehe zu Kalender",
+    "howToStep2": "Klicke auf das Teilen-Symbol neben deinem Kalender",
+    "howToStep3": "Aktiviere 'Öffentlicher Kalender'",
+    "howToStep4": "Kopiere die URL und füge sie hier ein"
   }
 }

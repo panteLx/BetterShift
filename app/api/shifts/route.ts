@@ -30,6 +30,7 @@ export async function GET(request: Request) {
         notes: shifts.notes,
         isAllDay: shifts.isAllDay,
         isSecondary: shifts.isSecondary,
+        icloudSyncId: shifts.icloudSyncId,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,
         calendar: {

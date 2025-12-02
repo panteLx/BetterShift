@@ -16,6 +16,25 @@ export const calendars = sqliteTable("calendars", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const icloudSyncs = sqliteTable("icloud_syncs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  calendarId: text("calendar_id")
+    .notNull()
+    .references(() => calendars.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  icloudUrl: text("icloud_url").notNull(),
+  color: text("color").notNull().default("#3b82f6"),
+  lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const shifts = sqliteTable("shifts", {
   id: text("id")
     .primaryKey()
@@ -34,6 +53,13 @@ export const shifts = sqliteTable("shifts", {
   notes: text("notes"),
   isAllDay: integer("is_all_day", { mode: "boolean" }).notNull().default(false),
   isSecondary: integer("is_secondary", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  icloudEventId: text("icloud_event_id"),
+  icloudSyncId: text("icloud_sync_id").references(() => icloudSyncs.id, {
+    onDelete: "cascade",
+  }),
+  syncedFromIcloud: integer("synced_from_icloud", { mode: "boolean" })
     .notNull()
     .default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
@@ -87,6 +113,8 @@ export const calendarNotes = sqliteTable("calendar_notes", {
 
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
+export type ICloudSync = typeof icloudSyncs.$inferSelect;
+export type NewICloudSync = typeof icloudSyncs.$inferInsert;
 export type Shift = typeof shifts.$inferSelect;
 export type NewShift = typeof shifts.$inferInsert;
 export type ShiftPreset = typeof shiftPresets.$inferSelect;

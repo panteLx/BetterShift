@@ -1,5 +1,5 @@
 // Re-export types from Drizzle schema
-export type { Calendar, Shift } from "./db/schema";
+export type { Calendar, Shift, ICloudSync } from "./db/schema";
 
 export interface CalendarWithCount {
   id: string;
@@ -26,6 +26,7 @@ export interface ShiftWithCalendar {
   color: string;
   notes?: string | null;
   isAllDay?: boolean;
+  icloudSyncId?: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;
 }

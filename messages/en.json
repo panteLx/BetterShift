@@ -157,5 +157,38 @@
   },
   "version": {
     "label": "Version"
+  },
+  "icloud": {
+    "manageTitle": "Manage iCloud Syncs",
+    "manageDescription": "Add and manage multiple iCloud calendar syncs for this calendar",
+    "addSync": "Add Sync",
+    "addNewSync": "Add New iCloud Sync",
+    "editSync": "Edit iCloud Sync",
+    "nameLabel": "Sync Name",
+    "namePlaceholder": "e.g., Work Calendar, Personal Calendar",
+    "urlLabel": "iCloud Calendar URL",
+    "urlPlaceholder": "webcal://p108-caldav.icloud.com/published/2/...",
+    "urlHint": "Paste the webcal:// URL from iCloud (starts with webcal://)",
+    "urlAlreadyExists": "This URL has already been added",
+    "colorLabel": "Shift Color",
+    "colorHint": "Choose the color for all imported shifts",
+    "lastSynced": "Last synced",
+    "syncError": "Failed to sync calendar",
+    "createError": "Failed to create sync",
+    "createSuccess": "Sync created successfully",
+    "updateError": "Failed to update sync",
+    "updateSuccess": "Sync updated successfully",
+    "deleteError": "Failed to delete sync",
+    "deleteSuccess": "Sync deleted successfully",
+    "deleteConfirm": "Delete this iCloud sync? All synced shifts will be removed.",
+    "syncSuccess": "Sync successful",
+    "statsCreated": "created",
+    "statsUpdated": "updated",
+    "statsDeleted": "deleted",
+    "howToTitle": "How to get your iCloud calendar URL:",
+    "howToStep1": "Open iCloud.com and go to Calendar",
+    "howToStep2": "Click the share icon next to your calendar",
+    "howToStep3": "Enable 'Public Calendar'",
+    "howToStep4": "Copy the URL and paste it here"
   }
 }

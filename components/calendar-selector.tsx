@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, KeyRound, Trash2 } from "lucide-react";
+import { Plus, KeyRound, Trash2, Cloud } from "lucide-react";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
@@ -19,6 +19,7 @@ interface CalendarSelectorProps {
   onCreateNew: () => void;
   onManagePassword?: () => void;
   onDelete?: (id: string) => void;
+  onICloudSync?: () => void;
 }
 
 export function CalendarSelector({
@@ -28,6 +29,7 @@ export function CalendarSelector({
   onCreateNew,
   onManagePassword,
   onDelete,
+  onICloudSync,
 }: CalendarSelectorProps) {
   const t = useTranslations();
 
@@ -60,6 +62,17 @@ export function CalendarSelector({
           title={t("calendar.managePassword")}
         >
           <KeyRound className="h-4 w-4" />
+        </Button>
+      )}
+      {onICloudSync && selectedId && (
+        <Button
+          onClick={onICloudSync}
+          size="icon"
+          variant="outline"
+          className="h-9 w-9 sm:h-10 sm:w-10"
+          title={t("icloud.manageTitle")}
+        >
+          <Cloud className="h-4 w-4" />
         </Button>
       )}
       {onDelete && selectedId && (

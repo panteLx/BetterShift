@@ -26,6 +26,7 @@ interface AppHeaderProps {
   onCreateCalendar: () => void;
   onManagePassword: () => void;
   onDeleteCalendar: (id: string) => void;
+  onICloudSync: () => void;
   onPresetsChange: () => void;
   onShiftsChange: () => void;
   onPasswordRequired: (action: () => Promise<void>) => void;
@@ -45,6 +46,7 @@ export function AppHeader({
   onCreateCalendar,
   onManagePassword,
   onDeleteCalendar,
+  onICloudSync,
   onPresetsChange,
   onShiftsChange,
   onPasswordRequired,
@@ -122,6 +124,7 @@ export function AppHeader({
                     onCreateNew={onCreateCalendar}
                     onManagePassword={onManagePassword}
                     onDelete={onDeleteCalendar}
+                    onICloudSync={onICloudSync}
                   />
                 </div>
               </motion.div>
@@ -252,6 +255,10 @@ export function AppHeader({
                 onManagePassword();
               }}
               onDelete={onDeleteCalendar}
+              onICloudSync={() => {
+                onMobileCalendarDialogChange(false);
+                onICloudSync();
+              }}
             />
           </div>
         </DialogContent>

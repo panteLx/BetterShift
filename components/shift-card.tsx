@@ -49,14 +49,16 @@ export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
               </p>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 sm:h-9 sm:w-9 transition-all text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 flex-shrink-0 rounded-full"
-            onClick={() => onDelete(shift.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {!shift.icloudSyncId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 sm:h-9 sm:w-9 transition-all text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 flex-shrink-0 rounded-full"
+              onClick={() => onDelete(shift.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         <div
           className="absolute inset-0 opacity-[0.05] pointer-events-none"
