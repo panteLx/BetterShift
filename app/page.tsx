@@ -484,8 +484,10 @@ function HomeContent() {
           isAllDay: preset.isAllDay || false,
         };
 
-        await createShiftHook(shiftData);
-        setStatsRefreshTrigger((prev) => prev + 1);
+        const newShift = await createShiftHook(shiftData);
+        if (newShift) {
+          setStatsRefreshTrigger((prev) => prev + 1);
+        }
       }
     } finally {
       // Remove date from toggling set
