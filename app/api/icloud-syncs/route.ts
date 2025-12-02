@@ -2,33 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { icloudSyncs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-
-/**
- * Validates iCloud calendar URL to prevent SSRF vulnerabilities
- * @param url - The URL to validate
- * @returns true if valid, false otherwise
- */
-function isValidICloudUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url);
-
-    // Check if protocol is webcal or https
-    if (!["webcal:", "https:"].includes(parsedUrl.protocol)) {
-      return false;
-    }
-
-    // Check if hostname is from iCloud domain
-    const hostname = parsedUrl.hostname.toLowerCase();
-    if (!hostname.endsWith(".icloud.com") && hostname !== "icloud.com") {
-      return false;
-    }
-
-    return true;
-  } catch {
-    // Invalid URL format
-    return false;
-  }
-}
+import { isValidICloudUrl } from "@/lib/icloud-utils";
 
 // GET all iCloud syncs for a calendar
 export async function GET(request: Request) {

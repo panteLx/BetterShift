@@ -14,23 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PRESET_COLORS } from "@/lib/constants";
 
 interface CalendarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (name: string, color: string, password?: string) => void;
 }
-
-const PRESET_COLORS = [
-  "#3b82f6", // blue
-  "#ef4444", // red
-  "#10b981", // green
-  "#f59e0b", // amber
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#06b6d4", // cyan
-  "#f97316", // orange
-];
 
 export function CalendarDialog({
   open,
@@ -39,7 +29,7 @@ export function CalendarDialog({
 }: CalendarDialogProps) {
   const t = useTranslations();
   const [name, setName] = useState("");
-  const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0].value);
   const [password, setPassword] = useState("");
   const [usePassword, setUsePassword] = useState(false);
 
@@ -52,7 +42,7 @@ export function CalendarDialog({
         usePassword && password ? password : undefined
       );
       setName("");
-      setSelectedColor(PRESET_COLORS[0]);
+      setSelectedColor(PRESET_COLORS[0].value);
       setPassword("");
       setUsePassword(false);
       onOpenChange(false);
@@ -96,30 +86,30 @@ export function CalendarDialog({
               {t("calendar.color")}
             </Label>
             <div className="grid grid-cols-4 gap-3 p-4 bg-muted/30 rounded-xl border border-border/30">
-              {PRESET_COLORS.map((color) => (
+              {PRESET_COLORS.map((colorObj) => (
                 <button
-                  key={color}
+                  key={colorObj.value}
                   type="button"
-                  onClick={() => setSelectedColor(color)}
+                  onClick={() => setSelectedColor(colorObj.value)}
                   className={`
                     relative w-full aspect-square rounded-xl transition-all duration-200
                     hover:scale-110 active:scale-95
                     ${
-                      selectedColor === color
+                      selectedColor === colorObj.value
                         ? "ring-4 ring-primary/30 shadow-lg scale-105"
                         : "ring-2 ring-border/20 hover:ring-border/40"
                     }
                   `}
                   style={{
-                    backgroundColor: color,
+                    backgroundColor: colorObj.value,
                     boxShadow:
-                      selectedColor === color
-                        ? `0 8px 24px ${color}40`
-                        : `0 2px 8px ${color}20`,
+                      selectedColor === colorObj.value
+                        ? `0 8px 24px ${colorObj.value}40`
+                        : `0 2px 8px ${colorObj.value}20`,
                   }}
-                  aria-label={color}
+                  aria-label={colorObj.name}
                 >
-                  {selectedColor === color && (
+                  {selectedColor === colorObj.value && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}

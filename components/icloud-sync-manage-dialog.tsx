@@ -16,17 +16,7 @@ import { useTranslations } from "next-intl";
 import { ICloudSync } from "@/lib/db/schema";
 import { Loader2, Trash2, RefreshCw, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
-
-const PRESET_COLORS = [
-  { name: "Blue", value: "#3b82f6" },
-  { name: "Red", value: "#ef4444" },
-  { name: "Green", value: "#10b981" },
-  { name: "Amber", value: "#f59e0b" },
-  { name: "Violet", value: "#8b5cf6" },
-  { name: "Pink", value: "#ec4899" },
-  { name: "Cyan", value: "#06b6d4" },
-  { name: "Orange", value: "#f97316" },
-];
+import { PRESET_COLORS } from "@/lib/constants";
 
 interface ICloudSyncManageDialogProps {
   open: boolean;
