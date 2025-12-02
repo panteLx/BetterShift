@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,15 +14,19 @@ import { Label } from "@/components/ui/label";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { useTranslations } from "next-intl";
 import { ICloudSync } from "@/lib/db/schema";
-import {
-  CloudUpload,
-  Loader2,
-  Trash2,
-  RefreshCw,
-  Plus,
-  Edit2,
-} from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
+
+const PRESET_COLORS = [
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Green", value: "#10b981" },
+  { name: "Amber", value: "#f59e0b" },
+  { name: "Violet", value: "#8b5cf6" },
+  { name: "Pink", value: "#ec4899" },
+  { name: "Cyan", value: "#06b6d4" },
+  { name: "Orange", value: "#f97316" },
+];
 
 interface ICloudSyncManageDialogProps {
   open: boolean;
@@ -50,14 +54,7 @@ export function ICloudSyncManageDialog({
   const [formUrl, setFormUrl] = useState("");
   const [formColor, setFormColor] = useState("#3b82f6");
 
-  // Load syncs when dialog opens
-  useEffect(() => {
-    if (open && calendarId) {
-      fetchSyncs();
-    }
-  }, [open, calendarId]);
-
-  const fetchSyncs = async () => {
+  const fetchSyncs = useCallback(async () => {
     if (!calendarId) return;
 
     setIsLoading(true);
@@ -74,7 +71,25 @@ export function ICloudSyncManageDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [calendarId]);
+
+  // Load syncs when dialog opens, reset state when it closes
+  useEffect(() => {
+    if (open && calendarId) {
+      fetchSyncs();
+    } else {
+      // Reset all internal state when dialog closes or calendarId becomes falsy
+      setSyncs([]);
+      setIsLoading(false);
+      setIsSyncing(null);
+      setIsDeleting(null);
+      setShowAddForm(false);
+      setEditingSync(null);
+      setFormName("");
+      setFormUrl("");
+      setFormColor("#3b82f6");
+    }
+  }, [open, calendarId, fetchSyncs]);
 
   const handleAddSync = async () => {
     if (!calendarId || !formName.trim() || !formUrl.trim()) return;
@@ -146,6 +161,7 @@ export function ICloudSyncManageDialog({
         setFormUrl("");
         setFormColor("#3b82f6");
         await fetchSyncs();
+        onSyncComplete?.(); // Trigger refresh of shifts if color was updated
         toast.success(t("icloud.updateSuccess"));
       } else {
         const data = await response.json();
@@ -362,6 +378,7 @@ export function ICloudSyncManageDialog({
                   color={formColor}
                   onChange={setFormColor}
                   label={t("icloud.colorLabel")}
+                  presetColors={PRESET_COLORS}
                 />
                 <p className="text-xs text-muted-foreground">
                   {t("icloud.colorHint")}

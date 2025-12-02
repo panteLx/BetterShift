@@ -2,6 +2,34 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { icloudSyncs, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { eventEmitter } from "@/lib/event-emitter";
+
+/**
+ * Validates iCloud calendar URL to prevent SSRF vulnerabilities
+ * @param url - The URL to validate
+ * @returns true if valid, false otherwise
+ */
+function isValidICloudUrl(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Check if protocol is webcal or https
+    if (!["webcal:", "https:"].includes(parsedUrl.protocol)) {
+      return false;
+    }
+
+    // Check if hostname is from iCloud domain
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (!hostname.endsWith(".icloud.com") && hostname !== "icloud.com") {
+      return false;
+    }
+
+    return true;
+  } catch {
+    // Invalid URL format
+    return false;
+  }
+}
 
 // GET single iCloud sync
 export async function GET(
@@ -44,6 +72,17 @@ export async function PATCH(
     const body = await request.json();
     const { name, icloudUrl, color } = body;
 
+    // Validate iCloud URL if provided
+    if (icloudUrl !== undefined && !isValidICloudUrl(icloudUrl)) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid iCloud URL. URL must use webcal:// or https:// protocol and be from icloud.com domain",
+        },
+        { status: 400 }
+      );
+    }
+
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
@@ -63,6 +102,25 @@ export async function PATCH(
         { error: "iCloud sync not found" },
         { status: 404 }
       );
+    }
+
+    // If color was updated, also update the color of all associated shifts
+    if (color !== undefined) {
+      await db
+        .update(shifts)
+        .set({
+          color: color,
+          updatedAt: new Date(),
+        })
+        .where(eq(shifts.icloudSyncId, id));
+
+      // Emit event to notify clients about shift updates
+      eventEmitter.emit("calendar-change", {
+        type: "shift",
+        action: "update",
+        calendarId: updated.calendarId,
+        data: { icloudSyncId: id, colorUpdated: true },
+      });
     }
 
     return NextResponse.json(updated);

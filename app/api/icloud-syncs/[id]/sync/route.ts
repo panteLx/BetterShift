@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { icloudSyncs, shifts } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
 
 export async function POST(
@@ -72,8 +72,9 @@ export async function POST(
     );
 
     const processedEventIds = new Set<string>();
-    const newShifts = [];
-    const updatedShifts = [];
+    const shiftsToInsert: (typeof shifts.$inferInsert)[] = [];
+    const shiftsToUpdate: Array<typeof shifts.$inferInsert & { id: string }> =
+      [];
 
     for (const vevent of vevents) {
       const event = new ICAL.Event(vevent);
@@ -97,6 +98,7 @@ export async function POST(
       let endTime = "23:59";
 
       if (!isAllDay) {
+        // Use local time as iCal.js already handles timezone conversion
         const startHours = startJsDate.getHours().toString().padStart(2, "0");
         const startMinutes = startJsDate
           .getMinutes()
@@ -109,7 +111,7 @@ export async function POST(
         endTime = `${endHours}:${endMinutes}`;
       }
 
-      // Normalize date to midnight for storage
+      // Normalize date to midnight for consistent storage
       const normalizedDate = new Date(
         startJsDate.getFullYear(),
         startJsDate.getMonth(),
@@ -138,51 +140,65 @@ export async function POST(
       );
 
       if (existingShift) {
-        // Update existing shift
-        await db
-          .update(shifts)
-          .set({
-            ...shiftData,
-            updatedAt: new Date(),
-          })
-          .where(eq(shifts.id, existingShift.id));
-        updatedShifts.push(eventId);
+        // Collect for batch update
+        shiftsToUpdate.push({
+          id: existingShift.id,
+          ...shiftData,
+          updatedAt: new Date(),
+        });
       } else {
-        // Create new shift
-        await db.insert(shifts).values({
+        // Collect for batch insert
+        shiftsToInsert.push({
           id: crypto.randomUUID(),
           ...shiftData,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
-        newShifts.push(eventId);
       }
     }
 
-    // Delete shifts that are no longer in the iCloud calendar
-    const shiftsToDelete = existingShifts.filter(
-      (s) => s.icloudEventId && !processedEventIds.has(s.icloudEventId)
-    );
+    // Calculate which shifts to delete before transaction
+    const shiftIdsToDelete = existingShifts
+      .filter((s) => s.icloudEventId && !processedEventIds.has(s.icloudEventId))
+      .map((s) => s.id);
 
-    for (const shift of shiftsToDelete) {
-      await db.delete(shifts).where(eq(shifts.id, shift.id));
-    }
+    // Perform batch operations in a transaction for atomicity and better performance
+    db.transaction((tx) => {
+      // Insert new shifts in one batch
+      if (shiftsToInsert.length > 0) {
+        tx.insert(shifts).values(shiftsToInsert).run();
+      }
 
-    // Update last sync time
-    await db
-      .update(icloudSyncs)
-      .set({
-        lastSyncedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(icloudSyncs.id, syncId));
+      // Update existing shifts (SQLite doesn't support batch updates directly,
+      // but doing them in a transaction improves performance)
+      if (shiftsToUpdate.length > 0) {
+        for (const shiftUpdate of shiftsToUpdate) {
+          const { id, ...updateData } = shiftUpdate;
+          tx.update(shifts).set(updateData).where(eq(shifts.id, id)).run();
+        }
+      }
+
+      // Delete shifts that are no longer in the iCloud calendar in one batch
+      if (shiftIdsToDelete.length > 0) {
+        tx.delete(shifts).where(inArray(shifts.id, shiftIdsToDelete)).run();
+      }
+
+      // Update last sync time
+      tx.update(icloudSyncs)
+        .set({
+          lastSyncedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(icloudSyncs.id, syncId))
+        .run();
+    });
 
     return NextResponse.json({
       success: true,
       stats: {
-        created: newShifts.length,
-        updated: updatedShifts.length,
-        deleted: shiftsToDelete.length,
+        created: shiftsToInsert.length,
+        updated: shiftsToUpdate.length,
+        deleted: shiftIdsToDelete.length,
         total: vevents.length,
       },
     });
