@@ -109,7 +109,7 @@ function HomeContent() {
     noteAction?: () => Promise<void>;
   } | null>(null);
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
-  const [isTogglingShift, setIsTogglingShift] = useState(false);
+  const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
   const [isConnected, setIsConnected] = useState(true);
   const [version, setVersion] = useState<string | null>(null);
 
@@ -302,7 +302,11 @@ function HomeContent() {
     setShowNoteDialog(true);
   };
 
-  const handleLongPress = (date: Date) => {
+  const handleDayClick = (date: Date) => {
+    handleAddShift(date);
+  };
+
+  const handleLongPressDay = (date: Date) => {
     setSelectedDate(date);
     const existingNote = notes.find(
       (note) => note.date && isSameDay(new Date(note.date), date)
@@ -381,12 +385,20 @@ function HomeContent() {
   };
 
   const handleAddShift = async (date: Date) => {
-    if (isTogglingShift || !selectedPresetId) return;
+    if (!selectedPresetId) return;
 
     const preset = presets.find((p) => p.id === selectedPresetId);
     if (!preset) return;
 
-    setIsTogglingShift(true);
+    // Capture date immediately to prevent wrong date assignment
+    const targetDate = new Date(date);
+    const dateKey = formatDateToLocal(targetDate);
+
+    // Check if this date is already being toggled
+    if (togglingDates.has(dateKey)) return;
+
+    // Add date to toggling set
+    setTogglingDates((prev) => new Set(prev).add(dateKey));
 
     try {
       const password = selectedCalendar
@@ -409,10 +421,14 @@ function HomeContent() {
           localStorage.removeItem(`calendar_password_${selectedCalendar}`);
           setPendingAction({
             type: "edit",
-            presetAction: () => handleAddShift(date),
+            presetAction: () => handleAddShift(targetDate),
           });
           setShowPasswordDialog(true);
-          setIsTogglingShift(false);
+          setTogglingDates((prev) => {
+            const next = new Set(prev);
+            next.delete(dateKey);
+            return next;
+          });
           return;
         }
       }
@@ -420,13 +436,15 @@ function HomeContent() {
       const existingShift = shifts.find(
         (shift) =>
           shift.date &&
-          isSameDay(new Date(shift.date), date) &&
+          isSameDay(new Date(shift.date), targetDate) &&
           shift.title === preset.title &&
           shift.startTime === preset.startTime &&
           shift.endTime === preset.endTime
       );
 
       if (existingShift) {
+        // Optimistic UI update - remove shift immediately
+        const previousShifts = [...shifts];
         setShifts(shifts.filter((s) => s.id !== existingShift.id));
         setStatsRefreshTrigger((prev) => prev + 1);
 
@@ -440,7 +458,8 @@ function HomeContent() {
           });
 
           if (!response.ok) {
-            setShifts(shifts);
+            // Revert on error
+            setShifts(previousShifts);
             setStatsRefreshTrigger((prev) => prev + 1);
             toast.error(t("shift.deleteError"));
           } else {
@@ -448,13 +467,15 @@ function HomeContent() {
           }
         } catch (error) {
           console.error("Failed to delete shift:", error);
-          setShifts(shifts);
+          // Revert on error
+          setShifts(previousShifts);
           setStatsRefreshTrigger((prev) => prev + 1);
           toast.error(t("shift.deleteError"));
         }
       } else {
+        // createShiftHook already handles optimistic UI updates
         const shiftData: ShiftFormData = {
-          date: formatDateToLocal(date),
+          date: dateKey,
           startTime: preset.startTime,
           endTime: preset.endTime,
           title: preset.title,
@@ -463,11 +484,17 @@ function HomeContent() {
           presetId: preset.id,
           isAllDay: preset.isAllDay || false,
         };
+
         await createShiftHook(shiftData);
         setStatsRefreshTrigger((prev) => prev + 1);
       }
     } finally {
-      setIsTogglingShift(false);
+      // Remove date from toggling set
+      setTogglingDates((prev) => {
+        const next = new Set(prev);
+        next.delete(dateKey);
+        return next;
+      });
     }
   };
 
@@ -617,11 +644,11 @@ function HomeContent() {
           shifts={shifts}
           notes={notes}
           selectedPresetId={selectedPresetId}
-          isTogglingShift={isTogglingShift}
-          onDayClick={handleAddShift}
+          togglingDates={togglingDates}
+          onDayClick={handleDayClick}
           onDayRightClick={handleDayRightClick}
           onNoteIconClick={handleNoteIconClick}
-          onLongPress={handleLongPress}
+          onLongPress={handleLongPressDay}
         />
 
         {/* Note Hint */}

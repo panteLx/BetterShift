@@ -12,7 +12,7 @@ interface CalendarGridProps {
   shifts: ShiftWithCalendar[];
   notes: CalendarNote[];
   selectedPresetId: string | undefined;
-  isTogglingShift: boolean;
+  togglingDates: Set<string>;
   onDayClick: (date: Date) => void;
   onDayRightClick: (e: React.MouseEvent, date: Date) => void;
   onNoteIconClick: (e: React.MouseEvent, date: Date) => void;
@@ -25,7 +25,7 @@ export function CalendarGrid({
   shifts,
   notes,
   selectedPresetId,
-  isTogglingShift,
+  togglingDates,
   onDayClick,
   onDayRightClick,
   onNoteIconClick,

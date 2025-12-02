@@ -21,7 +21,7 @@ export function useShifts(calendarId: string | undefined) {
   };
 
   const createShift = async (formData: ShiftFormData) => {
-    if (!calendarId) return;
+    if (!calendarId) return null;
 
     const tempId = `temp-${Date.now()}`;
     const optimisticShift: ShiftWithCalendar = {
@@ -58,7 +58,7 @@ export function useShifts(calendarId: string | undefined) {
         );
         setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
         toast.error(t("shift.createError"));
-        return;
+        return null;
       }
 
       const newShift = await response.json();
@@ -66,10 +66,12 @@ export function useShifts(calendarId: string | undefined) {
         shifts.map((s) => (s.id === tempId ? newShift : s))
       );
       toast.success(t("shift.created"));
+      return newShift;
     } catch (error) {
       console.error("Failed to create shift:", error);
       setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
       toast.error(t("shift.createError"));
+      return null;
     }
   };
 
