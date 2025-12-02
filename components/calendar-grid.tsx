@@ -5,6 +5,7 @@ import { CalendarNote } from "@/lib/db/schema";
 import { isToday } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useRef, useEffect } from "react";
+import { formatDateToLocal } from "@/lib/date-utils";
 
 interface CalendarGridProps {
   calendarDays: Date[];
@@ -84,7 +85,9 @@ export function CalendarGrid({
         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
         const isTodayDate = isToday(day);
 
-        const dayKey = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+        // Use formatDateToLocal to match the format used in handleAddShift
+        const dayKey = formatDateToLocal(day);
+        const isToggling = togglingDates.has(dayKey);
 
         const handleTouchStart = (e: React.TouchEvent) => {
           pressTimerRef.current[dayKey] = setTimeout(
@@ -110,7 +113,7 @@ export function CalendarGrid({
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchEnd}
-            disabled={false}
+            disabled={isToggling}
             whileTap={{ scale: 0.95 }}
             style={{
               WebkitUserSelect: "none",
@@ -133,6 +136,7 @@ export function CalendarGrid({
                   : "cursor-pointer"
               }
               ${!isCurrentMonth ? "opacity-40" : ""}
+              ${isToggling ? "opacity-50 cursor-wait pointer-events-none" : ""}
             `}
           >
             <div

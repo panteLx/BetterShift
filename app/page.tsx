@@ -473,7 +473,6 @@ function HomeContent() {
           toast.error(t("shift.deleteError"));
         }
       } else {
-        // createShiftHook already handles optimistic UI updates
         const shiftData: ShiftFormData = {
           date: dateKey,
           startTime: preset.startTime,
