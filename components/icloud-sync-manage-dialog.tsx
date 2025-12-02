@@ -17,6 +17,7 @@ import { ICloudSync } from "@/lib/db/schema";
 import { Loader2, Trash2, RefreshCw, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { PRESET_COLORS } from "@/lib/constants";
+import { isValidICloudUrl } from "@/lib/icloud-utils";
 
 interface ICloudSyncManageDialogProps {
   open: boolean;
@@ -83,6 +84,12 @@ export function ICloudSyncManageDialog({
 
   const handleAddSync = async () => {
     if (!calendarId || !formName.trim() || !formUrl.trim()) return;
+
+    // Validate iCloud URL format
+    if (!isValidICloudUrl(formUrl.trim())) {
+      toast.error(t("icloud.invalidUrlFormat"));
+      return;
+    }
 
     // Check if URL already exists
     const normalizedUrl = formUrl.trim().toLowerCase();

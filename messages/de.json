@@ -170,6 +170,7 @@
     "urlPlaceholder": "webcal://p108-caldav.icloud.com/published/2/...",
     "urlHint": "Füge die webcal:// URL von iCloud ein (beginnt mit webcal://)",
     "urlAlreadyExists": "Diese URL wurde bereits hinzugefügt",
+    "invalidUrlFormat": "Ungültiges iCloud URL-Format. URL muss mit webcal:// oder https:// beginnen und von icloud.com stammen",
     "colorLabel": "Schichten-Farbe",
     "colorHint": "Wähle die Farbe für alle importierten Schichten",
     "lastSynced": "Zuletzt synchronisiert",

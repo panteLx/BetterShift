@@ -170,6 +170,7 @@
     "urlPlaceholder": "webcal://p108-caldav.icloud.com/published/2/...",
     "urlHint": "Paste the webcal:// URL from iCloud (starts with webcal://)",
     "urlAlreadyExists": "This URL has already been added",
+    "invalidUrlFormat": "Invalid iCloud URL format. URL must start with webcal:// or https:// and be from icloud.com",
     "colorLabel": "Shift Color",
     "colorHint": "Choose the color for all imported shifts",
     "lastSynced": "Last synced",
