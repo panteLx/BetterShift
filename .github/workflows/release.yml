@@ -36,9 +36,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
             type=raw,value=latest
 
       - name: Build and push Docker image
@@ -52,13 +52,13 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Release v${{ steps.version.outputs.VERSION }}
           body: |
             ## What's Changed
 
-            See the [commit history](https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.VERSION }}...HEAD) for details.
+            See the [commit history](https://github.com/${{ github.repository }}/commits/v${{ steps.version.outputs.VERSION }}) for details.
 
             ## Docker Image
 

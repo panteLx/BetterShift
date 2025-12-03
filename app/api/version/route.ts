@@ -11,6 +11,9 @@ let cachedVersion: {
   timestamp: number;
 } | null = null;
 
+// Cache package version at module level (initialized on first call)
+let cachedPackageVersion = "";
+
 const CACHE_SECONDS = parseInt(
   process.env.VERSION_CACHE_DURATION || "3600",
   10
@@ -27,12 +30,18 @@ const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 function getPackageVersion(): string {
+  if (cachedPackageVersion) {
+    return cachedPackageVersion;
+  }
+
   try {
     const packageJsonPath = join(process.cwd(), "package.json");
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-    return packageJson.version || "unknown";
+    cachedPackageVersion = packageJson.version || "unknown";
+    return cachedPackageVersion;
   } catch (error) {
     console.error("Failed to read package.json version:", error);
+    cachedPackageVersion = "unknown";
     return "unknown";
   }
 }

@@ -170,8 +170,8 @@ BetterShift uses [Semantic Versioning](https://semver.org/) (semver) for version
 
 - `ghcr.io/pantelx/bettershift:latest` - Always points to the latest stable release
 - `ghcr.io/pantelx/bettershift:v1.0.1` - Specific version (immutable)
-- `ghcr.io/pantelx/bettershift:1.0` - Latest patch of minor version
-- `ghcr.io/pantelx/bettershift:1` - Latest minor of major version
+- `ghcr.io/pantelx/bettershift:v1.0` - Latest patch of minor version
+- `ghcr.io/pantelx/bettershift:v1` - Latest minor of major version
 
 **Development Builds**:
 
