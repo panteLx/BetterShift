@@ -407,7 +407,7 @@ export function ICloudSyncManageDialog({
                     <div className="flex items-center gap-2 mt-1">
                       <Checkbox
                         id={`hide-stats-${sync.id}`}
-                        checked={sync.hideFromStats || false}
+                        checked={sync.isHidden || sync.hideFromStats || false}
                         onCheckedChange={() =>
                           handleToggleVisibility(
                             sync.id,
@@ -415,11 +415,15 @@ export function ICloudSyncManageDialog({
                             sync.hideFromStats || false
                           )
                         }
-                        disabled={!!isSyncing || !!isDeleting}
+                        disabled={!!isSyncing || !!isDeleting || sync.isHidden}
                       />
                       <Label
                         htmlFor={`hide-stats-${sync.id}`}
-                        className="text-sm font-normal cursor-pointer"
+                        className={`text-sm font-normal ${
+                          sync.isHidden
+                            ? "cursor-not-allowed opacity-50"
+                            : "cursor-pointer"
+                        }`}
                       >
                         {t("icloud.hideFromStats")}
                       </Label>
