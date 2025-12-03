@@ -103,6 +103,38 @@ $ npm run dev
 
 Deploy using Docker for easy containerized hosting:
 
+**Option 1: Using pre-built images from GitHub Container Registry**
+
+Available image tags:
+
+- `:latest` - Latest stable release (recommended for production)
+- `:v1.0.0` - Specific version (use for pinned deployments)
+- `:dev` - Latest development build from main branch (bleeding edge, may be unstable)
+- `:pr-123` - Pull request builds (for testing PRs before merge)
+
+```bash
+# Pull the latest stable release (recommended)
+$ docker pull ghcr.io/pantelx/bettershift:latest
+
+# Or pull the latest development build
+$ docker pull ghcr.io/pantelx/bettershift:dev
+
+# Or pull a specific version
+$ docker pull ghcr.io/pantelx/bettershift:v1.0.0
+
+# Run the container
+$ docker run -d \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  --name bettershift \
+  ghcr.io/pantelx/bettershift:latest
+
+# Apply database migrations
+$ docker exec bettershift npm run db:migrate
+```
+
+**Option 2: Build locally with docker-compose**
+
 ```bash
 # Clone the repository
 $ git clone https://github.com/pantelx/bettershift.git && cd bettershift
@@ -125,6 +157,29 @@ $ npm run build
 # Start production server
 $ npm start
 ```
+
+---
+
+## 📦 Versioning & Releases
+
+BetterShift uses [Semantic Versioning](https://semver.org/) (semver) for version management. Releases are automatically created on GitHub when version tags are pushed.
+
+### Available Docker Tags
+
+**Stable Releases**:
+
+- `ghcr.io/pantelx/bettershift:latest` - Always points to the latest stable release
+- `ghcr.io/pantelx/bettershift:v1.0.1` - Specific version (immutable)
+- `ghcr.io/pantelx/bettershift:1.0` - Latest patch of minor version
+- `ghcr.io/pantelx/bettershift:1` - Latest minor of major version
+
+**Development Builds**:
+
+- `ghcr.io/pantelx/bettershift:dev` - Latest development build from main branch (unstable)
+
+**Pull Request Builds**:
+
+- `ghcr.io/pantelx/bettershift:pr-123` - Build for pull request #123 (testing only)
 
 ---
 
