@@ -38,6 +38,8 @@ next-env.d.ts
 # database (local data should not be in image)
 sqlite.db
 sqlite.db-journal
+sqlite.db-shm
+sqlite.db-wal
 data/
 
 # git
