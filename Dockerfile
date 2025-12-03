@@ -5,6 +5,9 @@ FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
+# Build argument for version (set during docker build)
+ARG VERSION=dev
+
 # Copy package files and install ALL dependencies
 # These layers are cached unless package files change
 COPY package.json package-lock.json ./
@@ -26,6 +29,9 @@ FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Get VERSION from builder stage
+ARG VERSION=dev
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -41,6 +47,9 @@ COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/package-lock.json ./package-lock.json
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --only=production
+
+# Write VERSION to file for runtime access
+RUN echo "$VERSION" > /app/.version
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data

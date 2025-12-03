@@ -49,6 +49,9 @@ sqlite.db-shm
 sqlite.db-wal
 data/
 
+# Docker build version file
+.version
+
 # docker (local override configuration)
 docker-compose.override.yml
 

@@ -12,6 +12,7 @@ import { ICloudSyncManageDialog } from "@/components/icloud-sync-manage-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { AppFooter } from "@/components/app-footer";
 import { ShiftStats } from "@/components/shift-stats";
 import { NoteDialog } from "@/components/note-dialog";
 import { AppHeader } from "@/components/app-header";
@@ -152,7 +153,11 @@ function HomeContent() {
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
   const [isConnected, setIsConnected] = useState(true);
-  const [version, setVersion] = useState<string | null>(null);
+  const [versionInfo, setVersionInfo] = useState<{
+    version: string;
+    githubUrl: string;
+    commitHash?: string;
+  } | null>(null);
 
   // SSE Connection for real-time updates
   useSSEConnection({
@@ -170,7 +175,11 @@ function HomeContent() {
     try {
       const response = await fetch("/api/version");
       const data = await response.json();
-      setVersion(data.version);
+      setVersionInfo({
+        version: data.version,
+        githubUrl: data.githubUrl,
+        commitHash: data.commitHash,
+      });
     } catch (error) {
       console.error("Failed to fetch version:", error);
     }
@@ -927,16 +936,7 @@ function HomeContent() {
       />
 
       {/* Footer */}
-      <div className="border-t bg-background mt-auto">
-        <div className="container max-w-4xl mx-auto p-3 sm:p-4 flex justify-between items-center">
-          <LanguageSwitcher />
-          {version && (
-            <div className="text-xs text-muted-foreground font-mono">
-              {t("version.label")}: {version}
-            </div>
-          )}
-        </div>
-      </div>
+      <AppFooter versionInfo={versionInfo} />
     </div>
   );
 }

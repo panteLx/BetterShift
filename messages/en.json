@@ -158,6 +158,11 @@
   "version": {
     "label": "Version"
   },
+  "footer": {
+    "version": "Version",
+    "github": "GitHub",
+    "support": "Support"
+  },
   "icloud": {
     "manageTitle": "Manage iCloud Syncs",
     "manageDescription": "Add and manage multiple iCloud calendar syncs for this calendar",

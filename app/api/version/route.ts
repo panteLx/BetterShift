@@ -1,33 +1,43 @@
 import { NextResponse } from "next/server";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
-// Cache version info for 1 hour
+// Cache version info
 let cachedVersion: {
   version: string;
-  branch: string;
   commitHash: string;
-  buildDate: string;
   timestamp: number;
 } | null = null;
 
-// Cache package version at module level (initialized on first call)
+let cachedDockerVersion: string | null = null;
 let cachedPackageVersion = "";
 
-const CACHE_SECONDS = parseInt(
-  process.env.VERSION_CACHE_DURATION || "3600",
-  10
-); // Default: 1 hour in seconds
-const CACHE_DURATION = CACHE_SECONDS * 1000; // Convert to milliseconds for in-memory TTL
-const GITHUB_API_REVALIDATE = parseInt(
-  process.env.GITHUB_API_REVALIDATE || "3600",
-  10
-); // Default: 1 hour in seconds
+const CACHE_DURATION = 3600 * 1000; // 1 hour
+const CACHE_SECONDS = 3600;
 
 const GITHUB_REPO_OWNER = process.env.GITHUB_REPO_OWNER || "panteLx";
 const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME || "BetterShift";
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+function getDockerVersion(): string | null {
+  if (cachedDockerVersion !== null) {
+    return cachedDockerVersion;
+  }
+
+  try {
+    const versionFilePath = join(process.cwd(), ".version");
+    if (existsSync(versionFilePath)) {
+      cachedDockerVersion = readFileSync(versionFilePath, "utf-8").trim();
+      return cachedDockerVersion;
+    }
+  } catch (error) {
+    console.log("No .version file found, not running in Docker");
+  }
+
+  cachedDockerVersion = null;
+  return null;
+}
 
 function getPackageVersion(): string {
   if (cachedPackageVersion) {
@@ -46,11 +56,8 @@ function getPackageVersion(): string {
   }
 }
 
-async function fetchGitHubVersion() {
+async function fetchCommitHash(): Promise<string> {
   try {
-    const packageVersion = getPackageVersion();
-
-    // Get latest commit from configured branch
     const response = await fetch(
       `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/commits/${GITHUB_BRANCH}`,
       {
@@ -58,7 +65,7 @@ async function fetchGitHubVersion() {
           Accept: "application/vnd.github.v3+json",
           ...(GITHUB_TOKEN && { Authorization: `Bearer ${GITHUB_TOKEN}` }),
         },
-        next: { revalidate: GITHUB_API_REVALIDATE },
+        next: { revalidate: CACHE_SECONDS },
       }
     );
 
@@ -67,31 +74,43 @@ async function fetchGitHubVersion() {
     }
 
     const data = await response.json();
-    const commitHash = data.sha.substring(0, 7);
-    const branch = GITHUB_BRANCH;
-
-    return {
-      version: packageVersion,
-      branch,
-      commitHash,
-      buildDate: data.commit.committer.date,
-      timestamp: Date.now(),
-    };
+    return data.sha.substring(0, 7);
   } catch (error) {
-    console.error("Failed to fetch GitHub version:", error);
-    return null;
+    console.error("Failed to fetch commit hash:", error);
+    return "unknown";
   }
 }
 
+function buildGitHubUrl(version: string, commitHash: string): string {
+  const baseUrl = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}`;
+
+  // Check if version matches semver pattern (e.g., 1.1.1 or v1.1.1)
+  const semverPattern = /^v?\d+\.\d+\.\d+$/;
+  if (semverPattern.test(version)) {
+    const tag = version.startsWith("v") ? version : `v${version}`;
+    return `${baseUrl}/releases/tag/${tag}`;
+  }
+
+  // Otherwise link to commit
+  if (commitHash && commitHash !== "unknown") {
+    return `${baseUrl}/commit/${commitHash}`;
+  }
+
+  return baseUrl;
+}
+
 export async function GET() {
-  // Check if we have a valid cached version
+  // Check cache
   if (cachedVersion && Date.now() - cachedVersion.timestamp < CACHE_DURATION) {
+    const githubUrl = buildGitHubUrl(
+      cachedVersion.version,
+      cachedVersion.commitHash
+    );
     return NextResponse.json(
       {
         version: cachedVersion.version,
-        branch: cachedVersion.branch,
         commitHash: cachedVersion.commitHash,
-        buildDate: cachedVersion.buildDate,
+        githubUrl,
       },
       {
         headers: {
@@ -101,38 +120,28 @@ export async function GET() {
     );
   }
 
-  // Fetch new version from GitHub
-  const versionInfo = await fetchGitHubVersion();
+  // Try to get version from Docker build arg first
+  const dockerVersion = getDockerVersion();
+  const version = dockerVersion || getPackageVersion();
+  const commitHash = await fetchCommitHash();
 
-  if (versionInfo) {
-    cachedVersion = versionInfo;
-    return NextResponse.json(
-      {
-        version: versionInfo.version,
-        branch: versionInfo.branch,
-        commitHash: versionInfo.commitHash,
-        buildDate: versionInfo.buildDate,
-      },
-      {
-        headers: {
-          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
-        },
-      }
-    );
-  }
+  cachedVersion = {
+    version,
+    commitHash,
+    timestamp: Date.now(),
+  };
 
-  // Fallback to dev-local if GitHub API fails
-  const packageVersion = getPackageVersion();
+  const githubUrl = buildGitHubUrl(version, commitHash);
+
   return NextResponse.json(
     {
-      version: packageVersion,
-      branch: "unknown",
-      commitHash: "unknown",
-      buildDate: new Date().toISOString(),
+      version,
+      commitHash,
+      githubUrl,
     },
     {
       headers: {
-        "Cache-Control": "public, max-age=60", // Shorter cache on error
+        "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
       },
     }
   );
