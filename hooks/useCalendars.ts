@@ -41,7 +41,11 @@ export function useCalendars(initialCalendarId?: string | null) {
       const response = await fetch("/api/calendars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color, password }),
+        body: JSON.stringify({
+          name,
+          color,
+          password,
+        }),
       });
 
       if (!response.ok) {

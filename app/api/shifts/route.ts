@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendars, shifts } from "@/lib/db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { calendars, shifts, icloudSyncs } from "@/lib/db/schema";
+import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
 // GET shifts for a calendar (with optional date filter)
@@ -30,6 +30,7 @@ export async function GET(request: Request) {
         notes: shifts.notes,
         isAllDay: shifts.isAllDay,
         isSecondary: shifts.isSecondary,
+        syncedFromIcloud: shifts.syncedFromIcloud,
         icloudSyncId: shifts.icloudSyncId,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,
@@ -40,7 +41,8 @@ export async function GET(request: Request) {
         },
       })
       .from(shifts)
-      .leftJoin(calendars, eq(shifts.calendarId, calendars.id));
+      .leftJoin(calendars, eq(shifts.calendarId, calendars.id))
+      .leftJoin(icloudSyncs, eq(shifts.icloudSyncId, icloudSyncs.id));
 
     if (date) {
       const targetDate = new Date(date);
@@ -51,13 +53,21 @@ export async function GET(request: Request) {
         and(
           eq(shifts.calendarId, calendarId),
           gte(shifts.date, startOfDay),
-          lte(shifts.date, endOfDay)
+          lte(shifts.date, endOfDay),
+          // Exclude shifts from hidden iCloud syncs (or shifts that are not synced)
+          or(isNull(shifts.icloudSyncId), eq(icloudSyncs.isHidden, false))
         )
       );
       return NextResponse.json(result);
     }
 
-    const result = await query.where(eq(shifts.calendarId, calendarId));
+    const result = await query.where(
+      and(
+        eq(shifts.calendarId, calendarId),
+        // Exclude shifts from hidden iCloud syncs (or shifts that are not synced)
+        or(isNull(shifts.icloudSyncId), eq(icloudSyncs.isHidden, false))
+      )
+    );
     return NextResponse.json(result);
   } catch (error) {
     console.error("Failed to fetch shifts:", error);

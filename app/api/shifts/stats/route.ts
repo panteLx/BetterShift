@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shifts } from "@/lib/db/schema";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { shifts, icloudSyncs } from "@/lib/db/schema";
+import { eq, and, gte, lte, sql, or, isNull } from "drizzle-orm";
 import {
   startOfWeek,
   endOfWeek,
@@ -48,18 +48,27 @@ export async function GET(request: Request) {
         break;
     }
 
-    // Fetch shifts for the period
+    // Fetch shifts for the period, excluding shifts from iCloud syncs that are hidden or hidden from stats
     const result = await db
       .select({
         title: shifts.title,
         count: sql<number>`count(*)`.as("count"),
       })
       .from(shifts)
+      .leftJoin(icloudSyncs, eq(shifts.icloudSyncId, icloudSyncs.id))
       .where(
         and(
           eq(shifts.calendarId, calendarId),
           gte(shifts.date, startDate),
-          lte(shifts.date, endDate)
+          lte(shifts.date, endDate),
+          // Exclude shifts from iCloud syncs that are hidden or hidden from stats
+          or(
+            isNull(shifts.icloudSyncId),
+            and(
+              eq(icloudSyncs.isHidden, false),
+              eq(icloudSyncs.hideFromStats, false)
+            )
+          )
         )
       )
       .groupBy(shifts.title)

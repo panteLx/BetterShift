@@ -44,7 +44,8 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, icloudUrl, color } = body;
+    const { name, icloudUrl, color, displayMode, isHidden, hideFromStats } =
+      body;
 
     // Validate iCloud URL if provided
     if (icloudUrl !== undefined && !isValidICloudUrl(icloudUrl)) {
@@ -64,6 +65,9 @@ export async function PATCH(
     if (name !== undefined) updateData.name = name;
     if (icloudUrl !== undefined) updateData.icloudUrl = icloudUrl;
     if (color !== undefined) updateData.color = color;
+    if (displayMode !== undefined) updateData.displayMode = displayMode;
+    if (isHidden !== undefined) updateData.isHidden = isHidden;
+    if (hideFromStats !== undefined) updateData.hideFromStats = hideFromStats;
 
     const [updated] = await db
       .update(icloudSyncs)
@@ -94,6 +98,16 @@ export async function PATCH(
         action: "update",
         calendarId: updated.calendarId,
         data: { icloudSyncId: id, colorUpdated: true },
+      });
+    }
+
+    // Emit event to notify clients about visibility changes
+    if (isHidden !== undefined || hideFromStats !== undefined) {
+      eventEmitter.emit("calendar-change", {
+        type: "shift",
+        action: "update",
+        calendarId: updated.calendarId,
+        data: { icloudSyncId: id, visibilityUpdated: true },
       });
     }
 

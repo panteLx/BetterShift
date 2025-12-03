@@ -10,6 +10,7 @@ import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
 import { ICloudSyncManageDialog } from "@/components/icloud-sync-manage-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
+import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ShiftStats } from "@/components/shift-stats";
 import { NoteDialog } from "@/components/note-dialog";
@@ -36,7 +37,7 @@ import {
   endOfWeek,
 } from "date-fns";
 import { de, enUS } from "date-fns/locale";
-import { CalendarNote, ShiftPreset } from "@/lib/db/schema";
+import { CalendarNote, ShiftPreset, ICloudSync } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { toast } from "sonner";
@@ -84,6 +85,33 @@ function HomeContent() {
     refetchNotes,
   } = useNotes(selectedCalendar);
 
+  // iCloud Syncs state
+  const [icloudSyncs, setIcloudSyncs] = useState<ICloudSync[]>([]);
+
+  // Fetch iCloud syncs for the calendar
+  useEffect(() => {
+    if (!selectedCalendar) {
+      setIcloudSyncs([]);
+      return;
+    }
+
+    const fetchICloudSyncs = async () => {
+      try {
+        const response = await fetch(
+          `/api/icloud-syncs?calendarId=${selectedCalendar}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setIcloudSyncs(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch iCloud syncs:", error);
+      }
+    };
+
+    fetchICloudSyncs();
+  }, [selectedCalendar]);
+
   // Local state
   const [selectedPresetId, setSelectedPresetId] = useState<
     string | undefined
@@ -102,8 +130,12 @@ function HomeContent() {
     useState(false);
   const [showICloudSyncDialog, setShowICloudSyncDialog] = useState(false);
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
+  const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [selectedDayShifts, setSelectedDayShifts] = useState<
+    ShiftWithCalendar[]
+  >([]);
+  const [selectedSyncedShifts, setSelectedSyncedShifts] = useState<
     ShiftWithCalendar[]
   >([]);
   const [calendarToDelete, setCalendarToDelete] = useState<
@@ -449,6 +481,15 @@ function HomeContent() {
     setShowDayShiftsDialog(true);
   };
 
+  const handleShowSyncedShifts = (
+    date: Date,
+    syncedShifts: ShiftWithCalendar[]
+  ) => {
+    setSelectedDayDate(date);
+    setSelectedSyncedShifts(syncedShifts);
+    setShowSyncedShiftsDialog(true);
+  };
+
   const handleDeleteShiftFromDayDialog = async (shiftId: string) => {
     setShowDayShiftsDialog(false);
     await handleDeleteShift(shiftId);
@@ -719,11 +760,13 @@ function HomeContent() {
           notes={notes}
           selectedPresetId={selectedPresetId}
           togglingDates={togglingDates}
+          icloudSyncs={icloudSyncs}
           onDayClick={handleDayClick}
           onDayRightClick={handleDayRightClick}
           onNoteIconClick={handleNoteIconClick}
           onLongPress={handleLongPressDay}
           onShowAllShifts={handleShowAllShifts}
+          onShowSyncedShifts={handleShowSyncedShifts}
         />
 
         {/* Note Hint */}
@@ -859,6 +902,21 @@ function HomeContent() {
             refetchShifts();
             refetchCalendars();
             setStatsRefreshTrigger((prev) => prev + 1);
+            // Refetch iCloud syncs to get updated displayMode
+            const fetchICloudSyncs = async () => {
+              try {
+                const response = await fetch(
+                  `/api/icloud-syncs?calendarId=${selectedCalendar}`
+                );
+                if (response.ok) {
+                  const data = await response.json();
+                  setIcloudSyncs(data);
+                }
+              } catch (error) {
+                console.error("Failed to fetch iCloud syncs:", error);
+              }
+            };
+            fetchICloudSyncs();
           }}
         />
       )}
@@ -871,6 +929,14 @@ function HomeContent() {
         shifts={selectedDayShifts}
         locale={locale}
         onDeleteShift={handleDeleteShiftFromDayDialog}
+      />
+
+      {/* Synced Shifts Dialog */}
+      <SyncedShiftsDialog
+        open={showSyncedShiftsDialog}
+        onOpenChange={setShowSyncedShiftsDialog}
+        date={selectedDayDate}
+        shifts={selectedSyncedShifts}
       />
 
       {/* Footer */}

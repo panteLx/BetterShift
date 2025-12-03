@@ -11,6 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { useTranslations } from "next-intl";
 import { ICloudSync } from "@/lib/db/schema";
@@ -44,6 +52,7 @@ export function ICloudSyncManageDialog({
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
   const [formColor, setFormColor] = useState("#3b82f6");
+  const [formDisplayMode, setFormDisplayMode] = useState("normal");
 
   const fetchSyncs = useCallback(async () => {
     if (!calendarId) return;
@@ -79,6 +88,7 @@ export function ICloudSyncManageDialog({
       setFormName("");
       setFormUrl("");
       setFormColor("#3b82f6");
+      setFormDisplayMode("normal");
     }
   }, [open, calendarId, fetchSyncs]);
 
@@ -112,6 +122,7 @@ export function ICloudSyncManageDialog({
           name: formName.trim(),
           icloudUrl: formUrl.trim(),
           color: formColor,
+          displayMode: formDisplayMode,
         }),
       });
 
@@ -120,8 +131,10 @@ export function ICloudSyncManageDialog({
         setFormName("");
         setFormUrl("");
         setFormColor("#3b82f6");
+        setFormDisplayMode("normal");
         setShowAddForm(false);
         await fetchSyncs();
+        onSyncComplete?.(); // Trigger refresh to update parent state
         toast.success(t("icloud.createSuccess"));
         // Auto-sync the newly created sync
         await handleSync(newSync.id);
@@ -149,6 +162,7 @@ export function ICloudSyncManageDialog({
           name: formName.trim(),
           icloudUrl: formUrl.trim() || undefined,
           color: formColor,
+          displayMode: formDisplayMode,
         }),
       });
 
@@ -157,8 +171,9 @@ export function ICloudSyncManageDialog({
         setFormName("");
         setFormUrl("");
         setFormColor("#3b82f6");
+        setFormDisplayMode("normal");
         await fetchSyncs();
-        onSyncComplete?.(); // Trigger refresh of shifts if color was updated
+        onSyncComplete?.(); // Trigger refresh of shifts and iCloudSyncs
         toast.success(t("icloud.updateSuccess"));
       } else {
         const data = await response.json();
@@ -237,6 +252,7 @@ export function ICloudSyncManageDialog({
     setFormName(sync.name);
     setFormUrl(sync.icloudUrl);
     setFormColor(sync.color);
+    setFormDisplayMode(sync.displayMode || "normal");
     setShowAddForm(false);
   };
 
@@ -245,6 +261,35 @@ export function ICloudSyncManageDialog({
     setFormName("");
     setFormUrl("");
     setFormColor("#3b82f6");
+    setFormDisplayMode("normal");
+  };
+
+  const handleToggleVisibility = async (
+    syncId: string,
+    field: "isHidden" | "hideFromStats",
+    currentValue: boolean
+  ) => {
+    try {
+      const response = await fetch(`/api/icloud-syncs/${syncId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          [field]: !currentValue,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchSyncs();
+        onSyncComplete?.(); // Trigger refresh
+        toast.success(t("icloud.updateSuccess"));
+      } else {
+        const data = await response.json();
+        toast.error(data.error || t("icloud.updateError"));
+      }
+    } catch (error) {
+      console.error("Failed to update visibility:", error);
+      toast.error(t("icloud.updateError"));
+    }
   };
 
   const startAdd = () => {
@@ -253,6 +298,7 @@ export function ICloudSyncManageDialog({
     setFormName("");
     setFormUrl("");
     setFormColor("#3b82f6");
+    setFormDisplayMode("normal");
   };
 
   return (
@@ -274,60 +320,113 @@ export function ICloudSyncManageDialog({
               {syncs.map((sync) => (
                 <div
                   key={sync.id}
-                  className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
+                  className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
                   style={{ borderLeftColor: sync.color, borderLeftWidth: 4 }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold flex items-center gap-2">
-                      <div
-                        className="w-1 h-4 rounded-full"
-                        style={{ backgroundColor: sync.color }}
-                      />
-                      <span className="truncate">{sync.name}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold flex items-center gap-2">
+                        <div
+                          className="w-1 h-4 rounded-full"
+                          style={{ backgroundColor: sync.color }}
+                        />
+                        <span className="truncate">{sync.name}</span>
+                      </div>
+                      {sync.lastSyncedAt && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t("icloud.lastSynced")}:{" "}
+                          {new Date(sync.lastSyncedAt).toLocaleString()}
+                        </p>
+                      )}
                     </div>
-                    {sync.lastSyncedAt && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t("icloud.lastSynced")}:{" "}
-                        {new Date(sync.lastSyncedAt).toLocaleString()}
-                      </p>
-                    )}
+                    <div className="flex gap-1 shrink-0">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => startEdit(sync)}
+                        disabled={!!isSyncing || !!isDeleting}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => handleSync(sync.id)}
+                        disabled={!!isSyncing || !!isDeleting}
+                      >
+                        {isSyncing === sync.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(sync.id)}
+                        disabled={!!isSyncing || !!isDeleting}
+                      >
+                        {isDeleting === sync.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => startEdit(sync)}
-                      disabled={!!isSyncing || !!isDeleting}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => handleSync(sync.id)}
-                      disabled={!!isSyncing || !!isDeleting}
-                    >
-                      {isSyncing === sync.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(sync.id)}
-                      disabled={!!isSyncing || !!isDeleting}
-                    >
-                      {isDeleting === sync.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+
+                  {/* Visibility Toggles */}
+                  <div className="flex flex-col gap-2 pl-3 border-t border-border/30 pt-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`hide-${sync.id}`}
+                        checked={sync.isHidden || false}
+                        onCheckedChange={() =>
+                          handleToggleVisibility(
+                            sync.id,
+                            "isHidden",
+                            sync.isHidden || false
+                          )
+                        }
+                        disabled={!!isSyncing || !!isDeleting}
+                      />
+                      <Label
+                        htmlFor={`hide-${sync.id}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {t("icloud.hideCalendar")}
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground pl-6">
+                      {t("icloud.hideCalendarHint")}
+                    </p>
+
+                    <div className="flex items-center gap-2 mt-1">
+                      <Checkbox
+                        id={`hide-stats-${sync.id}`}
+                        checked={sync.hideFromStats || false}
+                        onCheckedChange={() =>
+                          handleToggleVisibility(
+                            sync.id,
+                            "hideFromStats",
+                            sync.hideFromStats || false
+                          )
+                        }
+                        disabled={!!isSyncing || !!isDeleting}
+                      />
+                      <Label
+                        htmlFor={`hide-stats-${sync.id}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {t("icloud.hideFromStats")}
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground pl-6">
+                      {t("icloud.hideFromStatsHint")}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -382,6 +481,34 @@ export function ICloudSyncManageDialog({
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="sync-display-mode">
+                  {t("icloud.displayMode")}
+                </Label>
+                <Select
+                  value={formDisplayMode}
+                  onValueChange={setFormDisplayMode}
+                >
+                  <SelectTrigger
+                    id="sync-display-mode"
+                    className="bg-background/50"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">
+                      {t("icloud.displayModeNormal")}
+                    </SelectItem>
+                    <SelectItem value="minimal">
+                      {t("icloud.displayModeMinimal")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t("icloud.displayModeHint")}
+                </p>
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -393,6 +520,7 @@ export function ICloudSyncManageDialog({
                       setFormName("");
                       setFormUrl("");
                       setFormColor("#3b82f6");
+                      setFormDisplayMode("normal");
                     }
                   }}
                   disabled={isLoading}

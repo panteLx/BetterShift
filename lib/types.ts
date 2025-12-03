@@ -26,6 +26,7 @@ export interface ShiftWithCalendar {
   color: string;
   notes?: string | null;
   isAllDay?: boolean;
+  syncedFromIcloud?: boolean;
   icloudSyncId?: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;

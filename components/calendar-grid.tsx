@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { StickyNote } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
-import { CalendarNote } from "@/lib/db/schema";
+import { CalendarNote, ICloudSync } from "@/lib/db/schema";
 import { isToday } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useRef, useEffect } from "react";
@@ -14,11 +14,13 @@ interface CalendarGridProps {
   notes: CalendarNote[];
   selectedPresetId: string | undefined;
   togglingDates: Set<string>;
+  icloudSyncs: ICloudSync[];
   onDayClick: (date: Date) => void;
   onDayRightClick: (e: React.MouseEvent, date: Date) => void;
   onNoteIconClick: (e: React.MouseEvent, date: Date) => void;
   onLongPress: (date: Date) => void;
   onShowAllShifts?: (date: Date, shifts: ShiftWithCalendar[]) => void;
+  onShowSyncedShifts?: (date: Date, shifts: ShiftWithCalendar[]) => void;
 }
 
 export function CalendarGrid({
@@ -28,11 +30,13 @@ export function CalendarGrid({
   notes,
   selectedPresetId,
   togglingDates,
+  icloudSyncs,
   onDayClick,
   onDayRightClick,
   onNoteIconClick,
   onLongPress,
   onShowAllShifts,
+  onShowSyncedShifts,
 }: CalendarGridProps) {
   const t = useTranslations();
   const pressTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -166,53 +170,133 @@ export function CalendarGrid({
               )}
             </div>
             <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">
-              {dayShifts.slice(0, 2).map((shift) => (
-                <div
-                  key={shift.id}
-                  className="text-[10px] sm:text-xs px-0.5 py-0.5 sm:px-1.5 sm:py-1 rounded"
-                  style={{
-                    backgroundColor: shift.color
-                      ? `${shift.color}20`
-                      : "#3b82f620",
-                    borderLeft: `2px solid ${shift.color || "#3b82f6"}`,
-                  }}
-                  title={`${shift.title} ${
-                    shift.isAllDay
-                      ? `(${t("shift.allDay")})`
-                      : `(${shift.startTime} - ${shift.endTime})`
-                  }`}
-                >
-                  <div className="font-semibold line-clamp-2 leading-[1.1] sm:leading-tight">
-                    {shift.title}
-                  </div>
-                  <div className="text-[9px] sm:text-[10px] opacity-70 leading-tight">
-                    {shift.isAllDay ? (
-                      t("shift.allDay")
-                    ) : (
-                      <>
-                        <span className="sm:hidden">
-                          {shift.startTime.substring(0, 5)}
-                        </span>
-                        <span className="hidden sm:inline">
-                          {shift.startTime.substring(0, 5)} -{" "}
-                          {shift.endTime.substring(0, 5)}
-                        </span>
-                      </>
+              {(() => {
+                // Separate shifts by sync displayMode
+                const regularShifts = dayShifts.filter(
+                  (s) => !s.syncedFromIcloud
+                );
+                const syncedShiftsByMode: {
+                  [key: string]: ShiftWithCalendar[];
+                } = {};
+
+                dayShifts.forEach((shift) => {
+                  if (shift.syncedFromIcloud && shift.icloudSyncId) {
+                    const sync = icloudSyncs.find(
+                      (s) => s.id === shift.icloudSyncId
+                    );
+                    const displayMode = sync?.displayMode || "normal";
+
+                    if (displayMode === "minimal") {
+                      if (!syncedShiftsByMode[shift.icloudSyncId]) {
+                        syncedShiftsByMode[shift.icloudSyncId] = [];
+                      }
+                      syncedShiftsByMode[shift.icloudSyncId].push(shift);
+                    }
+                  }
+                });
+
+                // Get shifts to display normally (regular + synced with normal mode)
+                const normalDisplayShifts = dayShifts.filter((s) => {
+                  if (!s.syncedFromIcloud) return true;
+                  if (!s.icloudSyncId) return true;
+                  const sync = icloudSyncs.find(
+                    (sync) => sync.id === s.icloudSyncId
+                  );
+                  return sync?.displayMode === "normal";
+                });
+
+                return (
+                  <>
+                    {/* Display normal shifts (first 2) */}
+                    {normalDisplayShifts.slice(0, 2).map((shift) => (
+                      <div
+                        key={shift.id}
+                        className="text-[10px] sm:text-xs px-0.5 py-0.5 sm:px-1.5 sm:py-1 rounded"
+                        style={{
+                          backgroundColor: shift.color
+                            ? `${shift.color}20`
+                            : "#3b82f620",
+                          borderLeft: `2px solid ${shift.color || "#3b82f6"}`,
+                        }}
+                        title={`${shift.title} ${
+                          shift.isAllDay
+                            ? `(${t("shift.allDay")})`
+                            : `(${shift.startTime} - ${shift.endTime})`
+                        }`}
+                      >
+                        <div className="font-semibold line-clamp-2 leading-[1.1] sm:leading-tight">
+                          {shift.title}
+                        </div>
+                        <div className="text-[9px] sm:text-[10px] opacity-70 leading-tight">
+                          {shift.isAllDay ? (
+                            t("shift.allDay")
+                          ) : (
+                            <>
+                              <span className="sm:hidden">
+                                {shift.startTime.substring(0, 5)}
+                              </span>
+                              <span className="hidden sm:inline">
+                                {shift.startTime.substring(0, 5)} -{" "}
+                                {shift.endTime.substring(0, 5)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Show "+X more" for normal display shifts if more than 2 */}
+                    {normalDisplayShifts.length > 2 && (
+                      <div
+                        onClick={(e) => {
+                          if (selectedPresetId) return;
+                          e.stopPropagation();
+                          onShowAllShifts?.(day, normalDisplayShifts);
+                        }}
+                        className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                          selectedPresetId
+                            ? "cursor-not-allowed opacity-50"
+                            : "hover:text-primary/80 hover:underline cursor-pointer"
+                        }`}
+                      >
+                        +{normalDisplayShifts.length - 2}
+                      </div>
                     )}
-                  </div>
-                </div>
-              ))}
-              {dayShifts.length > 2 && (
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onShowAllShifts?.(day, dayShifts);
-                  }}
-                  className="text-[10px] sm:text-xs text-primary hover:text-primary/80 font-semibold text-center pt-0.5 hover:underline transition-colors cursor-pointer"
-                >
-                  +{dayShifts.length - 2}
-                </div>
-              )}
+
+                    {/* Show minimal badges for each sync with minimal display mode */}
+                    {Object.entries(syncedShiftsByMode).map(
+                      ([syncId, syncShifts]) => {
+                        const sync = icloudSyncs.find((s) => s.id === syncId);
+                        if (!sync || syncShifts.length === 0) return null;
+
+                        return (
+                          <div
+                            key={syncId}
+                            onClick={(e) => {
+                              if (selectedPresetId) return;
+                              e.stopPropagation();
+                              onShowSyncedShifts?.(day, syncShifts);
+                            }}
+                            className={`text-[10px] sm:text-xs px-1 py-0.5 sm:px-1.5 sm:py-1 rounded bg-muted/50 border border-border/50 text-muted-foreground transition-colors text-center ${
+                              selectedPresetId
+                                ? "cursor-not-allowed opacity-50"
+                                : "hover:bg-muted hover:text-foreground cursor-pointer"
+                            }`}
+                            style={{
+                              borderLeftColor: sync.color,
+                              borderLeftWidth: "2px",
+                            }}
+                          >
+                            {t("icloud.syncedShiftsCount", {
+                              count: syncShifts.length,
+                            })}
+                          </div>
+                        );
+                      }
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </motion.button>
         );

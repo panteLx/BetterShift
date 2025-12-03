@@ -26,6 +26,11 @@ export const icloudSyncs = sqliteTable("icloud_syncs", {
   name: text("name").notNull(),
   icloudUrl: text("icloud_url").notNull(),
   color: text("color").notNull().default("#3b82f6"),
+  displayMode: text("display_mode").notNull().default("normal"),
+  isHidden: integer("is_hidden", { mode: "boolean" }).notNull().default(false),
+  hideFromStats: integer("hide_from_stats", { mode: "boolean" })
+    .notNull()
+    .default(false),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
