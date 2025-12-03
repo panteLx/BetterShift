@@ -23,12 +23,6 @@ export function AppFooter({ versionInfo }: AppFooterProps) {
       ? `dev (${versionInfo.commitHash})`
       : versionInfo?.version;
 
-  console.log("Footer Debug:", {
-    version: versionInfo?.version,
-    commitHash: versionInfo?.commitHash,
-    displayVersion,
-  });
-
   return (
     <footer className="border-t bg-background mt-auto">
       <div className="container max-w-4xl mx-auto p-3 sm:p-4">
