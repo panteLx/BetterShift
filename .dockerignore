@@ -24,7 +24,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files (excluded for security - use build args or runtime env)
 .env*
 !.env.example
 
@@ -35,7 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# database
+# database (local data should not be in image)
 sqlite.db
 sqlite.db-journal
 data/
@@ -43,11 +43,17 @@ data/
 # git
 .git
 .gitignore
+.github
 
 # IDE
 .vscode
 .idea
 
+# docker
+docker-compose.override.yml
+
 # misc
 README.md
 *.md
+test-changelog.sh
+LICENSE

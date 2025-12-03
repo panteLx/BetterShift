@@ -15,10 +15,76 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, showing all commits"
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          echo "Generating changelog from $PREVIOUS_TAG to $GITHUB_REF_NAME"
+
+          # Get all commits, skip the last one (version bump)
+          ALL_COMMITS=$(git log $PREVIOUS_TAG..$GITHUB_REF_NAME --pretty=format:"%s|%h" --no-merges | tail -n +2)
+
+          # Build changelog with grouping
+          CHANGELOG=""
+
+          # Features
+          FEATURES=$(echo "$ALL_COMMITS" | grep "^feat:" | sed 's/|/ /' | sed 's/^/- /')
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG+="### ✨ Features"$'\n\n'
+            CHANGELOG+="$FEATURES"$'\n\n'
+          fi
+
+          # Bug Fixes
+          FIXES=$(echo "$ALL_COMMITS" | grep "^fix:" | sed 's/|/ /' | sed 's/^/- /')
+          if [ -n "$FIXES" ]; then
+            CHANGELOG+="### 🐛 Bug Fixes"$'\n\n'
+            CHANGELOG+="$FIXES"$'\n\n'
+          fi
+
+          # Documentation
+          DOCS=$(echo "$ALL_COMMITS" | grep "^docs:" | sed 's/|/ /' | sed 's/^/- /')
+          if [ -n "$DOCS" ]; then
+            CHANGELOG+="### 📝 Documentation"$'\n\n'
+            CHANGELOG+="$DOCS"$'\n\n'
+          fi
+
+          # Chores
+          CHORES=$(echo "$ALL_COMMITS" | grep "^chore:" | sed 's/|/ /' | sed 's/^/- /')
+          if [ -n "$CHORES" ]; then
+            CHANGELOG+="### 🔧 Chores"$'\n\n'
+            CHANGELOG+="$CHORES"$'\n\n'
+          fi
+
+          # Other changes (not matching conventional commits)
+          OTHERS=$(echo "$ALL_COMMITS" | grep -v "^feat:" | grep -v "^fix:" | grep -v "^docs:" | grep -v "^chore:" | sed 's/|/ /' | sed 's/^/- /')
+          if [ -n "$OTHERS" ]; then
+            CHANGELOG+="### 🔀 Other Changes"$'\n\n'
+            CHANGELOG+="$OTHERS"$'\n\n'
+          fi
+
+          # Use heredoc for multiline output
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
+          # Set previous tag
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -54,22 +120,24 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release v${{ steps.version.outputs.VERSION }}
+          name: v${{ steps.version.outputs.VERSION }}
           body: |
-            ## What's Changed
+            ## 📦 What's Changed
 
-            See the [commit history](https://github.com/${{ github.repository }}/commits/v${{ steps.version.outputs.VERSION }}) for details.
+            ${{ steps.changelog.outputs.changelog }}
 
-            ## Docker Image
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.changelog.outputs.previous_tag }}...v${{ steps.version.outputs.VERSION }}
+
+            ## 🐳 Docker Image
 
             ```bash
             docker pull ghcr.io/${{ github.repository }}:v${{ steps.version.outputs.VERSION }}
             docker pull ghcr.io/${{ github.repository }}:latest
             ```
 
-            Available tags:
-            - `ghcr.io/${{ github.repository }}:v${{ steps.version.outputs.VERSION }}` (specific version)
-            - `ghcr.io/${{ github.repository }}:latest` (always latest release)
+            ### Available tags:
+            - `v${{ steps.version.outputs.VERSION }}` - Specific version
+            - `latest` - Latest stable release
           draft: false
           prerelease: false
         env:

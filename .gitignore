@@ -29,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+lerna-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -41,13 +42,29 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# database
+# database (local SQLite database and data directory)
 sqlite.db
 sqlite.db-journal
+sqlite.db-shm
+sqlite.db-wal
 data/
 
-# docker
+# docker (local override configuration)
 docker-compose.override.yml
+
+# IDE (editor configurations)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
 
 # version info (generated at build time)
 public/version.json
+
+# scripts (local testing scripts)
+test-changelog.sh
