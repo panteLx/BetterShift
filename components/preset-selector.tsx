@@ -18,8 +18,10 @@ interface PresetSelectorProps {
   onSelectPreset: (presetId: string | undefined) => void;
   onPresetsChange: () => void;
   onShiftsChange?: () => void;
+  onStatsRefresh?: () => void;
   calendarId: string;
   onPasswordRequired: (action: () => Promise<void>) => void;
+  loading?: boolean;
 }
 
 export function PresetSelector({
@@ -28,8 +30,10 @@ export function PresetSelector({
   onSelectPreset,
   onPresetsChange,
   onShiftsChange,
+  onStatsRefresh,
   calendarId,
   onPasswordRequired,
+  loading = false,
 }: PresetSelectorProps) {
   const t = useTranslations();
   const [showManageDialog, setShowManageDialog] = useState(false);
@@ -104,6 +108,7 @@ export function PresetSelector({
         toast.success(t("preset.updated"));
 
         if (onShiftsChange) onShiftsChange();
+        if (onStatsRefresh) onStatsRefresh();
       }
 
       onPresetsChange();
@@ -163,6 +168,7 @@ export function PresetSelector({
         onSelectPreset={onSelectPreset}
         onCreateNew={handleCreateNew}
         onManageClick={() => setShowManageDialog(true)}
+        loading={loading}
       />
 
       <PresetManageDialog

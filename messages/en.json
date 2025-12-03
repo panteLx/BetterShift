@@ -6,7 +6,8 @@
     "edit": "Edit",
     "create": "Create",
     "loading": "Loading...",
-    "required": "required"
+    "required": "required",
+    "unlock": "Unlock"
   },
   "app": {
     "title": "BetterShift",
@@ -51,6 +52,10 @@
     "enterCalendarPassword": "Enter calendar password",
     "currentlyProtected": "This calendar is currently password protected.",
     "notProtected": "This calendar is currently not password protected.",
+    "lockCalendar": "Lock calendar",
+    "lockCalendarHint": "Lock calendar completely - password required for all actions",
+    "lockRequiresPassword": "Locking the calendar requires a password",
+    "currentlyLocked": "This calendar is currently locked.",
     "errorMatch": "Passwords do not match",
     "errorIncorrect": "Incorrect password",
     "errorRequired": "Password required",
@@ -119,6 +124,8 @@
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
     "secondaryPresets": "Secondary Presets",
     "markAsSecondary": "Mark as secondary (collapsed by default)",
+    "hideFromStats": "Hide from statistics",
+    "hideFromStatsHint": "Exclude shifts from this preset from statistics",
     "created": "Preset created successfully",
     "updated": "Preset updated successfully",
     "deleted": "Preset deleted successfully",

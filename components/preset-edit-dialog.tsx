@@ -24,6 +24,7 @@ interface PresetFormData {
   notes: string;
   isSecondary: boolean;
   isAllDay: boolean;
+  hideFromStats: boolean;
 }
 
 interface PresetEditDialogProps {
@@ -50,6 +51,7 @@ export function PresetEditDialog({
     notes: "",
     isSecondary: false,
     isAllDay: false,
+    hideFromStats: false,
   });
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export function PresetEditDialog({
         notes: preset.notes || "",
         isSecondary: preset.isSecondary || false,
         isAllDay: preset.isAllDay || false,
+        hideFromStats: preset.hideFromStats || false,
       });
     } else if (open && isCreating) {
       setFormData({
@@ -72,6 +75,7 @@ export function PresetEditDialog({
         notes: "",
         isSecondary: false,
         isAllDay: false,
+        hideFromStats: false,
       });
     }
   }, [open, preset, isCreating]);
@@ -214,6 +218,27 @@ export function PresetEditDialog({
             >
               {t("preset.markAsSecondary")}
             </Label>
+          </div>
+
+          <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/30">
+            <Checkbox
+              id="preset-hide-stats"
+              checked={formData.hideFromStats}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, hideFromStats: !!checked })
+              }
+            />
+            <div className="flex-1">
+              <Label
+                htmlFor="preset-hide-stats"
+                className="text-sm font-medium cursor-pointer"
+              >
+                {t("preset.hideFromStats")}
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t("preset.hideFromStatsHint")}
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-2.5 pt-2">

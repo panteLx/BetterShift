@@ -3,10 +3,16 @@ import { ShiftPreset } from "@/lib/db/schema";
 
 export function usePresets(calendarId: string | undefined) {
   const [presets, setPresets] = useState<ShiftPreset[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchPresets = async () => {
-    if (!calendarId) return;
+    if (!calendarId) {
+      setPresets([]);
+      setLoading(false);
+      return;
+    }
 
+    setLoading(true);
     try {
       const response = await fetch(`/api/presets?calendarId=${calendarId}`);
       if (!response.ok) {
@@ -19,6 +25,8 @@ export function usePresets(calendarId: string | undefined) {
     } catch (error) {
       console.error("Failed to fetch presets:", error);
       setPresets([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,11 +35,13 @@ export function usePresets(calendarId: string | undefined) {
       fetchPresets();
     } else {
       setPresets([]);
+      setLoading(false);
     }
   }, [calendarId]);
 
   return {
     presets,
+    loading,
     refetchPresets: fetchPresets,
   };
 }

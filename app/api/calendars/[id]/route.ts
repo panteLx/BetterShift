@@ -47,7 +47,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, color, password, currentPassword } = body;
+    const { name, color, password, currentPassword, isLocked } = body;
 
     // Fetch current calendar to check password
     const [existingCalendar] = await db
@@ -62,8 +62,12 @@ export async function PATCH(
       );
     }
 
-    // Verify password if calendar is protected
-    if (existingCalendar.passwordHash) {
+    // Verify password if calendar is protected AND we're changing password
+    // Skip verification if only changing isLocked
+    const onlyChangingLock =
+      isLocked !== undefined && password === undefined && !name && !color;
+
+    if (existingCalendar.passwordHash && !onlyChangingLock) {
       if (
         !currentPassword ||
         !verifyPassword(currentPassword, existingCalendar.passwordHash)
@@ -80,6 +84,20 @@ export async function PATCH(
     if (color) updateData.color = color;
     if (password !== undefined) {
       updateData.passwordHash = password ? hashPassword(password) : null;
+      // If removing password, also unlock calendar
+      if (password === null) {
+        updateData.isLocked = false;
+      }
+    }
+    if (isLocked !== undefined) {
+      // Only allow locking if password exists or is being set
+      if (isLocked && !existingCalendar.passwordHash && !password) {
+        return NextResponse.json(
+          { error: "Cannot lock calendar without password" },
+          { status: 400 }
+        );
+      }
+      updateData.isLocked = isLocked;
     }
 
     const [calendar] = await db

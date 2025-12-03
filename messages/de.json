@@ -6,7 +6,8 @@
     "edit": "Bearbeiten",
     "create": "Erstellen",
     "loading": "Lädt...",
-    "required": "erforderlich"
+    "required": "erforderlich",
+    "unlock": "Entsperren"
   },
   "app": {
     "title": "BetterShift",
@@ -51,6 +52,10 @@
     "enterCalendarPassword": "Kalenderpasswort eingeben",
     "currentlyProtected": "Dieser Kalender ist derzeit passwortgeschützt.",
     "notProtected": "Dieser Kalender ist derzeit nicht passwortgeschützt.",
+    "lockCalendar": "Kalender sperren",
+    "lockCalendarHint": "Kalender komplett sperren - Passwort erforderlich für alle Aktionen",
+    "lockRequiresPassword": "Kalendersperre erfordert ein Passwort",
+    "currentlyLocked": "Dieser Kalender ist derzeit gesperrt.",
     "errorMatch": "Passwörter stimmen nicht überein",
     "errorIncorrect": "Falsches Passwort",
     "errorRequired": "Passwort erforderlich",
@@ -119,6 +124,8 @@
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
     "secondaryPresets": "Sekundäre Vorlagen",
     "markAsSecondary": "Als sekundär markieren (standardmäßig eingeklappt)",
+    "hideFromStats": "Aus Statistik ausblenden",
+    "hideFromStatsHint": "Schichten dieser Vorlage aus der Statistik ausschließen",
     "created": "Vorlage erfolgreich erstellt",
     "updated": "Vorlage erfolgreich aktualisiert",
     "deleted": "Vorlage erfolgreich gelöscht",

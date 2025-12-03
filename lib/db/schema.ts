@@ -8,6 +8,7 @@ export const calendars = sqliteTable("calendars", {
   name: text("name").notNull(),
   color: text("color").notNull().default("#3b82f6"),
   passwordHash: text("password_hash"),
+  isLocked: integer("is_locked", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -91,6 +92,9 @@ export const shiftPresets = sqliteTable("shift_presets", {
     .notNull()
     .default(false),
   isAllDay: integer("is_all_day", { mode: "boolean" }).notNull().default(false),
+  hideFromStats: integer("hide_from_stats", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

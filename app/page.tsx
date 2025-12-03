@@ -19,6 +19,8 @@ import { AppHeader } from "@/components/app-header";
 import { CalendarGrid } from "@/components/calendar-grid";
 import { ShiftsList } from "@/components/shifts-list";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Plus,
   ChevronLeft,
@@ -76,7 +78,11 @@ function HomeContent() {
     refetchShifts,
   } = useShifts(selectedCalendar);
 
-  const { presets, refetchPresets } = usePresets(selectedCalendar);
+  const {
+    presets,
+    loading: presetsLoading,
+    refetchPresets,
+  } = usePresets(selectedCalendar);
 
   const {
     notes,
@@ -153,6 +159,7 @@ function HomeContent() {
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
   const [isConnected, setIsConnected] = useState(true);
+  const [isCalendarUnlocked, setIsCalendarUnlocked] = useState(true);
   const [versionInfo, setVersionInfo] = useState<{
     version: string;
     githubUrl: string;
@@ -193,8 +200,51 @@ function HomeContent() {
   useEffect(() => {
     if (selectedCalendar) {
       router.replace(`/?id=${selectedCalendar}`, { scroll: false });
+
+      // Check if calendar is locked
+      const currentCalendar = calendars.find((c) => c.id === selectedCalendar);
+      if (currentCalendar?.isLocked) {
+        // Check if we have a valid password in localStorage
+        const storedPassword = localStorage.getItem(
+          `calendar_password_${selectedCalendar}`
+        );
+
+        if (storedPassword) {
+          // Start optimistically unlocked, verify in background
+          setIsCalendarUnlocked(true);
+
+          // Verify the stored password
+          fetch(`/api/calendars/${selectedCalendar}/verify-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: storedPassword }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (!data.valid) {
+                // Password invalid, remove from storage and lock
+                localStorage.removeItem(
+                  `calendar_password_${selectedCalendar}`
+                );
+                setIsCalendarUnlocked(false);
+              }
+            })
+            .catch(() => {
+              // On error, lock the calendar
+              setIsCalendarUnlocked(false);
+            });
+        } else {
+          // No stored password, just set unlocked to false - form will handle it
+          setIsCalendarUnlocked(false);
+        }
+      } else {
+        // Calendar not locked, allow access
+        setIsCalendarUnlocked(true);
+      }
+    } else {
+      setIsCalendarUnlocked(true);
     }
-  }, [selectedCalendar, router]);
+  }, [selectedCalendar, calendars, router]);
 
   const initiateDeleteCalendar = (id: string) => {
     setCalendarToDelete(id);
@@ -706,6 +756,7 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Always show AppHeader - allows calendar switching even when locked */}
       <AppHeader
         calendars={calendars}
         selectedCalendar={selectedCalendar}
@@ -721,107 +772,190 @@ function HomeContent() {
         onICloudSync={handleICloudSyncClick}
         onPresetsChange={refetchPresets}
         onShiftsChange={refetchShifts}
+        onStatsRefresh={() => setStatsRefreshTrigger((prev) => prev + 1)}
         onPasswordRequired={handlePresetPasswordRequired}
         onManualShiftCreation={handleManualShiftCreation}
         onMobileCalendarDialogChange={setShowMobileCalendarDialog}
+        presetsLoading={presetsLoading}
       />
 
       <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
-        {/* Month Navigation */}
-        <motion.div
-          className="flex items-center justify-between mb-4 sm:mb-5 px-2 sm:px-0"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 sm:h-11 sm:w-11 rounded-full active:scale-95 transition-transform"
-            onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <motion.h2
-            className="text-lg sm:text-xl font-bold"
-            key={format(currentDate, "MMMM yyyy")}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {format(currentDate, "MMMM yyyy", { locale: dateLocale })}
-          </motion.h2>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 sm:h-11 sm:w-11 rounded-full active:scale-95 transition-transform"
-            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </motion.div>
-
-        {/* Calendar Grid */}
-        <CalendarGrid
-          calendarDays={calendarDays}
-          currentDate={currentDate}
-          shifts={shifts}
-          notes={notes}
-          selectedPresetId={selectedPresetId}
-          togglingDates={togglingDates}
-          icloudSyncs={icloudSyncs}
-          onDayClick={handleDayClick}
-          onDayRightClick={handleDayRightClick}
-          onNoteIconClick={handleNoteIconClick}
-          onLongPress={handleLongPressDay}
-          onShowAllShifts={handleShowAllShifts}
-          onShowSyncedShifts={handleShowSyncedShifts}
-        />
-
-        {/* Note Hint */}
-        <motion.div
-          className="px-2 sm:px-0 mb-4"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <StickyNote className="h-4 w-4 text-orange-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
-                  {t("note.hintMobile", {
-                    default:
-                      "Long press on a day to open notes. The note icon shows existing notes.",
-                  })}
+        {/* Show content only if calendar is unlocked or not locked */}
+        {selectedCalendar && !isCalendarUnlocked ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md"
+            >
+              <div className="bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl border border-border/50 rounded-2xl p-8">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 mx-auto">
+                  <CalendarIcon className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-2 text-center">
+                  {t("password.currentlyLocked")}
+                </h3>
+                <p className="text-muted-foreground text-center mb-8">
+                  {t("password.enterCalendarPassword")}
                 </p>
-                <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
-                  {t("note.hintDesktop", {
-                    default:
-                      "Right-click on a day to open notes. The note icon shows existing notes.",
-                  })}
-                </p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const password = formData.get("password") as string;
+                    if (password && selectedCalendar) {
+                      fetch(
+                        `/api/calendars/${selectedCalendar}/verify-password`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ password }),
+                        }
+                      )
+                        .then((response) => response.json())
+                        .then((data) => {
+                          if (data.valid) {
+                            localStorage.setItem(
+                              `calendar_password_${selectedCalendar}`,
+                              password
+                            );
+                            setIsCalendarUnlocked(true);
+                          } else {
+                            toast.error(t("password.errorIncorrect"));
+                          }
+                        })
+                        .catch(() => {
+                          toast.error(t("password.errorIncorrect"));
+                        });
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="unlock-password"
+                      className="text-sm font-medium"
+                    >
+                      {t("password.password")}
+                    </Label>
+                    <Input
+                      id="unlock-password"
+                      name="password"
+                      type="password"
+                      placeholder={t("password.passwordPlaceholder")}
+                      className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20"
+                      autoFocus
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
+                  >
+                    {t("common.unlock", { default: "Unlock" })}
+                  </Button>
+                </form>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </motion.div>
+        ) : (
+          <>
+            {/* Month Navigation */}
+            <motion.div
+              className="flex items-center justify-between mb-4 sm:mb-5 px-2 sm:px-0"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-full active:scale-95 transition-transform"
+                onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <motion.h2
+                className="text-lg sm:text-xl font-bold"
+                key={format(currentDate, "MMMM yyyy")}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {format(currentDate, "MMMM yyyy", { locale: dateLocale })}
+              </motion.h2>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-full active:scale-95 transition-transform"
+                onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </motion.div>
 
-        {/* Shifts List */}
-        <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
-          <ShiftStats
-            calendarId={selectedCalendar}
-            currentDate={currentDate}
-            refreshTrigger={statsRefreshTrigger}
-          />
+            {/* Calendar Grid */}
+            <CalendarGrid
+              calendarDays={calendarDays}
+              currentDate={currentDate}
+              shifts={shifts}
+              notes={notes}
+              selectedPresetId={selectedPresetId}
+              togglingDates={togglingDates}
+              icloudSyncs={icloudSyncs}
+              onDayClick={handleDayClick}
+              onDayRightClick={handleDayRightClick}
+              onNoteIconClick={handleNoteIconClick}
+              onLongPress={handleLongPressDay}
+              onShowAllShifts={handleShowAllShifts}
+              onShowSyncedShifts={handleShowSyncedShifts}
+            />
 
-          <ShiftsList
-            shifts={shifts}
-            currentDate={currentDate}
-            onDeleteShift={handleDeleteShift}
-          />
-        </div>
+            {/* Note Hint */}
+            <motion.div
+              className="px-2 sm:px-0 mb-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <StickyNote className="h-4 w-4 text-orange-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
+                      {t("note.hintMobile", {
+                        default:
+                          "Long press on a day to open notes. The note icon shows existing notes.",
+                      })}
+                    </p>
+                    <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
+                      {t("note.hintDesktop", {
+                        default:
+                          "Right-click on a day to open notes. The note icon shows existing notes.",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Shifts List */}
+            <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
+              <ShiftStats
+                calendarId={selectedCalendar}
+                currentDate={currentDate}
+                refreshTrigger={statsRefreshTrigger}
+              />
+
+              <ShiftsList
+                shifts={shifts}
+                currentDate={currentDate}
+                onDeleteShift={handleDeleteShift}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Floating Action Button for Manual Shift Creation - Desktop Only */}
@@ -877,6 +1011,9 @@ function HomeContent() {
           }
           hasPassword={
             !!calendars.find((c) => c.id === selectedCalendar)?.passwordHash
+          }
+          isLocked={
+            calendars.find((c) => c.id === selectedCalendar)?.isLocked || false
           }
           onSuccess={refetchCalendars}
         />
