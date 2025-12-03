@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { CalendarDialog } from "@/components/calendar-dialog";
@@ -160,6 +160,8 @@ function HomeContent() {
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
   const [isConnected, setIsConnected] = useState(true);
   const [isCalendarUnlocked, setIsCalendarUnlocked] = useState(true);
+  const [isVerifyingCalendarPassword, setIsVerifyingCalendarPassword] =
+    useState(false);
   const [versionInfo, setVersionInfo] = useState<{
     version: string;
     githubUrl: string;
@@ -196,22 +198,29 @@ function HomeContent() {
     fetchVersion();
   }, []);
 
+  // Memoize only the isLocked property of the selected calendar to avoid unnecessary re-verification
+  const selectedCalendarIsLocked = useMemo(() => {
+    if (!selectedCalendar) return false;
+    const currentCalendar = calendars.find((c) => c.id === selectedCalendar);
+    return currentCalendar?.isLocked ?? false;
+  }, [selectedCalendar, calendars]);
+
   // Update URL when selected calendar changes
   useEffect(() => {
     if (selectedCalendar) {
       router.replace(`/?id=${selectedCalendar}`, { scroll: false });
 
       // Check if calendar is locked
-      const currentCalendar = calendars.find((c) => c.id === selectedCalendar);
-      if (currentCalendar?.isLocked) {
+      if (selectedCalendarIsLocked) {
         // Check if we have a valid password in localStorage
         const storedPassword = localStorage.getItem(
           `calendar_password_${selectedCalendar}`
         );
 
         if (storedPassword) {
-          // Start optimistically unlocked, verify in background
-          setIsCalendarUnlocked(true);
+          // Set loading state and verify password before unlocking
+          setIsVerifyingCalendarPassword(true);
+          setIsCalendarUnlocked(false);
 
           // Verify the stored password
           fetch(`/api/calendars/${selectedCalendar}/verify-password`, {
@@ -221,8 +230,11 @@ function HomeContent() {
           })
             .then((response) => response.json())
             .then((data) => {
-              if (!data.valid) {
-                // Password invalid, remove from storage and lock
+              if (data.valid) {
+                // Password valid, unlock calendar
+                setIsCalendarUnlocked(true);
+              } else {
+                // Password invalid, remove from storage and keep locked
                 localStorage.removeItem(
                   `calendar_password_${selectedCalendar}`
                 );
@@ -230,21 +242,28 @@ function HomeContent() {
               }
             })
             .catch(() => {
-              // On error, lock the calendar
+              // On error, keep calendar locked
               setIsCalendarUnlocked(false);
+            })
+            .finally(() => {
+              // Clear loading state
+              setIsVerifyingCalendarPassword(false);
             });
         } else {
-          // No stored password, just set unlocked to false - form will handle it
+          // No stored password, set unlocked to false - form will handle it
           setIsCalendarUnlocked(false);
+          setIsVerifyingCalendarPassword(false);
         }
       } else {
         // Calendar not locked, allow access
         setIsCalendarUnlocked(true);
+        setIsVerifyingCalendarPassword(false);
       }
     } else {
       setIsCalendarUnlocked(true);
+      setIsVerifyingCalendarPassword(false);
     }
-  }, [selectedCalendar, calendars, router]);
+  }, [selectedCalendar, selectedCalendarIsLocked, router]);
 
   const initiateDeleteCalendar = (id: string) => {
     setCalendarToDelete(id);
@@ -780,8 +799,21 @@ function HomeContent() {
       />
 
       <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
-        {/* Show content only if calendar is unlocked or not locked */}
-        {selectedCalendar && !isCalendarUnlocked ? (
+        {/* Show loading state while verifying password */}
+        {isVerifyingCalendarPassword ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 mx-auto">
+                <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+              <p className="text-muted-foreground">{t("common.loading")}</p>
+            </motion.div>
+          </div>
+        ) : selectedCalendar && !isCalendarUnlocked ? (
           <div className="flex flex-col items-center justify-center py-20">
             <motion.div
               initial={{ opacity: 0, y: 20 }}

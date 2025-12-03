@@ -62,12 +62,8 @@ export async function PATCH(
       );
     }
 
-    // Verify password if calendar is protected AND we're changing password
-    // Skip verification if only changing isLocked
-    const onlyChangingLock =
-      isLocked !== undefined && password === undefined && !name && !color;
-
-    if (existingCalendar.passwordHash && !onlyChangingLock) {
+    // Always verify password if calendar is protected
+    if (existingCalendar.passwordHash) {
       if (
         !currentPassword ||
         !verifyPassword(currentPassword, existingCalendar.passwordHash)

@@ -58,24 +58,15 @@ export function ManagePasswordDialog({
     e.preventDefault();
     setError("");
 
-    // Always validate current password when calendar has password
+    // Always require current password when calendar has password
     if (hasPassword && !currentPassword) {
       setError(t("password.errorRequired"));
       return;
     }
 
-    // Check if only isLocked is being changed (password must still be provided)
-    const onlyTogglingLock =
-      hasPassword &&
-      !removePassword &&
-      !newPassword &&
-      lockCalendar !== isLocked;
-
-    if (!removePassword && !onlyTogglingLock) {
-      if (!newPassword) {
-        setError(t("password.errorRequired"));
-        return;
-      }
+    // Validate new password fields if changing password
+    const isChangingPassword = !removePassword && newPassword;
+    if (isChangingPassword) {
       if (newPassword !== confirmPassword) {
         setError(t("password.errorMatch"));
         return;
@@ -92,13 +83,15 @@ export function ManagePasswordDialog({
 
     try {
       const requestBody: any = {
+        currentPassword: hasPassword ? currentPassword : undefined,
         isLocked: lockCalendar,
       };
 
-      // Only include password fields if not just toggling lock
-      if (!onlyTogglingLock) {
-        requestBody.currentPassword = hasPassword ? currentPassword : undefined;
-        requestBody.password = removePassword ? null : newPassword;
+      // Include password fields if changing password
+      if (removePassword) {
+        requestBody.password = null;
+      } else if (newPassword) {
+        requestBody.password = newPassword;
       }
 
       const response = await fetch(`/api/calendars/${calendarId}`, {
@@ -119,14 +112,12 @@ export function ManagePasswordDialog({
         return;
       }
 
-      // Only clear cached password if password was actually changed or removed
-      if (!onlyTogglingLock) {
-        localStorage.removeItem(`calendar_password_${calendarId}`);
+      // Clear cached password from localStorage
+      localStorage.removeItem(`calendar_password_${calendarId}`);
 
-        // If new password was set, cache it
-        if (!removePassword && newPassword) {
-          localStorage.setItem(`calendar_password_${calendarId}`, newPassword);
-        }
+      // If new password was set, cache it
+      if (!removePassword && newPassword) {
+        localStorage.setItem(`calendar_password_${calendarId}`, newPassword);
       }
 
       onSuccess();
@@ -204,7 +195,6 @@ export function ManagePasswordDialog({
             <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/30">
               <Checkbox
                 id="lockCalendar"
-                key={`lock-${isLocked}`}
                 checked={lockCalendar}
                 onCheckedChange={(checked) => setLockCalendar(!!checked)}
               />
