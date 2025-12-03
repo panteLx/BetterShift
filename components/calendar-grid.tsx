@@ -172,9 +172,6 @@ export function CalendarGrid({
             <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">
               {(() => {
                 // Separate shifts by sync displayMode
-                const regularShifts = dayShifts.filter(
-                  (s) => !s.syncedFromIcloud
-                );
                 const syncedShiftsByMode: {
                   [key: string]: ShiftWithCalendar[];
                 } = {};
@@ -202,7 +199,7 @@ export function CalendarGrid({
                   const sync = icloudSyncs.find(
                     (sync) => sync.id === s.icloudSyncId
                   );
-                  return sync?.displayMode === "normal";
+                  return !sync || sync.displayMode === "normal";
                 });
 
                 return (

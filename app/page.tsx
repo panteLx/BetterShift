@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { CalendarDialog } from "@/components/calendar-dialog";
@@ -89,28 +89,28 @@ function HomeContent() {
   const [icloudSyncs, setIcloudSyncs] = useState<ICloudSync[]>([]);
 
   // Fetch iCloud syncs for the calendar
-  useEffect(() => {
+  const fetchICloudSyncs = useCallback(async () => {
     if (!selectedCalendar) {
       setIcloudSyncs([]);
       return;
     }
 
-    const fetchICloudSyncs = async () => {
-      try {
-        const response = await fetch(
-          `/api/icloud-syncs?calendarId=${selectedCalendar}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setIcloudSyncs(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch iCloud syncs:", error);
+    try {
+      const response = await fetch(
+        `/api/icloud-syncs?calendarId=${selectedCalendar}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setIcloudSyncs(data);
       }
-    };
-
-    fetchICloudSyncs();
+    } catch (error) {
+      console.error("Failed to fetch iCloud syncs:", error);
+    }
   }, [selectedCalendar]);
+
+  useEffect(() => {
+    fetchICloudSyncs();
+  }, [fetchICloudSyncs]);
 
   // Local state
   const [selectedPresetId, setSelectedPresetId] = useState<
@@ -903,19 +903,6 @@ function HomeContent() {
             refetchCalendars();
             setStatsRefreshTrigger((prev) => prev + 1);
             // Refetch iCloud syncs to get updated displayMode
-            const fetchICloudSyncs = async () => {
-              try {
-                const response = await fetch(
-                  `/api/icloud-syncs?calendarId=${selectedCalendar}`
-                );
-                if (response.ok) {
-                  const data = await response.json();
-                  setIcloudSyncs(data);
-                }
-              } catch (error) {
-                console.error("Failed to fetch iCloud syncs:", error);
-              }
-            };
             fetchICloudSyncs();
           }}
         />
