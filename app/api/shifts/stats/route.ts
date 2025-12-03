@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shifts, icloudSyncs } from "@/lib/db/schema";
+import { shifts, icloudSyncs, shiftPresets } from "@/lib/db/schema";
 import { eq, and, gte, lte, sql, or, isNull } from "drizzle-orm";
 import {
   startOfWeek,
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         break;
     }
 
-    // Fetch shifts for the period, excluding shifts from iCloud syncs that are hidden or hidden from stats
+    // Fetch shifts for the period, excluding shifts from iCloud syncs or presets that are hidden from stats
     const result = await db
       .select({
         title: shifts.title,
@@ -56,6 +56,7 @@ export async function GET(request: Request) {
       })
       .from(shifts)
       .leftJoin(icloudSyncs, eq(shifts.icloudSyncId, icloudSyncs.id))
+      .leftJoin(shiftPresets, eq(shifts.presetId, shiftPresets.id))
       .where(
         and(
           eq(shifts.calendarId, calendarId),
@@ -68,7 +69,9 @@ export async function GET(request: Request) {
               eq(icloudSyncs.isHidden, false),
               eq(icloudSyncs.hideFromStats, false)
             )
-          )
+          ),
+          // Exclude shifts from presets that are hidden from stats
+          or(isNull(shifts.presetId), eq(shiftPresets.hideFromStats, false))
         )
       )
       .groupBy(shifts.title)

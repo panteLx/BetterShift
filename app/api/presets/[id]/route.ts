@@ -21,6 +21,7 @@ export async function PATCH(
       notes,
       isSecondary,
       isAllDay,
+      hideFromStats,
       password,
     } = body;
 
@@ -67,6 +68,7 @@ export async function PATCH(
         notes: notes || null,
         isSecondary: isSecondary !== undefined ? isSecondary : undefined,
         isAllDay: isAllDay !== undefined ? isAllDay : undefined,
+        hideFromStats: hideFromStats !== undefined ? hideFromStats : undefined,
         updatedAt: new Date(),
       })
       .where(eq(shiftPresets.id, id))

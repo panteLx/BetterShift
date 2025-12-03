@@ -35,7 +35,8 @@ export function useCalendars(initialCalendarId?: string | null) {
   const createCalendar = async (
     name: string,
     color: string,
-    password?: string
+    password?: string,
+    isLocked?: boolean
   ) => {
     try {
       const response = await fetch("/api/calendars", {
@@ -45,6 +46,7 @@ export function useCalendars(initialCalendarId?: string | null) {
           name,
           color,
           password,
+          isLocked: isLocked || false,
         }),
       });
 

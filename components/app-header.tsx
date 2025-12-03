@@ -29,9 +29,11 @@ interface AppHeaderProps {
   onICloudSync: () => void;
   onPresetsChange: () => void;
   onShiftsChange: () => void;
+  onStatsRefresh: () => void;
   onPasswordRequired: (action: () => Promise<void>) => void;
   onManualShiftCreation: () => void;
   onMobileCalendarDialogChange: (open: boolean) => void;
+  presetsLoading?: boolean;
 }
 
 export function AppHeader({
@@ -49,9 +51,11 @@ export function AppHeader({
   onICloudSync,
   onPresetsChange,
   onShiftsChange,
+  onStatsRefresh,
   onPasswordRequired,
   onManualShiftCreation,
   onMobileCalendarDialogChange,
+  presetsLoading = false,
 }: AppHeaderProps) {
   const t = useTranslations();
 
@@ -212,8 +216,10 @@ export function AppHeader({
                   onSelectPreset={onSelectPreset}
                   onPresetsChange={onPresetsChange}
                   onShiftsChange={onShiftsChange}
+                  onStatsRefresh={onStatsRefresh}
                   calendarId={selectedCalendar}
                   onPasswordRequired={onPasswordRequired}
+                  loading={presetsLoading}
                 />
               </div>
             )}

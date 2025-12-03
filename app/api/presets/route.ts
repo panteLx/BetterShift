@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       notes,
       isSecondary,
       isAllDay,
+      hideFromStats,
       password,
     } = body;
 
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         isSecondary: isSecondary || false,
         isAllDay: isAllDay || false,
+        hideFromStats: hideFromStats || false,
       })
       .returning();
 

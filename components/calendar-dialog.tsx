@@ -19,7 +19,12 @@ import { PRESET_COLORS } from "@/lib/constants";
 interface CalendarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (name: string, color: string, password?: string) => void;
+  onSubmit: (
+    name: string,
+    color: string,
+    password?: string,
+    isLocked?: boolean
+  ) => void;
 }
 
 export function CalendarDialog({
@@ -31,22 +36,49 @@ export function CalendarDialog({
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0].value);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [usePassword, setUsePassword] = useState(false);
+  const [lockCalendar, setLockCalendar] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      onSubmit(
-        name.trim(),
-        selectedColor,
-        usePassword && password ? password : undefined
-      );
-      setName("");
-      setSelectedColor(PRESET_COLORS[0].value);
-      setPassword("");
-      setUsePassword(false);
-      onOpenChange(false);
+    setError("");
+
+    if (!name.trim()) return;
+
+    // Validate password if enabled
+    if (usePassword) {
+      if (!password) {
+        setError(t("password.errorRequired"));
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError(t("password.errorMatch"));
+        return;
+      }
     }
+
+    // Can't lock without password
+    if (lockCalendar && !usePassword) {
+      setError(t("password.lockRequiresPassword"));
+      return;
+    }
+
+    onSubmit(
+      name.trim(),
+      selectedColor,
+      usePassword && password ? password : undefined,
+      lockCalendar
+    );
+    setName("");
+    setSelectedColor(PRESET_COLORS[0].value);
+    setPassword("");
+    setConfirmPassword("");
+    setUsePassword(false);
+    setLockCalendar(false);
+    setError("");
+    onOpenChange(false);
   };
 
   return (
@@ -145,22 +177,60 @@ export function CalendarDialog({
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-2 pt-1"
+                className="space-y-3 pt-1"
               >
-                <Label htmlFor="password" className="text-sm">
-                  {t("password.password")}
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t("password.passwordPlaceholder")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-10 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/80"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm">
+                    {t("password.password")}
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder={t("password.passwordPlaceholder")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-10 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/80"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm">
+                    {t("password.confirmPassword")}
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder={t("password.confirmPasswordPlaceholder")}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-10 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/80"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 pt-1">
+                  <Checkbox
+                    id="lockCalendar"
+                    checked={lockCalendar}
+                    onCheckedChange={(checked) => setLockCalendar(!!checked)}
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="lockCalendar"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      {t("password.lockCalendar")}
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t("password.lockCalendarHint")}
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
           </div>
+          {error && (
+            <p className="text-sm text-red-500 flex items-center gap-1.5 bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2.5 pt-2">
             <Button
               type="button"

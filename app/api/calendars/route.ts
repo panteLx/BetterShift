@@ -13,6 +13,7 @@ export async function GET() {
         name: calendars.name,
         color: calendars.color,
         passwordHash: calendars.passwordHash,
+        isLocked: calendars.isLocked,
         createdAt: calendars.createdAt,
         updatedAt: calendars.updatedAt,
         _count:
@@ -37,11 +38,19 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, color, password } = body;
+    const { name, color, password, isLocked } = body;
 
     if (!name) {
       return NextResponse.json(
         { error: "Calendar name is required" },
+        { status: 400 }
+      );
+    }
+
+    // Can't lock without password
+    if (isLocked && !password) {
+      return NextResponse.json(
+        { error: "Cannot lock calendar without password" },
         { status: 400 }
       );
     }
@@ -52,6 +61,7 @@ export async function POST(request: Request) {
         name,
         color: color || "#3b82f6",
         passwordHash: password ? hashPassword(password) : null,
+        isLocked: isLocked || false,
       })
       .returning();
 

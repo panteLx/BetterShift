@@ -21,6 +21,7 @@ interface ManagePasswordDialogProps {
   calendarId: string;
   calendarName: string;
   hasPassword: boolean;
+  isLocked: boolean;
   onSuccess: () => void;
 }
 
@@ -30,6 +31,7 @@ export function ManagePasswordDialog({
   calendarId,
   calendarName,
   hasPassword,
+  isLocked,
   onSuccess,
 }: ManagePasswordDialogProps) {
   const t = useTranslations();
@@ -37,6 +39,7 @@ export function ManagePasswordDialog({
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [removePassword, setRemovePassword] = useState(false);
+  const [lockCalendar, setLockCalendar] = useState(isLocked);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -46,41 +49,55 @@ export function ManagePasswordDialog({
       setNewPassword("");
       setConfirmPassword("");
       setRemovePassword(false);
+      setLockCalendar(isLocked);
       setError("");
     }
-  }, [open]);
+  }, [open, isLocked]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Validate inputs
+    // Always require current password when calendar has password
     if (hasPassword && !currentPassword) {
       setError(t("password.errorRequired"));
       return;
     }
 
-    if (!removePassword) {
-      if (!newPassword) {
-        setError(t("password.errorRequired"));
-        return;
-      }
+    // Validate new password fields if changing password
+    const isChangingPassword = !removePassword && newPassword;
+    if (isChangingPassword) {
       if (newPassword !== confirmPassword) {
         setError(t("password.errorMatch"));
         return;
       }
     }
 
+    // If trying to lock without password
+    if (lockCalendar && removePassword) {
+      setError(t("password.lockRequiresPassword"));
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const requestBody: any = {
+        currentPassword: hasPassword ? currentPassword : undefined,
+        isLocked: lockCalendar,
+      };
+
+      // Include password fields if changing password
+      if (removePassword) {
+        requestBody.password = null;
+      } else if (newPassword) {
+        requestBody.password = newPassword;
+      }
+
       const response = await fetch(`/api/calendars/${calendarId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: hasPassword ? currentPassword : undefined,
-          password: removePassword ? null : newPassword,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.status === 401) {
@@ -156,7 +173,14 @@ export function ManagePasswordDialog({
               <Checkbox
                 id="removePassword"
                 checked={removePassword}
-                onCheckedChange={(checked) => setRemovePassword(!!checked)}
+                onCheckedChange={(checked) => {
+                  const isChecked = !!checked;
+                  setRemovePassword(isChecked);
+                  // Automatically unlock if removing password
+                  if (isChecked) {
+                    setLockCalendar(false);
+                  }
+                }}
               />
               <Label
                 htmlFor="removePassword"
@@ -164,6 +188,27 @@ export function ManagePasswordDialog({
               >
                 {t("password.removePassword")}
               </Label>
+            </div>
+          )}
+
+          {hasPassword && !removePassword && (
+            <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/30">
+              <Checkbox
+                id="lockCalendar"
+                checked={lockCalendar}
+                onCheckedChange={(checked) => setLockCalendar(!!checked)}
+              />
+              <div className="flex-1">
+                <Label
+                  htmlFor="lockCalendar"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {t("password.lockCalendar")}
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t("password.lockCalendarHint")}
+                </p>
+              </div>
             </div>
           )}
 
