@@ -389,39 +389,44 @@ export function ExternalSyncManageDialog({
                   className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
                   style={{ borderLeftColor: sync.color, borderLeftWidth: 4 }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold flex items-center gap-2">
-                        <div
-                          className="w-1 h-4 rounded-full"
-                          style={{ backgroundColor: sync.color }}
-                        />
-                        <span className="truncate">{sync.name}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 font-normal">
-                          {sync.syncType === "google"
-                            ? t("externalSync.syncTypeGoogle")
-                            : t("externalSync.syncTypeICloud")}
+                  {/* Title row - always full width on mobile */}
+                  <div className="flex items-start gap-2">
+                    <div
+                      className="w-1 h-4 rounded-full shrink-0 mt-0.5"
+                      style={{ backgroundColor: sync.color }}
+                    />
+                    <span className="font-semibold flex-1 min-w-0 break-words">
+                      {sync.name}
+                    </span>
+                  </div>
+
+                  {/* Badges and buttons row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 font-normal">
+                        {sync.syncType === "google"
+                          ? t("externalSync.syncTypeGoogle")
+                          : t("externalSync.syncTypeICloud")}
+                      </span>
+                      {sync.autoSyncInterval > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                          <RefreshCw className="h-3 w-3" />
+                          {sync.autoSyncInterval < 60
+                            ? `${sync.autoSyncInterval} min`
+                            : sync.autoSyncInterval < 1440
+                            ? `${sync.autoSyncInterval / 60} h`
+                            : `${sync.autoSyncInterval / 1440} d`}
                         </span>
-                        {sync.autoSyncInterval > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                            <RefreshCw className="h-3 w-3" />
-                            {sync.autoSyncInterval < 60
-                              ? `${sync.autoSyncInterval} min`
-                              : sync.autoSyncInterval < 1440
-                              ? `${sync.autoSyncInterval / 60} h`
-                              : `${sync.autoSyncInterval / 1440} d`}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium">
-                            {t("externalSync.autoSyncManual")}
-                          </span>
-                        )}
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium">
+                          {t("externalSync.autoSyncManual")}
+                        </span>
+                      )}
                       {sync.lastSyncedAt && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <span className="text-xs text-muted-foreground">
                           {t("externalSync.lastSynced")}:{" "}
                           {new Date(sync.lastSyncedAt).toLocaleString()}
-                        </p>
+                        </span>
                       )}
                     </div>
                     <div className="flex gap-1 shrink-0">
