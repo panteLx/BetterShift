@@ -212,6 +212,10 @@
     "howToStep1": "Open iCloud.com and go to Calendar",
     "howToStep2": "Click the share icon next to your calendar",
     "howToStep3": "Enable 'Public Calendar'",
-    "howToStep4": "Copy the URL and paste it here"
+    "howToStep4": "Copy the URL and paste it here",
+    "autoSyncLabel": "Auto Sync",
+    "autoSyncHint": "Choose how often this calendar should automatically sync",
+    "autoSyncManual": "Manual",
+    "autoSync24hShort": "24 h"
   }
 }

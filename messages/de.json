@@ -212,6 +212,10 @@
     "howToStep1": "Öffne iCloud.com und gehe zu Kalender",
     "howToStep2": "Klicke auf das Teilen-Symbol neben deinem Kalender",
     "howToStep3": "Aktiviere 'Öffentlicher Kalender'",
-    "howToStep4": "Kopiere die URL und füge sie hier ein"
+    "howToStep4": "Kopiere die URL und füge sie hier ein",
+    "autoSyncLabel": "Automatische Synchronisierung",
+    "autoSyncHint": "Wähle wie oft dieser Kalender automatisch synchronisiert werden soll",
+    "autoSyncManual": "Manuell",
+    "autoSync24hShort": "24 h"
   }
 }

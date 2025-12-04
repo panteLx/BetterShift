@@ -44,8 +44,15 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, icloudUrl, color, displayMode, isHidden, hideFromStats } =
-      body;
+    const {
+      name,
+      icloudUrl,
+      color,
+      displayMode,
+      isHidden,
+      hideFromStats,
+      autoSyncInterval,
+    } = body;
 
     // Validate iCloud URL if provided
     if (icloudUrl !== undefined && !isValidICloudUrl(icloudUrl)) {
@@ -53,6 +60,22 @@ export async function PATCH(
         {
           error:
             "Invalid iCloud URL. URL must use webcal:// or https:// protocol and be from icloud.com domain",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate autoSyncInterval if provided
+    const validIntervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
+    if (
+      autoSyncInterval !== undefined &&
+      !validIntervals.includes(autoSyncInterval)
+    ) {
+      return NextResponse.json(
+        {
+          error: `Invalid auto-sync interval. Must be one of: ${validIntervals.join(
+            ", "
+          )} minutes`,
         },
         { status: 400 }
       );
@@ -68,6 +91,8 @@ export async function PATCH(
     if (displayMode !== undefined) updateData.displayMode = displayMode;
     if (isHidden !== undefined) updateData.isHidden = isHidden;
     if (hideFromStats !== undefined) updateData.hideFromStats = hideFromStats;
+    if (autoSyncInterval !== undefined)
+      updateData.autoSyncInterval = autoSyncInterval;
 
     const [updated] = await db
       .update(icloudSyncs)
