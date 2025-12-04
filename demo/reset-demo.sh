@@ -25,11 +25,15 @@ fi
 
 # Stop container temporarily to avoid conflicts
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stopping container..."
-(cd "$PROJECT_DIR" && docker compose stop "$CONTAINER_NAME")
+if ! (cd "$PROJECT_DIR" && docker compose stop "$CONTAINER_NAME"); then
+    echo "Error: Failed to stop container"
+    exit 1
+fi
 
 # Remove current database and restore from snapshot
 sudo rm -f "$DB_PATH"
 sudo cp "$SNAPSHOT_PATH" "$DB_PATH"
+sudo chown $(stat -c '%u:%g' "$PROJECT_DIR/data") "$DB_PATH"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✓ Database restored from snapshot"
 
 # Start container again
@@ -38,7 +42,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting container..."
 
 # Wait for container to be healthy
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Waiting for container to be ready..."
-sleep 3
+timeout 60 sh -c "cd '$PROJECT_DIR' && until docker compose ps '$CONTAINER_NAME' | grep -q '(healthy)'; do sleep 2; done" || echo "Warning: Container may not be fully healthy"
 
 echo ""
 echo "========================================="
