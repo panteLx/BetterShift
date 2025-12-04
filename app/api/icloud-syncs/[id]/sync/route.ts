@@ -23,17 +23,38 @@ export async function syncICloudCalendar(syncId: string) {
   // Convert webcal:// to https:// for iCloud URLs
   const fetchUrl = icloudSync.icloudUrl.replace(/^webcal:\/\//i, "https://");
 
-  // Fetch the calendar from the specified iCloud URL
+  // Fetch the calendar from the specified iCloud URL with timeout protection
   let icsData: string;
   try {
-    const response = await fetch(fetchUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch calendar: ${response.statusText}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      const response = await fetch(fetchUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch calendar: ${response.statusText}`);
+      }
+      icsData = await response.text();
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // Check if this was a timeout/abort error
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        throw new Error(
+          "Request timed out after 10 seconds. Please try again."
+        );
+      }
+      throw fetchError;
     }
-    icsData = await response.text();
   } catch (error) {
     console.error("Error fetching iCloud calendar:", error);
-    throw new Error("Failed to fetch iCloud calendar. Please check the URL.");
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch iCloud calendar. Please check the URL."
+    );
   }
 
   // Parse the ICS data
@@ -59,12 +80,6 @@ export async function syncICloudCalendar(syncId: string) {
     .select()
     .from(shifts)
     .where(eq(shifts.icloudSyncId, syncId));
-
-  const existingEventIds = new Set(
-    existingShifts
-      .filter((s) => s.icloudEventId)
-      .map((s) => s.icloudEventId as string)
-  );
 
   const processedEventIds = new Set<string>();
   const shiftsToInsert: (typeof shifts.$inferInsert)[] = [];
