@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { removeCachedPassword, setCachedPassword } from "@/lib/password-cache";
 
 export function useCalendars(initialCalendarId?: string | null) {
   const t = useTranslations();
@@ -63,6 +64,12 @@ export function useCalendars(initialCalendarId?: string | null) {
       const newCalendar = await response.json();
       setCalendars((prev) => [...prev, newCalendar]);
       setSelectedCalendar(newCalendar.id);
+
+      // Cache the password if one was provided
+      if (password) {
+        setCachedPassword(newCalendar.id, password);
+      }
+
       toast.success(t("calendar.created"));
     } catch (error) {
       console.error("Failed to create calendar:", error);
@@ -99,7 +106,7 @@ export function useCalendars(initialCalendarId?: string | null) {
 
           return remainingCalendars;
         });
-        localStorage.removeItem(`calendar_password_${calendarId}`);
+        removeCachedPassword(calendarId);
 
         toast.success(t("calendar.deleted"));
         return true;

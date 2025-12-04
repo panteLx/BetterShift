@@ -3,6 +3,7 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormData } from "@/components/shift-dialog";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { getCachedPassword } from "@/lib/password-cache";
 
 export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
@@ -81,9 +82,7 @@ export function useShifts(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId
-        ? localStorage.getItem(`calendar_password_${calendarId}`)
-        : null;
+      const password = calendarId ? getCachedPassword(calendarId) : null;
 
       const response = await fetch(`/api/shifts/${id}`, {
         method: "PATCH",
@@ -119,9 +118,7 @@ export function useShifts(calendarId: string | undefined) {
 
   const deleteShift = async (id: string, onPasswordRequired?: () => void) => {
     try {
-      const password = calendarId
-        ? localStorage.getItem(`calendar_password_${calendarId}`)
-        : null;
+      const password = calendarId ? getCachedPassword(calendarId) : null;
 
       const response = await fetch(`/api/shifts/${id}`, {
         method: "DELETE",

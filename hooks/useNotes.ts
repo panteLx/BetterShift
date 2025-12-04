@@ -3,6 +3,7 @@ import { CalendarNote } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { getCachedPassword } from "@/lib/password-cache";
 
 export function useNotes(calendarId: string | undefined) {
   const t = useTranslations();
@@ -34,7 +35,7 @@ export function useNotes(calendarId: string | undefined) {
     if (!calendarId) return false;
 
     try {
-      const password = localStorage.getItem(`calendar_password_${calendarId}`);
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch("/api/notes", {
         method: "POST",
@@ -79,9 +80,7 @@ export function useNotes(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId
-        ? localStorage.getItem(`calendar_password_${calendarId}`)
-        : null;
+      const password = calendarId ? getCachedPassword(calendarId) : null;
 
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "PUT",
@@ -120,9 +119,7 @@ export function useNotes(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId
-        ? localStorage.getItem(`calendar_password_${calendarId}`)
-        : null;
+      const password = calendarId ? getCachedPassword(calendarId) : null;
 
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "DELETE",

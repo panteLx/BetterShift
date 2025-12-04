@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { removeCachedPassword, setCachedPassword } from "@/lib/password-cache";
 
 interface ManagePasswordDialogProps {
   open: boolean;
@@ -112,12 +113,16 @@ export function ManagePasswordDialog({
         return;
       }
 
-      // Clear cached password from localStorage
-      localStorage.removeItem(`calendar_password_${calendarId}`);
-
-      // If new password was set, cache it
-      if (!removePassword && newPassword) {
-        localStorage.setItem(`calendar_password_${calendarId}`, newPassword);
+      // Handle localStorage based on what changed
+      if (removePassword) {
+        // Only remove from localStorage if password was actually removed
+        removeCachedPassword(calendarId);
+      } else if (newPassword) {
+        // New password was set, update localStorage
+        setCachedPassword(calendarId, newPassword);
+      } else if (hasPassword && currentPassword) {
+        // Only isLocked changed, keep the current password cached
+        setCachedPassword(calendarId, currentPassword);
       }
 
       onSuccess();

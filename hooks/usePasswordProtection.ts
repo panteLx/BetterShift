@@ -1,4 +1,8 @@
 import { useCallback } from "react";
+import {
+  getCachedPassword,
+  verifyAndCachePassword,
+} from "@/lib/password-cache";
 
 interface UsePasswordProtectionOptions {
   calendarId: string;
@@ -10,30 +14,9 @@ export function usePasswordProtection({
   onPasswordRequired,
 }: UsePasswordProtectionOptions) {
   const verifyPassword = useCallback(async (): Promise<boolean> => {
-    const password = localStorage.getItem(`calendar_password_${calendarId}`);
-
-    try {
-      const response = await fetch(
-        `/api/calendars/${calendarId}/verify-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.protected && !data.valid) {
-        localStorage.removeItem(`calendar_password_${calendarId}`);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Failed to verify password:", error);
-      return false;
-    }
+    const password = getCachedPassword(calendarId);
+    const result = await verifyAndCachePassword(calendarId, password);
+    return result.valid;
   }, [calendarId]);
 
   const withPasswordCheck = useCallback(
@@ -53,7 +36,7 @@ export function usePasswordProtection({
   );
 
   const getPassword = useCallback(() => {
-    return localStorage.getItem(`calendar_password_${calendarId}`);
+    return getCachedPassword(calendarId);
   }, [calendarId]);
 
   return {

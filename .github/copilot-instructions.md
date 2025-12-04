@@ -66,14 +66,29 @@ export async function PUT(
 
 Calendars can be password-protected. Implementation flow:
 
-1. Check localStorage: `calendar_password_${calendarId}`
-2. Verify via `/api/calendars/[id]/verify-password` POST
-3. On 401: Show `PasswordDialog`, store in localStorage
+1. Check localStorage via `getCachedPassword(calendarId)` from `lib/password-cache.ts`
+2. Verify via `verifyAndCachePassword(calendarId, password)` - automatically caches valid passwords
+3. On invalid password: Show `PasswordDialog`, which automatically caches on success
 4. Use `pendingAction` state to retry operation after authentication
 
+**Important**: Always use the utilities from `lib/password-cache.ts` instead of direct localStorage access:
+
+- `getCachedPassword(calendarId)` - Get cached password
+- `setCachedPassword(calendarId, password)` - Cache password after verification
+- `removeCachedPassword(calendarId)` - Remove cached password
+- `verifyAndCachePassword(calendarId, password)` - Verify and auto-cache if valid
+- `hasValidCachedPassword(calendarId)` - Check if cached password is still valid
+
 ```typescript
-setPendingAction({ type: "edit", shiftId: id, formData });
-setShowPasswordDialog(true);
+// Example: Password check before action
+const password = getCachedPassword(calendarId);
+const result = await verifyAndCachePassword(calendarId, password);
+
+if (result.protected && !result.valid) {
+  setPendingAction({ type: "edit", shiftId: id, formData });
+  setShowPasswordDialog(true);
+  return;
+}
 ```
 
 ### State Management

@@ -21,10 +21,3 @@ export function verifyPassword(
   const inputHash = hashPassword(password);
   return inputHash === hash;
 }
-
-/**
- * Generates a random salt (optional, for future enhancements)
- */
-export function generateSalt(): string {
-  return crypto.randomBytes(16).toString("hex");
-}

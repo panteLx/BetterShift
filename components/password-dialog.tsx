@@ -12,6 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  setCachedPassword,
+  verifyAndCachePassword,
+} from "@/lib/password-cache";
 
 interface PasswordDialogProps {
   open: boolean;
@@ -46,20 +50,9 @@ export function PasswordDialog({
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `/api/calendars/${calendarId}/verify-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password }),
-        }
-      );
+      const result = await verifyAndCachePassword(calendarId, password);
 
-      const data = await response.json();
-
-      if (data.valid) {
-        // Store password in localStorage
-        localStorage.setItem(`calendar_password_${calendarId}`, password);
+      if (result.valid) {
         onSuccess(password);
         onOpenChange(false);
       } else {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { toast } from "sonner";
 import { CalendarDialog } from "@/components/calendar-dialog";
 import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { PasswordDialog } from "@/components/password-dialog";
@@ -43,7 +44,11 @@ import { de, enUS } from "date-fns/locale";
 import { CalendarNote, ShiftPreset, ICloudSync } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
-import { toast } from "sonner";
+import {
+  getCachedPassword,
+  verifyAndCachePassword,
+  removeCachedPassword,
+} from "@/lib/password-cache";
 import { motion } from "motion/react";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useShifts } from "@/hooks/useShifts";
@@ -212,34 +217,17 @@ function HomeContent() {
 
       // Check if calendar is locked
       if (selectedCalendarIsLocked) {
-        // Check if we have a valid password in localStorage
-        const storedPassword = localStorage.getItem(
-          `calendar_password_${selectedCalendar}`
-        );
+        const cachedPassword = getCachedPassword(selectedCalendar);
 
-        if (storedPassword) {
+        if (cachedPassword) {
           // Set loading state and verify password before unlocking
           setIsVerifyingCalendarPassword(true);
           setIsCalendarUnlocked(false);
 
-          // Verify the stored password
-          fetch(`/api/calendars/${selectedCalendar}/verify-password`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password: storedPassword }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.valid) {
-                // Password valid, unlock calendar
-                setIsCalendarUnlocked(true);
-              } else {
-                // Password invalid, remove from storage and keep locked
-                localStorage.removeItem(
-                  `calendar_password_${selectedCalendar}`
-                );
-                setIsCalendarUnlocked(false);
-              }
+          // Verify the cached password
+          verifyAndCachePassword(selectedCalendar, cachedPassword)
+            .then((result) => {
+              setIsCalendarUnlocked(result.valid);
             })
             .catch(() => {
               // On error, keep calendar locked
@@ -250,7 +238,7 @@ function HomeContent() {
               setIsVerifyingCalendarPassword(false);
             });
         } else {
-          // No stored password, set unlocked to false - form will handle it
+          // No cached password, set unlocked to false
           setIsCalendarUnlocked(false);
           setIsVerifyingCalendarPassword(false);
         }
@@ -278,35 +266,22 @@ function HomeContent() {
 
     // Check if calendar is password protected
     if (calendar.passwordHash) {
-      const storedPassword = localStorage.getItem(
-        `calendar_password_${selectedCalendar}`
-      );
+      const cachedPassword = getCachedPassword(selectedCalendar);
 
-      if (storedPassword) {
-        // Verify stored password
-        try {
-          const response = await fetch(
-            `/api/calendars/${selectedCalendar}/verify-password`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ password: storedPassword }),
-            }
-          );
+      if (cachedPassword) {
+        // Verify cached password
+        const result = await verifyAndCachePassword(
+          selectedCalendar,
+          cachedPassword
+        );
 
-          if (response.ok) {
-            setShowICloudSyncDialog(true);
-            return;
-          } else {
-            // Password invalid, remove from storage
-            localStorage.removeItem(`calendar_password_${selectedCalendar}`);
-          }
-        } catch (error) {
-          console.error("Password verification failed:", error);
+        if (result.valid) {
+          setShowICloudSyncDialog(true);
+          return;
         }
       }
 
-      // Show password dialog
+      // Show password dialog if no valid cached password
       setPendingAction({
         type: "edit",
         presetAction: async () => {
@@ -519,38 +494,23 @@ function HomeContent() {
   const handleManualShiftCreation = async () => {
     if (!selectedCalendar) return;
 
-    try {
-      const password = localStorage.getItem(
-        `calendar_password_${selectedCalendar}`
-      );
+    const cachedPassword = getCachedPassword(selectedCalendar);
+    const result = await verifyAndCachePassword(
+      selectedCalendar,
+      cachedPassword
+    );
 
-      const response = await fetch(
-        `/api/calendars/${selectedCalendar}/verify-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.protected && !data.valid) {
-        localStorage.removeItem(`calendar_password_${selectedCalendar}`);
-        setPendingAction({
-          type: "edit",
-          presetAction: handleManualShiftCreation,
-        });
-        setShowPasswordDialog(true);
-        return;
-      }
-
-      setSelectedDate(new Date());
-      setShowShiftDialog(true);
-    } catch (error) {
-      console.error("Failed to verify password:", error);
-      toast.error(t("password.errorVerification"));
+    if (result.protected && !result.valid) {
+      setPendingAction({
+        type: "edit",
+        presetAction: handleManualShiftCreation,
+      });
+      setShowPasswordDialog(true);
+      return;
     }
+
+    setSelectedDate(new Date());
+    setShowShiftDialog(true);
   };
 
   const handleShowAllShifts = (date: Date, dayShifts: ShiftWithCalendar[]) => {
@@ -593,23 +553,13 @@ function HomeContent() {
 
     try {
       const password = selectedCalendar
-        ? localStorage.getItem(`calendar_password_${selectedCalendar}`)
+        ? getCachedPassword(selectedCalendar)
         : null;
 
       if (selectedCalendar) {
-        const response = await fetch(
-          `/api/calendars/${selectedCalendar}/verify-password`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password }),
-          }
-        );
+        const result = await verifyAndCachePassword(selectedCalendar, password);
 
-        const data = await response.json();
-
-        if (data.protected && !data.valid) {
-          localStorage.removeItem(`calendar_password_${selectedCalendar}`);
+        if (result.protected && !result.valid) {
           setPendingAction({
             type: "edit",
             presetAction: () => handleAddShift(targetDate),
