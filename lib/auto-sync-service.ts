@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { icloudSyncs } from "@/lib/db/schema";
 import { gt, eq } from "drizzle-orm";
 import { eventEmitter } from "@/lib/event-emitter";
+import { syncICloudCalendar } from "@/app/api/icloud-syncs/[id]/sync/route";
 
 interface SyncJob {
   syncId: string;
@@ -17,6 +18,7 @@ interface SyncJob {
 class AutoSyncService {
   private jobs: Map<string, SyncJob> = new Map();
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  private pollInterval: NodeJS.Timeout | null = null;
   private isRunning = false;
 
   /**
@@ -35,7 +37,7 @@ class AutoSyncService {
     await this.loadSyncs();
 
     // Check for syncs every 5 minutes in case of changes
-    setInterval(() => this.loadSyncs(), 5 * 60 * 1000);
+    this.pollInterval = setInterval(() => this.loadSyncs(), 5 * 60 * 1000);
   }
 
   /**
@@ -45,7 +47,13 @@ class AutoSyncService {
     console.log("Stopping auto-sync service...");
     this.isRunning = false;
 
-    // Clear all timers
+    // Clear the polling interval
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+
+    // Clear all sync job timers
     for (const timer of this.timers.values()) {
       clearTimeout(timer);
     }
@@ -138,45 +146,19 @@ class AutoSyncService {
     console.log(`Executing auto-sync for ${syncId}`);
 
     try {
-      // Get sync details for calendar ID
-      const [sync] = await db
-        .select()
-        .from(icloudSyncs)
-        .where(eq(icloudSyncs.id, syncId))
-        .limit(1);
+      // Call sync function directly instead of HTTP fetch
+      const stats = await syncICloudCalendar(syncId);
 
-      if (!sync) {
-        console.error(`Sync ${syncId} not found, removing job`);
-        this.removeJob(syncId);
-        return;
-      }
-
-      // Call the sync API endpoint
-      const response = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-        }/api/icloud-syncs/${syncId}/sync`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`Auto-sync completed for ${syncId}:`, data.stats);
+      if (stats) {
+        console.log(`Auto-sync completed for ${syncId}:`, stats);
 
         // Emit event to notify connected clients
         eventEmitter.emit("calendar-change", {
           type: "shift",
           action: "update",
-          calendarId: sync.calendarId,
-          data: { autoSync: true, syncId, stats: data.stats },
+          calendarId: stats.calendarId,
+          data: { autoSync: true, syncId, stats },
         });
-      } else {
-        console.error(
-          `Auto-sync failed for ${syncId}: ${response.status} ${response.statusText}`
-        );
       }
     } catch (error) {
       console.error(`Auto-sync error for ${syncId}:`, error);
@@ -206,19 +188,11 @@ class AutoSyncService {
     console.log(`Manually triggering sync for ${syncId}`);
 
     try {
-      const response = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-        }/api/icloud-syncs/${syncId}/sync`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      // Call sync function directly instead of HTTP fetch
+      const stats = await syncICloudCalendar(syncId);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`Manual sync completed for ${syncId}:`, data.stats);
+      if (stats) {
+        console.log(`Manual sync completed for ${syncId}:`, stats);
 
         // Reschedule based on new lastSyncedAt
         const job = this.jobs.get(syncId);
@@ -227,13 +201,10 @@ class AutoSyncService {
           this.scheduleJob(syncId, job.intervalMs, new Date());
         }
 
-        return data;
-      } else {
-        console.error(
-          `Manual sync failed for ${syncId}: ${response.status} ${response.statusText}`
-        );
-        return null;
+        return { stats };
       }
+
+      return null;
     } catch (error) {
       console.error(`Manual sync error for ${syncId}:`, error);
       return null;

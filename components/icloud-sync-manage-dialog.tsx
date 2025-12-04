@@ -278,6 +278,14 @@ export function ICloudSyncManageDialog({
     field: "isHidden" | "hideFromStats",
     currentValue: boolean
   ) => {
+    // Optimistically update local editingSync state for immediate UI feedback
+    if (editingSync && editingSync.id === syncId) {
+      setEditingSync({
+        ...editingSync,
+        [field]: !currentValue,
+      });
+    }
+
     try {
       const response = await fetch(`/api/icloud-syncs/${syncId}`, {
         method: "PATCH",
@@ -294,10 +302,26 @@ export function ICloudSyncManageDialog({
       } else {
         const data = await response.json();
         toast.error(data.error || t("icloud.updateError"));
+
+        // Revert optimistic update on error
+        if (editingSync && editingSync.id === syncId) {
+          setEditingSync({
+            ...editingSync,
+            [field]: currentValue,
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to update visibility:", error);
       toast.error(t("icloud.updateError"));
+
+      // Revert optimistic update on error
+      if (editingSync && editingSync.id === syncId) {
+        setEditingSync({
+          ...editingSync,
+          [field]: currentValue,
+        });
+      }
     }
   };
 
@@ -345,10 +369,10 @@ export function ICloudSyncManageDialog({
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
                             <RefreshCw className="h-3 w-3" />
                             {sync.autoSyncInterval < 60
-                              ? `${sync.autoSyncInterval}min`
+                              ? `${sync.autoSyncInterval} min`
                               : sync.autoSyncInterval < 1440
-                              ? `${sync.autoSyncInterval / 60}h`
-                              : `${sync.autoSyncInterval / 1440}d`}
+                              ? `${sync.autoSyncInterval / 60} h`
+                              : `${sync.autoSyncInterval / 1440} d`}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium">
@@ -497,23 +521,11 @@ export function ICloudSyncManageDialog({
                 </div>
                 <Slider
                   value={[
-                    formAutoSyncInterval === 0
-                      ? 0
-                      : formAutoSyncInterval === 5
-                      ? 1
-                      : formAutoSyncInterval === 15
-                      ? 2
-                      : formAutoSyncInterval === 30
-                      ? 3
-                      : formAutoSyncInterval === 60
-                      ? 4
-                      : formAutoSyncInterval === 120
-                      ? 5
-                      : formAutoSyncInterval === 360
-                      ? 6
-                      : formAutoSyncInterval === 720
-                      ? 7
-                      : 8,
+                    (() => {
+                      const intervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
+                      const index = intervals.indexOf(formAutoSyncInterval);
+                      return index >= 0 ? index : 0;
+                    })(),
                   ]}
                   onValueChange={(value: number[]) => {
                     const intervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
@@ -525,7 +537,7 @@ export function ICloudSyncManageDialog({
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{t("icloud.autoSyncManual")}</span>
-                  <span>24h</span>
+                  <span>{t("icloud.autoSync24hShort")}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {t("icloud.autoSyncHint")}
@@ -538,7 +550,7 @@ export function ICloudSyncManageDialog({
                     <Checkbox
                       id="hide-calendar"
                       checked={editingSync.isHidden || false}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={() => {
                         handleToggleVisibility(
                           editingSync.id,
                           "isHidden",
@@ -565,7 +577,7 @@ export function ICloudSyncManageDialog({
                         editingSync.hideFromStats ||
                         false
                       }
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={() => {
                         handleToggleVisibility(
                           editingSync.id,
                           "hideFromStats",

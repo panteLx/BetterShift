@@ -65,6 +65,22 @@ export async function PATCH(
       );
     }
 
+    // Validate autoSyncInterval if provided
+    const validIntervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
+    if (
+      autoSyncInterval !== undefined &&
+      !validIntervals.includes(autoSyncInterval)
+    ) {
+      return NextResponse.json(
+        {
+          error: `Invalid auto-sync interval. Must be one of: ${validIntervals.join(
+            ", "
+          )} minutes`,
+        },
+        { status: 400 }
+      );
+    }
+
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };

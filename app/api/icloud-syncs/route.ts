@@ -64,6 +64,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate autoSyncInterval
+    const validIntervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
+    if (
+      autoSyncInterval !== undefined &&
+      !validIntervals.includes(autoSyncInterval)
+    ) {
+      return NextResponse.json(
+        {
+          error: `Invalid auto-sync interval. Must be one of: ${validIntervals.join(
+            ", "
+          )} minutes`,
+        },
+        { status: 400 }
+      );
+    }
+
     const [icloudSync] = await db
       .insert(icloudSyncs)
       .values({
