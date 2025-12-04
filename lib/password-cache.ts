@@ -45,7 +45,19 @@ export async function verifyAndCachePassword(
       }
     );
 
+    // Handle different HTTP status codes
     if (!response.ok) {
+      // 401 Unauthorized or 403 Forbidden indicate wrong password
+      if (response.status === 401 || response.status === 403) {
+        removeCachedPassword(calendarId);
+        return { valid: false, protected: true };
+      }
+
+      // Other errors (404, 500, etc.) - treat as temporary failure
+      // Don't remove cached password as the error might be transient
+      console.error(
+        `Password verification failed with status ${response.status}`
+      );
       return { valid: false, protected: true };
     }
 
@@ -67,6 +79,8 @@ export async function verifyAndCachePassword(
       protected: data.protected,
     };
   } catch (error) {
+    // Network errors or other exceptions
+    // Don't remove cached password as this might be a temporary network issue
     console.error("Failed to verify password:", error);
     return { valid: false, protected: true };
   }

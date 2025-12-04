@@ -47,7 +47,6 @@ import { formatDateToLocal } from "@/lib/date-utils";
 import {
   getCachedPassword,
   verifyAndCachePassword,
-  removeCachedPassword,
 } from "@/lib/password-cache";
 import { motion } from "motion/react";
 import { useCalendars } from "@/hooks/useCalendars";
