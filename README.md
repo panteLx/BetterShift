@@ -12,7 +12,7 @@
 
 > **Note**
 >
-> BetterShift is a modern shift management application built with Next.js 16 and SQLite. It helps you organize and manage work shifts across multiple calendars with customizable presets, color coding, and password protection. Perfect for anyone managing variable work schedules.
+> BetterShift is a modern shift management application built with Next.js 16 and SQLite. It helps you organize and manage work shifts across multiple calendars with customizable presets, color coding, password protection and external calendar synchronization. Perfect for anyone managing variable work schedules.
 
 ## 🔗 Quick Links
 
@@ -36,7 +36,7 @@
 - **Shift Presets**: Create reusable shift templates with custom times, colors, and labels
 - **Drag & Drop**: Reorder calendars and presets with intuitive drag-and-drop functionality
 - **Calendar Notes**: Right-click any day to add custom notes (e.g., "Morning shift because afternoon hairdresser")
-- **ICloud Sync**: Automatically or manually synchronize multiple iCloud calendars at configurable intervals
+- **External Calendar Sync**: Automatically or manually synchronize multiple external calendars at configurable intervals
 
 ### 🎨 Customization & Organization
 
@@ -49,13 +49,12 @@
 
 - **Password Protection**: Secure individual calendars with optional passwords
 - **Local Storage**: Passwords are securely hashed using SHA-256
-- **Export Functionality**: Export calendar data for backup or migration
 
 ### 🌐 Internationalization
 
 - **Multi-Language Support**: Built-in support for German and English
 - **Automatic Detection**: Automatically detects browser language preference
-- **Manual Switching**: Easy language switcher in the header
+- **Manual Switching**: Easy language switcher in the footer
 - **Cookie-Based Preference**: Your language choice persists across sessions
 
 ### 📊 Statistics & Insights
@@ -201,45 +200,6 @@ $ npm run db:studio
 > **Note**
 >
 > Never run `npm run db:push` in production. Always use migrations (`db:generate` + `db:migrate`) for safe schema changes.
-
----
-
-## ❓ Frequently Asked Questions
-
-### What is BetterShift?
-
-BetterShift is a shift management application designed for people with variable work schedules. It allows you to manage multiple calendars, create shift presets, add notes to specific days, and view statistics about your working hours.
-
-### How do I protect a calendar with a password?
-
-1. Open the calendar settings
-2. Click "Manage Password"
-3. Set a password for the calendar
-4. The password will be required for editing or viewing that calendar
-
-### How do I add a shift quickly?
-
-1. Select a preset from the preset selector
-2. Click on any day in the calendar
-3. The shift will be created automatically with the preset's settings
-4. Click the same day again to remove the shift
-
-### How do I add notes to a specific day?
-
-Right-click (or long-press on mobile) on any day in the calendar to open the note dialog. You can add, edit, or delete notes for that day.
-
-### Does BetterShift work offline?
-
-BetterShift requires a server connection to save data. However, it handles offline scenarios gracefully and will attempt to reconnect automatically.
-
-### What languages are supported?
-
-Currently, BetterShift supports:
-
-- German (Deutsch)
-- English
-
-The application automatically detects your browser language and uses the appropriate translation.
 
 ---
 
