@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { icloudSyncs, shifts } from "@/lib/db/schema";
+import { externalSyncs, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter } from "@/lib/event-emitter";
-import { isValidICloudUrl } from "@/lib/icloud-utils";
+import {
+  isValidCalendarUrl,
+  type CalendarSyncType,
+} from "@/lib/external-calendar-utils";
 
-// GET single iCloud sync
+// GET single external sync
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -13,30 +16,30 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const [icloudSync] = await db
+    const [externalSync] = await db
       .select()
-      .from(icloudSyncs)
-      .where(eq(icloudSyncs.id, id))
+      .from(externalSyncs)
+      .where(eq(externalSyncs.id, id))
       .limit(1);
 
-    if (!icloudSync) {
+    if (!externalSync) {
       return NextResponse.json(
-        { error: "iCloud sync not found" },
+        { error: "External sync not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(icloudSync);
+    return NextResponse.json(externalSync);
   } catch (error) {
-    console.error("Failed to fetch iCloud sync:", error);
+    console.error("Failed to fetch external sync:", error);
     return NextResponse.json(
-      { error: "Failed to fetch iCloud sync" },
+      { error: "Failed to fetch external sync" },
       { status: 500 }
     );
   }
 }
 
-// PATCH update iCloud sync
+// PATCH update external sync
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -46,7 +49,7 @@ export async function PATCH(
     const body = await request.json();
     const {
       name,
-      icloudUrl,
+      calendarUrl,
       color,
       displayMode,
       isHidden,
@@ -54,15 +57,37 @@ export async function PATCH(
       autoSyncInterval,
     } = body;
 
-    // Validate iCloud URL if provided
-    if (icloudUrl !== undefined && !isValidICloudUrl(icloudUrl)) {
+    // Get existing sync to validate URL with correct sync type
+    const [existingSync] = await db
+      .select()
+      .from(externalSyncs)
+      .where(eq(externalSyncs.id, id))
+      .limit(1);
+
+    if (!existingSync) {
       return NextResponse.json(
-        {
-          error:
-            "Invalid iCloud URL. URL must use webcal:// or https:// protocol and be from icloud.com domain",
-        },
-        { status: 400 }
+        { error: "External sync not found" },
+        { status: 404 }
       );
+    }
+
+    // Validate calendar URL if provided
+    if (calendarUrl !== undefined) {
+      if (
+        !isValidCalendarUrl(
+          calendarUrl,
+          existingSync.syncType as CalendarSyncType
+        )
+      ) {
+        const domain =
+          existingSync.syncType === "icloud" ? "icloud.com" : "google.com";
+        return NextResponse.json(
+          {
+            error: `Invalid ${existingSync.syncType} calendar URL. URL must use webcal:// or https:// protocol and be from ${domain} domain`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate autoSyncInterval if provided
@@ -86,7 +111,7 @@ export async function PATCH(
     };
 
     if (name !== undefined) updateData.name = name;
-    if (icloudUrl !== undefined) updateData.icloudUrl = icloudUrl;
+    if (calendarUrl !== undefined) updateData.calendarUrl = calendarUrl;
     if (color !== undefined) updateData.color = color;
     if (displayMode !== undefined) updateData.displayMode = displayMode;
     if (isHidden !== undefined) updateData.isHidden = isHidden;
@@ -95,14 +120,14 @@ export async function PATCH(
       updateData.autoSyncInterval = autoSyncInterval;
 
     const [updated] = await db
-      .update(icloudSyncs)
+      .update(externalSyncs)
       .set(updateData)
-      .where(eq(icloudSyncs.id, id))
+      .where(eq(externalSyncs.id, id))
       .returning();
 
     if (!updated) {
       return NextResponse.json(
-        { error: "iCloud sync not found" },
+        { error: "External sync not found" },
         { status: 404 }
       );
     }
@@ -115,14 +140,14 @@ export async function PATCH(
           color: color,
           updatedAt: new Date(),
         })
-        .where(eq(shifts.icloudSyncId, id));
+        .where(eq(shifts.externalSyncId, id));
 
       // Emit event to notify clients about shift updates
       eventEmitter.emit("calendar-change", {
         type: "shift",
         action: "update",
         calendarId: updated.calendarId,
-        data: { icloudSyncId: id, colorUpdated: true },
+        data: { externalSyncId: id, colorUpdated: true },
       });
     }
 
@@ -132,21 +157,21 @@ export async function PATCH(
         type: "shift",
         action: "update",
         calendarId: updated.calendarId,
-        data: { icloudSyncId: id, visibilityUpdated: true },
+        data: { externalSyncId: id, visibilityUpdated: true },
       });
     }
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Failed to update iCloud sync:", error);
+    console.error("Failed to update external sync:", error);
     return NextResponse.json(
-      { error: "Failed to update iCloud sync" },
+      { error: "Failed to update external sync" },
       { status: 500 }
     );
   }
 }
 
-// DELETE iCloud sync and all associated shifts
+// DELETE external sync and all associated shifts
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -154,13 +179,13 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    await db.delete(icloudSyncs).where(eq(icloudSyncs.id, id));
+    await db.delete(externalSyncs).where(eq(externalSyncs.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete iCloud sync:", error);
+    console.error("Failed to delete external sync:", error);
     return NextResponse.json(
-      { error: "Failed to delete iCloud sync" },
+      { error: "Failed to delete external sync" },
       { status: 500 }
     );
   }

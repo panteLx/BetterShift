@@ -83,7 +83,7 @@ export function DayShiftsDialog({
                   </p>
                 )}
               </div>
-              {onDeleteShift && !shift.icloudSyncId && (
+              {onDeleteShift && !shift.externalSyncId && (
                 <Button
                   size="icon"
                   variant="ghost"

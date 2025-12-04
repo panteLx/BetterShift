@@ -1,29 +1,35 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { icloudSyncs, shifts } from "@/lib/db/schema";
+import { externalSyncs, shifts } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
-import { expandRecurringEvents, splitMultiDayEvent } from "@/lib/icloud-utils";
+import {
+  expandRecurringEvents,
+  splitMultiDayEvent,
+} from "@/lib/external-calendar-utils";
 
 /**
  * Core sync logic extracted for reuse by both API route and auto-sync service
  */
-export async function syncICloudCalendar(syncId: string) {
-  // Get the iCloud sync configuration
-  const [icloudSync] = await db
+export async function syncExternalCalendar(syncId: string) {
+  // Get the external sync configuration
+  const [externalSync] = await db
     .select()
-    .from(icloudSyncs)
-    .where(eq(icloudSyncs.id, syncId))
+    .from(externalSyncs)
+    .where(eq(externalSyncs.id, syncId))
     .limit(1);
 
-  if (!icloudSync) {
-    throw new Error("iCloud sync configuration not found");
+  if (!externalSync) {
+    throw new Error("External sync configuration not found");
   }
 
-  // Convert webcal:// to https:// for iCloud URLs
-  const fetchUrl = icloudSync.icloudUrl.replace(/^webcal:\/\//i, "https://");
+  // Convert webcal:// to https:// for calendar URLs
+  const fetchUrl = externalSync.calendarUrl.replace(
+    /^webcal:\/\//i,
+    "https://"
+  );
 
-  // Fetch the calendar from the specified iCloud URL with timeout protection
+  // Fetch the calendar from the specified URL with timeout protection
   let icsData: string;
   try {
     const controller = new AbortController();
@@ -49,11 +55,11 @@ export async function syncICloudCalendar(syncId: string) {
       throw fetchError;
     }
   } catch (error) {
-    console.error("Error fetching iCloud calendar:", error);
+    console.error("Error fetching external calendar:", error);
     throw new Error(
       error instanceof Error
         ? error.message
-        : "Failed to fetch iCloud calendar. Please check the URL."
+        : "Failed to fetch external calendar. Please check the URL."
     );
   }
 
@@ -75,11 +81,11 @@ export async function syncICloudCalendar(syncId: string) {
   const syncWindowEnd = new Date();
   syncWindowEnd.setFullYear(syncWindowEnd.getFullYear() + 1);
 
-  // Get existing iCloud synced shifts for this sync
+  // Get existing synced shifts for this sync
   const existingShifts = await db
     .select()
     .from(shifts)
-    .where(eq(shifts.icloudSyncId, syncId));
+    .where(eq(shifts.externalSyncId, syncId));
 
   const processedEventIds = new Set<string>();
   const shiftsToInsert: (typeof shifts.$inferInsert)[] = [];
@@ -125,24 +131,24 @@ export async function syncICloudCalendar(syncId: string) {
         processedEventIds.add(eventId);
 
         const shiftData = {
-          calendarId: icloudSync.calendarId,
+          calendarId: externalSync.calendarId,
           date: dayEntry.date,
           startTime: dayEntry.startTime,
           endTime: dayEntry.endTime,
           title: event.summary || "Untitled Event",
-          color: icloudSync.color,
+          color: externalSync.color,
           notes: event.description || null,
           isAllDay,
           isSecondary: false,
-          icloudEventId: eventId,
-          icloudSyncId: syncId,
-          syncedFromIcloud: true,
+          externalEventId: eventId,
+          externalSyncId: syncId,
+          syncedFromExternal: true,
           presetId: null,
         };
 
         // Check if this event already exists
         const existingShift = existingShifts.find(
-          (s) => s.icloudEventId === eventId
+          (s) => s.externalEventId === eventId
         );
 
         if (existingShift) {
@@ -167,7 +173,9 @@ export async function syncICloudCalendar(syncId: string) {
 
   // Calculate which shifts to delete before transaction
   const shiftIdsToDelete = existingShifts
-    .filter((s) => s.icloudEventId && !processedEventIds.has(s.icloudEventId))
+    .filter(
+      (s) => s.externalEventId && !processedEventIds.has(s.externalEventId)
+    )
     .map((s) => s.id);
 
   // Perform batch operations in a transaction for atomicity and better performance
@@ -186,18 +194,18 @@ export async function syncICloudCalendar(syncId: string) {
       }
     }
 
-    // Delete shifts that are no longer in the iCloud calendar in one batch
+    // Delete shifts that are no longer in the external calendar in one batch
     if (shiftIdsToDelete.length > 0) {
       tx.delete(shifts).where(inArray(shifts.id, shiftIdsToDelete)).run();
     }
 
     // Update last sync time
-    tx.update(icloudSyncs)
+    tx.update(externalSyncs)
       .set({
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(icloudSyncs.id, syncId))
+      .where(eq(externalSyncs.id, syncId))
       .run();
 
     // Return transaction stats
@@ -207,7 +215,8 @@ export async function syncICloudCalendar(syncId: string) {
       deleted: shiftIdsToDelete.length,
       totalEvents: vevents.length,
       totalOccurrences: shiftsToInsert.length + shiftsToUpdate.length,
-      calendarId: icloudSync.calendarId,
+      calendarId: externalSync.calendarId,
+      syncType: externalSync.syncType,
     };
   });
 
@@ -220,14 +229,14 @@ export async function POST(
 ) {
   try {
     const { id: syncId } = await params;
-    const stats = await syncICloudCalendar(syncId);
+    const stats = await syncExternalCalendar(syncId);
 
     return NextResponse.json({
       success: true,
       stats,
     });
   } catch (error) {
-    console.error("Error syncing iCloud calendar:", error);
+    console.error("Error syncing external calendar:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: errorMessage }, { status: 500 });

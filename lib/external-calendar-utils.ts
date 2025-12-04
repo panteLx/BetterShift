@@ -1,15 +1,22 @@
 /**
- * iCloud calendar utility functions
+ * External calendar utility functions
+ * Supports iCloud, Google Calendar, and other iCal-based calendar services
  */
 
 import ICAL from "ical.js";
 
+export type CalendarSyncType = "icloud" | "google";
+
 /**
- * Validates iCloud calendar URL to prevent SSRF vulnerabilities
+ * Validates external calendar URL to prevent SSRF vulnerabilities
  * @param url - The URL to validate
+ * @param syncType - The type of calendar sync (icloud or google)
  * @returns true if valid, false otherwise
  */
-export function isValidICloudUrl(url: string): boolean {
+export function isValidCalendarUrl(
+  url: string,
+  syncType: CalendarSyncType
+): boolean {
   try {
     const parsedUrl = new URL(url);
 
@@ -18,10 +25,23 @@ export function isValidICloudUrl(url: string): boolean {
       return false;
     }
 
-    // Check if hostname is from iCloud domain
     const hostname = parsedUrl.hostname.toLowerCase();
-    if (!hostname.endsWith(".icloud.com") && hostname !== "icloud.com") {
-      return false;
+
+    // Validate based on sync type
+    if (syncType === "icloud") {
+      // Check if hostname is from iCloud domain
+      if (!hostname.endsWith(".icloud.com") && hostname !== "icloud.com") {
+        return false;
+      }
+    } else if (syncType === "google") {
+      // Check if hostname is from Google Calendar domain
+      if (
+        !hostname.endsWith(".google.com") &&
+        hostname !== "google.com" &&
+        hostname !== "calendar.google.com"
+      ) {
+        return false;
+      }
     }
 
     return true;
@@ -29,6 +49,14 @@ export function isValidICloudUrl(url: string): boolean {
     // Invalid URL format
     return false;
   }
+}
+
+/**
+ * Backwards compatibility - validates iCloud URLs
+ * @deprecated Use isValidCalendarUrl instead
+ */
+export function isValidICloudUrl(url: string): boolean {
+  return isValidCalendarUrl(url, "icloud");
 }
 
 /**

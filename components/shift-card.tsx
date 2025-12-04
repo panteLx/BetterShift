@@ -49,7 +49,7 @@ export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
               </p>
             )}
           </div>
-          {!shift.icloudSyncId && (
+          {!shift.externalSyncId && (
             <Button
               variant="ghost"
               size="icon"

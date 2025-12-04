@@ -9,7 +9,7 @@ import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
-import { ICloudSyncManageDialog } from "@/components/icloud-sync-manage-dialog";
+import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -41,7 +41,7 @@ import {
   endOfWeek,
 } from "date-fns";
 import { de, enUS } from "date-fns/locale";
-import { CalendarNote, ShiftPreset, ICloudSync } from "@/lib/db/schema";
+import { CalendarNote, ShiftPreset, ExternalSync } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import {
@@ -96,32 +96,32 @@ function HomeContent() {
     refetchNotes,
   } = useNotes(selectedCalendar);
 
-  // iCloud Syncs state
-  const [icloudSyncs, setIcloudSyncs] = useState<ICloudSync[]>([]);
+  // External Calendar Syncs state
+  const [externalSyncs, setExternalSyncs] = useState<ExternalSync[]>([]);
 
-  // Fetch iCloud syncs for the calendar
-  const fetchICloudSyncs = useCallback(async () => {
+  // Fetch external syncs for the calendar
+  const fetchExternalSyncs = useCallback(async () => {
     if (!selectedCalendar) {
-      setIcloudSyncs([]);
+      setExternalSyncs([]);
       return;
     }
 
     try {
       const response = await fetch(
-        `/api/icloud-syncs?calendarId=${selectedCalendar}`
+        `/api/external-syncs?calendarId=${selectedCalendar}`
       );
       if (response.ok) {
         const data = await response.json();
-        setIcloudSyncs(data);
+        setExternalSyncs(data);
       }
     } catch (error) {
-      console.error("Failed to fetch iCloud syncs:", error);
+      console.error("Failed to fetch external syncs:", error);
     }
   }, [selectedCalendar]);
 
   useEffect(() => {
-    fetchICloudSyncs();
-  }, [fetchICloudSyncs]);
+    fetchExternalSyncs();
+  }, [fetchExternalSyncs]);
 
   // Local state
   const [selectedPresetId, setSelectedPresetId] = useState<
@@ -139,7 +139,7 @@ function HomeContent() {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showDeleteCalendarDialog, setShowDeleteCalendarDialog] =
     useState(false);
-  const [showICloudSyncDialog, setShowICloudSyncDialog] = useState(false);
+  const [showExternalSyncDialog, setShowExternalSyncDialog] = useState(false);
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
   const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
@@ -257,7 +257,7 @@ function HomeContent() {
     setShowDeleteCalendarDialog(true);
   };
 
-  const handleICloudSyncClick = async () => {
+  const handleExternalSyncClick = async () => {
     if (!selectedCalendar) return;
 
     const calendar = calendars.find((c) => c.id === selectedCalendar);
@@ -275,7 +275,7 @@ function HomeContent() {
         );
 
         if (result.valid) {
-          setShowICloudSyncDialog(true);
+          setShowExternalSyncDialog(true);
           return;
         }
       }
@@ -284,13 +284,13 @@ function HomeContent() {
       setPendingAction({
         type: "edit",
         presetAction: async () => {
-          setShowICloudSyncDialog(true);
+          setShowExternalSyncDialog(true);
         },
       });
       setShowPasswordDialog(true);
     } else {
       // No password protection
-      setShowICloudSyncDialog(true);
+      setShowExternalSyncDialog(true);
     }
   };
 
@@ -737,7 +737,7 @@ function HomeContent() {
         onCreateCalendar={() => setShowCalendarDialog(true)}
         onManagePassword={() => setShowManagePasswordDialog(true)}
         onDeleteCalendar={initiateDeleteCalendar}
-        onICloudSync={handleICloudSyncClick}
+        onExternalSync={handleExternalSyncClick}
         onPresetsChange={refetchPresets}
         onShiftsChange={refetchShifts}
         onStatsRefresh={() => setStatsRefreshTrigger((prev) => prev + 1)}
@@ -882,7 +882,7 @@ function HomeContent() {
               notes={notes}
               selectedPresetId={selectedPresetId}
               togglingDates={togglingDates}
-              icloudSyncs={icloudSyncs}
+              externalSyncs={externalSyncs}
               onDayClick={handleDayClick}
               onDayRightClick={handleDayRightClick}
               onNoteIconClick={handleNoteIconClick}
@@ -1021,16 +1021,16 @@ function HomeContent() {
         />
       )}
       {selectedCalendar && (
-        <ICloudSyncManageDialog
-          open={showICloudSyncDialog}
-          onOpenChange={setShowICloudSyncDialog}
+        <ExternalSyncManageDialog
+          open={showExternalSyncDialog}
+          onOpenChange={setShowExternalSyncDialog}
           calendarId={selectedCalendar}
           onSyncComplete={() => {
             refetchShifts();
             refetchCalendars();
             setStatsRefreshTrigger((prev) => prev + 1);
-            // Refetch iCloud syncs to get updated displayMode
-            fetchICloudSyncs();
+            // Refetch external syncs to get updated displayMode
+            fetchExternalSyncs();
           }}
         />
       )}

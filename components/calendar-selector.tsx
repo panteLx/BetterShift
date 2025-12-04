@@ -19,7 +19,7 @@ interface CalendarSelectorProps {
   onCreateNew: () => void;
   onManagePassword?: () => void;
   onDelete?: (id: string) => void;
-  onICloudSync?: () => void;
+  onExternalSync?: () => void;
 }
 
 export function CalendarSelector({
@@ -29,7 +29,7 @@ export function CalendarSelector({
   onCreateNew,
   onManagePassword,
   onDelete,
-  onICloudSync,
+  onExternalSync,
 }: CalendarSelectorProps) {
   const t = useTranslations();
 
@@ -64,13 +64,13 @@ export function CalendarSelector({
           <KeyRound className="h-4 w-4" />
         </Button>
       )}
-      {onICloudSync && selectedId && (
+      {onExternalSync && selectedId && (
         <Button
-          onClick={onICloudSync}
+          onClick={onExternalSync}
           size="icon"
           variant="outline"
           className="h-9 w-9 sm:h-10 sm:w-10"
-          title={t("icloud.manageTitle")}
+          title={t("externalSync.manageTitle")}
         >
           <Cloud className="h-4 w-4" />
         </Button>

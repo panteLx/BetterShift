@@ -22,36 +22,40 @@ import {
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
-import { ICloudSync } from "@/lib/db/schema";
+import { ExternalSync } from "@/lib/db/schema";
 import { Loader2, Trash2, RefreshCw, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { PRESET_COLORS } from "@/lib/constants";
-import { isValidICloudUrl } from "@/lib/icloud-utils";
+import {
+  isValidCalendarUrl,
+  type CalendarSyncType,
+} from "@/lib/external-calendar-utils";
 
-interface ICloudSyncManageDialogProps {
+interface ExternalSyncManageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string | null;
   onSyncComplete?: () => void;
 }
 
-export function ICloudSyncManageDialog({
+export function ExternalSyncManageDialog({
   open,
   onOpenChange,
   calendarId,
   onSyncComplete,
-}: ICloudSyncManageDialogProps) {
+}: ExternalSyncManageDialogProps) {
   const t = useTranslations();
-  const [syncs, setSyncs] = useState<ICloudSync[]>([]);
+  const [syncs, setSyncs] = useState<ExternalSync[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingSync, setEditingSync] = useState<ICloudSync | null>(null);
+  const [editingSync, setEditingSync] = useState<ExternalSync | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
+  const [formSyncType, setFormSyncType] = useState("icloud");
   const [formColor, setFormColor] = useState("#3b82f6");
   const [formDisplayMode, setFormDisplayMode] = useState("normal");
   const [formAutoSyncInterval, setFormAutoSyncInterval] = useState(0);
@@ -62,7 +66,7 @@ export function ICloudSyncManageDialog({
     setIsLoading(true);
     try {
       const response = await fetch(
-        `/api/icloud-syncs?calendarId=${calendarId}`
+        `/api/external-syncs?calendarId=${calendarId}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -89,6 +93,7 @@ export function ICloudSyncManageDialog({
       setEditingSync(null);
       setFormName("");
       setFormUrl("");
+      setFormSyncType("icloud");
       setFormColor("#3b82f6");
       setFormDisplayMode("normal");
       setFormAutoSyncInterval(0);
@@ -98,32 +103,33 @@ export function ICloudSyncManageDialog({
   const handleAddSync = async () => {
     if (!calendarId || !formName.trim() || !formUrl.trim()) return;
 
-    // Validate iCloud URL format
-    if (!isValidICloudUrl(formUrl.trim())) {
-      toast.error(t("icloud.invalidUrlFormat"));
+    // Validate calendar URL format
+    if (!isValidCalendarUrl(formUrl.trim(), formSyncType as CalendarSyncType)) {
+      toast.error(t("externalSync.invalidUrlFormat"));
       return;
     }
 
     // Check if URL already exists
     const normalizedUrl = formUrl.trim().toLowerCase();
     const urlExists = syncs.some(
-      (sync) => sync.icloudUrl.toLowerCase() === normalizedUrl
+      (sync) => sync.calendarUrl.toLowerCase() === normalizedUrl
     );
 
     if (urlExists) {
-      toast.error(t("icloud.urlAlreadyExists"));
+      toast.error(t("externalSync.urlAlreadyExists"));
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/icloud-syncs", {
+      const response = await fetch("/api/external-syncs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           calendarId,
           name: formName.trim(),
-          icloudUrl: formUrl.trim(),
+          calendarUrl: formUrl.trim(),
+          syncType: formSyncType,
           color: formColor,
           displayMode: formDisplayMode,
           autoSyncInterval: formAutoSyncInterval,
@@ -134,22 +140,23 @@ export function ICloudSyncManageDialog({
         const newSync = await response.json();
         setFormName("");
         setFormUrl("");
+        setFormSyncType("icloud");
         setFormColor("#3b82f6");
         setFormDisplayMode("normal");
         setFormAutoSyncInterval(0);
         setShowAddForm(false);
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh to update parent state
-        toast.success(t("icloud.createSuccess"));
+        toast.success(t("externalSync.createSuccess"));
         // Auto-sync the newly created sync
         await handleSync(newSync.id);
       } else {
         const data = await response.json();
-        toast.error(data.error || t("icloud.createError"));
+        toast.error(data.error || t("externalSync.createError"));
       }
     } catch (error) {
       console.error("Failed to create sync:", error);
-      toast.error(t("icloud.createError"));
+      toast.error(t("externalSync.createError"));
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +167,7 @@ export function ICloudSyncManageDialog({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/icloud-syncs/${editingSync.id}`, {
+      const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -176,19 +183,20 @@ export function ICloudSyncManageDialog({
         setEditingSync(null);
         setFormName("");
         setFormUrl("");
+        setFormSyncType("icloud");
         setFormColor("#3b82f6");
         setFormDisplayMode("normal");
         setFormAutoSyncInterval(0);
         await fetchSyncs();
-        onSyncComplete?.(); // Trigger refresh of shifts and iCloudSyncs
-        toast.success(t("icloud.updateSuccess"));
+        onSyncComplete?.(); // Trigger refresh of shifts and externalSyncs
+        toast.success(t("externalSync.updateSuccess"));
       } else {
         const data = await response.json();
-        toast.error(data.error || t("icloud.updateError"));
+        toast.error(data.error || t("externalSync.updateError"));
       }
     } catch (error) {
       console.error("Failed to update sync:", error);
-      toast.error(t("icloud.updateError"));
+      toast.error(t("externalSync.updateError"));
     } finally {
       setIsLoading(false);
     }
@@ -197,7 +205,7 @@ export function ICloudSyncManageDialog({
   const handleSync = async (syncId: string) => {
     setIsSyncing(syncId);
     try {
-      const response = await fetch(`/api/icloud-syncs/${syncId}/sync`, {
+      const response = await fetch(`/api/external-syncs/${syncId}/sync`, {
         method: "POST",
       });
 
@@ -213,16 +221,16 @@ export function ICloudSyncManageDialog({
       // Show sync statistics
       const stats = data.stats || { created: 0, updated: 0, deleted: 0 };
       toast.success(
-        `${t("icloud.syncSuccess")}: ${stats.created} ${t(
-          "icloud.statsCreated"
-        )}, ${stats.updated} ${t("icloud.statsUpdated")}, ${stats.deleted} ${t(
-          "icloud.statsDeleted"
-        )}`
+        `${t("externalSync.syncSuccess")}: ${stats.created} ${t(
+          "externalSync.statsCreated"
+        )}, ${stats.updated} ${t("externalSync.statsUpdated")}, ${
+          stats.deleted
+        } ${t("externalSync.statsDeleted")}`
       );
     } catch (error) {
       console.error("Sync error:", error);
       toast.error(
-        error instanceof Error ? error.message : t("icloud.syncError")
+        error instanceof Error ? error.message : t("externalSync.syncError")
       );
     } finally {
       setIsSyncing(null);
@@ -230,34 +238,34 @@ export function ICloudSyncManageDialog({
   };
 
   const handleDelete = async (syncId: string) => {
-    if (!confirm(t("icloud.deleteConfirm"))) return;
+    if (!confirm(t("externalSync.deleteConfirm"))) return;
 
     setIsDeleting(syncId);
     try {
-      const response = await fetch(`/api/icloud-syncs/${syncId}`, {
+      const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
         await fetchSyncs();
         onSyncComplete?.();
-        toast.success(t("icloud.deleteSuccess"));
+        toast.success(t("externalSync.deleteSuccess"));
       } else {
         const data = await response.json();
-        toast.error(data.error || t("icloud.deleteError"));
+        toast.error(data.error || t("externalSync.deleteError"));
       }
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error(t("icloud.deleteError"));
+      toast.error(t("externalSync.deleteError"));
     } finally {
       setIsDeleting(null);
     }
   };
 
-  const startEdit = (sync: ICloudSync) => {
+  const startEdit = (sync: ExternalSync) => {
     setEditingSync(sync);
     setFormName(sync.name);
-    setFormUrl(sync.icloudUrl);
+    setFormUrl(sync.calendarUrl);
     setFormColor(sync.color);
     setFormDisplayMode(sync.displayMode || "normal");
     setFormAutoSyncInterval(sync.autoSyncInterval || 0);
@@ -268,6 +276,7 @@ export function ICloudSyncManageDialog({
     setEditingSync(null);
     setFormName("");
     setFormUrl("");
+    setFormSyncType("icloud");
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
     setFormAutoSyncInterval(0);
@@ -287,7 +296,7 @@ export function ICloudSyncManageDialog({
     }
 
     try {
-      const response = await fetch(`/api/icloud-syncs/${syncId}`, {
+      const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -298,10 +307,10 @@ export function ICloudSyncManageDialog({
       if (response.ok) {
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh
-        toast.success(t("icloud.updateSuccess"));
+        toast.success(t("externalSync.updateSuccess"));
       } else {
         const data = await response.json();
-        toast.error(data.error || t("icloud.updateError"));
+        toast.error(data.error || t("externalSync.updateError"));
 
         // Revert optimistic update on error
         if (editingSync && editingSync.id === syncId) {
@@ -313,7 +322,7 @@ export function ICloudSyncManageDialog({
       }
     } catch (error) {
       console.error("Failed to update visibility:", error);
-      toast.error(t("icloud.updateError"));
+      toast.error(t("externalSync.updateError"));
 
       // Revert optimistic update on error
       if (editingSync && editingSync.id === syncId) {
@@ -330,9 +339,32 @@ export function ICloudSyncManageDialog({
     setEditingSync(null);
     setFormName("");
     setFormUrl("");
+    setFormSyncType("icloud");
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
     setFormAutoSyncInterval(0);
+  };
+
+  // Get URL placeholder and hint based on sync type
+  const getUrlPlaceholder = () => {
+    if (formSyncType === "google") {
+      return t("externalSync.urlPlaceholderGoogle");
+    }
+    return t("externalSync.urlPlaceholderICloud");
+  };
+
+  const getUrlHint = () => {
+    if (formSyncType === "google") {
+      return t("externalSync.urlHintGoogle");
+    }
+    return t("externalSync.urlHintICloud");
+  };
+
+  const getDomainHint = () => {
+    if (formSyncType === "google") {
+      return "calendar.google.com";
+    }
+    return "icloud.com";
   };
 
   return (
@@ -340,10 +372,10 @@ export function ICloudSyncManageDialog({
       <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("icloud.manageTitle")}
+            {t("externalSync.manageTitle")}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            {t("icloud.manageDescription")}
+            {t("externalSync.manageDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -365,6 +397,11 @@ export function ICloudSyncManageDialog({
                           style={{ backgroundColor: sync.color }}
                         />
                         <span className="truncate">{sync.name}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 font-normal">
+                          {sync.syncType === "google"
+                            ? t("externalSync.syncTypeGoogle")
+                            : t("externalSync.syncTypeICloud")}
+                        </span>
                         {sync.autoSyncInterval > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
                             <RefreshCw className="h-3 w-3" />
@@ -376,13 +413,13 @@ export function ICloudSyncManageDialog({
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium">
-                            {t("icloud.autoSyncManual")}
+                            {t("externalSync.autoSyncManual")}
                           </span>
                         )}
                       </div>
                       {sync.lastSyncedAt && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {t("icloud.lastSynced")}:{" "}
+                          {t("externalSync.lastSynced")}:{" "}
                           {new Date(sync.lastSyncedAt).toLocaleString()}
                         </p>
                       )}
@@ -434,34 +471,57 @@ export function ICloudSyncManageDialog({
           {(showAddForm || editingSync) && (
             <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
               <h3 className="font-semibold">
-                {editingSync ? t("icloud.editSync") : t("icloud.addSync")}
+                {editingSync
+                  ? t("externalSync.editSync")
+                  : t("externalSync.addSync")}
               </h3>
 
               <div className="space-y-2">
-                <Label htmlFor="sync-name">{t("icloud.nameLabel")}</Label>
+                <Label htmlFor="sync-name">{t("externalSync.nameLabel")}</Label>
                 <Input
                   id="sync-name"
                   type="text"
-                  placeholder={t("icloud.namePlaceholder")}
+                  placeholder={t("externalSync.namePlaceholder")}
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
 
+              {!editingSync && (
+                <div className="space-y-2">
+                  <Label htmlFor="sync-type">
+                    {t("externalSync.syncTypeLabel")}
+                  </Label>
+                  <Select value={formSyncType} onValueChange={setFormSyncType}>
+                    <SelectTrigger id="sync-type" className="bg-background/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="icloud">
+                        {t("externalSync.syncTypeICloud")}
+                      </SelectItem>
+                      <SelectItem value="google">
+                        {t("externalSync.syncTypeGoogle")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="sync-url">{t("icloud.urlLabel")}</Label>
+                <Label htmlFor="sync-url">{t("externalSync.urlLabel")}</Label>
                 <Input
                   id="sync-url"
                   type="text"
-                  placeholder={t("icloud.urlPlaceholder")}
+                  placeholder={getUrlPlaceholder()}
                   value={formUrl}
                   onChange={(e) => setFormUrl(e.target.value)}
                   disabled={isLoading || !!editingSync}
                 />
                 {!editingSync && (
                   <p className="text-xs text-muted-foreground">
-                    {t("icloud.urlHint")}
+                    {getUrlHint()}
                   </p>
                 )}
               </div>
@@ -470,17 +530,17 @@ export function ICloudSyncManageDialog({
                 <ColorPicker
                   color={formColor}
                   onChange={setFormColor}
-                  label={t("icloud.colorLabel")}
+                  label={t("externalSync.colorLabel")}
                   presetColors={PRESET_COLORS}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t("icloud.colorHint")}
+                  {t("externalSync.colorHint")}
                 </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="sync-display-mode">
-                  {t("icloud.displayMode")}
+                  {t("externalSync.displayMode")}
                 </Label>
                 <Select
                   value={formDisplayMode}
@@ -494,24 +554,24 @@ export function ICloudSyncManageDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="normal">
-                      {t("icloud.displayModeNormal")}
+                      {t("externalSync.displayModeNormal")}
                     </SelectItem>
                     <SelectItem value="minimal">
-                      {t("icloud.displayModeMinimal")}
+                      {t("externalSync.displayModeMinimal")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {t("icloud.displayModeHint")}
+                  {t("externalSync.displayModeHint")}
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>{t("icloud.autoSyncLabel")}</Label>
+                  <Label>{t("externalSync.autoSyncLabel")}</Label>
                   <span className="text-sm font-medium text-primary">
                     {formAutoSyncInterval === 0
-                      ? t("icloud.autoSyncManual")
+                      ? t("externalSync.autoSyncManual")
                       : formAutoSyncInterval < 60
                       ? `${formAutoSyncInterval} min`
                       : formAutoSyncInterval < 1440
@@ -536,11 +596,11 @@ export function ICloudSyncManageDialog({
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t("icloud.autoSyncManual")}</span>
-                  <span>{t("icloud.autoSync24hShort")}</span>
+                  <span>{t("externalSync.autoSyncManual")}</span>
+                  <span>{t("externalSync.autoSync24hShort")}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {t("icloud.autoSyncHint")}
+                  {t("externalSync.autoSyncHint")}
                 </p>
               </div>
 
@@ -562,11 +622,11 @@ export function ICloudSyncManageDialog({
                       htmlFor="hide-calendar"
                       className="text-sm font-normal cursor-pointer"
                     >
-                      {t("icloud.hideCalendar")}
+                      {t("externalSync.hideCalendar")}
                     </Label>
                   </div>
                   <p className="text-xs text-muted-foreground pl-6">
-                    {t("icloud.hideCalendarHint")}
+                    {t("externalSync.hideCalendarHint")}
                   </p>
 
                   <div className="flex items-center gap-2">
@@ -594,11 +654,11 @@ export function ICloudSyncManageDialog({
                           : "cursor-pointer"
                       }`}
                     >
-                      {t("icloud.hideFromStats")}
+                      {t("externalSync.hideFromStats")}
                     </Label>
                   </div>
                   <p className="text-xs text-muted-foreground pl-6">
-                    {t("icloud.hideFromStatsHint")}
+                    {t("externalSync.hideFromStatsHint")}
                   </p>
                 </div>
               )}
@@ -613,6 +673,7 @@ export function ICloudSyncManageDialog({
                       setShowAddForm(false);
                       setFormName("");
                       setFormUrl("");
+                      setFormSyncType("icloud");
                       setFormColor("#3b82f6");
                       setFormDisplayMode("normal");
                       setFormAutoSyncInterval(0);
@@ -633,7 +694,7 @@ export function ICloudSyncManageDialog({
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  {editingSync ? t("common.save") : t("icloud.addSync")}
+                  {editingSync ? t("common.save") : t("externalSync.addSync")}
                 </Button>
               </div>
             </div>
@@ -647,19 +708,49 @@ export function ICloudSyncManageDialog({
               disabled={!!isSyncing || !!isDeleting}
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t("icloud.addNewSync")}
+              {t("externalSync.addNewSync")}
             </Button>
           )}
 
           {/* Instructions */}
           <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-4">
             <div className="text-sm space-y-2">
-              <div className="font-medium">{t("icloud.howToTitle")}</div>
+              <div className="font-medium">
+                {t(
+                  formSyncType === "google"
+                    ? "externalSync.howToTitleGoogle"
+                    : "externalSync.howToTitleICloud"
+                )}
+              </div>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>{t("icloud.howToStep1")}</li>
-                <li>{t("icloud.howToStep2")}</li>
-                <li>{t("icloud.howToStep3")}</li>
-                <li>{t("icloud.howToStep4")}</li>
+                <li>
+                  {t(
+                    formSyncType === "google"
+                      ? "externalSync.howToStep1Google"
+                      : "externalSync.howToStep1ICloud"
+                  )}
+                </li>
+                <li>
+                  {t(
+                    formSyncType === "google"
+                      ? "externalSync.howToStep2Google"
+                      : "externalSync.howToStep2ICloud"
+                  )}
+                </li>
+                <li>
+                  {t(
+                    formSyncType === "google"
+                      ? "externalSync.howToStep3Google"
+                      : "externalSync.howToStep3ICloud"
+                  )}
+                </li>
+                <li>
+                  {t(
+                    formSyncType === "google"
+                      ? "externalSync.howToStep4Google"
+                      : "externalSync.howToStep4ICloud"
+                  )}
+                </li>
               </ol>
             </div>
           </div>

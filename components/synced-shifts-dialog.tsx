@@ -40,10 +40,10 @@ export function SyncedShiftsDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {t("icloud.syncedShiftsTitle", { date: formattedDate })}
+            {t("externalSync.syncedShiftsTitle", { date: formattedDate })}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {t("icloud.viewSyncedShifts")}
+            {t("externalSync.viewSyncedShifts")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto">

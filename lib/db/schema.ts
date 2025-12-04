@@ -17,7 +17,7 @@ export const calendars = sqliteTable("calendars", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const icloudSyncs = sqliteTable("icloud_syncs", {
+export const externalSyncs = sqliteTable("external_syncs", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -25,7 +25,8 @@ export const icloudSyncs = sqliteTable("icloud_syncs", {
     .notNull()
     .references(() => calendars.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  icloudUrl: text("icloud_url").notNull(),
+  syncType: text("sync_type").notNull().default("icloud"), // icloud, google, etc.
+  calendarUrl: text("calendar_url").notNull(),
   color: text("color").notNull().default("#3b82f6"),
   displayMode: text("display_mode").notNull().default("normal"),
   isHidden: integer("is_hidden", { mode: "boolean" }).notNull().default(false),
@@ -62,11 +63,11 @@ export const shifts = sqliteTable("shifts", {
   isSecondary: integer("is_secondary", { mode: "boolean" })
     .notNull()
     .default(false),
-  icloudEventId: text("icloud_event_id"),
-  icloudSyncId: text("icloud_sync_id").references(() => icloudSyncs.id, {
+  externalEventId: text("external_event_id"),
+  externalSyncId: text("external_sync_id").references(() => externalSyncs.id, {
     onDelete: "cascade",
   }),
-  syncedFromIcloud: integer("synced_from_icloud", { mode: "boolean" })
+  syncedFromExternal: integer("synced_from_external", { mode: "boolean" })
     .notNull()
     .default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
@@ -123,8 +124,8 @@ export const calendarNotes = sqliteTable("calendar_notes", {
 
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
-export type ICloudSync = typeof icloudSyncs.$inferSelect;
-export type NewICloudSync = typeof icloudSyncs.$inferInsert;
+export type ExternalSync = typeof externalSyncs.$inferSelect;
+export type NewExternalSync = typeof externalSyncs.$inferInsert;
 export type Shift = typeof shifts.$inferSelect;
 export type NewShift = typeof shifts.$inferInsert;
 export type ShiftPreset = typeof shiftPresets.$inferSelect;

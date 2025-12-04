@@ -1,13 +1,14 @@
 /**
- * Auto-Sync Service for iCloud Calendars
+ * Auto-Sync Service for External Calendars
  * Runs in the background and periodically syncs calendars based on their autoSyncInterval
+ * Supports iCloud, Google Calendar, and other iCal-based services
  */
 
 import { db } from "@/lib/db";
-import { icloudSyncs } from "@/lib/db/schema";
+import { externalSyncs } from "@/lib/db/schema";
 import { gt, eq } from "drizzle-orm";
 import { eventEmitter } from "@/lib/event-emitter";
-import { syncICloudCalendar } from "@/app/api/icloud-syncs/[id]/sync/route";
+import { syncExternalCalendar } from "@/app/api/external-syncs/[id]/sync/route";
 
 interface SyncJob {
   syncId: string;
@@ -69,8 +70,8 @@ class AutoSyncService {
       // Get all syncs with auto-sync enabled (autoSyncInterval > 0)
       const syncs = await db
         .select()
-        .from(icloudSyncs)
-        .where(gt(icloudSyncs.autoSyncInterval, 0));
+        .from(externalSyncs)
+        .where(gt(externalSyncs.autoSyncInterval, 0));
 
       // Remove jobs for syncs that were deleted or disabled
       for (const [syncId] of this.jobs) {
@@ -147,7 +148,7 @@ class AutoSyncService {
 
     try {
       // Call sync function directly instead of HTTP fetch
-      const stats = await syncICloudCalendar(syncId);
+      const stats = await syncExternalCalendar(syncId);
 
       if (stats) {
         console.log(`Auto-sync completed for ${syncId}:`, stats);
@@ -189,7 +190,7 @@ class AutoSyncService {
 
     try {
       // Call sync function directly instead of HTTP fetch
-      const stats = await syncICloudCalendar(syncId);
+      const stats = await syncExternalCalendar(syncId);
 
       if (stats) {
         console.log(`Manual sync completed for ${syncId}:`, stats);

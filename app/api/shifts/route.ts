@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendars, shifts, icloudSyncs } from "@/lib/db/schema";
+import { calendars, shifts, externalSyncs } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
@@ -30,8 +30,8 @@ export async function GET(request: Request) {
         notes: shifts.notes,
         isAllDay: shifts.isAllDay,
         isSecondary: shifts.isSecondary,
-        syncedFromIcloud: shifts.syncedFromIcloud,
-        icloudSyncId: shifts.icloudSyncId,
+        syncedFromExternal: shifts.syncedFromExternal,
+        externalSyncId: shifts.externalSyncId,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,
         calendar: {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       })
       .from(shifts)
       .leftJoin(calendars, eq(shifts.calendarId, calendars.id))
-      .leftJoin(icloudSyncs, eq(shifts.icloudSyncId, icloudSyncs.id));
+      .leftJoin(externalSyncs, eq(shifts.externalSyncId, externalSyncs.id));
 
     if (date) {
       const targetDate = new Date(date);
@@ -54,8 +54,8 @@ export async function GET(request: Request) {
           eq(shifts.calendarId, calendarId),
           gte(shifts.date, startOfDay),
           lte(shifts.date, endOfDay),
-          // Exclude shifts from hidden iCloud syncs (or shifts that are not synced)
-          or(isNull(shifts.icloudSyncId), eq(icloudSyncs.isHidden, false))
+          // Exclude shifts from hidden external syncs (or shifts that are not synced)
+          or(isNull(shifts.externalSyncId), eq(externalSyncs.isHidden, false))
         )
       );
       return NextResponse.json(result);
@@ -64,8 +64,8 @@ export async function GET(request: Request) {
     const result = await query.where(
       and(
         eq(shifts.calendarId, calendarId),
-        // Exclude shifts from hidden iCloud syncs (or shifts that are not synced)
-        or(isNull(shifts.icloudSyncId), eq(icloudSyncs.isHidden, false))
+        // Exclude shifts from hidden external syncs (or shifts that are not synced)
+        or(isNull(shifts.externalSyncId), eq(externalSyncs.isHidden, false))
       )
     );
     return NextResponse.json(result);

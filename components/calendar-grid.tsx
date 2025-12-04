@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { StickyNote, RefreshCw } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
-import { CalendarNote, ICloudSync } from "@/lib/db/schema";
+import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { isToday } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useRef, useEffect } from "react";
@@ -14,7 +14,7 @@ interface CalendarGridProps {
   notes: CalendarNote[];
   selectedPresetId: string | undefined;
   togglingDates: Set<string>;
-  icloudSyncs: ICloudSync[];
+  externalSyncs: ExternalSync[];
   onDayClick: (date: Date) => void;
   onDayRightClick: (e: React.MouseEvent, date: Date) => void;
   onNoteIconClick: (e: React.MouseEvent, date: Date) => void;
@@ -30,7 +30,7 @@ export function CalendarGrid({
   notes,
   selectedPresetId,
   togglingDates,
-  icloudSyncs,
+  externalSyncs,
   onDayClick,
   onDayRightClick,
   onNoteIconClick,
@@ -177,27 +177,27 @@ export function CalendarGrid({
                 } = {};
 
                 dayShifts.forEach((shift) => {
-                  if (shift.syncedFromIcloud && shift.icloudSyncId) {
-                    const sync = icloudSyncs.find(
-                      (s) => s.id === shift.icloudSyncId
+                  if (shift.syncedFromExternal && shift.externalSyncId) {
+                    const sync = externalSyncs.find(
+                      (s) => s.id === shift.externalSyncId
                     );
                     const displayMode = sync?.displayMode || "normal";
 
                     if (displayMode === "minimal") {
-                      if (!syncedShiftsByMode[shift.icloudSyncId]) {
-                        syncedShiftsByMode[shift.icloudSyncId] = [];
+                      if (!syncedShiftsByMode[shift.externalSyncId]) {
+                        syncedShiftsByMode[shift.externalSyncId] = [];
                       }
-                      syncedShiftsByMode[shift.icloudSyncId].push(shift);
+                      syncedShiftsByMode[shift.externalSyncId].push(shift);
                     }
                   }
                 });
 
                 // Get shifts to display normally (regular + synced with normal mode)
                 const normalDisplayShifts = dayShifts.filter((s) => {
-                  if (!s.syncedFromIcloud) return true;
-                  if (!s.icloudSyncId) return true;
-                  const sync = icloudSyncs.find(
-                    (sync) => sync.id === s.icloudSyncId
+                  if (!s.syncedFromExternal) return true;
+                  if (!s.externalSyncId) return true;
+                  const sync = externalSyncs.find(
+                    (sync) => sync.id === s.externalSyncId
                   );
                   return !sync || sync.displayMode === "normal";
                 });
@@ -263,7 +263,7 @@ export function CalendarGrid({
                     {/* Show minimal badges for each sync with minimal display mode */}
                     {Object.entries(syncedShiftsByMode).map(
                       ([syncId, syncShifts]) => {
-                        const sync = icloudSyncs.find((s) => s.id === syncId);
+                        const sync = externalSyncs.find((s) => s.id === syncId);
                         if (!sync || syncShifts.length === 0) return null;
 
                         return (
