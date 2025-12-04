@@ -37,7 +37,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { calendarId, name, icloudUrl, color, displayMode } = body;
+    const {
+      calendarId,
+      name,
+      icloudUrl,
+      color,
+      displayMode,
+      autoSyncInterval,
+    } = body;
 
     if (!calendarId || !name || !icloudUrl) {
       return NextResponse.json(
@@ -66,6 +73,7 @@ export async function POST(request: Request) {
         icloudUrl,
         color: color || "#3b82f6",
         displayMode: displayMode || "normal",
+        autoSyncInterval: autoSyncInterval || 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       })

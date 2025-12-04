@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
 import { ICloudSync } from "@/lib/db/schema";
 import { Loader2, Trash2, RefreshCw, Plus, Edit2 } from "lucide-react";
@@ -53,6 +54,7 @@ export function ICloudSyncManageDialog({
   const [formUrl, setFormUrl] = useState("");
   const [formColor, setFormColor] = useState("#3b82f6");
   const [formDisplayMode, setFormDisplayMode] = useState("normal");
+  const [formAutoSyncInterval, setFormAutoSyncInterval] = useState(0);
 
   const fetchSyncs = useCallback(async () => {
     if (!calendarId) return;
@@ -89,6 +91,7 @@ export function ICloudSyncManageDialog({
       setFormUrl("");
       setFormColor("#3b82f6");
       setFormDisplayMode("normal");
+      setFormAutoSyncInterval(0);
     }
   }, [open, calendarId, fetchSyncs]);
 
@@ -123,6 +126,7 @@ export function ICloudSyncManageDialog({
           icloudUrl: formUrl.trim(),
           color: formColor,
           displayMode: formDisplayMode,
+          autoSyncInterval: formAutoSyncInterval,
         }),
       });
 
@@ -132,6 +136,7 @@ export function ICloudSyncManageDialog({
         setFormUrl("");
         setFormColor("#3b82f6");
         setFormDisplayMode("normal");
+        setFormAutoSyncInterval(0);
         setShowAddForm(false);
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh to update parent state
@@ -163,6 +168,7 @@ export function ICloudSyncManageDialog({
           icloudUrl: formUrl.trim() || undefined,
           color: formColor,
           displayMode: formDisplayMode,
+          autoSyncInterval: formAutoSyncInterval,
         }),
       });
 
@@ -172,6 +178,7 @@ export function ICloudSyncManageDialog({
         setFormUrl("");
         setFormColor("#3b82f6");
         setFormDisplayMode("normal");
+        setFormAutoSyncInterval(0);
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh of shifts and iCloudSyncs
         toast.success(t("icloud.updateSuccess"));
@@ -253,6 +260,7 @@ export function ICloudSyncManageDialog({
     setFormUrl(sync.icloudUrl);
     setFormColor(sync.color);
     setFormDisplayMode(sync.displayMode || "normal");
+    setFormAutoSyncInterval(sync.autoSyncInterval || 0);
     setShowAddForm(false);
   };
 
@@ -262,6 +270,7 @@ export function ICloudSyncManageDialog({
     setFormUrl("");
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
+    setFormAutoSyncInterval(0);
   };
 
   const handleToggleVisibility = async (
@@ -299,6 +308,7 @@ export function ICloudSyncManageDialog({
     setFormUrl("");
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
+    setFormAutoSyncInterval(0);
   };
 
   return (
@@ -331,6 +341,20 @@ export function ICloudSyncManageDialog({
                           style={{ backgroundColor: sync.color }}
                         />
                         <span className="truncate">{sync.name}</span>
+                        {sync.autoSyncInterval > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                            <RefreshCw className="h-3 w-3" />
+                            {sync.autoSyncInterval < 60
+                              ? `${sync.autoSyncInterval}min`
+                              : sync.autoSyncInterval < 1440
+                              ? `${sync.autoSyncInterval / 60}h`
+                              : `${sync.autoSyncInterval / 1440}d`}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium">
+                            {t("icloud.autoSyncManual")}
+                          </span>
+                        )}
                       </div>
                       {sync.lastSyncedAt && (
                         <p className="text-xs text-muted-foreground mt-1">
@@ -376,61 +400,6 @@ export function ICloudSyncManageDialog({
                         )}
                       </Button>
                     </div>
-                  </div>
-
-                  {/* Visibility Toggles */}
-                  <div className="flex flex-col gap-2 pl-3 border-t border-border/30 pt-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`hide-${sync.id}`}
-                        checked={sync.isHidden || false}
-                        onCheckedChange={() =>
-                          handleToggleVisibility(
-                            sync.id,
-                            "isHidden",
-                            sync.isHidden || false
-                          )
-                        }
-                        disabled={!!isSyncing || !!isDeleting}
-                      />
-                      <Label
-                        htmlFor={`hide-${sync.id}`}
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        {t("icloud.hideCalendar")}
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      {t("icloud.hideCalendarHint")}
-                    </p>
-
-                    <div className="flex items-center gap-2 mt-1">
-                      <Checkbox
-                        id={`hide-stats-${sync.id}`}
-                        checked={sync.isHidden || sync.hideFromStats || false}
-                        onCheckedChange={() =>
-                          handleToggleVisibility(
-                            sync.id,
-                            "hideFromStats",
-                            sync.hideFromStats || false
-                          )
-                        }
-                        disabled={!!isSyncing || !!isDeleting || sync.isHidden}
-                      />
-                      <Label
-                        htmlFor={`hide-stats-${sync.id}`}
-                        className={`text-sm font-normal ${
-                          sync.isHidden
-                            ? "cursor-not-allowed opacity-50"
-                            : "cursor-pointer"
-                        }`}
-                      >
-                        {t("icloud.hideFromStats")}
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      {t("icloud.hideFromStatsHint")}
-                    </p>
                   </div>
                 </div>
               ))}
@@ -513,6 +482,115 @@ export function ICloudSyncManageDialog({
                 </p>
               </div>
 
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>{t("icloud.autoSyncLabel")}</Label>
+                  <span className="text-sm font-medium text-primary">
+                    {formAutoSyncInterval === 0
+                      ? t("icloud.autoSyncManual")
+                      : formAutoSyncInterval < 60
+                      ? `${formAutoSyncInterval} min`
+                      : formAutoSyncInterval < 1440
+                      ? `${formAutoSyncInterval / 60} h`
+                      : `${formAutoSyncInterval / 1440} d`}
+                  </span>
+                </div>
+                <Slider
+                  value={[
+                    formAutoSyncInterval === 0
+                      ? 0
+                      : formAutoSyncInterval === 5
+                      ? 1
+                      : formAutoSyncInterval === 15
+                      ? 2
+                      : formAutoSyncInterval === 30
+                      ? 3
+                      : formAutoSyncInterval === 60
+                      ? 4
+                      : formAutoSyncInterval === 120
+                      ? 5
+                      : formAutoSyncInterval === 360
+                      ? 6
+                      : formAutoSyncInterval === 720
+                      ? 7
+                      : 8,
+                  ]}
+                  onValueChange={(value: number[]) => {
+                    const intervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
+                    setFormAutoSyncInterval(intervals[value[0]]);
+                  }}
+                  max={8}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{t("icloud.autoSyncManual")}</span>
+                  <span>24h</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("icloud.autoSyncHint")}
+                </p>
+              </div>
+
+              {editingSync && (
+                <div className="space-y-3 pt-2 border-t border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="hide-calendar"
+                      checked={editingSync.isHidden || false}
+                      onCheckedChange={(checked) => {
+                        handleToggleVisibility(
+                          editingSync.id,
+                          "isHidden",
+                          editingSync.isHidden || false
+                        );
+                      }}
+                    />
+                    <Label
+                      htmlFor="hide-calendar"
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {t("icloud.hideCalendar")}
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {t("icloud.hideCalendarHint")}
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="hide-from-stats"
+                      checked={
+                        editingSync.isHidden ||
+                        editingSync.hideFromStats ||
+                        false
+                      }
+                      onCheckedChange={(checked) => {
+                        handleToggleVisibility(
+                          editingSync.id,
+                          "hideFromStats",
+                          editingSync.hideFromStats || false
+                        );
+                      }}
+                      disabled={editingSync.isHidden}
+                    />
+                    <Label
+                      htmlFor="hide-from-stats"
+                      className={`text-sm font-normal ${
+                        editingSync.isHidden
+                          ? "cursor-not-allowed opacity-50"
+                          : "cursor-pointer"
+                      }`}
+                    >
+                      {t("icloud.hideFromStats")}
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {t("icloud.hideFromStatsHint")}
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -525,6 +603,7 @@ export function ICloudSyncManageDialog({
                       setFormUrl("");
                       setFormColor("#3b82f6");
                       setFormDisplayMode("normal");
+                      setFormAutoSyncInterval(0);
                     }
                   }}
                   disabled={isLoading}

@@ -32,6 +32,7 @@ export const icloudSyncs = sqliteTable("icloud_syncs", {
   hideFromStats: integer("hide_from_stats", { mode: "boolean" })
     .notNull()
     .default(false),
+  autoSyncInterval: integer("auto_sync_interval").notNull().default(0), // 0 = manual, otherwise minutes
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
