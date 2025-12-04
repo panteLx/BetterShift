@@ -360,13 +360,6 @@ export function ExternalSyncManageDialog({
     return t("externalSync.urlHintICloud");
   };
 
-  const getDomainHint = () => {
-    if (formSyncType === "google") {
-      return "calendar.google.com";
-    }
-    return "icloud.com";
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">

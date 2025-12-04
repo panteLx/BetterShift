@@ -41,7 +41,7 @@ import {
   endOfWeek,
 } from "date-fns";
 import { de, enUS } from "date-fns/locale";
-import { CalendarNote, ShiftPreset, ExternalSync } from "@/lib/db/schema";
+import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import {

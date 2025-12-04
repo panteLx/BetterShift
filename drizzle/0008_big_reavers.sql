@@ -1,6 +1,6 @@
+PRAGMA foreign_keys=OFF;--> statement-breakpoint
 ALTER TABLE `icloud_syncs` RENAME TO `external_syncs`;--> statement-breakpoint
 ALTER TABLE `external_syncs` RENAME COLUMN "icloud_url" TO "calendar_url";--> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_external_syncs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`calendar_id` text NOT NULL,
@@ -21,7 +21,6 @@ CREATE TABLE `__new_external_syncs` (
 INSERT INTO `__new_external_syncs`("id", "calendar_id", "name", "sync_type", "calendar_url", "color", "display_mode", "is_hidden", "hide_from_stats", "auto_sync_interval", "last_synced_at", "created_at", "updated_at") SELECT "id", "calendar_id", "name", 'icloud', "calendar_url", "color", "display_mode", "is_hidden", "hide_from_stats", "auto_sync_interval", "last_synced_at", "created_at", "updated_at" FROM `external_syncs`;--> statement-breakpoint
 DROP TABLE `external_syncs`;--> statement-breakpoint
 ALTER TABLE `__new_external_syncs` RENAME TO `external_syncs`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE TABLE `__new_shifts` (
 	`id` text PRIMARY KEY NOT NULL,
 	`calendar_id` text NOT NULL,
@@ -46,4 +45,5 @@ CREATE TABLE `__new_shifts` (
 --> statement-breakpoint
 INSERT INTO `__new_shifts`("id", "calendar_id", "preset_id", "date", "start_time", "end_time", "title", "color", "notes", "is_all_day", "is_secondary", "external_event_id", "external_sync_id", "synced_from_external", "created_at", "updated_at") SELECT "id", "calendar_id", "preset_id", "date", "start_time", "end_time", "title", "color", "notes", "is_all_day", "is_secondary", "icloud_event_id", "icloud_sync_id", "synced_from_icloud", "created_at", "updated_at" FROM `shifts`;--> statement-breakpoint
 DROP TABLE `shifts`;--> statement-breakpoint
-ALTER TABLE `__new_shifts` RENAME TO `shifts`;
+ALTER TABLE `__new_shifts` RENAME TO `shifts`;--> statement-breakpoint
+PRAGMA foreign_keys=ON;
