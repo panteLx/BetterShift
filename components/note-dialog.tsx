@@ -70,11 +70,6 @@ export function NoteDialog({
       // Save immediately
       if (noteText.trim()) {
         onSubmit(noteText);
-      } else if (note && !noteText.trim()) {
-        // Delete note if text is empty and note exists
-        if (onDelete) {
-          onDelete();
-        }
       }
     }
     onOpenChange(open);
