@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import { StickyNote } from "lucide-react";
@@ -40,21 +40,82 @@ export function NoteDialog({
   const t = useTranslations();
   const locale = useLocale();
   const [noteText, setNoteText] = useState("");
+  const initialNoteRef = useRef<string>("");
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     if (open) {
-      setNoteText(note?.note || "");
+      const initialNote = note?.note || "";
+      setNoteText(initialNote);
+      initialNoteRef.current = initialNote;
+      isInitialMount.current = true;
+    } else {
+      // Clear timeout when dialog closes
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
     }
   }, [open, note]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (noteText.trim()) {
-      onSubmit(noteText);
-      setNoteText("");
-      onOpenChange(false);
+  // Handle dialog close with immediate save if needed
+  const handleDialogClose = (open: boolean) => {
+    if (!open && noteText !== initialNoteRef.current) {
+      // Cancel pending timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      // Save immediately
+      if (noteText.trim()) {
+        onSubmit(noteText);
+      } else if (note && !noteText.trim()) {
+        // Delete note if text is empty and note exists
+        if (onDelete) {
+          onDelete();
+        }
+      }
     }
+    onOpenChange(open);
   };
+
+  // Auto-save with debouncing
+  useEffect(() => {
+    if (!open) return;
+
+    // Skip initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Only save if text has changed from initial value
+    if (noteText !== initialNoteRef.current) {
+      saveTimeoutRef.current = setTimeout(() => {
+        if (noteText.trim()) {
+          onSubmit(noteText);
+          initialNoteRef.current = noteText;
+        } else if (note && !noteText.trim()) {
+          // Delete note if text is empty and note exists
+          if (onDelete) {
+            onDelete();
+          }
+        }
+      }, 1000); // 1 second debounce
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [noteText, open, onSubmit, onDelete, note]);
 
   const handleDelete = () => {
     if (onDelete) {
@@ -69,7 +130,7 @@ export function NoteDialog({
     : "";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[480px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text flex items-center gap-2">
@@ -85,7 +146,7 @@ export function NoteDialog({
             </div>
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <div className="p-6 space-y-5">
           <div className="space-y-2.5">
             <Label
               htmlFor="note"
@@ -100,7 +161,6 @@ export function NoteDialog({
               onChange={(e) => setNoteText(e.target.value)}
               placeholder={t("note.notePlaceholder")}
               className="min-h-[120px] border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-primary/5 backdrop-blur-sm resize-none"
-              required
             />
           </div>
           <div className="flex justify-between items-center pt-2">
@@ -123,17 +183,11 @@ export function NoteDialog({
                 onClick={() => onOpenChange(false)}
                 className="h-11 border-border/50 hover:bg-muted/50"
               >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
-              >
-                {t("common.save")}
+                {t("common.close")}
               </Button>
             </div>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

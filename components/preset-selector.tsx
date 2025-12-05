@@ -112,9 +112,13 @@ export function PresetSelector({
       }
 
       onPresetsChange();
-      setShowEditDialog(false);
-      setEditingPreset(null);
-      setIsCreatingNew(false);
+
+      // Nur beim Erstellen Dialog schließen, beim Bearbeiten offen lassen für Auto-Save
+      if (isCreatingNew) {
+        setShowEditDialog(false);
+        setEditingPreset(null);
+        setIsCreatingNew(false);
+      }
     } catch (error) {
       console.error("Failed to save preset:", error);
       toast.error(t("preset.saveError"));

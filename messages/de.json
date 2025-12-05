@@ -1,6 +1,7 @@
 {
   "common": {
     "cancel": "Abbrechen",
+    "close": "Schließen",
     "save": "Speichern",
     "delete": "Löschen",
     "edit": "Bearbeiten",
@@ -65,7 +66,7 @@
     "create": "Neue Notiz",
     "edit": "Notiz bearbeiten",
     "note": "Notiz",
-    "notePlaceholder": "z.B. Frühdienst weil nachmittags Friseur...",
+    "notePlaceholder": "z.B. Frühdienst weil nachmittags Termin...",
     "hintMobile": "Langes Drücken auf einen Tag öffnet Notizen. Das Notiz-Icon zeigt vorhandene Notizen an.",
     "hintDesktop": "Rechtsklick auf einen Tag öffnet Notizen. Das Notiz-Icon zeigt vorhandene Notizen an.",
     "created": "Notiz erfolgreich erstellt",

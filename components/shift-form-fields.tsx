@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { ShiftFormData } from "@/components/shift-dialog";
 import { PRESET_COLORS } from "@/lib/constants";
+import { Check } from "lucide-react";
 
 interface ShiftFormFieldsProps {
   formData: ShiftFormData;
@@ -16,6 +17,8 @@ interface ShiftFormFieldsProps {
   presetName: string;
   onPresetNameChange: (value: string) => void;
   isEditing: boolean;
+  onBlur?: () => void;
+  showSaved?: boolean;
 }
 
 export function ShiftFormFields({
@@ -26,6 +29,8 @@ export function ShiftFormFields({
   presetName,
   onPresetNameChange,
   isEditing,
+  onBlur,
+  showSaved = false,
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
 
@@ -46,6 +51,7 @@ export function ShiftFormFields({
           onChange={(e) =>
             onFormDataChange({ ...formData, date: e.target.value })
           }
+          onBlur={onBlur}
           className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
         />
       </div>
@@ -54,9 +60,10 @@ export function ShiftFormFields({
         <Checkbox
           id="allDay"
           checked={formData.isAllDay}
-          onCheckedChange={(checked) =>
-            onFormDataChange({ ...formData, isAllDay: !!checked })
-          }
+          onCheckedChange={(checked) => {
+            onFormDataChange({ ...formData, isAllDay: !!checked });
+            setTimeout(() => onBlur?.(), 10);
+          }}
         />
         <Label htmlFor="allDay" className="text-sm font-medium cursor-pointer">
           {t("shift.allDayShift")}
@@ -82,6 +89,7 @@ export function ShiftFormFields({
               onChange={(e) =>
                 onFormDataChange({ ...formData, startTime: e.target.value })
               }
+              onBlur={onBlur}
               className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
             />
           </div>
@@ -96,6 +104,7 @@ export function ShiftFormFields({
               onChange={(e) =>
                 onFormDataChange({ ...formData, endTime: e.target.value })
               }
+              onBlur={onBlur}
               className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
             />
           </div>
@@ -117,6 +126,7 @@ export function ShiftFormFields({
           onChange={(e) =>
             onFormDataChange({ ...formData, title: e.target.value })
           }
+          onBlur={onBlur}
           className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
           autoFocus
         />
@@ -137,6 +147,7 @@ export function ShiftFormFields({
           onChange={(e) =>
             onFormDataChange({ ...formData, notes: e.target.value })
           }
+          onBlur={onBlur}
           rows={3}
           className="border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 resize-none"
         />
@@ -148,6 +159,20 @@ export function ShiftFormFields({
         label={t("shift.color")}
         presetColors={PRESET_COLORS}
       />
+
+      <AnimatePresence>
+        {showSaved && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800"
+          >
+            <Check className="h-4 w-4" />
+            <span>{t("common.saved")}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Auto-Save as Preset */}
       {!isEditing && (
