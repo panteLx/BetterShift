@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import {
@@ -53,10 +53,13 @@ export function PresetEditDialog({
     isAllDay: false,
     hideFromStats: false,
   });
+  const initialDataRef = useRef<PresetFormData | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     if (open && preset && !isCreating) {
-      setFormData({
+      const initialData = {
         title: preset.title,
         startTime: preset.startTime,
         endTime: preset.endTime,
@@ -65,9 +68,12 @@ export function PresetEditDialog({
         isSecondary: preset.isSecondary || false,
         isAllDay: preset.isAllDay || false,
         hideFromStats: preset.hideFromStats || false,
-      });
+      };
+      setFormData(initialData);
+      initialDataRef.current = initialData;
+      isInitialMount.current = true;
     } else if (open && isCreating) {
-      setFormData({
+      const initialData = {
         title: "",
         startTime: "09:00",
         endTime: "17:00",
@@ -76,17 +82,71 @@ export function PresetEditDialog({
         isSecondary: false,
         isAllDay: false,
         hideFromStats: false,
-      });
+      };
+      setFormData(initialData);
+      initialDataRef.current = initialData;
+      isInitialMount.current = true;
+    } else if (!open) {
+      // Clear timeout when dialog closes
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
     }
   }, [open, preset, isCreating]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
+  // Auto-save with debouncing (only for editing existing presets)
+  useEffect(() => {
+    if (!open || isCreating || !initialDataRef.current) return;
+
+    // Skip initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Check if data has changed and title is not empty
+    const hasChanged =
+      JSON.stringify(formData) !== JSON.stringify(initialDataRef.current);
+    if (hasChanged && formData.title.trim()) {
+      saveTimeoutRef.current = setTimeout(() => {
+        onSave(formData);
+        initialDataRef.current = formData;
+      }, 1000); // 1 second debounce
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formData, open, isCreating, onSave]);
+
+  // Handle dialog close with immediate save if needed
+  const handleDialogClose = (open: boolean) => {
+    if (!open && !isCreating && initialDataRef.current) {
+      // Cancel pending timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      // Save immediately if data changed and title is not empty
+      const hasChanged =
+        JSON.stringify(formData) !== JSON.stringify(initialDataRef.current);
+      if (hasChanged && formData.title.trim()) {
+        onSave(formData);
+      }
+    }
+    onOpenChange(open);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] max-w-[520px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
@@ -102,7 +162,7 @@ export function PresetEditDialog({
                 })}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 p-6">
+        <div className="space-y-5 p-6">
           <div className="space-y-2.5">
             <Label
               htmlFor="preset-title"
@@ -119,7 +179,6 @@ export function PresetEditDialog({
                 setFormData({ ...formData, title: e.target.value })
               }
               className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
-              required
             />
           </div>
 
@@ -248,17 +307,24 @@ export function PresetEditDialog({
               onClick={() => onOpenChange(false)}
               className="flex-1 h-11 border-border/50 hover:bg-muted/50"
             >
-              {t("common.cancel")}
+              {t("common.close")}
             </Button>
-            <Button
-              type="submit"
-              disabled={!formData.title.trim()}
-              className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-            >
-              {isCreating ? t("common.create") : t("common.save")}
-            </Button>
+            {isCreating && (
+              <Button
+                type="button"
+                onClick={() => {
+                  if (formData.title.trim()) {
+                    onSave(formData);
+                  }
+                }}
+                disabled={!formData.title.trim()}
+                className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
+              >
+                {t("common.create")}
+              </Button>
+            )}
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

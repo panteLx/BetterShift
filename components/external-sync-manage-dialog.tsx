@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +59,15 @@ export function ExternalSyncManageDialog({
   const [formColor, setFormColor] = useState("#3b82f6");
   const [formDisplayMode, setFormDisplayMode] = useState("normal");
   const [formAutoSyncInterval, setFormAutoSyncInterval] = useState(0);
+
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialFormDataRef = useRef<{
+    name: string;
+    color: string;
+    displayMode: string;
+    autoSyncInterval: number;
+  } | null>(null);
+  const isInitialMount = useRef(true);
 
   const fetchSyncs = useCallback(async () => {
     if (!calendarId) return;
@@ -270,6 +279,15 @@ export function ExternalSyncManageDialog({
     setFormDisplayMode(sync.displayMode || "normal");
     setFormAutoSyncInterval(sync.autoSyncInterval || 0);
     setShowAddForm(false);
+
+    // Set initial data for auto-save comparison
+    initialFormDataRef.current = {
+      name: sync.name,
+      color: sync.color,
+      displayMode: sync.displayMode || "normal",
+      autoSyncInterval: sync.autoSyncInterval || 0,
+    };
+    isInitialMount.current = true;
   };
 
   const cancelEdit = () => {
@@ -280,6 +298,13 @@ export function ExternalSyncManageDialog({
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
     setFormAutoSyncInterval(0);
+    initialFormDataRef.current = null;
+
+    // Clear any pending save timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
   };
 
   const handleToggleVisibility = async (
@@ -345,6 +370,150 @@ export function ExternalSyncManageDialog({
     setFormAutoSyncInterval(0);
   };
 
+  // Shared function to save external sync changes
+  const saveExternalSyncChanges = useCallback(
+    async (updateInitialRef: boolean = false): Promise<boolean> => {
+      if (!editingSync) return false;
+
+      try {
+        const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formName.trim(),
+            color: formColor,
+            displayMode: formDisplayMode,
+            autoSyncInterval: formAutoSyncInterval,
+          }),
+        });
+
+        if (response.ok) {
+          await fetchSyncs();
+          onSyncComplete?.();
+          if (updateInitialRef) {
+            // Update initial data ref after successful save
+            initialFormDataRef.current = {
+              name: formName,
+              color: formColor,
+              displayMode: formDisplayMode,
+              autoSyncInterval: formAutoSyncInterval,
+            };
+          }
+          toast.success(t("externalSync.updateSuccess"));
+          return true;
+        } else {
+          const data = await response.json();
+          toast.error(data.error || t("externalSync.updateError"));
+          return false;
+        }
+      } catch (error) {
+        console.error("Failed to save sync:", error);
+        toast.error(t("externalSync.updateError"));
+        return false;
+      }
+    },
+    [
+      editingSync,
+      formName,
+      formColor,
+      formDisplayMode,
+      formAutoSyncInterval,
+      fetchSyncs,
+      onSyncComplete,
+      t,
+    ]
+  );
+
+  // Auto-save for editing external syncs
+  useEffect(() => {
+    if (!editingSync || !initialFormDataRef.current) return;
+
+    // Skip initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Check if data has changed
+    const currentFormData = {
+      name: formName,
+      color: formColor,
+      displayMode: formDisplayMode,
+      autoSyncInterval: formAutoSyncInterval,
+    };
+
+    const hasChanged =
+      JSON.stringify(currentFormData) !==
+      JSON.stringify(initialFormDataRef.current);
+
+    if (hasChanged && formName.trim()) {
+      saveTimeoutRef.current = setTimeout(() => {
+        saveExternalSyncChanges(true);
+      }, 1000); // 1 second debounce
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    formName,
+    formColor,
+    formDisplayMode,
+    formAutoSyncInterval,
+    editingSync,
+    saveExternalSyncChanges,
+  ]);
+
+  // Handle dialog close with immediate save if needed
+  const handleDialogClose = async (open: boolean) => {
+    // If opening the dialog, proceed immediately
+    if (open) {
+      onOpenChange(open);
+      return;
+    }
+
+    // If closing and editing an existing sync, check for unsaved changes
+    if (editingSync && initialFormDataRef.current) {
+      // Cancel pending timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      // Check if data has changed
+      const currentFormData = {
+        name: formName,
+        color: formColor,
+        displayMode: formDisplayMode,
+        autoSyncInterval: formAutoSyncInterval,
+      };
+
+      const hasChanged =
+        JSON.stringify(currentFormData) !==
+        JSON.stringify(initialFormDataRef.current);
+
+      // Save immediately if data changed and name is not empty
+      if (hasChanged && formName.trim()) {
+        const success = await saveExternalSyncChanges(false);
+        if (!success) {
+          // Failed to save, keep dialog open
+          return;
+        }
+        // Save succeeded, proceed to close
+      }
+    }
+
+    // Close the dialog (only reached after successful save or no changes)
+    onOpenChange(false);
+  };
+
   // Get URL placeholder and hint based on sync type
   const getUrlPlaceholder = () => {
     if (formSyncType === "google") {
@@ -361,7 +530,7 @@ export function ExternalSyncManageDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
@@ -603,71 +772,81 @@ export function ExternalSyncManageDialog({
               </div>
 
               {editingSync && (
-                <div className="space-y-3 pt-2 border-t border-border/30">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="hide-calendar"
-                      checked={editingSync.isHidden || false}
-                      onCheckedChange={() => {
-                        handleToggleVisibility(
-                          editingSync.id,
-                          "isHidden",
-                          editingSync.isHidden || false
-                        );
-                      }}
-                    />
-                    <Label
-                      htmlFor="hide-calendar"
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {t("externalSync.hideCalendar")}
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground pl-6">
-                    {t("externalSync.hideCalendarHint")}
-                  </p>
+                <>
+                  <div className="space-y-3 pt-2 border-t border-border/30">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="hide-calendar"
+                        checked={editingSync.isHidden || false}
+                        onCheckedChange={() => {
+                          handleToggleVisibility(
+                            editingSync.id,
+                            "isHidden",
+                            editingSync.isHidden || false
+                          );
+                        }}
+                      />
+                      <Label
+                        htmlFor="hide-calendar"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {t("externalSync.hideCalendar")}
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground pl-6">
+                      {t("externalSync.hideCalendarHint")}
+                    </p>
 
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="hide-from-stats"
-                      checked={
-                        editingSync.isHidden ||
-                        editingSync.hideFromStats ||
-                        false
-                      }
-                      onCheckedChange={() => {
-                        handleToggleVisibility(
-                          editingSync.id,
-                          "hideFromStats",
-                          editingSync.hideFromStats || false
-                        );
-                      }}
-                      disabled={editingSync.isHidden}
-                    />
-                    <Label
-                      htmlFor="hide-from-stats"
-                      className={`text-sm font-normal ${
-                        editingSync.isHidden
-                          ? "cursor-not-allowed opacity-50"
-                          : "cursor-pointer"
-                      }`}
-                    >
-                      {t("externalSync.hideFromStats")}
-                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="hide-from-stats"
+                        checked={
+                          editingSync.isHidden ||
+                          editingSync.hideFromStats ||
+                          false
+                        }
+                        onCheckedChange={() => {
+                          handleToggleVisibility(
+                            editingSync.id,
+                            "hideFromStats",
+                            editingSync.hideFromStats || false
+                          );
+                        }}
+                        disabled={editingSync.isHidden}
+                      />
+                      <Label
+                        htmlFor="hide-from-stats"
+                        className={`text-sm font-normal ${
+                          editingSync.isHidden
+                            ? "cursor-not-allowed opacity-50"
+                            : "cursor-pointer"
+                        }`}
+                      >
+                        {t("externalSync.hideFromStats")}
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground pl-6">
+                      {t("externalSync.hideFromStatsHint")}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground pl-6">
-                    {t("externalSync.hideFromStatsHint")}
-                  </p>
-                </div>
+                </>
               )}
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (editingSync) {
-                      cancelEdit();
-                    } else {
+              {editingSync ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => cancelEdit()}
+                    className="flex-1"
+                  >
+                    {t("common.close")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
                       setShowAddForm(false);
                       setFormName("");
                       setFormUrl("");
@@ -675,26 +854,22 @@ export function ExternalSyncManageDialog({
                       setFormColor("#3b82f6");
                       setFormDisplayMode("normal");
                       setFormAutoSyncInterval(0);
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  onClick={editingSync ? handleUpdateSync : handleAddSync}
-                  disabled={
-                    isLoading ||
-                    !formName.trim() ||
-                    (!editingSync && !formUrl.trim())
-                  }
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  {editingSync ? t("common.save") : t("externalSync.addSync")}
-                </Button>
-              </div>
+                    }}
+                    disabled={isLoading}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    onClick={handleAddSync}
+                    disabled={isLoading || !formName.trim() || !formUrl.trim()}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {t("externalSync.addSync")}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
