@@ -113,7 +113,6 @@ export function PresetSelector({
 
       onPresetsChange();
 
-      // Nur beim Erstellen Dialog schließen, beim Bearbeiten offen lassen für Auto-Save
       if (isCreatingNew) {
         setShowEditDialog(false);
         setEditingPreset(null);

@@ -370,6 +370,60 @@ export function ExternalSyncManageDialog({
     setFormAutoSyncInterval(0);
   };
 
+  // Shared function to save external sync changes
+  const saveExternalSyncChanges = useCallback(
+    async (updateInitialRef: boolean = false): Promise<boolean> => {
+      if (!editingSync) return false;
+
+      try {
+        const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formName.trim(),
+            color: formColor,
+            displayMode: formDisplayMode,
+            autoSyncInterval: formAutoSyncInterval,
+          }),
+        });
+
+        if (response.ok) {
+          await fetchSyncs();
+          onSyncComplete?.();
+          if (updateInitialRef) {
+            // Update initial data ref after successful save
+            initialFormDataRef.current = {
+              name: formName,
+              color: formColor,
+              displayMode: formDisplayMode,
+              autoSyncInterval: formAutoSyncInterval,
+            };
+          }
+          toast.success(t("externalSync.updateSuccess"));
+          return true;
+        } else {
+          const data = await response.json();
+          toast.error(data.error || t("externalSync.updateError"));
+          return false;
+        }
+      } catch (error) {
+        console.error("Failed to save sync:", error);
+        toast.error(t("externalSync.updateError"));
+        return false;
+      }
+    },
+    [
+      editingSync,
+      formName,
+      formColor,
+      formDisplayMode,
+      formAutoSyncInterval,
+      fetchSyncs,
+      onSyncComplete,
+      t,
+    ]
+  );
+
   // Auto-save for editing external syncs
   useEffect(() => {
     if (!editingSync || !initialFormDataRef.current) return;
@@ -398,36 +452,8 @@ export function ExternalSyncManageDialog({
       JSON.stringify(initialFormDataRef.current);
 
     if (hasChanged && formName.trim()) {
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          const response = await fetch(
-            `/api/external-syncs/${editingSync.id}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: formName.trim(),
-                color: formColor,
-                displayMode: formDisplayMode,
-                autoSyncInterval: formAutoSyncInterval,
-              }),
-            }
-          );
-
-          if (response.ok) {
-            await fetchSyncs();
-            onSyncComplete?.();
-            // Update initial data ref after successful save
-            initialFormDataRef.current = currentFormData;
-            toast.success(t("externalSync.updateSuccess"));
-          } else {
-            const data = await response.json();
-            toast.error(data.error || t("externalSync.updateError"));
-          }
-        } catch (error) {
-          console.error("Failed to auto-save sync:", error);
-          toast.error(t("externalSync.updateError"));
-        }
+      saveTimeoutRef.current = setTimeout(() => {
+        saveExternalSyncChanges(true);
       }, 1000); // 1 second debounce
     }
 
@@ -442,14 +468,19 @@ export function ExternalSyncManageDialog({
     formDisplayMode,
     formAutoSyncInterval,
     editingSync,
-    fetchSyncs,
-    onSyncComplete,
-    t,
+    saveExternalSyncChanges,
   ]);
 
   // Handle dialog close with immediate save if needed
   const handleDialogClose = async (open: boolean) => {
-    if (!open && editingSync && initialFormDataRef.current) {
+    // If opening the dialog, proceed immediately
+    if (open) {
+      onOpenChange(open);
+      return;
+    }
+
+    // If closing and editing an existing sync, check for unsaved changes
+    if (editingSync && initialFormDataRef.current) {
       // Cancel pending timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -470,32 +501,17 @@ export function ExternalSyncManageDialog({
 
       // Save immediately if data changed and name is not empty
       if (hasChanged && formName.trim()) {
-        try {
-          const response = await fetch(
-            `/api/external-syncs/${editingSync.id}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: formName.trim(),
-                color: formColor,
-                displayMode: formDisplayMode,
-                autoSyncInterval: formAutoSyncInterval,
-              }),
-            }
-          );
-
-          if (response.ok) {
-            await fetchSyncs();
-            onSyncComplete?.();
-            toast.success(t("externalSync.updateSuccess"));
-          }
-        } catch (error) {
-          console.error("Failed to save on close:", error);
+        const success = await saveExternalSyncChanges(false);
+        if (!success) {
+          // Failed to save, keep dialog open
+          return;
         }
+        // Save succeeded, proceed to close
       }
     }
-    onOpenChange(open);
+
+    // Close the dialog (only reached after successful save or no changes)
+    onOpenChange(false);
   };
 
   // Get URL placeholder and hint based on sync type

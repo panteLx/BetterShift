@@ -160,20 +160,6 @@ export function ShiftFormFields({
         presetColors={PRESET_COLORS}
       />
 
-      <AnimatePresence>
-        {showSaved && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800"
-          >
-            <Check className="h-4 w-4" />
-            <span>{t("common.saved")}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Auto-Save as Preset */}
       {!isEditing && (
         <div className="space-y-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">

@@ -386,14 +386,14 @@ function HomeContent() {
         noteText,
         handlePasswordRequired
       );
-      // Dialog bleibt offen für Auto-Save
+      // Dialog stays open for Auto-Save
     } else if (selectedDate) {
       const success = await createNoteHook(
         noteText,
         selectedDate,
         handlePasswordRequired
       );
-      // Dialog bleibt offen für Auto-Save
+      // Dialog stays open for Auto-Save
     }
   };
 
@@ -417,7 +417,7 @@ function HomeContent() {
       handlePasswordRequired
     );
     if (success) {
-      setShowNoteDialog(false); // Schließe nach Delete
+      setShowNoteDialog(false); // Close dialog after deletion
     }
   };
 

@@ -101,11 +101,6 @@ export function NoteDialog({
         if (noteText.trim()) {
           onSubmit(noteText);
           initialNoteRef.current = noteText;
-        } else if (note && !noteText.trim()) {
-          // Delete note if text is empty and note exists
-          if (onDelete) {
-            onDelete();
-          }
         }
       }, 1000); // 1 second debounce
     }

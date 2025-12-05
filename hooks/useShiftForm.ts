@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { ShiftFormData } from "@/components/shift-dialog";
 import { ShiftPreset } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
