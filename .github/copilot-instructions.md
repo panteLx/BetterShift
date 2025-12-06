@@ -109,12 +109,53 @@ next-intl setup with auto-detection:
 - Usage: `const t = useTranslations()` → `t("shift.create")`
 - Date formatting: `locale === "de" ? de : enUS`
 
+**Translation Key Usage Status**:
+
+All translation keys in `messages/{de,en}.json` are actively used.
+
+When adding new features, ensure all translation keys are actually used in components. Remove unused keys to keep translation files clean.
+
 ### Component Design Patterns
 
 - **Dialogs**: Control state via props, reset on close
 - **Forms**: Prevent default, validate, callback to parent
 - **Colors**: Use `PRESET_COLORS` array, hex format (`#3b82f6`), 20% opacity for backgrounds
 - **Dates**: `formatDateToLocal()` for YYYY-MM-DD format
+
+### UI/UX Design Principles
+
+**Live Updates**: All components must support real-time updates via Server-Sent Events (SSE):
+
+- Listen to relevant SSE events (shift, preset, note, sync-log updates)
+- Use silent refresh patterns: `fetchData(false)` to update without loading states
+- Implement refresh triggers: counter-based props (e.g., `syncLogRefreshTrigger`)
+- Avoid flashing/blinking during updates - update data smoothly without UI disruption
+
+**Consistent Dialog Design**: All dialogs must follow the unified design pattern:
+
+```tsx
+<DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
+  <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
+    <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+      {t("dialog.title")}
+    </DialogTitle>
+    <DialogDescription className="text-sm text-muted-foreground">
+      {t("dialog.description")}
+    </DialogDescription>
+  </DialogHeader>
+  <div className="space-y-4 overflow-y-auto flex-1 px-6 pb-6">
+    {/* Dialog content */}
+  </div>
+</DialogContent>
+```
+
+Key design elements:
+
+- Gradient backgrounds for visual depth
+- Consistent padding (`p-6`, `px-6`, `pb-6`)
+- Border styling with reduced opacity (`border-border/50`)
+- Backdrop blur effects for modern aesthetics
+- Gradient text for titles (`bg-gradient-to-r from-foreground to-foreground/70`)
 
 ### Calendar Interactions
 

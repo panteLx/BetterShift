@@ -44,6 +44,7 @@ interface ExternalSyncManageDialogProps {
   onOpenChange: (open: boolean) => void;
   calendarId: string | null;
   onSyncComplete?: () => void;
+  syncErrorRefreshTrigger?: number;
 }
 
 export function ExternalSyncManageDialog({
@@ -51,9 +52,11 @@ export function ExternalSyncManageDialog({
   onOpenChange,
   calendarId,
   onSyncComplete,
+  syncErrorRefreshTrigger,
 }: ExternalSyncManageDialogProps) {
   const t = useTranslations();
   const [syncs, setSyncs] = useState<ExternalSync[]>([]);
+  const [syncErrors, setSyncErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -84,24 +87,71 @@ export function ExternalSyncManageDialog({
   } | null>(null);
   const isInitialMount = useRef(true);
 
-  const fetchSyncs = useCallback(async () => {
-    if (!calendarId) return;
+  const fetchSyncs = useCallback(
+    async (showLoadingState = true) => {
+      if (!calendarId) return;
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `/api/external-syncs?calendarId=${calendarId}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setSyncs(data);
+      if (showLoadingState) {
+        setIsLoading(true);
       }
-    } catch (error) {
-      console.error("Failed to fetch syncs:", error);
-    } finally {
-      setIsLoading(false);
+      try {
+        const response = await fetch(
+          `/api/external-syncs?calendarId=${calendarId}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSyncs(data);
+
+          // Fetch last sync logs to check for errors
+          const logsResponse = await fetch(
+            `/api/sync-logs?calendarId=${calendarId}&limit=50`
+          );
+          if (logsResponse.ok) {
+            const logs = await logsResponse.json();
+            const errors: Record<string, string> = {};
+
+            // Get the latest error for each external sync
+            data.forEach((sync: ExternalSync) => {
+              const syncLogs = logs.filter(
+                (log: any) => log.externalSyncId === sync.id
+              );
+              // Only show unread errors
+              const latestError = syncLogs.find(
+                (log: any) => log.status === "error" && !log.isRead
+              );
+              if (latestError) {
+                errors[sync.id] =
+                  latestError.errorMessage ||
+                  t("syncNotifications.statusError");
+              }
+            });
+
+            setSyncErrors(errors);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch syncs:", error);
+      } finally {
+        if (showLoadingState) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [calendarId, t]
+  );
+
+  // Silent refresh for sync error updates (triggered by SSE)
+  useEffect(() => {
+    if (
+      open &&
+      calendarId &&
+      syncErrorRefreshTrigger &&
+      syncErrorRefreshTrigger > 0
+    ) {
+      // Silently refresh sync errors without loading state
+      fetchSyncs(false);
     }
-  }, [calendarId]);
+  }, [syncErrorRefreshTrigger, open, calendarId, fetchSyncs]);
 
   // Load syncs when dialog opens, reset state when it closes
   useEffect(() => {
@@ -700,11 +750,25 @@ export function ExternalSyncManageDialog({
                       </div>
                     </div>
 
-                    {/* Last synced info - always below badges */}
-                    {sync.lastSyncedAt && (
-                      <div className="text-xs text-muted-foreground pt-1 border-t border-border/30">
-                        {t("externalSync.lastSynced")}:{" "}
-                        {new Date(sync.lastSyncedAt).toLocaleString()}
+                    {/* Last synced info and errors - always below badges */}
+                    {(sync.lastSyncedAt || syncErrors[sync.id]) && (
+                      <div className="pt-1 border-t border-border/30 space-y-1.5">
+                        {sync.lastSyncedAt && (
+                          <div className="text-xs text-muted-foreground">
+                            {t("externalSync.lastSynced")}:{" "}
+                            {new Date(sync.lastSyncedAt).toLocaleString()}
+                          </div>
+                        )}
+                        {syncErrors[sync.id] && (
+                          <div className="text-xs text-red-100 bg-red-950/90 p-2 rounded border border-red-800">
+                            <div className="font-medium mb-0.5">
+                              {t("syncNotifications.errorMessage")}:
+                            </div>
+                            <div className="text-red-200">
+                              {syncErrors[sync.id]}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -147,19 +147,21 @@ class AutoSyncService {
     console.log(`Executing auto-sync for ${syncId}`);
 
     try {
-      // Call sync function directly instead of HTTP fetch
-      const stats = await syncExternalCalendar(syncId);
+      // Call sync function with "auto" type
+      const stats = await syncExternalCalendar(syncId, "auto");
 
       if (stats) {
         console.log(`Auto-sync completed for ${syncId}:`, stats);
 
-        // Emit event to notify connected clients
-        eventEmitter.emit("calendar-change", {
-          type: "shift",
-          action: "update",
-          calendarId: stats.calendarId,
-          data: { autoSync: true, syncId, stats },
-        });
+        // Emit event to notify connected clients only if changes were made
+        if (stats.created > 0 || stats.updated > 0 || stats.deleted > 0) {
+          eventEmitter.emit("calendar-change", {
+            type: "shift",
+            action: "update",
+            calendarId: stats.calendarId,
+            data: { autoSync: true, syncId, stats },
+          });
+        }
       }
     } catch (error) {
       console.error(`Auto-sync error for ${syncId}:`, error);
@@ -189,8 +191,8 @@ class AutoSyncService {
     console.log(`Manually triggering sync for ${syncId}`);
 
     try {
-      // Call sync function directly instead of HTTP fetch
-      const stats = await syncExternalCalendar(syncId);
+      // Call sync function with "manual" type
+      const stats = await syncExternalCalendar(syncId, "manual");
 
       if (stats) {
         console.log(`Manual sync completed for ${syncId}:`, stats);

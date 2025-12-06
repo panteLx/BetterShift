@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { ShiftPreset } from "@/lib/db/schema";
+import { CalendarWithCount } from "@/lib/types";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PresetList } from "@/components/preset-list";
@@ -13,6 +14,7 @@ import { PresetManageDialog } from "@/components/preset-manage-dialog";
 import { usePasswordProtection } from "@/hooks/usePasswordProtection";
 
 interface PresetSelectorProps {
+  calendars: CalendarWithCount[];
   presets: ShiftPreset[];
   selectedPresetId?: string;
   onSelectPreset: (presetId: string | undefined) => void;
@@ -25,6 +27,7 @@ interface PresetSelectorProps {
 }
 
 export function PresetSelector({
+  calendars,
   presets,
   selectedPresetId,
   onSelectPreset,
@@ -166,6 +169,8 @@ export function PresetSelector({
   return (
     <>
       <PresetList
+        calendars={calendars}
+        calendarId={calendarId}
         presets={presets}
         selectedPresetId={selectedPresetId}
         onSelectPreset={onSelectPreset}

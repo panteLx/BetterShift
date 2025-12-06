@@ -71,6 +71,13 @@
       "when": 1765071171359,
       "tag": "0009_omniscient_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1765059800909,
+      "tag": "0010_unusual_paibok",
+      "breakpoints": true
     }
   ]
 }

@@ -125,6 +125,29 @@ export const calendarNotes = sqliteTable("calendar_notes", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const syncLogs = sqliteTable("sync_logs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  calendarId: text("calendar_id")
+    .notNull()
+    .references(() => calendars.id, { onDelete: "cascade" }),
+  externalSyncId: text("external_sync_id")
+    .notNull()
+    .references(() => externalSyncs.id, { onDelete: "cascade" }),
+  externalSyncName: text("external_sync_name").notNull(), // Denormalized for history
+  status: text("status").notNull(), // success, error
+  errorMessage: text("error_message"),
+  shiftsCreated: integer("shifts_created").notNull().default(0),
+  shiftsUpdated: integer("shifts_updated").notNull().default(0),
+  shiftsDeleted: integer("shifts_deleted").notNull().default(0),
+  syncType: text("sync_type").notNull().default("auto"), // auto, manual
+  isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
+  syncedAt: integer("synced_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
 export type ExternalSync = typeof externalSyncs.$inferSelect;
@@ -135,3 +158,5 @@ export type ShiftPreset = typeof shiftPresets.$inferSelect;
 export type NewShiftPreset = typeof shiftPresets.$inferInsert;
 export type CalendarNote = typeof calendarNotes.$inferSelect;
 export type NewCalendarNote = typeof calendarNotes.$inferInsert;
+export type SyncLog = typeof syncLogs.$inferSelect;
+export type NewSyncLog = typeof syncLogs.$inferInsert;

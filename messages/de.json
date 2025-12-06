@@ -173,6 +173,7 @@
   },
   "externalSync": {
     "manageTitle": "Externe Kalender verwalten",
+    "manage": "Verwalten",
     "manageDescription": "Füge mehrere externe Kalender für diesen Kalender hinzu und verwalte sie",
     "syncTypeICloud": "iCloud",
     "syncTypeGoogle": "Google",
@@ -233,5 +234,30 @@
     "autoSyncHint": "Wähle wie oft dieser Kalender automatisch synchronisiert werden soll",
     "autoSyncManual": "Manuell",
     "autoSync24hShort": "24 h"
+  },
+  "syncNotifications": {
+    "title": "Sync-Benachrichtigungen",
+    "noLogs": "Noch keine Synchronisierungen",
+    "noLogsFiltered": "Keine Synchronisierungen für diesen Filter",
+    "statusError": "Fehler",
+    "syncTypeAuto": "Automatisch",
+    "syncTypeManual": "Manuell",
+    "created": "{count} erstellt",
+    "updated": "{count} aktualisiert",
+    "deleted": "{count} gelöscht",
+    "noChanges": "Keine Änderungen",
+    "errorMessage": "Fehlermeldung",
+    "filterAll": "Alle anzeigen",
+    "filterSuccess": "Nur Erfolgreiche",
+    "filterError": "Nur Fehler",
+    "deleteAll": "Alle löschen",
+    "deleteConfirm": "Möchten Sie wirklich alle Sync-Logs löschen?",
+    "deleteSuccess": "Sync-Logs erfolgreich gelöscht",
+    "deleteError": "Fehler beim Löschen der Sync-Logs",
+    "hasErrors": "Fehler vorhanden",
+    "markAsRead": "Als gelesen markieren",
+    "markedAsRead": "Fehler als gelesen markiert",
+    "markAsReadError": "Fehler beim Markieren als gelesen",
+    "read": "Gelesen"
   }
 }

@@ -3,8 +3,12 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Check, Plus, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
+import { CalendarWithCount } from "@/lib/types";
+import { getCachedPassword } from "@/lib/password-cache";
 
 interface PresetListProps {
+  calendars: CalendarWithCount[];
+  calendarId: string;
   presets: ShiftPreset[];
   selectedPresetId?: string;
   onSelectPreset: (presetId: string | undefined) => void;
@@ -14,6 +18,8 @@ interface PresetListProps {
 }
 
 export function PresetList({
+  calendars,
+  calendarId,
   presets,
   selectedPresetId,
   onSelectPreset,
@@ -23,6 +29,12 @@ export function PresetList({
 }: PresetListProps) {
   const t = useTranslations();
   const [showSecondary, setShowSecondary] = React.useState(false);
+
+  // Hide preset buttons if calendar is locked AND no valid password is cached
+  const selectedCalendar = calendars.find((c) => c.id === calendarId);
+  const isCalendarLocked = selectedCalendar?.isLocked === true;
+  const hasPassword = calendarId ? !!getCachedPassword(calendarId) : false;
+  const shouldHidePresetButtons = isCalendarLocked && !hasPassword;
 
   const primaryPresets = presets.filter((p) => !p.isSecondary);
   const secondaryPresets = presets.filter((p) => p.isSecondary);
@@ -39,6 +51,11 @@ export function PresetList({
         </div>
       </div>
     );
+  }
+
+  // Hide everything if calendar is locked and no password is cached
+  if (shouldHidePresetButtons) {
+    return null;
   }
 
   if (presets.length === 0) {

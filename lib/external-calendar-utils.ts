@@ -328,3 +328,82 @@ export function splitMultiDayEvent(
 
   return days;
 }
+
+/**
+ * Creates a stable fingerprint for an event based on its content
+ * This is used because some calendar providers generate new UIDs on each request
+ * @param date - Event date
+ * @param startTime - Start time
+ * @param endTime - End time
+ * @param title - Event title
+ * @param dayIndex - For multi-day events, the day index
+ * @returns A stable fingerprint string
+ */
+export function createEventFingerprint(
+  date: Date,
+  startTime: string,
+  endTime: string,
+  title: string,
+  dayIndex?: number
+): string {
+  const dateStr = new Date(date).toISOString().split("T")[0];
+  const parts = [dateStr, startTime, endTime, title];
+  if (dayIndex !== undefined) {
+    parts.push(`day${dayIndex}`);
+  }
+  return parts.join("|");
+}
+
+/**
+ * Compares shift data to determine if an update is needed
+ * @param existing - The existing shift from database
+ * @param newData - The new shift data from external calendar
+ * @returns true if shifts are different and update is needed
+ */
+export function needsUpdate(
+  existing: {
+    date: Date;
+    startTime: string;
+    endTime: string;
+    title: string;
+    color: string;
+    notes: string | null;
+    isAllDay: boolean;
+    isSecondary: boolean;
+  },
+  newData: {
+    date: Date;
+    startTime: string;
+    endTime: string;
+    title: string;
+    color: string;
+    notes: string | null;
+    isAllDay: boolean;
+    isSecondary: boolean;
+  }
+): boolean {
+  // Compare date (convert to comparable format)
+  const existingDate = new Date(existing.date).toISOString().split("T")[0];
+  const newDate = new Date(newData.date).toISOString().split("T")[0];
+  if (existingDate !== newDate) return true;
+
+  // Compare time fields
+  if (existing.startTime !== newData.startTime) return true;
+  if (existing.endTime !== newData.endTime) return true;
+
+  // Compare title
+  if (existing.title !== newData.title) return true;
+
+  // Compare color
+  if (existing.color !== newData.color) return true;
+
+  // Compare notes (handle null values)
+  if ((existing.notes || null) !== (newData.notes || null)) return true;
+
+  // Compare boolean fields
+  if (existing.isAllDay !== newData.isAllDay) return true;
+  if (existing.isSecondary !== newData.isSecondary) return true;
+
+  // No differences found
+  return false;
+}

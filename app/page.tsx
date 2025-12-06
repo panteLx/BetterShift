@@ -10,6 +10,7 @@ import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
 import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dialog";
+import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -98,11 +99,13 @@ function HomeContent() {
 
   // External Calendar Syncs state
   const [externalSyncs, setExternalSyncs] = useState<ExternalSync[]>([]);
+  const [hasSyncErrors, setHasSyncErrors] = useState(false);
 
   // Fetch external syncs for the calendar
   const fetchExternalSyncs = useCallback(async () => {
     if (!selectedCalendar) {
       setExternalSyncs([]);
+      setHasSyncErrors(false);
       return;
     }
 
@@ -119,9 +122,34 @@ function HomeContent() {
     }
   }, [selectedCalendar]);
 
+  // Fetch sync logs to check for errors
+  const fetchSyncErrorStatus = useCallback(async () => {
+    if (!selectedCalendar) {
+      setHasSyncErrors(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/sync-logs?calendarId=${selectedCalendar}&limit=50`
+      );
+      if (response.ok) {
+        const logs = await response.json();
+        // Only show errors that are not read
+        const hasErrors = logs.some(
+          (log: any) => log.status === "error" && !log.isRead
+        );
+        setHasSyncErrors(hasErrors);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sync logs:", error);
+    }
+  }, [selectedCalendar]);
+
   useEffect(() => {
     fetchExternalSyncs();
-  }, [fetchExternalSyncs]);
+    fetchSyncErrorStatus();
+  }, [fetchExternalSyncs, fetchSyncErrorStatus]);
 
   // Local state
   const [selectedPresetId, setSelectedPresetId] = useState<
@@ -140,6 +168,9 @@ function HomeContent() {
   const [showDeleteCalendarDialog, setShowDeleteCalendarDialog] =
     useState(false);
   const [showExternalSyncDialog, setShowExternalSyncDialog] = useState(false);
+  const [showSyncNotificationDialog, setShowSyncNotificationDialog] =
+    useState(false);
+  const [syncLogRefreshTrigger, setSyncLogRefreshTrigger] = useState(0);
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
   const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
@@ -154,11 +185,12 @@ function HomeContent() {
   >();
   const [selectedNote, setSelectedNote] = useState<CalendarNote | undefined>();
   const [pendingAction, setPendingAction] = useState<{
-    type: "delete" | "edit";
+    type: "delete" | "edit" | "syncNotifications";
     shiftId?: string;
     formData?: ShiftFormData;
     presetAction?: () => Promise<void>;
     noteAction?: () => Promise<void>;
+    action?: () => Promise<void>;
   } | null>(null);
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
@@ -179,6 +211,10 @@ function HomeContent() {
     onPresetUpdate: refetchPresets,
     onNoteUpdate: refetchNotes,
     onStatsRefresh: () => setStatsRefreshTrigger((prev) => prev + 1),
+    onSyncLogUpdate: () => {
+      fetchSyncErrorStatus();
+      setSyncLogRefreshTrigger((prev) => prev + 1);
+    },
     isConnected,
     setIsConnected,
   });
@@ -344,6 +380,8 @@ function HomeContent() {
       } else if (pendingAction.noteAction) {
         await pendingAction.noteAction();
         setShowNoteDialog(false);
+      } else if (pendingAction.action) {
+        await pendingAction.action();
       }
     } catch (error) {
       console.error("Failed to execute pending action:", error);
@@ -728,12 +766,49 @@ function HomeContent() {
         selectedPresetId={selectedPresetId}
         isConnected={isConnected}
         showMobileCalendarDialog={showMobileCalendarDialog}
+        hasSyncErrors={hasSyncErrors}
         onSelectCalendar={setSelectedCalendar}
         onSelectPreset={setSelectedPresetId}
         onCreateCalendar={() => setShowCalendarDialog(true)}
         onManagePassword={() => setShowManagePasswordDialog(true)}
         onDeleteCalendar={initiateDeleteCalendar}
         onExternalSync={handleExternalSyncClick}
+        onSyncNotifications={async () => {
+          if (!selectedCalendar) return;
+
+          const calendar = calendars.find((c) => c.id === selectedCalendar);
+          if (!calendar) return;
+
+          // Check if calendar is password protected
+          if (calendar.passwordHash) {
+            const cachedPassword = getCachedPassword(selectedCalendar);
+
+            if (cachedPassword) {
+              // Verify cached password
+              const result = await verifyAndCachePassword(
+                selectedCalendar,
+                cachedPassword
+              );
+
+              if (result.valid) {
+                setShowSyncNotificationDialog(true);
+                return;
+              }
+            }
+
+            // Show password dialog if no valid cached password
+            setPendingAction({
+              type: "syncNotifications",
+              action: async () => {
+                setShowSyncNotificationDialog(true);
+              },
+            });
+            setShowPasswordDialog(true);
+          } else {
+            // No password protection
+            setShowSyncNotificationDialog(true);
+          }
+        }}
         onPresetsChange={refetchPresets}
         onShiftsChange={refetchShifts}
         onStatsRefresh={() => setStatsRefreshTrigger((prev) => prev + 1)}
@@ -1021,12 +1096,15 @@ function HomeContent() {
           open={showExternalSyncDialog}
           onOpenChange={setShowExternalSyncDialog}
           calendarId={selectedCalendar}
+          syncErrorRefreshTrigger={syncLogRefreshTrigger}
           onSyncComplete={() => {
             refetchShifts();
             refetchCalendars();
             setStatsRefreshTrigger((prev) => prev + 1);
             // Refetch external syncs to get updated displayMode
             fetchExternalSyncs();
+            // Refetch sync error status
+            fetchSyncErrorStatus();
           }}
         />
       )}
@@ -1048,6 +1126,18 @@ function HomeContent() {
         date={selectedDayDate}
         shifts={selectedSyncedShifts}
       />
+
+      {/* Sync Notification Center */}
+      {selectedCalendar && (
+        <SyncNotificationDialog
+          open={showSyncNotificationDialog}
+          onOpenChange={setShowSyncNotificationDialog}
+          calendarId={selectedCalendar}
+          onErrorsMarkedRead={fetchSyncErrorStatus}
+          onSyncLogUpdate={() => setSyncLogRefreshTrigger((prev) => prev + 1)}
+          syncLogRefreshTrigger={syncLogRefreshTrigger}
+        />
+      )}
 
       {/* Footer */}
       <AppFooter versionInfo={versionInfo} />

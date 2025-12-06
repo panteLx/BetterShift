@@ -245,7 +245,7 @@ export function CalendarDialog({
               disabled={!name.trim()}
               className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
             >
-              {t("common.create")} {t("calendar.title")}
+              {t("common.create")}
             </Button>
           </div>
         </form>
