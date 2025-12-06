@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       .select()
       .from(externalSyncs)
       .where(eq(externalSyncs.calendarId, calendarId))
-      .orderBy(externalSyncs.createdAt);
+      .orderBy(desc(externalSyncs.createdAt));
 
     return NextResponse.json(syncs);
   } catch (error) {
