@@ -75,7 +75,21 @@ export function isValidCalendarUrl(
         return false;
       }
     } else if (syncType === "custom") {
-      // For custom calendars, just check protocol - no domain restrictions
+      // For custom calendars, validate against SSRF
+      // Block localhost, private IPs, and internal domains
+      if (
+        hostname === "localhost" ||
+        hostname.match(/^127\./) ||
+        hostname.match(/^10\./) ||
+        hostname.match(/^172\.(1[6-9]|2[0-9]|3[01])\./) ||
+        hostname.match(/^192\.168\./) ||
+        hostname.match(/^169\.254\./) ||
+        hostname === "::1" ||
+        hostname === "0.0.0.0"
+      ) {
+        return false;
+      }
+
       return true;
     }
 

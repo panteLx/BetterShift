@@ -94,8 +94,7 @@ export function ExternalSyncManageDialog({
       );
       if (response.ok) {
         const data = await response.json();
-        // Reverse order so newest syncs appear at the bottom
-        setSyncs(data.reverse());
+        setSyncs(data);
       }
     } catch (error) {
       console.error("Failed to fetch syncs:", error);
@@ -151,10 +150,12 @@ export function ExternalSyncManageDialog({
         return;
       }
 
-      // Check if URL already exists
+      // Check if URL already exists (only for URL-based imports, not file uploads)
       const normalizedUrl = formUrl.trim().toLowerCase();
       const urlExists = syncs.some(
-        (sync) => sync.calendarUrl.toLowerCase() === normalizedUrl
+        (sync) =>
+          !sync.isOneTimeImport &&
+          sync.calendarUrl.toLowerCase() === normalizedUrl
       );
 
       if (urlExists) {
@@ -169,6 +170,13 @@ export function ExternalSyncManageDialog({
 
       // Read file content if file upload
       if (importType === "file" && icsFile) {
+        // Check file size (limit: 5MB)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (icsFile.size > MAX_FILE_SIZE) {
+          toast.error(t("externalSync.fileTooLarge"));
+          setIsLoading(false);
+          return;
+        }
         icsContent = await icsFile.text();
       }
 
@@ -577,20 +585,11 @@ export function ExternalSyncManageDialog({
     return t("externalSync.urlPlaceholder");
   };
 
-  // Get URL hint - show static hints based on import type
   const getUrlHint = () => {
-    // When editing, use the sync's type
-    if (editingSync) {
-      if (editingSync.syncType === "google") {
-        return t("externalSync.urlHintGoogle");
-      } else if (editingSync.syncType === "icloud") {
-        return t("externalSync.urlHintICloud");
-      }
+    if (!editingSync) {
+      // When creating new calendar, show custom hint
       return t("externalSync.urlHintCustom");
     }
-
-    // When creating new calendar, show custom hint
-    return t("externalSync.urlHintCustom");
   };
 
   return (
@@ -795,8 +794,7 @@ export function ExternalSyncManageDialog({
                 </div>
               ) : (
                 // Show URL input for new syncs OR when editing non-one-time-import syncs
-                (!editingSync ||
-                  (editingSync && !editingSync.isOneTimeImport)) && (
+                (!editingSync || !editingSync.isOneTimeImport) && (
                   <div className="space-y-2">
                     <Label htmlFor="sync-url">
                       {t("externalSync.urlLabel")}

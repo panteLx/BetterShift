@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
+  isValidICSContent,
   type CalendarSyncType,
 } from "@/lib/external-calendar-utils";
 
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
       displayMode,
       autoSyncInterval,
       icsContent, // For file uploads
+      isHidden,
+      hideFromStats,
     } = body;
 
     if (!calendarId || !name) {
@@ -60,12 +63,20 @@ export async function POST(request: Request) {
       );
     }
 
-    let finalCalendarUrl = calendarUrl;
+    let finalCalendarUrl;
     let isOneTimeImport = false;
     let syncType: CalendarSyncType;
 
     // Handle different scenarios
     if (icsContent) {
+      // Validate ICS content
+      if (!isValidICSContent(icsContent)) {
+        return NextResponse.json(
+          { error: "Invalid ICS file format or file contains no events" },
+          { status: 400 }
+        );
+      }
+
       // File upload - one-time import, always custom type
       isOneTimeImport = true;
       syncType = "custom";
@@ -130,6 +141,8 @@ export async function POST(request: Request) {
         displayMode: displayMode || "normal",
         autoSyncInterval: finalAutoSyncInterval,
         isOneTimeImport,
+        isHidden: isHidden || false,
+        hideFromStats: hideFromStats || false,
         createdAt: new Date(),
         updatedAt: new Date(),
       })

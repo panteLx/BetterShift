@@ -185,6 +185,7 @@
     "urlPlaceholder": "https://example.com/calendar.ics oder webcal://...",
     "fileLabel": "ICS-Datei",
     "fileRequired": "Bitte wähle eine ICS-Datei aus",
+    "fileTooLarge": "Datei ist zu groß. Maximale Größe beträgt 5 MB.",
     "fileSelected": "Datei ausgewählt",
     "urlRequired": "Bitte gib eine Kalender-URL ein",
     "oneTimeImport": "Einmaliger Import",
