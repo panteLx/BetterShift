@@ -23,11 +23,19 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
 import { ExternalSync } from "@/lib/db/schema";
-import { Loader2, Trash2, RefreshCw, Plus, Edit2 } from "lucide-react";
+import {
+  Loader2,
+  Trash2,
+  RefreshCw,
+  Plus,
+  Edit2,
+  ChevronDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PRESET_COLORS } from "@/lib/constants";
 import {
   isValidCalendarUrl,
+  detectCalendarSyncType,
   type CalendarSyncType,
 } from "@/lib/external-calendar-utils";
 
@@ -55,14 +63,21 @@ export function ExternalSyncManageDialog({
   // Form state
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
-  const [formSyncType, setFormSyncType] = useState("icloud");
   const [formColor, setFormColor] = useState("#3b82f6");
   const [formDisplayMode, setFormDisplayMode] = useState("normal");
   const [formAutoSyncInterval, setFormAutoSyncInterval] = useState(0);
+  const [icsFile, setIcsFile] = useState<File | null>(null);
+  const [importType, setImportType] = useState<"url" | "file">("url");
+  const [formIsHidden, setFormIsHidden] = useState(false);
+  const [formHideFromStats, setFormHideFromStats] = useState(false);
+  const [expandedHint, setExpandedHint] = useState<CalendarSyncType | null>(
+    null
+  );
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialFormDataRef = useRef<{
     name: string;
+    url: string;
     color: string;
     displayMode: string;
     autoSyncInterval: number;
@@ -79,7 +94,8 @@ export function ExternalSyncManageDialog({
       );
       if (response.ok) {
         const data = await response.json();
-        setSyncs(data);
+        // Reverse order so newest syncs appear at the bottom
+        setSyncs(data.reverse());
       }
     } catch (error) {
       console.error("Failed to fetch syncs:", error);
@@ -102,46 +118,73 @@ export function ExternalSyncManageDialog({
       setEditingSync(null);
       setFormName("");
       setFormUrl("");
-      setFormSyncType("icloud");
       setFormColor("#3b82f6");
       setFormDisplayMode("normal");
       setFormAutoSyncInterval(0);
+      setIcsFile(null);
+      setImportType("url");
+      setFormIsHidden(false);
+      setFormHideFromStats(false);
     }
   }, [open, calendarId, fetchSyncs]);
 
   const handleAddSync = async () => {
-    if (!calendarId || !formName.trim() || !formUrl.trim()) return;
+    if (!calendarId || !formName.trim()) return;
 
-    // Validate calendar URL format
-    if (!isValidCalendarUrl(formUrl.trim(), formSyncType as CalendarSyncType)) {
-      toast.error(t("externalSync.invalidUrlFormat"));
-      return;
-    }
+    // For file upload
+    if (importType === "file") {
+      if (!icsFile) {
+        toast.error(t("externalSync.fileRequired"));
+        return;
+      }
+    } else {
+      // For URL-based imports
+      if (!formUrl.trim()) {
+        toast.error(t("externalSync.urlRequired"));
+        return;
+      }
 
-    // Check if URL already exists
-    const normalizedUrl = formUrl.trim().toLowerCase();
-    const urlExists = syncs.some(
-      (sync) => sync.calendarUrl.toLowerCase() === normalizedUrl
-    );
+      // Detect and validate calendar URL format
+      const detectedType = detectCalendarSyncType(formUrl.trim());
+      if (!isValidCalendarUrl(formUrl.trim(), detectedType)) {
+        toast.error(t("externalSync.invalidUrlFormat"));
+        return;
+      }
 
-    if (urlExists) {
-      toast.error(t("externalSync.urlAlreadyExists"));
-      return;
+      // Check if URL already exists
+      const normalizedUrl = formUrl.trim().toLowerCase();
+      const urlExists = syncs.some(
+        (sync) => sync.calendarUrl.toLowerCase() === normalizedUrl
+      );
+
+      if (urlExists) {
+        toast.error(t("externalSync.urlAlreadyExists"));
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
+      let icsContent: string | undefined;
+
+      // Read file content if file upload
+      if (importType === "file" && icsFile) {
+        icsContent = await icsFile.text();
+      }
+
       const response = await fetch("/api/external-syncs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           calendarId,
           name: formName.trim(),
-          calendarUrl: formUrl.trim(),
-          syncType: formSyncType,
+          calendarUrl: formUrl.trim() || undefined,
           color: formColor,
           displayMode: formDisplayMode,
           autoSyncInterval: formAutoSyncInterval,
+          icsContent,
+          isHidden: formIsHidden,
+          hideFromStats: formHideFromStats,
         }),
       });
 
@@ -149,10 +192,13 @@ export function ExternalSyncManageDialog({
         const newSync = await response.json();
         setFormName("");
         setFormUrl("");
-        setFormSyncType("icloud");
         setFormColor("#3b82f6");
         setFormDisplayMode("normal");
         setFormAutoSyncInterval(0);
+        setIcsFile(null);
+        setImportType("url");
+        setFormIsHidden(false);
+        setFormHideFromStats(false);
         setShowAddForm(false);
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh to update parent state
@@ -181,7 +227,7 @@ export function ExternalSyncManageDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formName.trim(),
-          icloudUrl: formUrl.trim() || undefined,
+          calendarUrl: formUrl.trim() || undefined,
           color: formColor,
           displayMode: formDisplayMode,
           autoSyncInterval: formAutoSyncInterval,
@@ -192,7 +238,6 @@ export function ExternalSyncManageDialog({
         setEditingSync(null);
         setFormName("");
         setFormUrl("");
-        setFormSyncType("icloud");
         setFormColor("#3b82f6");
         setFormDisplayMode("normal");
         setFormAutoSyncInterval(0);
@@ -273,17 +318,20 @@ export function ExternalSyncManageDialog({
 
   const startEdit = (sync: ExternalSync) => {
     setEditingSync(sync);
-    setFormName(sync.name);
-    setFormUrl(sync.calendarUrl);
-    setFormColor(sync.color);
+    setFormName(sync.name || "");
+    setFormUrl(sync.calendarUrl || "");
+    setFormColor(sync.color || "#3b82f6");
     setFormDisplayMode(sync.displayMode || "normal");
     setFormAutoSyncInterval(sync.autoSyncInterval || 0);
+    setFormIsHidden(sync.isHidden || false);
+    setFormHideFromStats(sync.hideFromStats || false);
     setShowAddForm(false);
 
     // Set initial data for auto-save comparison
     initialFormDataRef.current = {
-      name: sync.name,
-      color: sync.color,
+      name: sync.name || "",
+      url: sync.calendarUrl || "",
+      color: sync.color || "#3b82f6",
       displayMode: sync.displayMode || "normal",
       autoSyncInterval: sync.autoSyncInterval || 0,
     };
@@ -294,7 +342,6 @@ export function ExternalSyncManageDialog({
     setEditingSync(null);
     setFormName("");
     setFormUrl("");
-    setFormSyncType("icloud");
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
     setFormAutoSyncInterval(0);
@@ -364,10 +411,13 @@ export function ExternalSyncManageDialog({
     setEditingSync(null);
     setFormName("");
     setFormUrl("");
-    setFormSyncType("icloud");
     setFormColor("#3b82f6");
     setFormDisplayMode("normal");
     setFormAutoSyncInterval(0);
+    setIcsFile(null);
+    setImportType("url");
+    setFormIsHidden(false);
+    setFormHideFromStats(false);
   };
 
   // Shared function to save external sync changes
@@ -381,6 +431,9 @@ export function ExternalSyncManageDialog({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: formName.trim(),
+            calendarUrl: !editingSync.isOneTimeImport
+              ? formUrl.trim()
+              : undefined,
             color: formColor,
             displayMode: formDisplayMode,
             autoSyncInterval: formAutoSyncInterval,
@@ -394,6 +447,7 @@ export function ExternalSyncManageDialog({
             // Update initial data ref after successful save
             initialFormDataRef.current = {
               name: formName,
+              url: formUrl,
               color: formColor,
               displayMode: formDisplayMode,
               autoSyncInterval: formAutoSyncInterval,
@@ -415,6 +469,7 @@ export function ExternalSyncManageDialog({
     [
       editingSync,
       formName,
+      formUrl,
       formColor,
       formDisplayMode,
       formAutoSyncInterval,
@@ -442,6 +497,7 @@ export function ExternalSyncManageDialog({
     // Check if data has changed
     const currentFormData = {
       name: formName,
+      url: formUrl,
       color: formColor,
       displayMode: formDisplayMode,
       autoSyncInterval: formAutoSyncInterval,
@@ -464,6 +520,7 @@ export function ExternalSyncManageDialog({
     };
   }, [
     formName,
+    formUrl,
     formColor,
     formDisplayMode,
     formAutoSyncInterval,
@@ -490,6 +547,7 @@ export function ExternalSyncManageDialog({
       // Check if data has changed
       const currentFormData = {
         name: formName,
+        url: formUrl,
         color: formColor,
         displayMode: formDisplayMode,
         autoSyncInterval: formAutoSyncInterval,
@@ -514,19 +572,25 @@ export function ExternalSyncManageDialog({
     onOpenChange(false);
   };
 
-  // Get URL placeholder and hint based on sync type
+  // Get URL placeholder - show generic placeholder for all
   const getUrlPlaceholder = () => {
-    if (formSyncType === "google") {
-      return t("externalSync.urlPlaceholderGoogle");
-    }
-    return t("externalSync.urlPlaceholderICloud");
+    return t("externalSync.urlPlaceholder");
   };
 
+  // Get URL hint - show static hints based on import type
   const getUrlHint = () => {
-    if (formSyncType === "google") {
-      return t("externalSync.urlHintGoogle");
+    // When editing, use the sync's type
+    if (editingSync) {
+      if (editingSync.syncType === "google") {
+        return t("externalSync.urlHintGoogle");
+      } else if (editingSync.syncType === "icloud") {
+        return t("externalSync.urlHintICloud");
+      }
+      return t("externalSync.urlHintCustom");
     }
-    return t("externalSync.urlHintICloud");
+
+    // When creating new calendar, show custom hint
+    return t("externalSync.urlHintCustom");
   };
 
   return (
@@ -542,95 +606,110 @@ export function ExternalSyncManageDialog({
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto flex-1 p-6">
-          {/* Existing Syncs List */}
-          {syncs.length > 0 && (
+          {/* Existing Syncs List - hide when adding new sync, show only edited sync when editing */}
+          {syncs.length > 0 && !showAddForm && (
             <div className="space-y-3">
-              {syncs.map((sync) => (
-                <div
-                  key={sync.id}
-                  className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
-                  style={{ borderLeftColor: sync.color, borderLeftWidth: 4 }}
-                >
-                  {/* Title row - always full width on mobile */}
-                  <div className="flex items-start gap-2">
-                    <div
-                      className="w-1 h-4 rounded-full shrink-0 mt-0.5"
-                      style={{ backgroundColor: sync.color }}
-                    />
-                    <span className="font-semibold flex-1 min-w-0 break-words">
-                      {sync.name}
-                    </span>
-                  </div>
-
-                  {/* Badges and buttons row */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 font-normal">
-                        {sync.syncType === "google"
-                          ? t("externalSync.syncTypeGoogle")
-                          : t("externalSync.syncTypeICloud")}
+              {syncs
+                .filter((sync) => !editingSync || sync.id === editingSync.id)
+                .map((sync) => (
+                  <div
+                    key={sync.id}
+                    className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
+                    style={{ borderLeftColor: sync.color, borderLeftWidth: 4 }}
+                  >
+                    {/* Title row - always full width on mobile */}
+                    <div className="flex items-start gap-2">
+                      <div
+                        className="w-1 h-4 rounded-full shrink-0 mt-0.5"
+                        style={{ backgroundColor: sync.color }}
+                      />
+                      <span className="font-semibold flex-1 min-w-0 break-words">
+                        {sync.name}
                       </span>
-                      {sync.autoSyncInterval > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                          <RefreshCw className="h-3 w-3" />
-                          {sync.autoSyncInterval < 60
-                            ? `${sync.autoSyncInterval} min`
-                            : sync.autoSyncInterval < 1440
-                            ? `${sync.autoSyncInterval / 60} h`
-                            : `${sync.autoSyncInterval / 1440} d`}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground text-xs font-medium">
-                          {t("externalSync.autoSyncManual")}
-                        </span>
-                      )}
-                      {sync.lastSyncedAt && (
-                        <span className="text-xs text-muted-foreground">
-                          {t("externalSync.lastSynced")}:{" "}
-                          {new Date(sync.lastSyncedAt).toLocaleString()}
-                        </span>
-                      )}
                     </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => startEdit(sync)}
-                        disabled={!!isSyncing || !!isDeleting}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => handleSync(sync.id)}
-                        disabled={!!isSyncing || !!isDeleting}
-                      >
-                        {isSyncing === sync.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4" />
+
+                    {/* Badges and buttons row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-medium">
+                          {sync.syncType === "google"
+                            ? t("externalSync.syncTypeGoogle")
+                            : sync.syncType === "custom"
+                            ? t("externalSync.syncTypeCustom")
+                            : t("externalSync.syncTypeICloud")}
+                        </span>
+                        {sync.isOneTimeImport && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
+                            {t("externalSync.oneTimeImport")}
+                          </span>
                         )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(sync.id)}
-                        disabled={!!isSyncing || !!isDeleting}
-                      >
-                        {isDeleting === sync.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                        {!sync.isOneTimeImport && sync.autoSyncInterval > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 text-xs font-medium">
+                            <RefreshCw className="h-3 w-3" />
+                            {sync.autoSyncInterval < 60
+                              ? `${sync.autoSyncInterval} min`
+                              : sync.autoSyncInterval < 1440
+                              ? `${sync.autoSyncInterval / 60} h`
+                              : `${sync.autoSyncInterval / 1440} d`}
+                          </span>
                         ) : (
-                          <Trash2 className="h-4 w-4" />
+                          !sync.isOneTimeImport && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20 text-xs font-medium">
+                              {t("externalSync.autoSyncManual")}
+                            </span>
+                          )
                         )}
-                      </Button>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => startEdit(sync)}
+                          disabled={!!isSyncing || !!isDeleting}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        {!sync.isOneTimeImport && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleSync(sync.id)}
+                            disabled={!!isSyncing || !!isDeleting}
+                          >
+                            {isSyncing === sync.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(sync.id)}
+                          disabled={!!isSyncing || !!isDeleting}
+                        >
+                          {isDeleting === sync.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Last synced info - always below badges */}
+                    {sync.lastSyncedAt && (
+                      <div className="text-xs text-muted-foreground pt-1 border-t border-border/30">
+                        {t("externalSync.lastSynced")}:{" "}
+                        {new Date(sync.lastSyncedAt).toLocaleString()}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
 
@@ -657,41 +736,91 @@ export function ExternalSyncManageDialog({
 
               {!editingSync && (
                 <div className="space-y-2">
-                  <Label htmlFor="sync-type">
-                    {t("externalSync.syncTypeLabel")}
+                  <Label htmlFor="import-type">
+                    {t("externalSync.importMethod")}
                   </Label>
-                  <Select value={formSyncType} onValueChange={setFormSyncType}>
-                    <SelectTrigger id="sync-type" className="bg-background/50">
+                  <Select
+                    value={importType}
+                    onValueChange={(value: "url" | "file") => {
+                      setImportType(value);
+                      setFormUrl("");
+                      setIcsFile(null);
+                    }}
+                  >
+                    <SelectTrigger
+                      id="import-type"
+                      className="bg-background/50"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="icloud">
-                        {t("externalSync.syncTypeICloud")}
+                      <SelectItem value="url">
+                        {t("externalSync.importMethodUrl")}
                       </SelectItem>
-                      <SelectItem value="google">
-                        {t("externalSync.syncTypeGoogle")}
+                      <SelectItem value="file">
+                        {t("externalSync.importMethodFile")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {importType === "url"
+                      ? t("externalSync.importMethodUrlHint")
+                      : t("externalSync.importMethodFileHint")}
+                  </p>
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="sync-url">{t("externalSync.urlLabel")}</Label>
-                <Input
-                  id="sync-url"
-                  type="text"
-                  placeholder={getUrlPlaceholder()}
-                  value={formUrl}
-                  onChange={(e) => setFormUrl(e.target.value)}
-                  disabled={isLoading || !!editingSync}
-                />
-                {!editingSync && (
-                  <p className="text-xs text-muted-foreground">
-                    {getUrlHint()}
-                  </p>
-                )}
-              </div>
+              {!editingSync && importType === "file" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="ics-file">
+                    {t("externalSync.fileLabel")}
+                  </Label>
+                  <Input
+                    id="ics-file"
+                    type="file"
+                    accept=".ics,.ical"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      setIcsFile(file || null);
+                    }}
+                    disabled={isLoading}
+                    className="cursor-pointer"
+                    value=""
+                  />
+                  {icsFile && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("externalSync.fileSelected")}: {icsFile.name}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                // Show URL input for new syncs OR when editing non-one-time-import syncs
+                (!editingSync ||
+                  (editingSync && !editingSync.isOneTimeImport)) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="sync-url">
+                      {t("externalSync.urlLabel")}
+                    </Label>
+                    <Input
+                      id="sync-url"
+                      type="text"
+                      placeholder={getUrlPlaceholder()}
+                      value={formUrl || ""}
+                      onChange={(e) => setFormUrl(e.target.value)}
+                      disabled={isLoading}
+                      readOnly={!!editingSync}
+                      className={
+                        editingSync
+                          ? "bg-muted/30 cursor-default font-mono text-sm"
+                          : ""
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {getUrlHint()}
+                    </p>
+                  </div>
+                )
+              )}
 
               <div className="space-y-2">
                 <ColorPicker
@@ -733,104 +862,121 @@ export function ExternalSyncManageDialog({
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>{t("externalSync.autoSyncLabel")}</Label>
-                  <span className="text-sm font-medium text-primary">
-                    {formAutoSyncInterval === 0
-                      ? t("externalSync.autoSyncManual")
-                      : formAutoSyncInterval < 60
-                      ? `${formAutoSyncInterval} min`
-                      : formAutoSyncInterval < 1440
-                      ? `${formAutoSyncInterval / 60} h`
-                      : `${formAutoSyncInterval / 1440} d`}
-                  </span>
-                </div>
-                <Slider
-                  value={[
-                    (() => {
-                      const intervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
-                      const index = intervals.indexOf(formAutoSyncInterval);
-                      return index >= 0 ? index : 0;
-                    })(),
-                  ]}
-                  onValueChange={(value: number[]) => {
-                    const intervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
-                    setFormAutoSyncInterval(intervals[value[0]]);
-                  }}
-                  max={8}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t("externalSync.autoSyncManual")}</span>
-                  <span>{t("externalSync.autoSync24hShort")}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("externalSync.autoSyncHint")}
-                </p>
-              </div>
-
-              {editingSync && (
-                <>
-                  <div className="space-y-3 pt-2 border-t border-border/30">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="hide-calendar"
-                        checked={editingSync.isHidden || false}
-                        onCheckedChange={() => {
-                          handleToggleVisibility(
-                            editingSync.id,
-                            "isHidden",
-                            editingSync.isHidden || false
-                          );
-                        }}
-                      />
-                      <Label
-                        htmlFor="hide-calendar"
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        {t("externalSync.hideCalendar")}
-                      </Label>
+              {/* Only show auto-sync for URL-based imports (both creating and editing) */}
+              {!(importType === "file") &&
+                !(editingSync && editingSync.isOneTimeImport) && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>{t("externalSync.autoSyncLabel")}</Label>
+                      <span className="text-sm font-medium text-primary">
+                        {formAutoSyncInterval === 0
+                          ? t("externalSync.autoSyncManual")
+                          : formAutoSyncInterval < 60
+                          ? `${formAutoSyncInterval} min`
+                          : formAutoSyncInterval < 1440
+                          ? `${formAutoSyncInterval / 60} h`
+                          : `${formAutoSyncInterval / 1440} d`}
+                      </span>
                     </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      {t("externalSync.hideCalendarHint")}
-                    </p>
-
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="hide-from-stats"
-                        checked={
-                          editingSync.isHidden ||
-                          editingSync.hideFromStats ||
-                          false
-                        }
-                        onCheckedChange={() => {
-                          handleToggleVisibility(
-                            editingSync.id,
-                            "hideFromStats",
-                            editingSync.hideFromStats || false
-                          );
-                        }}
-                        disabled={editingSync.isHidden}
-                      />
-                      <Label
-                        htmlFor="hide-from-stats"
-                        className={`text-sm font-normal ${
-                          editingSync.isHidden
-                            ? "cursor-not-allowed opacity-50"
-                            : "cursor-pointer"
-                        }`}
-                      >
-                        {t("externalSync.hideFromStats")}
-                      </Label>
+                    <Slider
+                      value={[
+                        (() => {
+                          const intervals = [
+                            0, 5, 15, 30, 60, 120, 360, 720, 1440,
+                          ];
+                          const index = intervals.indexOf(formAutoSyncInterval);
+                          return index >= 0 ? index : 0;
+                        })(),
+                      ]}
+                      onValueChange={(value: number[]) => {
+                        const intervals = [
+                          0, 5, 15, 30, 60, 120, 360, 720, 1440,
+                        ];
+                        setFormAutoSyncInterval(intervals[value[0]]);
+                      }}
+                      max={8}
+                      step={1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{t("externalSync.autoSyncManual")}</span>
+                      <span>{t("externalSync.autoSync24hShort")}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      {t("externalSync.hideFromStatsHint")}
+                    <p className="text-xs text-muted-foreground">
+                      {t("externalSync.autoSyncHint")}
                     </p>
                   </div>
-                </>
-              )}
+                )}
+
+              {/* Visibility options - both for creating and editing */}
+              <div className="space-y-3 pt-2 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="hide-calendar"
+                    checked={
+                      editingSync ? editingSync.isHidden || false : formIsHidden
+                    }
+                    onCheckedChange={(checked) => {
+                      if (editingSync) {
+                        handleToggleVisibility(
+                          editingSync.id,
+                          "isHidden",
+                          editingSync.isHidden || false
+                        );
+                      } else {
+                        setFormIsHidden(checked as boolean);
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="hide-calendar"
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {t("externalSync.hideCalendar")}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t("externalSync.hideCalendarHint")}
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="hide-from-stats"
+                    checked={
+                      editingSync
+                        ? editingSync.isHidden ||
+                          editingSync.hideFromStats ||
+                          false
+                        : formIsHidden || formHideFromStats
+                    }
+                    onCheckedChange={(checked) => {
+                      if (editingSync) {
+                        handleToggleVisibility(
+                          editingSync.id,
+                          "hideFromStats",
+                          editingSync.hideFromStats || false
+                        );
+                      } else {
+                        setFormHideFromStats(checked as boolean);
+                      }
+                    }}
+                    disabled={editingSync ? editingSync.isHidden : formIsHidden}
+                  />
+                  <Label
+                    htmlFor="hide-from-stats"
+                    className={`text-sm font-normal ${
+                      (editingSync ? editingSync.isHidden : formIsHidden)
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer"
+                    }`}
+                  >
+                    {t("externalSync.hideFromStats")}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t("externalSync.hideFromStatsHint")}
+                </p>
+              </div>
 
               {editingSync ? (
                 <div className="flex gap-2">
@@ -850,10 +996,13 @@ export function ExternalSyncManageDialog({
                       setShowAddForm(false);
                       setFormName("");
                       setFormUrl("");
-                      setFormSyncType("icloud");
                       setFormColor("#3b82f6");
                       setFormDisplayMode("normal");
                       setFormAutoSyncInterval(0);
+                      setIcsFile(null);
+                      setImportType("url");
+                      setFormIsHidden(false);
+                      setFormHideFromStats(false);
                     }}
                     disabled={isLoading}
                   >
@@ -861,7 +1010,11 @@ export function ExternalSyncManageDialog({
                   </Button>
                   <Button
                     onClick={handleAddSync}
-                    disabled={isLoading || !formName.trim() || !formUrl.trim()}
+                    disabled={
+                      isLoading ||
+                      !formName.trim() ||
+                      (importType === "file" ? !icsFile : !formUrl.trim())
+                    }
                   >
                     {isLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -885,47 +1038,89 @@ export function ExternalSyncManageDialog({
             </Button>
           )}
 
-          {/* Instructions - only show when adding/editing */}
-          {(showAddForm || editingSync) && (
-            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-4">
-              <div className="text-sm space-y-2">
-                <div className="font-medium">
-                  {t(
-                    formSyncType === "google"
-                      ? "externalSync.howToTitleGoogle"
-                      : "externalSync.howToTitleICloud"
-                  )}
-                </div>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                  <li>
-                    {t(
-                      formSyncType === "google"
-                        ? "externalSync.howToStep1Google"
-                        : "externalSync.howToStep1ICloud"
-                    )}
-                  </li>
-                  <li>
-                    {t(
-                      formSyncType === "google"
-                        ? "externalSync.howToStep2Google"
-                        : "externalSync.howToStep2ICloud"
-                    )}
-                  </li>
-                  <li>
-                    {t(
-                      formSyncType === "google"
-                        ? "externalSync.howToStep3Google"
-                        : "externalSync.howToStep3ICloud"
-                    )}
-                  </li>
-                  <li>
-                    {t(
-                      formSyncType === "google"
-                        ? "externalSync.howToStep4Google"
-                        : "externalSync.howToStep4ICloud"
-                    )}
-                  </li>
-                </ol>
+          {/* Hints Section - show only when creating */}
+          {showAddForm && (
+            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 space-y-2">
+              <h4 className="text-sm font-semibold text-foreground/90">
+                {t("externalSync.hintsTitle")}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {t("externalSync.hintsDescription")}
+              </p>
+
+              {/* iCloud Hint */}
+              <div className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedHint(expandedHint === "icloud" ? null : "icloud")
+                  }
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                >
+                  <span className="text-sm font-medium">
+                    {t("externalSync.syncTypeICloud")}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      expandedHint === "icloud" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {expandedHint === "icloud" && (
+                  <div className="px-3 pb-3 text-sm text-muted-foreground space-y-1">
+                    <p>{t("externalSync.hintICloud")}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Google Hint */}
+              <div className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedHint(expandedHint === "google" ? null : "google")
+                  }
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                >
+                  <span className="text-sm font-medium">
+                    {t("externalSync.syncTypeGoogle")}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      expandedHint === "google" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {expandedHint === "google" && (
+                  <div className="px-3 pb-3 text-sm text-muted-foreground space-y-1">
+                    <p>{t("externalSync.hintGoogle")}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Calendar Hint */}
+              <div className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedHint(expandedHint === "custom" ? null : "custom")
+                  }
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                >
+                  <span className="text-sm font-medium">
+                    {t("externalSync.customCalendar")}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      expandedHint === "custom" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {expandedHint === "custom" && (
+                  <div className="px-3 pb-3 text-sm text-muted-foreground space-y-1">
+                    <p>{t("externalSync.hintCustom")}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

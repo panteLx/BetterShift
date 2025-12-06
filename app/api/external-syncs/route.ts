@@ -4,6 +4,7 @@ import { externalSyncs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   isValidCalendarUrl,
+  detectCalendarSyncType,
   type CalendarSyncType,
 } from "@/lib/external-calendar-utils";
 
@@ -43,46 +44,69 @@ export async function POST(request: Request) {
     const {
       calendarId,
       name,
-      syncType,
       calendarUrl,
       color,
       displayMode,
       autoSyncInterval,
+      icsContent, // For file uploads
     } = body;
 
-    if (!calendarId || !name || !calendarUrl || !syncType) {
+    if (!calendarId || !name) {
       return NextResponse.json(
         {
-          error: "Calendar ID, name, sync type, and calendar URL are required",
+          error: "Calendar ID and name are required",
         },
         { status: 400 }
       );
     }
 
-    // Validate sync type
-    if (!["icloud", "google"].includes(syncType)) {
+    let finalCalendarUrl = calendarUrl;
+    let isOneTimeImport = false;
+    let syncType: CalendarSyncType;
+
+    // Handle different scenarios
+    if (icsContent) {
+      // File upload - one-time import, always custom type
+      isOneTimeImport = true;
+      syncType = "custom";
+      // Store content as data URL for later retrieval
+      finalCalendarUrl = `data:text/calendar;base64,${Buffer.from(
+        icsContent
+      ).toString("base64")}`;
+    } else if (calendarUrl) {
+      // URL-based import - detect type from URL
+      syncType = detectCalendarSyncType(calendarUrl);
+      isOneTimeImport = false;
+
+      // Validate calendar URL to prevent SSRF
+      if (!isValidCalendarUrl(calendarUrl, syncType)) {
+        const domainMsg =
+          syncType === "icloud"
+            ? "icloud.com domain"
+            : syncType === "google"
+            ? "google.com domain"
+            : "valid domain";
+        return NextResponse.json(
+          {
+            error: `Invalid ${syncType} calendar URL. URL must use webcal:// or https:// protocol and be from ${domainMsg}`,
+          },
+          { status: 400 }
+        );
+      }
+      finalCalendarUrl = calendarUrl;
+    } else {
       return NextResponse.json(
-        { error: "Sync type must be either 'icloud' or 'google'" },
+        { error: "Either calendar URL or ICS content is required" },
         { status: 400 }
       );
     }
 
-    // Validate calendar URL to prevent SSRF
-    if (!isValidCalendarUrl(calendarUrl, syncType as CalendarSyncType)) {
-      const domain = syncType === "icloud" ? "icloud.com" : "google.com";
-      return NextResponse.json(
-        {
-          error: `Invalid ${syncType} calendar URL. URL must use webcal:// or https:// protocol and be from ${domain} domain`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate autoSyncInterval
+    // Validate autoSyncInterval (should be 0 for one-time imports)
     const validIntervals = [0, 5, 15, 30, 60, 120, 360, 720, 1440];
+    const finalAutoSyncInterval = isOneTimeImport ? 0 : autoSyncInterval || 0;
     if (
-      autoSyncInterval !== undefined &&
-      !validIntervals.includes(autoSyncInterval)
+      finalAutoSyncInterval !== undefined &&
+      !validIntervals.includes(finalAutoSyncInterval)
     ) {
       return NextResponse.json(
         {
@@ -101,10 +125,11 @@ export async function POST(request: Request) {
         calendarId,
         name,
         syncType,
-        calendarUrl,
+        calendarUrl: finalCalendarUrl,
         color: color || "#3b82f6",
         displayMode: displayMode || "normal",
-        autoSyncInterval: autoSyncInterval || 0,
+        autoSyncInterval: finalAutoSyncInterval,
+        isOneTimeImport,
         createdAt: new Date(),
         updatedAt: new Date(),
       })

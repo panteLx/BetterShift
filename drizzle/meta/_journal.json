@@ -64,6 +64,13 @@
       "when": 1764883523241,
       "tag": "0008_big_reavers",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1765071171359,
+      "tag": "0009_omniscient_magma",
+      "breakpoints": true
     }
   ]
 }

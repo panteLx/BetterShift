@@ -36,7 +36,7 @@
 - **Shift Presets**: Create reusable shift templates with custom times, colors, and labels
 - **Drag & Drop**: Reorder calendars and presets with intuitive drag-and-drop functionality
 - **Calendar Notes**: Right-click any day to add custom notes (e.g., "Morning shift because afternoon hairdresser")
-- **External Calendar Sync**: Automatically or manually synchronize multiple external calendars at configurable intervals
+- **External Calendars**: Automatically or manually synchronize multiple external calendars at configurable intervals or import ICS files
 
 ### 🎨 Customization & Organization
 
@@ -89,6 +89,11 @@ $ git clone https://github.com/pantelx/bettershift.git && cd bettershift
 # Install dependencies
 $ npm install
 
+# Copy the example environment file
+$ cp .env.example .env
+
+# Adjust .env settings as needed
+
 # Set up the database
 $ npm run db:migrate
 
@@ -137,6 +142,11 @@ $ docker exec bettershift npm run db:migrate
 ```bash
 # Clone the repository
 $ git clone https://github.com/pantelx/bettershift.git && cd bettershift
+
+# Copy the example environment file
+$ cp .env.example .env
+
+# Adjust .env settings as needed
 
 # Build and start the container
 $ docker-compose up -d --build

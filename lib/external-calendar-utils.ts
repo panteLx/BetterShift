@@ -5,12 +5,44 @@
 
 import ICAL from "ical.js";
 
-export type CalendarSyncType = "icloud" | "google";
+export type CalendarSyncType = "icloud" | "google" | "custom";
+
+/**
+ * Detects the calendar sync type based on the URL
+ * @param url - The calendar URL
+ * @returns The detected sync type (icloud, google, or custom)
+ */
+export function detectCalendarSyncType(url: string): CalendarSyncType {
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // Check for iCloud domain
+    if (hostname.endsWith(".icloud.com") || hostname === "icloud.com") {
+      return "icloud";
+    }
+
+    // Check for Google domain
+    if (
+      hostname.endsWith(".google.com") ||
+      hostname === "google.com" ||
+      hostname === "calendar.google.com"
+    ) {
+      return "google";
+    }
+
+    // Everything else is custom
+    return "custom";
+  } catch {
+    // Invalid URL, default to custom
+    return "custom";
+  }
+}
 
 /**
  * Validates external calendar URL to prevent SSRF vulnerabilities
  * @param url - The URL to validate
- * @param syncType - The type of calendar sync (icloud or google)
+ * @param syncType - The type of calendar sync (icloud, google, or custom)
  * @returns true if valid, false otherwise
  */
 export function isValidCalendarUrl(
@@ -42,11 +74,30 @@ export function isValidCalendarUrl(
       ) {
         return false;
       }
+    } else if (syncType === "custom") {
+      // For custom calendars, just check protocol - no domain restrictions
+      return true;
     }
 
     return true;
   } catch {
     // Invalid URL format
+    return false;
+  }
+}
+
+/**
+ * Validates ICS file content
+ * @param icsContent - The ICS file content as string
+ * @returns true if valid ICS format, false otherwise
+ */
+export function isValidICSContent(icsContent: string): boolean {
+  try {
+    const jcalData = ICAL.parse(icsContent);
+    const comp = new ICAL.Component(jcalData);
+    const vevents = comp.getAllSubcomponents("vevent");
+    return vevents.length > 0;
+  } catch {
     return false;
   }
 }

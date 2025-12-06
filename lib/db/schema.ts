@@ -25,7 +25,7 @@ export const externalSyncs = sqliteTable("external_syncs", {
     .notNull()
     .references(() => calendars.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  syncType: text("sync_type").notNull().default("icloud"), // icloud, google, etc.
+  syncType: text("sync_type").notNull().default("icloud"), // icloud, google, custom
   calendarUrl: text("calendar_url").notNull(),
   color: text("color").notNull().default("#3b82f6"),
   displayMode: text("display_mode").notNull().default("normal"),
@@ -34,6 +34,9 @@ export const externalSyncs = sqliteTable("external_syncs", {
     .notNull()
     .default(false),
   autoSyncInterval: integer("auto_sync_interval").notNull().default(0), // 0 = manual, otherwise minutes
+  isOneTimeImport: integer("is_one_time_import", { mode: "boolean" })
+    .notNull()
+    .default(false), // true for uploaded files (no sync), false for URLs (can sync)
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
