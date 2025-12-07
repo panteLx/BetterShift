@@ -1,7 +1,7 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 
-export const locales = ["de", "en"] as const;
+export const locales = ["de", "en", "it"] as const;
 export type Locale = (typeof locales)[number];
 
 const configuredDefaultLocale = process.env.DEFAULT_LOCALE as
@@ -21,10 +21,13 @@ function getLocaleFromNavigator(acceptLanguage: string | null): Locale {
     return locale.toLowerCase();
   });
 
-  // If German is in the list, use German, otherwise use English
+  // Check for preferred language
   for (const lang of languages) {
     if (lang.startsWith("de")) {
       return "de";
+    }
+    if (lang.startsWith("it")) {
+      return "it";
     }
   }
 
