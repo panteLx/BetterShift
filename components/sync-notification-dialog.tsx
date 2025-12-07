@@ -138,7 +138,7 @@ export function SyncNotificationDialog({
 
     setIsDeleting(true);
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/sync-logs?calendarId=${calendarId}`, {
         method: "DELETE",
@@ -165,7 +165,7 @@ export function SyncNotificationDialog({
 
     setIsMarkingRead(true);
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(
         `/api/sync-logs?calendarId=${calendarId}&action=markErrorsAsRead`,

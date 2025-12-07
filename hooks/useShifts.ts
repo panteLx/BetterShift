@@ -97,7 +97,7 @@ export function useShifts(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/shifts/${id}`, {
         method: "PATCH",
@@ -133,7 +133,7 @@ export function useShifts(calendarId: string | undefined) {
 
   const deleteShift = async (id: string, onPasswordRequired?: () => void) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/shifts/${id}`, {
         method: "DELETE",

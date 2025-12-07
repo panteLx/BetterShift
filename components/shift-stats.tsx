@@ -56,12 +56,11 @@ export function ShiftStats({
       }
 
       const response = await fetch(`/api/shifts/stats?${params}`);
-      const data = await response.json();
-
-      // Only set stats if response has the expected structure
-      if (data.stats && typeof data.stats === "object") {
-        setStats(data);
+      if (!response.ok) {
+        return; // Calendar is locked and no valid password
       }
+      const data = await response.json();
+      setStats(data);
     } catch (error) {
       console.error("Failed to fetch shift statistics:", error);
     } finally {

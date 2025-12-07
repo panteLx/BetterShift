@@ -238,7 +238,7 @@ export function ExternalSyncManageDialog({
         icsContent = await icsFile.text();
       }
 
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch("/api/external-syncs", {
         method: "POST",
@@ -291,7 +291,7 @@ export function ExternalSyncManageDialog({
 
     setIsLoading(true);
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
         method: "PATCH",
@@ -331,7 +331,7 @@ export function ExternalSyncManageDialog({
   const handleSync = async (syncId: string) => {
     setIsSyncing(syncId);
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/external-syncs/${syncId}/sync`, {
         method: "POST",
@@ -372,7 +372,7 @@ export function ExternalSyncManageDialog({
 
     setIsDeleting(syncId);
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "DELETE",
@@ -448,7 +448,7 @@ export function ExternalSyncManageDialog({
     }
 
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "PATCH",
@@ -509,7 +509,7 @@ export function ExternalSyncManageDialog({
       if (!editingSync) return false;
 
       try {
-        const password = calendarId ? getCachedPassword(calendarId) : null;
+        const password = getCachedPassword(calendarId);
 
         const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
           method: "PATCH",
