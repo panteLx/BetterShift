@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
 import { useTranslations, useLocale } from "next-intl";
-import { de, enUS } from "date-fns/locale";
+import { getDateLocale } from "@/lib/locales";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftCard } from "@/components/shift-card";
 import { ChevronUp, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
@@ -20,7 +20,7 @@ export function ShiftsList({
 }: ShiftsListProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = locale === "de" ? de : enUS;
+  const dateLocale = getDateLocale(locale);
   const [showShiftsSection, setShowShiftsSection] = useState(false);
 
   const shiftsInMonth = shifts.filter((shift) => {

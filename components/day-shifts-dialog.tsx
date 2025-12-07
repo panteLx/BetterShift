@@ -10,7 +10,7 @@ import {
 import { ShiftWithCalendar } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { de, enUS } from "date-fns/locale";
+import { getDateLocale } from "@/lib/locales";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
@@ -35,7 +35,7 @@ export function DayShiftsDialog({
 
   if (!date) return null;
 
-  const dateLocale = locale === "de" ? de : enUS;
+  const dateLocale = getDateLocale(locale);
   const formattedDate = format(date, "EEEE, d. MMMM yyyy", {
     locale: dateLocale,
   });

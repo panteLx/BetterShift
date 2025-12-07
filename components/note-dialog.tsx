@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { motion } from "motion/react";
 import { StickyNote } from "lucide-react";
 import {
   Dialog,
@@ -15,9 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarNote } from "@/lib/db/schema";
-import { formatDateToLocal } from "@/lib/date-utils";
 import { format } from "date-fns";
-import { de, enUS } from "date-fns/locale";
+import { getDateLocale } from "@/lib/locales";
 import { useLocale } from "next-intl";
 
 interface NoteDialogProps {
@@ -39,6 +37,7 @@ export function NoteDialog({
 }: NoteDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
+  const dateLocale = getDateLocale(locale);
   const [noteText, setNoteText] = useState("");
   const initialNoteRef = useRef<string>("");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -114,7 +113,6 @@ export function NoteDialog({
     }
   };
 
-  const dateLocale = locale === "de" ? de : enUS;
   const formattedDate = selectedDate
     ? format(selectedDate, "PPP", { locale: dateLocale })
     : "";

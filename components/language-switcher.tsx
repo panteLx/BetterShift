@@ -9,16 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Languages } from "lucide-react";
-
-type Locale = "de" | "en" | "it";
-
-const languageNames: Record<Locale, string> = {
-  de: "Deutsch",
-  en: "English",
-  it: "Italiano",
-};
-
-const locales: Locale[] = ["de", "en", "it"];
+import { locales, languageNames, type Locale } from "@/lib/locales";
 
 export function LanguageSwitcher() {
   const currentLocale = useLocale() as Locale;

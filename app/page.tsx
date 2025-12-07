@@ -41,7 +41,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
-import { de, enUS } from "date-fns/locale";
+import { getDateLocale } from "@/lib/locales";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
@@ -61,7 +61,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = locale === "de" ? de : enUS;
+  const dateLocale = getDateLocale(locale);
 
   // Custom hooks for data management
   const {

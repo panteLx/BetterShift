@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { ShiftWithCalendar } from "@/lib/types";
 import { format } from "date-fns";
-import { de, enUS } from "date-fns/locale";
+import { getDateLocale } from "@/lib/locales";
 import { useLocale } from "next-intl";
 import { Clock } from "lucide-react";
 
@@ -29,7 +29,7 @@ export function SyncedShiftsDialog({
 }: SyncedShiftsDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = locale === "de" ? de : enUS;
+  const dateLocale = getDateLocale(locale);
 
   const formattedDate = date
     ? format(date, "EEEE, dd. MMMM yyyy", { locale: dateLocale })
