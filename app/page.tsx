@@ -209,6 +209,7 @@ function HomeContent() {
   const [isCalendarUnlocked, setIsCalendarUnlocked] = useState(true);
   const [isVerifyingCalendarPassword, setIsVerifyingCalendarPassword] =
     useState(false);
+  const [passwordCacheTrigger, setPasswordCacheTrigger] = useState(0);
   const [versionInfo, setVersionInfo] = useState<{
     version: string;
     githubUrl: string;
@@ -225,7 +226,7 @@ function HomeContent() {
     const requiresPassword = !!selectedCalendarData.passwordHash;
     const hasPassword = !!getCachedPassword(selectedCalendar);
     return requiresPassword && !hasPassword;
-  }, [selectedCalendar, selectedCalendarData]);
+  }, [selectedCalendar, selectedCalendarData, passwordCacheTrigger]);
 
   // SSE Connection for real-time updates
   useSSEConnection({
@@ -378,6 +379,7 @@ function HomeContent() {
     ]);
 
     setStatsRefreshTrigger((prev) => prev + 1);
+    setPasswordCacheTrigger((prev) => prev + 1);
 
     if (!pendingAction) return;
 
