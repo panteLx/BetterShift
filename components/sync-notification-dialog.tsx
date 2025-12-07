@@ -148,13 +148,19 @@ export function SyncNotificationDialog({
 
       if (response.ok) {
         setLogs([]);
-        toast.success(t("syncNotifications.deleteSuccess"));
+        toast.success(
+          t("common.deleted", { item: t("syncNotifications.title") })
+        );
       } else {
-        toast.error(t("syncNotifications.deleteError"));
+        toast.error(
+          t("common.deleteError", { item: t("syncNotifications.title") })
+        );
       }
     } catch (error) {
       console.error("Failed to delete sync logs:", error);
-      toast.error(t("syncNotifications.deleteError"));
+      toast.error(
+        t("common.deleteError", { item: t("syncNotifications.title") })
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -182,11 +188,15 @@ export function SyncNotificationDialog({
         // Notify parent to refresh error status
         onErrorsMarkedRead?.();
       } else {
-        toast.error(t("syncNotifications.markAsReadError"));
+        toast.error(
+          t("common.updateError", { item: t("syncNotifications.title") })
+        );
       }
     } catch (error) {
       console.error("Failed to mark errors as read:", error);
-      toast.error(t("syncNotifications.markAsReadError"));
+      toast.error(
+        t("common.updateError", { item: t("syncNotifications.title") })
+      );
     } finally {
       setIsMarkingRead(false);
     }

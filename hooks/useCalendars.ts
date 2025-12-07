@@ -57,7 +57,7 @@ export function useCalendars(initialCalendarId?: string | null) {
           `Failed to create calendar: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("calendar.createError"));
+        toast.error(t("common.createError", { item: t("calendar.title") }));
         return;
       }
 
@@ -70,10 +70,10 @@ export function useCalendars(initialCalendarId?: string | null) {
         setCachedPassword(newCalendar.id, password);
       }
 
-      toast.success(t("calendar.created"));
+      toast.success(t("common.created", { item: t("calendar.title") }));
     } catch (error) {
       console.error("Failed to create calendar:", error);
-      toast.error(t("calendar.createError"));
+      toast.error(t("common.createError", { item: t("calendar.title") }));
     }
   };
 
@@ -88,7 +88,7 @@ export function useCalendars(initialCalendarId?: string | null) {
       });
 
       if (response.status === 401) {
-        toast.error(t("password.errorIncorrect"));
+        toast.error(t("validation.passwordIncorrect"));
         return false;
       }
 
@@ -108,7 +108,7 @@ export function useCalendars(initialCalendarId?: string | null) {
         });
         removeCachedPassword(calendarId);
 
-        toast.success(t("calendar.deleted"));
+        toast.success(t("common.deleted", { item: t("calendar.title") }));
         return true;
       } else {
         const errorText = await response.text();
@@ -116,12 +116,12 @@ export function useCalendars(initialCalendarId?: string | null) {
           `Failed to delete calendar: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("calendar.deleteError"));
+        toast.error(t("common.deleteError", { item: t("calendar.title") }));
         return false;
       }
     } catch (error) {
       console.error("Failed to delete calendar:", error);
-      toast.error(t("calendar.deleteError"));
+      toast.error(t("common.deleteError", { item: t("calendar.title") }));
     }
     return false;
   };

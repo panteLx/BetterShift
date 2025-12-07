@@ -915,11 +915,11 @@ function HomeContent() {
                             // Trigger data refetch after successful password entry
                             handlePasswordSuccess(password);
                           } else {
-                            toast.error(t("password.errorIncorrect"));
+                            toast.error(t("validation.passwordIncorrect"));
                           }
                         })
                         .catch(() => {
-                          toast.error(t("password.errorIncorrect"));
+                          toast.error(t("validation.passwordIncorrect"));
                         });
                     }
                   }}
@@ -930,13 +930,13 @@ function HomeContent() {
                       htmlFor="unlock-password"
                       className="text-sm font-medium"
                     >
-                      {t("password.password")}
+                      {t("form.passwordLabel")}
                     </Label>
                     <Input
                       id="unlock-password"
                       name="password"
                       type="password"
-                      placeholder={t("password.passwordPlaceholder")}
+                      placeholder={t("form.passwordPlaceholder")}
                       className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20"
                       autoFocus
                     />

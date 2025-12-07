@@ -72,17 +72,17 @@ export function useNotes(calendarId: string | undefined) {
           `Failed to create note: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("note.createError"));
+        toast.error(t("common.createError", { item: t("note.note") }));
         return false;
       }
 
       const newNote = await response.json();
       setNotes((prev) => [...prev, newNote]);
-      toast.success(t("note.created"));
+      toast.success(t("common.created", { item: t("note.note") }));
       return true;
     } catch (error) {
       console.error("Failed to create note:", error);
-      toast.error(t("note.createError"));
+      toast.error(t("common.createError", { item: t("note.note") }));
       return false;
     }
   };
@@ -112,17 +112,17 @@ export function useNotes(calendarId: string | undefined) {
           `Failed to update note: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("note.updateError"));
+        toast.error(t("common.updateError", { item: t("note.note") }));
         return false;
       }
 
       const updatedNote = await response.json();
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
-      toast.success(t("note.updated"));
+      toast.success(t("common.updated", { item: t("note.note") }));
       return true;
     } catch (error) {
       console.error("Failed to update note:", error);
-      toast.error(t("note.updateError"));
+      toast.error(t("common.updateError", { item: t("note.note") }));
       return false;
     }
   };
@@ -153,16 +153,16 @@ export function useNotes(calendarId: string | undefined) {
           `Failed to delete note: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("note.deleteError"));
+        toast.error(t("common.deleteError", { item: t("note.note") }));
         return false;
       }
 
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
-      toast.success(t("note.deleted"));
+      toast.success(t("common.deleted", { item: t("note.note") }));
       return true;
     } catch (error) {
       console.error("Failed to delete note:", error);
-      toast.error(t("note.deleteError"));
+      toast.error(t("common.deleteError", { item: t("note.note") }));
       return false;
     }
   };

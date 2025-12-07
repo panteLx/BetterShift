@@ -86,11 +86,11 @@ export function PresetSelector({
             `Failed to create preset: ${response.status} ${response.statusText}`,
             errorText
           );
-          toast.error(t("preset.saveError"));
+          toast.error(t("common.createError", { item: t("preset.create") }));
           return;
         }
 
-        toast.success(t("preset.created"));
+        toast.success(t("common.created", { item: t("preset.create") }));
       } else if (editingPreset) {
         const response = await fetch(`/api/presets/${editingPreset.id}`, {
           method: "PATCH",
@@ -104,11 +104,11 @@ export function PresetSelector({
             `Failed to update preset: ${response.status} ${response.statusText}`,
             errorText
           );
-          toast.error(t("preset.saveError"));
+          toast.error(t("common.updateError", { item: t("preset.create") }));
           return;
         }
 
-        toast.success(t("preset.updated"));
+        toast.success(t("common.updated", { item: t("preset.create") }));
 
         if (onShiftsChange) onShiftsChange();
         if (onStatsRefresh) onStatsRefresh();
@@ -123,7 +123,7 @@ export function PresetSelector({
       }
     } catch (error) {
       console.error("Failed to save preset:", error);
-      toast.error(t("preset.saveError"));
+      toast.error(t("common.updateError", { item: t("preset.create") }));
     }
   };
 
@@ -148,7 +148,7 @@ export function PresetSelector({
             `Failed to delete preset: ${response.status} ${response.statusText}`,
             errorText
           );
-          toast.error(t("preset.deleteError"));
+          toast.error(t("common.deleteError", { item: t("preset.create") }));
           return;
         }
 
@@ -158,10 +158,10 @@ export function PresetSelector({
 
         onPresetsChange();
         if (onShiftsChange) onShiftsChange();
-        toast.success(t("preset.deleted"));
+        toast.success(t("common.deleted", { item: t("preset.create") }));
       } catch (error) {
         console.error("Failed to delete preset:", error);
-        toast.error(t("preset.deleteError"));
+        toast.error(t("common.deleteError", { item: t("preset.create") }));
       }
     });
   };

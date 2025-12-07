@@ -173,7 +173,9 @@ export function PresetEditDialog({
             </Label>
             <Input
               id="preset-title"
-              placeholder={t("preset.namePlaceholder")}
+              placeholder={t("form.namePlaceholder", {
+                example: t("preset.presetName"),
+              })}
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -240,7 +242,7 @@ export function PresetEditDialog({
           <ColorPicker
             color={formData.color}
             onChange={(color) => setFormData({ ...formData, color })}
-            label={t("shift.color")}
+            label={t("form.colorLabel")}
             presetColors={PRESET_COLORS}
           />
 
@@ -250,11 +252,11 @@ export function PresetEditDialog({
               className="text-sm font-medium flex items-center gap-2"
             >
               <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-              {t("shift.notesOptional")}
+              {t("form.notesLabel")}
             </Label>
             <Input
               id="preset-notes"
-              placeholder={t("shift.notesPlaceholder")}
+              placeholder={t("form.notesPlaceholder")}
               value={formData.notes}
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })

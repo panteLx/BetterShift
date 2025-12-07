@@ -138,11 +138,11 @@ export function ShiftFormFields({
           className="text-sm font-medium flex items-center gap-2"
         >
           <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-          {t("shift.notesOptional")}
+          {t("form.notesLabel")}
         </Label>
         <Textarea
           id="notes"
-          placeholder={t("shift.notesPlaceholder")}
+          placeholder={t("form.notesPlaceholder")}
           value={formData.notes}
           onChange={(e) =>
             onFormDataChange({ ...formData, notes: e.target.value })
@@ -156,7 +156,7 @@ export function ShiftFormFields({
       <ColorPicker
         color={formData.color || "#3b82f6"}
         onChange={(color) => onFormDataChange({ ...formData, color })}
-        label={t("shift.color")}
+        label={t("form.colorLabel")}
         presetColors={PRESET_COLORS}
       />
 

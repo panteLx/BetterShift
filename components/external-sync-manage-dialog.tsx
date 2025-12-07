@@ -191,20 +191,20 @@ export function ExternalSyncManageDialog({
     // For file upload
     if (importType === "file") {
       if (!icsFile) {
-        toast.error(t("externalSync.fileRequired"));
+        toast.error(t("validation.fileRequired"));
         return;
       }
     } else {
       // For URL-based imports
       if (!formUrl.trim()) {
-        toast.error(t("externalSync.urlRequired"));
+        toast.error(t("validation.urlRequired"));
         return;
       }
 
       // Detect and validate calendar URL format
       const detectedType = detectCalendarSyncType(formUrl.trim());
       if (!isValidCalendarUrl(formUrl.trim(), detectedType)) {
-        toast.error(t("externalSync.invalidUrlFormat"));
+        toast.error(t("validation.urlInvalid"));
         return;
       }
 
@@ -217,7 +217,7 @@ export function ExternalSyncManageDialog({
       );
 
       if (urlExists) {
-        toast.error(t("externalSync.urlAlreadyExists"));
+        toast.error(t("validation.urlAlreadyExists"));
         return;
       }
     }
@@ -231,7 +231,7 @@ export function ExternalSyncManageDialog({
         // Check file size (limit: 5MB)
         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
         if (icsFile.size > MAX_FILE_SIZE) {
-          toast.error(t("externalSync.fileTooLarge"));
+          toast.error(t("validation.fileTooLarge", { maxSize: "5MB" }));
           setIsLoading(false);
           return;
         }
@@ -271,16 +271,23 @@ export function ExternalSyncManageDialog({
         setShowAddForm(false);
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh to update parent state
-        toast.success(t("externalSync.createSuccess"));
+        toast.success(
+          t("common.created", { item: t("externalSync.syncTypeCustom") })
+        );
         // Auto-sync the newly created sync
         await handleSync(newSync.id);
       } else {
         const data = await response.json();
-        toast.error(data.error || t("externalSync.createError"));
+        toast.error(
+          data.error ||
+            t("common.createError", { item: t("externalSync.syncTypeCustom") })
+        );
       }
     } catch (error) {
       console.error("Failed to create sync:", error);
-      toast.error(t("externalSync.createError"));
+      toast.error(
+        t("common.createError", { item: t("externalSync.syncTypeCustom") })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -315,14 +322,21 @@ export function ExternalSyncManageDialog({
         setFormAutoSyncInterval(0);
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh of shifts and externalSyncs
-        toast.success(t("externalSync.updateSuccess"));
+        toast.success(
+          t("common.updated", { item: t("externalSync.syncTypeCustom") })
+        );
       } else {
         const data = await response.json();
-        toast.error(data.error || t("externalSync.updateError"));
+        toast.error(
+          data.error ||
+            t("common.updateError", { item: t("externalSync.syncTypeCustom") })
+        );
       }
     } catch (error) {
       console.error("Failed to update sync:", error);
-      toast.error(t("externalSync.updateError"));
+      toast.error(
+        t("common.updateError", { item: t("externalSync.syncTypeCustom") })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -383,14 +397,21 @@ export function ExternalSyncManageDialog({
       if (response.ok) {
         await fetchSyncs();
         onSyncComplete?.();
-        toast.success(t("externalSync.deleteSuccess"));
+        toast.success(
+          t("common.deleted", { item: t("externalSync.syncTypeCustom") })
+        );
       } else {
         const data = await response.json();
-        toast.error(data.error || t("externalSync.deleteError"));
+        toast.error(
+          data.error ||
+            t("common.deleteError", { item: t("externalSync.syncTypeCustom") })
+        );
       }
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error(t("externalSync.deleteError"));
+      toast.error(
+        t("common.deleteError", { item: t("externalSync.syncTypeCustom") })
+      );
     } finally {
       setIsDeleting(null);
     }
@@ -462,10 +483,15 @@ export function ExternalSyncManageDialog({
       if (response.ok) {
         await fetchSyncs();
         onSyncComplete?.(); // Trigger refresh
-        toast.success(t("externalSync.updateSuccess"));
+        toast.success(
+          t("common.updated", { item: t("externalSync.syncTypeCustom") })
+        );
       } else {
         const data = await response.json();
-        toast.error(data.error || t("externalSync.updateError"));
+        toast.error(
+          data.error ||
+            t("common.updateError", { item: t("externalSync.syncTypeCustom") })
+        );
 
         // Revert optimistic update on error
         if (editingSync && editingSync.id === syncId) {
@@ -477,7 +503,9 @@ export function ExternalSyncManageDialog({
       }
     } catch (error) {
       console.error("Failed to update visibility:", error);
-      toast.error(t("externalSync.updateError"));
+      toast.error(
+        t("common.updateError", { item: t("externalSync.syncTypeCustom") })
+      );
 
       // Revert optimistic update on error
       if (editingSync && editingSync.id === syncId) {
@@ -539,16 +567,25 @@ export function ExternalSyncManageDialog({
               autoSyncInterval: formAutoSyncInterval,
             };
           }
-          toast.success(t("externalSync.updateSuccess"));
+          toast.success(
+            t("common.updated", { item: t("externalSync.syncTypeCustom") })
+          );
           return true;
         } else {
           const data = await response.json();
-          toast.error(data.error || t("externalSync.updateError"));
+          toast.error(
+            data.error ||
+              t("common.updateError", {
+                item: t("externalSync.syncTypeCustom"),
+              })
+          );
           return false;
         }
       } catch (error) {
         console.error("Failed to save sync:", error);
-        toast.error(t("externalSync.updateError"));
+        toast.error(
+          t("common.updateError", { item: t("externalSync.syncTypeCustom") })
+        );
         return false;
       }
     },
@@ -660,7 +697,7 @@ export function ExternalSyncManageDialog({
 
   // Get URL placeholder - show generic placeholder for all
   const getUrlPlaceholder = () => {
-    return t("externalSync.urlPlaceholder");
+    return t("form.urlPlaceholder");
   };
 
   const getUrlHint = () => {
@@ -808,17 +845,17 @@ export function ExternalSyncManageDialog({
           {(showAddForm || editingSync) && (
             <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
               <h3 className="font-semibold">
-                {editingSync
-                  ? t("externalSync.editSync")
-                  : t("externalSync.addSync")}
+                {editingSync ? t("externalSync.editSync") : t("common.add")}
               </h3>
 
               <div className="space-y-2">
-                <Label htmlFor="sync-name">{t("externalSync.nameLabel")}</Label>
+                <Label htmlFor="sync-name">{t("form.nameLabel")}</Label>
                 <Input
                   id="sync-name"
                   type="text"
-                  placeholder={t("externalSync.namePlaceholder")}
+                  placeholder={t("form.namePlaceholder", {
+                    example: t("externalSync.syncTypeCustom"),
+                  })}
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   disabled={isLoading}
@@ -888,9 +925,7 @@ export function ExternalSyncManageDialog({
                 // Show URL input for new syncs OR when editing non-one-time-import syncs
                 (!editingSync || !editingSync.isOneTimeImport) && (
                   <div className="space-y-2">
-                    <Label htmlFor="sync-url">
-                      {t("externalSync.urlLabel")}
-                    </Label>
+                    <Label htmlFor="sync-url">{t("form.urlLabel")}</Label>
                     <Input
                       id="sync-url"
                       type="text"
@@ -916,7 +951,7 @@ export function ExternalSyncManageDialog({
                 <ColorPicker
                   color={formColor}
                   onChange={setFormColor}
-                  label={t("externalSync.colorLabel")}
+                  label={t("form.colorLabel")}
                   presetColors={PRESET_COLORS}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -1109,7 +1144,7 @@ export function ExternalSyncManageDialog({
                     {isLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
-                    {t("externalSync.addSync")}
+                    {t("common.add")}
                   </Button>
                 </div>
               )}

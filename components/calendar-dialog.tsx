@@ -105,7 +105,9 @@ export function CalendarDialog({
             </Label>
             <Input
               id="name"
-              placeholder={t("calendar.namePlaceholder")}
+              placeholder={t("form.namePlaceholder", {
+                example: t("calendar.name"),
+              })}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm transition-all"
@@ -115,7 +117,7 @@ export function CalendarDialog({
           <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">
               <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-              {t("calendar.color")}
+              {t("form.colorLabel")}
             </Label>
             <div className="grid grid-cols-4 gap-3 p-4 bg-muted/30 rounded-xl border border-border/30">
               {PRESET_COLORS.map((colorObj) => (
@@ -181,12 +183,12 @@ export function CalendarDialog({
               >
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm">
-                    {t("password.password")}
+                    {t("form.passwordLabel")}
                   </Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder={t("password.passwordPlaceholder")}
+                    placeholder={t("form.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="h-10 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/80"

@@ -149,6 +149,69 @@ next-intl setup with auto-detection:
 - Usage: `const t = useTranslations()` → `t("shift.create")`
 - Date formatting: `locale === "de" ? de : enUS`
 
+**Translation Structure (Optimized)**:
+
+The translation files use a centralized structure to eliminate duplicates and ensure consistency.
+
+**German Translation Style**:
+
+- Always use informal "du" form (never formal "Sie" form)
+- Examples: "Möchtest du..." (not "Möchten Sie..."), "Bitte entsperre..." (not "Bitte entsperren Sie...")
+- This applies to all user-facing messages, descriptions, hints, and instructions
+
+**Common Keys (Parametrized)**:
+
+```typescript
+// Success/Error Messages - use {item} parameter
+toast.success(t("common.created", { item: t("shift.title") }));
+toast.error(t("common.createError", { item: t("calendar.title") }));
+toast.success(t("common.updated", { item: t("preset.create") }));
+toast.error(t("common.deleteError", { item: t("note.note") }));
+
+// Available: common.created, common.updated, common.deleted
+//           common.createError, common.updateError, common.deleteError
+//           common.deleteConfirm, common.deleteConfirmWithWarning
+```
+
+**Validation Keys (Centralized)**:
+
+```typescript
+// Password validation
+setError(t("validation.passwordMatch"));
+setError(t("validation.passwordIncorrect"));
+setError(t("validation.passwordRequired"));
+
+// File/URL validation
+toast.error(t("validation.fileRequired"));
+toast.error(t("validation.fileTooLarge", { maxSize: "5MB" }));
+toast.error(t("validation.urlRequired"));
+toast.error(t("validation.urlInvalid"));
+toast.error(t("validation.urlAlreadyExists"));
+```
+
+**Form Field Keys (Reusable)**:
+
+```typescript
+// Form labels and placeholders
+<Label>{t("form.nameLabel")}</Label>
+<Input placeholder={t("form.namePlaceholder", { example: t("calendar.name") })} />
+<Label>{t("form.colorLabel")}</Label>
+<Label>{t("form.passwordLabel")}</Label>
+<Input placeholder={t("form.passwordPlaceholder")} />
+<Label>{t("form.notesLabel")}</Label>
+<Textarea placeholder={t("form.notesPlaceholder")} />
+<Label>{t("form.urlLabel")}</Label>
+<Input placeholder={t("form.urlPlaceholder")} />
+```
+
+**Key Rules**:
+
+- **Never duplicate** CRUD success/error messages - always use `common.*` with `{item}` parameter
+- **Never duplicate** validation messages - use `validation.*` namespace
+- **Never duplicate** form field labels - use `form.*` namespace
+- Feature-specific keys (e.g., `shift.startTime`, `calendar.select`) remain in their namespace
+- When adding new features, check if message fits `common.*`, `validation.*`, or `form.*` before creating new keys
+
 **Translation Key Usage Status**:
 
 All translation keys in `messages/{de,en}.json` are actively used.
