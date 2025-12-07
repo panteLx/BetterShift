@@ -31,7 +31,7 @@
 
 ### 📅 Smart Shift Calendar Management
 
-- **Multiple Calendars** — Create unlimited shift calendars with custom names and colors for different jobs, peoples or schedules
+- **Multiple Calendars** — Create unlimited shift calendars with custom names and colors for different jobs, people or schedules
 - **Interactive Month View** — Navigate shifts effortlessly with a clean, week-based calendar layout
 - **One-Click Shift Toggle** — Left-click any day to instantly add or remove shifts using your active preset
 - **Daily Notes** — Right-click any day to attach context notes (e.g., "Early shift for doctor appointment")

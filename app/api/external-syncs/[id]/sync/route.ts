@@ -272,13 +272,6 @@ export async function syncExternalCalendar(
         })
         .run();
 
-      // Emit event for sync log creation
-      eventEmitter.emit("calendar-change", {
-        type: "sync-log",
-        action: "create",
-        calendarId: externalSync.calendarId,
-      });
-
       // Return transaction stats
       return {
         created: shiftsToInsert.length,
@@ -292,6 +285,13 @@ export async function syncExternalCalendar(
     });
 
     stats = transactionResult;
+
+    // Emit event for sync log creation after successful transaction
+    eventEmitter.emit("calendar-change", {
+      type: "sync-log",
+      action: "create",
+      calendarId: externalSync.calendarId,
+    });
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Unknown sync error";

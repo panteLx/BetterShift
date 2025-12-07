@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, KeyRound, Trash2, Cloud, Bell, AlertCircle } from "lucide-react";
+import { Plus, KeyRound, Trash2, Cloud, Bell } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 
 interface CalendarSelectorProps {

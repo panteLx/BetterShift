@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -46,17 +46,44 @@ export function SyncNotificationDialog({
   syncLogRefreshTrigger,
 }: SyncNotificationDialogProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "success" | "error">("all");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
 
+  const fetchLogs = useCallback(
+    async (showLoadingState = true) => {
+      if (!calendarId) return;
+
+      if (showLoadingState) {
+        setLoading(true);
+      }
+      try {
+        const response = await fetch(
+          `/api/sync-logs?calendarId=${calendarId}&limit=20`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setLogs(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch sync logs:", error);
+      } finally {
+        if (showLoadingState) {
+          setLoading(false);
+        }
+      }
+    },
+    [calendarId]
+  );
+
   useEffect(() => {
     if (open && calendarId) {
       fetchLogs();
     }
-  }, [open, calendarId]);
+  }, [open, calendarId, fetchLogs]);
 
   // Silent refresh when SSE triggers update (syncLogRefreshTrigger changes)
   useEffect(() => {
@@ -68,33 +95,10 @@ export function SyncNotificationDialog({
     ) {
       fetchLogs(false);
     }
-  }, [syncLogRefreshTrigger]);
-
-  const fetchLogs = async (showLoadingState = true) => {
-    if (!calendarId) return;
-
-    if (showLoadingState) {
-      setLoading(true);
-    }
-    try {
-      const response = await fetch(
-        `/api/sync-logs?calendarId=${calendarId}&limit=20`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setLogs(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch sync logs:", error);
-    } finally {
-      if (showLoadingState) {
-        setLoading(false);
-      }
-    }
-  };
+  }, [open, calendarId, syncLogRefreshTrigger, fetchLogs]);
 
   const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat("de-DE", {
+    return new Intl.DateTimeFormat(locale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
