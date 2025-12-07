@@ -8,6 +8,7 @@ interface SSEConnectionOptions {
   onPresetUpdate: () => void;
   onNoteUpdate: () => void;
   onStatsRefresh: () => void;
+  onSyncLogUpdate?: () => void;
   isConnected: boolean;
   setIsConnected: (connected: boolean) => void;
 }
@@ -18,6 +19,7 @@ export function useSSEConnection({
   onPresetUpdate,
   onNoteUpdate,
   onStatsRefresh,
+  onSyncLogUpdate,
   isConnected,
   setIsConnected,
 }: SSEConnectionOptions) {
@@ -33,6 +35,7 @@ export function useSSEConnection({
   const presetUpdateRef = useRef(onPresetUpdate);
   const noteUpdateRef = useRef(onNoteUpdate);
   const statsRefreshRef = useRef(onStatsRefresh);
+  const syncLogUpdateRef = useRef(onSyncLogUpdate);
   const setIsConnectedRef = useRef(setIsConnected);
   const tRef = useRef(t);
 
@@ -42,6 +45,7 @@ export function useSSEConnection({
     presetUpdateRef.current = onPresetUpdate;
     noteUpdateRef.current = onNoteUpdate;
     statsRefreshRef.current = onStatsRefresh;
+    syncLogUpdateRef.current = onSyncLogUpdate;
     setIsConnectedRef.current = setIsConnected;
     tRef.current = t;
   }, [
@@ -49,6 +53,7 @@ export function useSSEConnection({
     onPresetUpdate,
     onNoteUpdate,
     onStatsRefresh,
+    onSyncLogUpdate,
     setIsConnected,
     t,
   ]);
@@ -159,6 +164,8 @@ export function useSSEConnection({
           presetUpdateRef.current();
         } else if (data.type === "note") {
           noteUpdateRef.current();
+        } else if (data.type === "sync-log") {
+          syncLogUpdateRef.current?.();
         }
 
         lastSyncTimeRef.current = Date.now();

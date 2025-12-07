@@ -53,11 +53,11 @@ export function PasswordDialog({
         onSuccess(password);
         onOpenChange(false);
       } else {
-        setError(t("password.errorIncorrect"));
+        setError(t("validation.passwordIncorrect"));
       }
     } catch (error) {
       console.error("Failed to verify password:", error);
-      setError(t("password.errorIncorrect"));
+      setError(t("validation.passwordIncorrect"));
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export function PasswordDialog({
       <DialogContent className="sm:max-w-[440px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("password.password")} {t("common.required")}
+            {t("form.passwordLabel")} {t("common.required")}
           </DialogTitle>
           <DialogDescription asChild>
             <div className="text-sm text-muted-foreground flex items-center gap-2">
@@ -84,7 +84,7 @@ export function PasswordDialog({
               className="text-sm font-medium flex items-center gap-2"
             >
               <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-red-500/50 rounded-full"></div>
-              {t("password.password")}
+              {t("form.passwordLabel")}
             </Label>
             <Input
               id="password"
@@ -115,7 +115,7 @@ export function PasswordDialog({
               disabled={loading || !password}
               className="flex-1 h-11 bg-gradient-to-r from-red-500 to-red-500/90 hover:from-red-500/90 hover:to-red-500/80 shadow-lg shadow-red-500/25 disabled:opacity-50 disabled:shadow-none"
             >
-              {loading ? t("common.loading") : t("password.unlock")}
+              {loading ? t("common.loading") : t("common.unlock")}
             </Button>
           </div>
         </form>

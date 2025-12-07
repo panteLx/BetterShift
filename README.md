@@ -2,6 +2,7 @@
 <div align="center">
 
 ![BetterShift](https://img.shields.io/badge/BetterShift-Shift%20Management-blue?style=for-the-badge)
+![Version](https://img.shields.io/github/v/release/pantelx/bettershift?style=for-the-badge&label=Version)
 ![Checks](https://img.shields.io/github/check-runs/pantelx/bettershift/main?style=for-the-badge&label=Checks)
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20our%20Community-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ma4SnagqwE)
@@ -28,53 +29,54 @@
 
 ## ✨ Key Features
 
-### 📅 Calendar & Shift Management
+### 📅 Smart Shift Calendar Management
 
-- **Multiple Calendars**: Create and manage multiple shift calendars with custom names and colors
-- **Interactive Calendar View**: Month-based calendar with week-based layout for easy navigation
-- **Quick Shift Toggle**: Left-click any day to toggle shifts using your selected preset
-- **Shift Presets**: Create reusable shift templates with custom times, colors, and labels
-- **Drag & Drop**: Reorder calendars and presets with intuitive drag-and-drop functionality
-- **Calendar Notes**: Right-click any day to add custom notes (e.g., "Morning shift because afternoon hairdresser")
-- **External Calendar Sync**: Automatically or manually synchronize multiple external calendars at configurable intervals
+- **Multiple Calendars** — Create unlimited shift calendars with custom names and colors for different jobs, people or schedules
+- **Interactive Month View** — Navigate shifts effortlessly with a clean, week-based calendar layout
+- **One-Click Shift Toggle** — Left-click any day to instantly add or remove shifts using your active preset
+- **Daily Notes** — Right-click any day to attach context notes (e.g., "Early shift for doctor appointment")
+- **External Calendar Sync** — Subscribe to external calendars (Google, Outlook, iCal) with automatic or manual refresh
+- **Sync Notification Center** — Monitor external calendar sync status, errors, and updates in real-time
 
-### 🎨 Customization & Organization
+### 🎨 Flexible Customization
 
-- **Color Coding**: Assign colors to calendars and presets for better visualization
-- **Preset Management**: Create, edit, and delete shift presets with auto-save functionality
-- **Custom Shift Times**: Define exact start and end times for each shift
-- **Flexible Scheduling**: Easily create one-time shifts or use presets for recurring patterns
+- **Shift Presets** — Build reusable templates with custom labels, times, and color-coded categories
+- **Visual Organization** — Color-code calendars and shifts for instant visual recognition
+- **Quick Preset Switching** — Change active presets on the fly to adapt to different shift patterns
+- **Auto-Save Templates** — Automatically save new shift configurations as presets for future use
 
-### 🔒 Security & Privacy
+### 🔒 Privacy & Security
 
-- **Password Protection**: Secure individual calendars with optional passwords
-- **Local Storage**: Passwords are securely hashed using SHA-256
+- **Password Protection** — Lock individual calendars with SHA-256 encrypted passwords
+- **Secure Local Storage** — All data stays on your server; passwords are hashed and never stored in plaintext
+- **Per-Calendar Access Control** — Different calendars can have different security levels
 
-### 🌐 Internationalization
+### 🌍 International by Design
 
-- **Multi-Language Support**: Built-in support for German and English
-- **Automatic Detection**: Automatically detects browser language preference
-- **Manual Switching**: Easy language switcher in the footer
-- **Cookie-Based Preference**: Your language choice persists across sessions
+- **Multi-Language Support** — Full German and English translations built-in
+- **Smart Language Detection** — Automatically uses your browser's language preference
+- **Persistent Settings** — Language choice saved in cookies across sessions
+- **Easy Switching** — Toggle languages anytime from the footer
 
-### 📊 Statistics & Insights
+### 📊 Insightful Analytics
 
-- **Shift Statistics**: View detailed statistics for different time periods
-- **Customizable Periods**: Analyze shifts for current month, last 30 days, or custom ranges
-- **Real-time Updates**: Statistics automatically refresh when shifts are modified
+- **Flexible Time Periods** — View statistics for current month, last 30 days, or custom date ranges
+- **Real-Time Stats** — Shift totals and hour calculations update instantly when you make changes
+- **Work Pattern Analysis** — Understand your schedule with aggregated shift data
 
-### 🔄 Real-Time Synchronization
+### ⚡ Live Updates & Sync
 
-- **Server-Sent Events**: Real-time updates across multiple browser tabs
-- **Offline Handling**: Graceful handling of offline scenarios
-- **Automatic Refresh**: Data refreshes automatically when changes are detected
+- **Server-Sent Events (SSE)** — Changes appear instantly across all open browser tabs
+- **Connection Monitoring** — Visual indicators show real-time sync status
+- **Offline Resilience** — Graceful handling when connection drops, auto-reconnect on restore
+- **Background Refresh** — Data updates silently without disrupting your workflow
 
-### 💾 Modern Tech Stack
+### 🛠️ Modern Foundation
 
-- **Next.js 16 App Router**: Latest Next.js with React 19 for optimal performance
-- **SQLite with Drizzle ORM**: Lightweight, file-based database with type-safe queries
-- **Tailwind CSS 4**: Modern styling with shadcn/ui components
-- **Docker Support**: Easy deployment with Docker and Docker Compose
+- **Next.js 16 + React 19** — Built on the latest App Router architecture for peak performance
+- **SQLite + Drizzle ORM** — Lightweight file-based database with full TypeScript type safety
+- **Tailwind CSS 4** — Modern, responsive design with shadcn/ui component library
+- **Docker Ready** — One-command deployment with Docker Compose for easy self-hosting
 
 ---
 
@@ -88,6 +90,11 @@ $ git clone https://github.com/pantelx/bettershift.git && cd bettershift
 
 # Install dependencies
 $ npm install
+
+# Copy the example environment file
+$ cp .env.example .env
+
+# Adjust .env settings as needed
 
 # Set up the database
 $ npm run db:migrate
@@ -137,6 +144,11 @@ $ docker exec bettershift npm run db:migrate
 ```bash
 # Clone the repository
 $ git clone https://github.com/pantelx/bettershift.git && cd bettershift
+
+# Copy the example environment file
+$ cp .env.example .env
+
+# Adjust .env settings as needed
 
 # Build and start the container
 $ docker-compose up -d --build

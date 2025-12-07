@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ShiftPreset } from "@/lib/db/schema";
+import { getCachedPassword } from "@/lib/password-cache";
 
 export function usePresets(calendarId: string | undefined) {
   const [presets, setPresets] = useState<ShiftPreset[]>([]);
@@ -14,11 +15,18 @@ export function usePresets(calendarId: string | undefined) {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/presets?calendarId=${calendarId}`);
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({ calendarId });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/presets?${params}`);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch presets: ${response.status} ${response.statusText}`
-        );
+        // Calendar is locked and no valid password - return empty array
+        setPresets([]);
+        setLoading(false);
+        return;
       }
       const data = await response.json();
       setPresets(data);

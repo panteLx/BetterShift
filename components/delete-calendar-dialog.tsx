@@ -77,14 +77,14 @@ export function DeleteCalendarDialog({
                 className="text-sm font-medium flex items-center gap-2"
               >
                 <div className="w-1 h-4 bg-gradient-to-b from-destructive to-destructive/50 rounded-full"></div>
-                {t("password.password")}
+                {t("form.passwordLabel")}
               </Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("password.passwordPlaceholder")}
+                placeholder={t("form.passwordPlaceholder")}
                 className="h-11 border-destructive/30 focus:border-destructive/50 focus:ring-destructive/20 bg-background/50"
                 required
                 autoFocus

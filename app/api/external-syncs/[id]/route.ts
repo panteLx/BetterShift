@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs, shifts } from "@/lib/db/schema";
+import { externalSyncs, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter } from "@/lib/event-emitter";
 import {
   isValidCalendarUrl,
@@ -15,6 +16,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
 
     const [externalSync] = await db
       .select()
@@ -27,6 +30,29 @@ export async function GET(
         { error: "External sync not found" },
         { status: 404 }
       );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, externalSync.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     return NextResponse.json(externalSync);
@@ -69,6 +95,30 @@ export async function PATCH(
         { error: "External sync not found" },
         { status: 404 }
       );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, existingSync.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      const { password } = body;
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     // Validate calendar URL if provided
@@ -178,6 +228,55 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Read password from request body
+    let password: string | null = null;
+    const contentType = request.headers.get("content-type");
+
+    if (contentType?.includes("application/json")) {
+      try {
+        const body = await request.json();
+        password = body.password || null;
+      } catch (e) {
+        // If body parsing fails, continue with null password
+      }
+    }
+
+    // Fetch external sync to get calendar ID
+    const [existingSync] = await db
+      .select()
+      .from(externalSyncs)
+      .where(eq(externalSyncs.id, id));
+
+    if (!existingSync) {
+      return NextResponse.json(
+        { error: "External sync not found" },
+        { status: 404 }
+      );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, existingSync.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
 
     await db.delete(externalSyncs).where(eq(externalSyncs.id, id));
 

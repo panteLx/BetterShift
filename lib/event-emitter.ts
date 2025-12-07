@@ -34,12 +34,22 @@ class EventEmitter {
   }
 }
 
-// Global singleton instance
-export const eventEmitter = new EventEmitter();
+// Global singleton instance with HMR support
+// Use globalThis to persist across hot reloads in development
+const globalForEventEmitter = globalThis as unknown as {
+  eventEmitter: EventEmitter | undefined;
+};
+
+export const eventEmitter =
+  globalForEventEmitter.eventEmitter ?? new EventEmitter();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForEventEmitter.eventEmitter = eventEmitter;
+}
 
 // Event types
 export type CalendarChangeEvent = {
-  type: "shift" | "preset" | "note" | "calendar";
+  type: "shift" | "preset" | "note" | "calendar" | "sync-log";
   action: "create" | "update" | "delete";
   calendarId: string;
   data?: unknown;

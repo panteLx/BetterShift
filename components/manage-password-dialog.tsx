@@ -61,7 +61,7 @@ export function ManagePasswordDialog({
 
     // Always require current password when calendar has password
     if (hasPassword && !currentPassword) {
-      setError(t("password.errorRequired"));
+      setError(t("validation.passwordRequired"));
       return;
     }
 
@@ -69,7 +69,7 @@ export function ManagePasswordDialog({
     const isChangingPassword = !removePassword && newPassword;
     if (isChangingPassword) {
       if (newPassword !== confirmPassword) {
-        setError(t("password.errorMatch"));
+        setError(t("validation.passwordMatch"));
         return;
       }
     }
@@ -102,13 +102,13 @@ export function ManagePasswordDialog({
       });
 
       if (response.status === 401) {
-        setError(t("password.errorIncorrect"));
+        setError(t("validation.passwordIncorrect"));
         setLoading(false);
         return;
       }
 
       if (!response.ok) {
-        setError(t("password.errorIncorrect"));
+        setError(t("validation.passwordIncorrect"));
         setLoading(false);
         return;
       }
@@ -129,7 +129,7 @@ export function ManagePasswordDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to update password:", error);
-      setError(t("password.errorIncorrect"));
+      setError(t("validation.passwordIncorrect"));
     } finally {
       setLoading(false);
     }
@@ -233,7 +233,7 @@ export function ManagePasswordDialog({
                   <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
                   {hasPassword
                     ? t("password.newPassword")
-                    : t("password.password")}
+                    : t("form.passwordLabel")}
                 </Label>
                 <Input
                   id="newPassword"

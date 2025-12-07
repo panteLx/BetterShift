@@ -21,12 +21,14 @@ interface AppHeaderProps {
   selectedPresetId: string | undefined;
   isConnected: boolean;
   showMobileCalendarDialog: boolean;
+  hasSyncErrors?: boolean;
   onSelectCalendar: (id: string) => void;
   onSelectPreset: (id: string | undefined) => void;
   onCreateCalendar: () => void;
   onManagePassword: () => void;
   onDeleteCalendar: (id: string) => void;
   onExternalSync: () => void;
+  onSyncNotifications: () => void;
   onPresetsChange: () => void;
   onShiftsChange: () => void;
   onStatsRefresh: () => void;
@@ -43,12 +45,14 @@ export function AppHeader({
   selectedPresetId,
   isConnected,
   showMobileCalendarDialog,
+  hasSyncErrors = false,
   onSelectCalendar,
   onSelectPreset,
   onCreateCalendar,
   onManagePassword,
   onDeleteCalendar,
   onExternalSync,
+  onSyncNotifications,
   onPresetsChange,
   onShiftsChange,
   onStatsRefresh,
@@ -129,6 +133,8 @@ export function AppHeader({
                     onManagePassword={onManagePassword}
                     onDelete={onDeleteCalendar}
                     onExternalSync={onExternalSync}
+                    onSyncNotifications={onSyncNotifications}
+                    hasSyncErrors={hasSyncErrors}
                   />
                 </div>
               </motion.div>
@@ -211,6 +217,7 @@ export function AppHeader({
             {selectedCalendar && (
               <div className="px-0.5 sm:px-0">
                 <PresetSelector
+                  calendars={calendars}
                   presets={presets}
                   selectedPresetId={selectedPresetId}
                   onSelectPreset={onSelectPreset}
@@ -265,6 +272,12 @@ export function AppHeader({
                 onMobileCalendarDialogChange(false);
                 onExternalSync();
               }}
+              onSyncNotifications={() => {
+                onMobileCalendarDialogChange(false);
+                onSyncNotifications();
+              }}
+              hasSyncErrors={hasSyncErrors}
+              variant="mobile"
             />
           </div>
         </DialogContent>

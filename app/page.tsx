@@ -10,6 +10,7 @@ import { PasswordDialog } from "@/components/password-dialog";
 import { ManagePasswordDialog } from "@/components/manage-password-dialog";
 import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
 import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dialog";
+import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -98,18 +99,24 @@ function HomeContent() {
 
   // External Calendar Syncs state
   const [externalSyncs, setExternalSyncs] = useState<ExternalSync[]>([]);
+  const [hasSyncErrors, setHasSyncErrors] = useState(false);
 
   // Fetch external syncs for the calendar
   const fetchExternalSyncs = useCallback(async () => {
     if (!selectedCalendar) {
       setExternalSyncs([]);
+      setHasSyncErrors(false);
       return;
     }
 
     try {
-      const response = await fetch(
-        `/api/external-syncs?calendarId=${selectedCalendar}`
-      );
+      const password = getCachedPassword(selectedCalendar);
+      const params = new URLSearchParams({ calendarId: selectedCalendar });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/external-syncs?${params}`);
       if (response.ok) {
         const data = await response.json();
         setExternalSyncs(data);
@@ -119,9 +126,41 @@ function HomeContent() {
     }
   }, [selectedCalendar]);
 
+  // Fetch sync logs to check for errors
+  const fetchSyncErrorStatus = useCallback(async () => {
+    if (!selectedCalendar) {
+      setHasSyncErrors(false);
+      return;
+    }
+
+    try {
+      const password = getCachedPassword(selectedCalendar);
+      const params = new URLSearchParams({
+        calendarId: selectedCalendar,
+        limit: "50",
+      });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/sync-logs?${params}`);
+      if (response.ok) {
+        const logs = await response.json();
+        // Only show errors that are not read
+        const hasErrors = logs.some(
+          (log: any) => log.status === "error" && !log.isRead
+        );
+        setHasSyncErrors(hasErrors);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sync logs:", error);
+    }
+  }, [selectedCalendar]);
+
   useEffect(() => {
     fetchExternalSyncs();
-  }, [fetchExternalSyncs]);
+    fetchSyncErrorStatus();
+  }, [fetchExternalSyncs, fetchSyncErrorStatus]);
 
   // Local state
   const [selectedPresetId, setSelectedPresetId] = useState<
@@ -140,6 +179,9 @@ function HomeContent() {
   const [showDeleteCalendarDialog, setShowDeleteCalendarDialog] =
     useState(false);
   const [showExternalSyncDialog, setShowExternalSyncDialog] = useState(false);
+  const [showSyncNotificationDialog, setShowSyncNotificationDialog] =
+    useState(false);
+  const [syncLogRefreshTrigger, setSyncLogRefreshTrigger] = useState(0);
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
   const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
@@ -154,11 +196,12 @@ function HomeContent() {
   >();
   const [selectedNote, setSelectedNote] = useState<CalendarNote | undefined>();
   const [pendingAction, setPendingAction] = useState<{
-    type: "delete" | "edit";
+    type: "delete" | "edit" | "syncNotifications";
     shiftId?: string;
     formData?: ShiftFormData;
     presetAction?: () => Promise<void>;
     noteAction?: () => Promise<void>;
+    action?: () => Promise<void>;
   } | null>(null);
   const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
@@ -166,11 +209,24 @@ function HomeContent() {
   const [isCalendarUnlocked, setIsCalendarUnlocked] = useState(true);
   const [isVerifyingCalendarPassword, setIsVerifyingCalendarPassword] =
     useState(false);
+  const [passwordCacheTrigger, setPasswordCacheTrigger] = useState(0);
   const [versionInfo, setVersionInfo] = useState<{
     version: string;
     githubUrl: string;
     commitHash?: string;
   } | null>(null);
+
+  // Check if UI elements should be hidden (password required but not cached)
+  const selectedCalendarData = useMemo(() => {
+    return calendars.find((c) => c.id === selectedCalendar);
+  }, [calendars, selectedCalendar]);
+
+  const shouldHideUIElements = useMemo(() => {
+    if (!selectedCalendar || !selectedCalendarData) return false;
+    const requiresPassword = !!selectedCalendarData.passwordHash;
+    const hasPassword = !!getCachedPassword(selectedCalendar);
+    return requiresPassword && !hasPassword;
+  }, [selectedCalendar, selectedCalendarData, passwordCacheTrigger]);
 
   // SSE Connection for real-time updates
   useSSEConnection({
@@ -179,6 +235,10 @@ function HomeContent() {
     onPresetUpdate: refetchPresets,
     onNoteUpdate: refetchNotes,
     onStatsRefresh: () => setStatsRefreshTrigger((prev) => prev + 1),
+    onSyncLogUpdate: () => {
+      fetchSyncErrorStatus();
+      setSyncLogRefreshTrigger((prev) => prev + 1);
+    },
     isConnected,
     setIsConnected,
   });
@@ -227,6 +287,10 @@ function HomeContent() {
           verifyAndCachePassword(selectedCalendar, cachedPassword)
             .then((result) => {
               setIsCalendarUnlocked(result.valid);
+              if (result.valid) {
+                // Password is valid, refetch all data
+                handlePasswordSuccess(cachedPassword);
+              }
             })
             .catch(() => {
               // On error, keep calendar locked
@@ -305,6 +369,18 @@ function HomeContent() {
   };
 
   const handlePasswordSuccess = async (password: string) => {
+    // Refetch all data now that password is available
+    await Promise.all([
+      refetchShifts(),
+      refetchPresets(),
+      refetchNotes(),
+      fetchExternalSyncs(),
+      fetchSyncErrorStatus(),
+    ]);
+
+    setStatsRefreshTrigger((prev) => prev + 1);
+    setPasswordCacheTrigger((prev) => prev + 1);
+
     if (!pendingAction) return;
 
     try {
@@ -344,6 +420,8 @@ function HomeContent() {
       } else if (pendingAction.noteAction) {
         await pendingAction.noteAction();
         setShowNoteDialog(false);
+      } else if (pendingAction.action) {
+        await pendingAction.action();
       }
     } catch (error) {
       console.error("Failed to execute pending action:", error);
@@ -728,12 +806,49 @@ function HomeContent() {
         selectedPresetId={selectedPresetId}
         isConnected={isConnected}
         showMobileCalendarDialog={showMobileCalendarDialog}
+        hasSyncErrors={hasSyncErrors}
         onSelectCalendar={setSelectedCalendar}
         onSelectPreset={setSelectedPresetId}
         onCreateCalendar={() => setShowCalendarDialog(true)}
         onManagePassword={() => setShowManagePasswordDialog(true)}
         onDeleteCalendar={initiateDeleteCalendar}
         onExternalSync={handleExternalSyncClick}
+        onSyncNotifications={async () => {
+          if (!selectedCalendar) return;
+
+          const calendar = calendars.find((c) => c.id === selectedCalendar);
+          if (!calendar) return;
+
+          // Check if calendar is password protected
+          if (calendar.passwordHash) {
+            const cachedPassword = getCachedPassword(selectedCalendar);
+
+            if (cachedPassword) {
+              // Verify cached password
+              const result = await verifyAndCachePassword(
+                selectedCalendar,
+                cachedPassword
+              );
+
+              if (result.valid) {
+                setShowSyncNotificationDialog(true);
+                return;
+              }
+            }
+
+            // Show password dialog if no valid cached password
+            setPendingAction({
+              type: "syncNotifications",
+              action: async () => {
+                setShowSyncNotificationDialog(true);
+              },
+            });
+            setShowPasswordDialog(true);
+          } else {
+            // No password protection
+            setShowSyncNotificationDialog(true);
+          }
+        }}
         onPresetsChange={refetchPresets}
         onShiftsChange={refetchShifts}
         onStatsRefresh={() => setStatsRefreshTrigger((prev) => prev + 1)}
@@ -797,12 +912,14 @@ function HomeContent() {
                               password
                             );
                             setIsCalendarUnlocked(true);
+                            // Trigger data refetch after successful password entry
+                            handlePasswordSuccess(password);
                           } else {
-                            toast.error(t("password.errorIncorrect"));
+                            toast.error(t("validation.passwordIncorrect"));
                           }
                         })
                         .catch(() => {
-                          toast.error(t("password.errorIncorrect"));
+                          toast.error(t("validation.passwordIncorrect"));
                         });
                     }
                   }}
@@ -813,13 +930,13 @@ function HomeContent() {
                       htmlFor="unlock-password"
                       className="text-sm font-medium"
                     >
-                      {t("password.password")}
+                      {t("form.passwordLabel")}
                     </Label>
                     <Input
                       id="unlock-password"
                       name="password"
                       type="password"
-                      placeholder={t("password.passwordPlaceholder")}
+                      placeholder={t("form.passwordPlaceholder")}
                       className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20"
                       autoFocus
                     />
@@ -880,42 +997,50 @@ function HomeContent() {
               togglingDates={togglingDates}
               externalSyncs={externalSyncs}
               onDayClick={handleDayClick}
-              onDayRightClick={handleDayRightClick}
-              onNoteIconClick={handleNoteIconClick}
-              onLongPress={handleLongPressDay}
+              onDayRightClick={
+                shouldHideUIElements ? undefined : handleDayRightClick
+              }
+              onNoteIconClick={
+                shouldHideUIElements ? undefined : handleNoteIconClick
+              }
+              onLongPress={
+                shouldHideUIElements ? undefined : handleLongPressDay
+              }
               onShowAllShifts={handleShowAllShifts}
               onShowSyncedShifts={handleShowSyncedShifts}
             />
 
             {/* Note Hint */}
-            <motion.div
-              className="px-2 sm:px-0 mb-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
-                <div className="flex items-center gap-2.5">
-                  <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <StickyNote className="h-4 w-4 text-orange-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
-                      {t("note.hintMobile", {
-                        default:
-                          "Long press on a day to open notes. The note icon shows existing notes.",
-                      })}
-                    </p>
-                    <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
-                      {t("note.hintDesktop", {
-                        default:
-                          "Right-click on a day to open notes. The note icon shows existing notes.",
-                      })}
-                    </p>
+            {!shouldHideUIElements && (
+              <motion.div
+                className="px-2 sm:px-0 mb-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <StickyNote className="h-4 w-4 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
+                        {t("note.hintMobile", {
+                          default:
+                            "Long press on a day to open notes. The note icon shows existing notes.",
+                        })}
+                      </p>
+                      <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
+                        {t("note.hintDesktop", {
+                          default:
+                            "Right-click on a day to open notes. The note icon shows existing notes.",
+                        })}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* Shifts List */}
             <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
@@ -928,7 +1053,9 @@ function HomeContent() {
               <ShiftsList
                 shifts={shifts}
                 currentDate={currentDate}
-                onDeleteShift={handleDeleteShift}
+                onDeleteShift={
+                  shouldHideUIElements ? undefined : handleDeleteShift
+                }
               />
             </div>
           </>
@@ -936,7 +1063,7 @@ function HomeContent() {
       </div>
 
       {/* Floating Action Button for Manual Shift Creation - Desktop Only */}
-      {selectedCalendar && (
+      {selectedCalendar && !shouldHideUIElements && (
         <motion.div
           className="hidden sm:block fixed bottom-6 right-6 z-50"
           initial={{ scale: 0, opacity: 0 }}
@@ -1021,12 +1148,15 @@ function HomeContent() {
           open={showExternalSyncDialog}
           onOpenChange={setShowExternalSyncDialog}
           calendarId={selectedCalendar}
+          syncErrorRefreshTrigger={syncLogRefreshTrigger}
           onSyncComplete={() => {
             refetchShifts();
             refetchCalendars();
             setStatsRefreshTrigger((prev) => prev + 1);
             // Refetch external syncs to get updated displayMode
             fetchExternalSyncs();
+            // Refetch sync error status
+            fetchSyncErrorStatus();
           }}
         />
       )}
@@ -1048,6 +1178,18 @@ function HomeContent() {
         date={selectedDayDate}
         shifts={selectedSyncedShifts}
       />
+
+      {/* Sync Notification Center */}
+      {selectedCalendar && (
+        <SyncNotificationDialog
+          open={showSyncNotificationDialog}
+          onOpenChange={setShowSyncNotificationDialog}
+          calendarId={selectedCalendar}
+          onErrorsMarkedRead={fetchSyncErrorStatus}
+          onSyncLogUpdate={() => setSyncLogRefreshTrigger((prev) => prev + 1)}
+          syncLogRefreshTrigger={syncLogRefreshTrigger}
+        />
+      )}
 
       {/* Footer */}
       <AppFooter versionInfo={versionInfo} />

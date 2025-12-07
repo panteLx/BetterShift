@@ -5,12 +5,44 @@
 
 import ICAL from "ical.js";
 
-export type CalendarSyncType = "icloud" | "google";
+export type CalendarSyncType = "icloud" | "google" | "custom";
+
+/**
+ * Detects the calendar sync type based on the URL
+ * @param url - The calendar URL
+ * @returns The detected sync type (icloud, google, or custom)
+ */
+export function detectCalendarSyncType(url: string): CalendarSyncType {
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // Check for iCloud domain
+    if (hostname.endsWith(".icloud.com") || hostname === "icloud.com") {
+      return "icloud";
+    }
+
+    // Check for Google domain
+    if (
+      hostname.endsWith(".google.com") ||
+      hostname === "google.com" ||
+      hostname === "calendar.google.com"
+    ) {
+      return "google";
+    }
+
+    // Everything else is custom
+    return "custom";
+  } catch {
+    // Invalid URL, default to custom
+    return "custom";
+  }
+}
 
 /**
  * Validates external calendar URL to prevent SSRF vulnerabilities
  * @param url - The URL to validate
- * @param syncType - The type of calendar sync (icloud or google)
+ * @param syncType - The type of calendar sync (icloud, google, or custom)
  * @returns true if valid, false otherwise
  */
 export function isValidCalendarUrl(
@@ -42,11 +74,44 @@ export function isValidCalendarUrl(
       ) {
         return false;
       }
+    } else if (syncType === "custom") {
+      // For custom calendars, validate against SSRF
+      // Block localhost, private IPs, and internal domains
+      if (
+        hostname === "localhost" ||
+        hostname.match(/^127\./) ||
+        hostname.match(/^10\./) ||
+        hostname.match(/^172\.(1[6-9]|2[0-9]|3[01])\./) ||
+        hostname.match(/^192\.168\./) ||
+        hostname.match(/^169\.254\./) ||
+        hostname === "::1" ||
+        hostname === "0.0.0.0"
+      ) {
+        return false;
+      }
+
+      return true;
     }
 
     return true;
   } catch {
     // Invalid URL format
+    return false;
+  }
+}
+
+/**
+ * Validates ICS file content
+ * @param icsContent - The ICS file content as string
+ * @returns true if valid ICS format, false otherwise
+ */
+export function isValidICSContent(icsContent: string): boolean {
+  try {
+    const jcalData = ICAL.parse(icsContent);
+    const comp = new ICAL.Component(jcalData);
+    const vevents = comp.getAllSubcomponents("vevent");
+    return vevents.length > 0;
+  } catch {
     return false;
   }
 }
@@ -262,4 +327,87 @@ export function splitMultiDayEvent(
   }
 
   return days;
+}
+
+/**
+ * Creates a stable fingerprint for an event based on its content
+ * This is used because some calendar providers generate new UIDs on each request
+ * @param date - Event date
+ * @param startTime - Start time
+ * @param endTime - End time
+ * @param title - Event title
+ * @param dayIndex - For multi-day events, the day index
+ * @returns A stable fingerprint string
+ */
+export function createEventFingerprint(
+  date: Date,
+  startTime: string,
+  endTime: string,
+  title: string,
+  dayIndex?: number,
+  externalEventId?: string
+): string {
+  const dateStr = new Date(date).toISOString().split("T")[0];
+  const parts = [dateStr, startTime, endTime, title];
+  if (dayIndex !== undefined) {
+    parts.push(`day${dayIndex}`);
+  }
+  if (externalEventId) {
+    parts.push(externalEventId);
+  }
+  return parts.join("|");
+}
+
+/**
+ * Compares shift data to determine if an update is needed
+ * @param existing - The existing shift from database
+ * @param newData - The new shift data from external calendar
+ * @returns true if shifts are different and update is needed
+ */
+export function needsUpdate(
+  existing: {
+    date: Date;
+    startTime: string;
+    endTime: string;
+    title: string;
+    color: string;
+    notes: string | null;
+    isAllDay: boolean;
+    isSecondary: boolean;
+  },
+  newData: {
+    date: Date;
+    startTime: string;
+    endTime: string;
+    title: string;
+    color: string;
+    notes: string | null;
+    isAllDay: boolean;
+    isSecondary: boolean;
+  }
+): boolean {
+  // Compare date (convert to comparable format)
+  const existingDate = new Date(existing.date).toISOString().split("T")[0];
+  const newDate = new Date(newData.date).toISOString().split("T")[0];
+  if (existingDate !== newDate) return true;
+
+  // Compare time fields
+  if (existing.startTime !== newData.startTime) return true;
+  if (existing.endTime !== newData.endTime) return true;
+
+  // Compare title
+  if (existing.title !== newData.title) return true;
+
+  // Compare color
+  if (existing.color !== newData.color) return true;
+
+  // Compare notes (handle null values)
+  if ((existing.notes || null) !== (newData.notes || null)) return true;
+
+  // Compare boolean fields
+  if (existing.isAllDay !== newData.isAllDay) return true;
+  if (existing.isSecondary !== newData.isSecondary) return true;
+
+  // No differences found
+  return false;
 }

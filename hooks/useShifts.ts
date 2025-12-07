@@ -13,11 +13,23 @@ export function useShifts(calendarId: string | undefined) {
     if (!calendarId) return;
 
     try {
-      const response = await fetch(`/api/shifts?calendarId=${calendarId}`);
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({ calendarId });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/shifts?${params}`);
+      if (!response.ok) {
+        // Calendar is locked and no valid password - return empty array
+        setShifts([]);
+        return;
+      }
       const data = await response.json();
       setShifts(data);
     } catch (error) {
       console.error("Failed to fetch shifts:", error);
+      setShifts([]);
     }
   };
 
@@ -42,12 +54,15 @@ export function useShifts(calendarId: string | undefined) {
     setShifts((prev) => [...prev, optimisticShift]);
 
     try {
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch("/api/shifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           calendarId: calendarId,
+          password,
         }),
       });
 
@@ -58,7 +73,7 @@ export function useShifts(calendarId: string | undefined) {
           errorText
         );
         setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
-        toast.error(t("shift.createError"));
+        toast.error(t("common.createError", { item: t("shift.title") }));
         return null;
       }
 
@@ -66,12 +81,12 @@ export function useShifts(calendarId: string | undefined) {
       setShifts((shifts) =>
         shifts.map((s) => (s.id === tempId ? newShift : s))
       );
-      toast.success(t("shift.created"));
+      toast.success(t("common.created", { item: t("shift.title") }));
       return newShift;
     } catch (error) {
       console.error("Failed to create shift:", error);
       setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
-      toast.error(t("shift.createError"));
+      toast.error(t("common.createError", { item: t("shift.title") }));
       return null;
     }
   };
@@ -82,7 +97,7 @@ export function useShifts(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/shifts/${id}`, {
         method: "PATCH",
@@ -101,24 +116,24 @@ export function useShifts(calendarId: string | undefined) {
           `Failed to update shift: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("shift.updateError"));
+        toast.error(t("common.updateError", { item: t("shift.title") }));
         return false;
       }
 
       const updatedShift = await response.json();
       setShifts((prev) => prev.map((s) => (s.id === id ? updatedShift : s)));
-      toast.success(t("shift.updated"));
+      toast.success(t("common.updated", { item: t("shift.title") }));
       return true;
     } catch (error) {
       console.error("Failed to update shift:", error);
-      toast.error(t("shift.updateError"));
+      toast.error(t("common.updateError", { item: t("shift.title") }));
       return false;
     }
   };
 
   const deleteShift = async (id: string, onPasswordRequired?: () => void) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/shifts/${id}`, {
         method: "DELETE",
@@ -139,16 +154,16 @@ export function useShifts(calendarId: string | undefined) {
           `Failed to delete shift: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("shift.deleteError"));
+        toast.error(t("common.deleteError", { item: t("shift.title") }));
         return false;
       }
 
       setShifts((prev) => prev.filter((s) => s.id !== id));
-      toast.success(t("shift.deleted"));
+      toast.success(t("common.deleted", { item: t("shift.title") }));
       return true;
     } catch (error) {
       console.error("Failed to delete shift:", error);
-      toast.error(t("shift.deleteError"));
+      toast.error(t("common.deleteError", { item: t("shift.title") }));
       return false;
     }
   };

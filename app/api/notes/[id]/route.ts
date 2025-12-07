@@ -12,6 +12,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
+
     const result = await db
       .select()
       .from(calendarNotes)
@@ -22,6 +25,29 @@ export async function GET(
         { error: "Calendar note not found" },
         { status: 404 }
       );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, result[0].calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     return NextResponse.json(result[0]);

@@ -13,17 +13,30 @@ export function useNotes(calendarId: string | undefined) {
     if (!calendarId) return;
 
     try {
-      const response = await fetch(`/api/notes?calendarId=${calendarId}`);
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({ calendarId });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/notes?${params}`);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch notes: ${response.status} ${response.statusText}`
-        );
+        // Only clear notes for unauthorized responses (locked calendar)
+        if (response.status === 401 || response.status === 403) {
+          setNotes([]);
+        } else {
+          // For other errors (server errors, etc.), log but don't clear existing notes
+          console.error(
+            `Failed to fetch notes: ${response.status} ${response.statusText}`
+          );
+        }
+        return;
       }
       const data = await response.json();
       setNotes(data);
     } catch (error) {
+      // Network errors or other exceptions - don't clear existing notes
       console.error("Failed to fetch notes:", error);
-      setNotes([]);
     }
   };
 
@@ -59,17 +72,17 @@ export function useNotes(calendarId: string | undefined) {
           `Failed to create note: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("note.createError"));
+        toast.error(t("common.createError", { item: t("note.note") }));
         return false;
       }
 
       const newNote = await response.json();
       setNotes((prev) => [...prev, newNote]);
-      toast.success(t("note.created"));
+      toast.success(t("common.created", { item: t("note.note") }));
       return true;
     } catch (error) {
       console.error("Failed to create note:", error);
-      toast.error(t("note.createError"));
+      toast.error(t("common.createError", { item: t("note.note") }));
       return false;
     }
   };
@@ -80,7 +93,7 @@ export function useNotes(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "PUT",
@@ -99,17 +112,17 @@ export function useNotes(calendarId: string | undefined) {
           `Failed to update note: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("note.updateError"));
+        toast.error(t("common.updateError", { item: t("note.note") }));
         return false;
       }
 
       const updatedNote = await response.json();
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
-      toast.success(t("note.updated"));
+      toast.success(t("common.updated", { item: t("note.note") }));
       return true;
     } catch (error) {
       console.error("Failed to update note:", error);
-      toast.error(t("note.updateError"));
+      toast.error(t("common.updateError", { item: t("note.note") }));
       return false;
     }
   };
@@ -119,7 +132,7 @@ export function useNotes(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "DELETE",
@@ -140,16 +153,16 @@ export function useNotes(calendarId: string | undefined) {
           `Failed to delete note: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("note.deleteError"));
+        toast.error(t("common.deleteError", { item: t("note.note") }));
         return false;
       }
 
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
-      toast.success(t("note.deleted"));
+      toast.success(t("common.deleted", { item: t("note.note") }));
       return true;
     } catch (error) {
       console.error("Failed to delete note:", error);
-      toast.error(t("note.deleteError"));
+      toast.error(t("common.deleteError", { item: t("note.note") }));
       return false;
     }
   };
