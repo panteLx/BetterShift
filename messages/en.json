@@ -1,4 +1,9 @@
 {
+  "language": {
+    "de": "German",
+    "en": "English",
+    "it": "Italian"
+  },
   "common": {
     "cancel": "Cancel",
     "close": "Close",

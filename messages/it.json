@@ -1,4 +1,9 @@
 {
+  "language": {
+    "de": "Tedesco",
+    "en": "Inglese",
+    "it": "Italiano"
+  },
   "common": {
     "cancel": "Annulla",
     "close": "Chiudi",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -9,10 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Languages } from "lucide-react";
-import { locales, languageNames, type Locale } from "@/lib/locales";
+import { locales, type Locale } from "@/lib/locales";
 
 export function LanguageSwitcher() {
   const currentLocale = useLocale() as Locale;
+  const t = useTranslations();
 
   const handleLocaleChange = (newLocale: string) => {
     // Set cookie to persist user's choice
@@ -31,7 +32,7 @@ export function LanguageSwitcher() {
         <SelectContent>
           {locales.map((locale) => (
             <SelectItem key={locale} value={locale}>
-              {languageNames[locale]}
+              {t(`language.${locale}`)}
             </SelectItem>
           ))}
         </SelectContent>
