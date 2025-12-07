@@ -10,7 +10,7 @@ import { ChevronUp, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 interface ShiftsListProps {
   shifts: ShiftWithCalendar[];
   currentDate: Date;
-  onDeleteShift: (id: string) => void;
+  onDeleteShift?: (id: string) => void;
 }
 
 export function ShiftsList({

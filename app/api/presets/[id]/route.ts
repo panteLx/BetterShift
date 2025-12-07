@@ -5,6 +5,58 @@ import { eq } from "drizzle-orm";
 import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
+// GET single preset
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
+
+    const [preset] = await db
+      .select()
+      .from(shiftPresets)
+      .where(eq(shiftPresets.id, id));
+
+    if (!preset) {
+      return NextResponse.json({ error: "Preset not found" }, { status: 404 });
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, preset.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
+
+    return NextResponse.json(preset);
+  } catch (error) {
+    console.error("Failed to fetch preset:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch preset" },
+      { status: 500 }
+    );
+  }
+}
+
 // PATCH update a preset
 export async function PATCH(
   request: NextRequest,

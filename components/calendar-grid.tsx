@@ -16,9 +16,9 @@ interface CalendarGridProps {
   togglingDates: Set<string>;
   externalSyncs: ExternalSync[];
   onDayClick: (date: Date) => void;
-  onDayRightClick: (e: React.MouseEvent, date: Date) => void;
-  onNoteIconClick: (e: React.MouseEvent, date: Date) => void;
-  onLongPress: (date: Date) => void;
+  onDayRightClick?: (e: React.MouseEvent, date: Date) => void;
+  onNoteIconClick?: (e: React.MouseEvent, date: Date) => void;
+  onLongPress?: (date: Date) => void;
   onShowAllShifts?: (date: Date, shifts: ShiftWithCalendar[]) => void;
   onShowSyncedShifts?: (date: Date, shifts: ShiftWithCalendar[]) => void;
 }
@@ -96,10 +96,12 @@ export function CalendarGrid({
         const isToggling = togglingDates.has(dayKey);
 
         const handleTouchStart = (e: React.TouchEvent) => {
-          pressTimerRef.current[dayKey] = setTimeout(
-            () => onLongPress(day),
-            500
-          );
+          if (onLongPress) {
+            pressTimerRef.current[dayKey] = setTimeout(
+              () => onLongPress(day),
+              500
+            );
+          }
         };
         const handleTouchEnd = () => {
           if (pressTimerRef.current[dayKey]) {
@@ -114,7 +116,9 @@ export function CalendarGrid({
             onClick={() => onDayClick(day)}
             onContextMenu={(e) => {
               e.preventDefault();
-              onDayRightClick(e, day);
+              if (onDayRightClick) {
+                onDayRightClick(e, day);
+              }
             }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
@@ -151,7 +155,7 @@ export function CalendarGrid({
               }`}
             >
               <span>{day.getDate()}</span>
-              {dayNote && (
+              {dayNote && onNoteIconClick && (
                 <motion.div
                   className="group/note relative"
                   onClick={(e) => onNoteIconClick(e, day)}

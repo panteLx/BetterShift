@@ -176,6 +176,7 @@ export function PresetSelector({
         onSelectPreset={onSelectPreset}
         onCreateNew={handleCreateNew}
         onManageClick={() => setShowManageDialog(true)}
+        onUnlock={() => onPasswordRequired(async () => {})}
         loading={loading}
       />
 

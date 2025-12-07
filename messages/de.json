@@ -60,7 +60,10 @@
     "errorMatch": "Passwörter stimmen nicht überein",
     "errorIncorrect": "Falsches Passwort",
     "errorRequired": "Passwort erforderlich",
-    "unlock": "Entsperren"
+    "unlock": "Entsperren",
+    "unlockRequired": "Kalender ist passwortgeschützt",
+    "unlockRequiredDescription": "Dieser Kalender ist passwortgeschützt. Bitte entsperren Sie den Kalender, um Vorlagen zu verwalten und Schichten zu erstellen.",
+    "unlockCalendar": "Kalender entsperren"
   },
   "note": {
     "create": "Neue Notiz",

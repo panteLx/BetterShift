@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs, shifts, syncLogs } from "@/lib/db/schema";
+import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 import ICAL from "ical.js";
 import {
   expandRecurringEvents,
@@ -343,6 +344,56 @@ export async function POST(
 ) {
   try {
     const { id: syncId } = await params;
+
+    // Read password from request body
+    let password: string | null = null;
+    const contentType = request.headers.get("content-type");
+
+    if (contentType?.includes("application/json")) {
+      try {
+        const body = await request.json();
+        password = body.password || null;
+      } catch (e) {
+        // If body parsing fails, continue with null password
+      }
+    }
+
+    // Fetch external sync to get calendar ID
+    const [externalSync] = await db
+      .select()
+      .from(externalSyncs)
+      .where(eq(externalSyncs.id, syncId));
+
+    if (!externalSync) {
+      return NextResponse.json(
+        { error: "External sync not found" },
+        { status: 404 }
+      );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, externalSync.calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+    }
+
     const stats = await syncExternalCalendar(syncId, "manual");
 
     return NextResponse.json({

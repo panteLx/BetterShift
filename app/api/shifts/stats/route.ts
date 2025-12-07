@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shifts, externalSyncs, shiftPresets } from "@/lib/db/schema";
+import {
+  shifts,
+  externalSyncs,
+  shiftPresets,
+  calendars,
+} from "@/lib/db/schema";
 import { eq, and, gte, lte, sql, or, isNull } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 import {
   startOfWeek,
   endOfWeek,
@@ -24,6 +30,31 @@ export async function GET(request: Request) {
         { error: "Calendar ID is required" },
         { status: 400 }
       );
+    }
+
+    const password = searchParams.get("password");
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     const referenceDate = date ? new Date(date) : new Date();

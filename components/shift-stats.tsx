@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
+import { getCachedPassword } from "@/lib/password-cache";
 
 interface ShiftStats {
   period: string;
@@ -44,9 +45,20 @@ export function ShiftStats({
     }
 
     try {
-      const response = await fetch(
-        `/api/shifts/stats?calendarId=${calendarId}&period=${period}&date=${currentDate.toISOString()}`
-      );
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({
+        calendarId,
+        period,
+        date: currentDate.toISOString(),
+      });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/shifts/stats?${params}`);
+      if (!response.ok) {
+        return; // Calendar is locked and no valid password
+      }
       const data = await response.json();
       setStats(data);
     } catch (error) {
@@ -60,9 +72,10 @@ export function ShiftStats({
 
   if (!calendarId) return null;
 
-  const totalShifts = stats
-    ? Object.values(stats.stats).reduce((sum, count) => sum + count, 0)
-    : 0;
+  const totalShifts =
+    stats && stats.stats
+      ? Object.values(stats.stats).reduce((sum, count) => sum + count, 0)
+      : 0;
 
   return (
     <div className="border border-border/50 rounded-xl bg-gradient-to-b from-card/80 via-card/60 to-card/40 backdrop-blur-sm overflow-hidden shadow-lg">

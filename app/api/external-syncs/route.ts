@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs } from "@/lib/db/schema";
+import { externalSyncs, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -20,6 +21,31 @@ export async function GET(request: Request) {
         { error: "Calendar ID is required" },
         { status: 400 }
       );
+    }
+
+    const password = searchParams.get("password");
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     const syncs = await db
@@ -61,6 +87,30 @@ export async function POST(request: Request) {
         },
         { status: 400 }
       );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      const { password } = body;
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     let finalCalendarUrl;

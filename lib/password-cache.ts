@@ -6,8 +6,10 @@
 /**
  * Get cached password from localStorage
  */
-export function getCachedPassword(calendarId: string): string | null {
-  if (typeof window === "undefined") return null;
+export function getCachedPassword(
+  calendarId: string | null | undefined
+): string | null {
+  if (typeof window === "undefined" || !calendarId) return null;
   return localStorage.getItem(`calendar_password_${calendarId}`);
 }
 

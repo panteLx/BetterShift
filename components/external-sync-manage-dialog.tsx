@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PRESET_COLORS } from "@/lib/constants";
+import { getCachedPassword } from "@/lib/password-cache";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -95,17 +96,24 @@ export function ExternalSyncManageDialog({
         setIsLoading(true);
       }
       try {
-        const response = await fetch(
-          `/api/external-syncs?calendarId=${calendarId}`
-        );
+        const password = getCachedPassword(calendarId);
+        const params = new URLSearchParams({ calendarId });
+        if (password) {
+          params.append("password", password);
+        }
+
+        const response = await fetch(`/api/external-syncs?${params}`);
         if (response.ok) {
           const data = await response.json();
           setSyncs(data);
 
           // Fetch last sync logs to check for errors
-          const logsResponse = await fetch(
-            `/api/sync-logs?calendarId=${calendarId}&limit=50`
-          );
+          const logsParams = new URLSearchParams({ calendarId, limit: "50" });
+          if (password) {
+            logsParams.append("password", password);
+          }
+
+          const logsResponse = await fetch(`/api/sync-logs?${logsParams}`);
           if (logsResponse.ok) {
             const logs = await logsResponse.json();
             const errors: Record<string, string> = {};
@@ -230,6 +238,8 @@ export function ExternalSyncManageDialog({
         icsContent = await icsFile.text();
       }
 
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch("/api/external-syncs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -243,6 +253,7 @@ export function ExternalSyncManageDialog({
           icsContent,
           isHidden: formIsHidden,
           hideFromStats: formHideFromStats,
+          password,
         }),
       });
 
@@ -280,6 +291,8 @@ export function ExternalSyncManageDialog({
 
     setIsLoading(true);
     try {
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -289,6 +302,7 @@ export function ExternalSyncManageDialog({
           color: formColor,
           displayMode: formDisplayMode,
           autoSyncInterval: formAutoSyncInterval,
+          password,
         }),
       });
 
@@ -317,8 +331,12 @@ export function ExternalSyncManageDialog({
   const handleSync = async (syncId: string) => {
     setIsSyncing(syncId);
     try {
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch(`/api/external-syncs/${syncId}/sync`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
 
       const data = await response.json();
@@ -354,8 +372,12 @@ export function ExternalSyncManageDialog({
 
     setIsDeleting(syncId);
     try {
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
 
       if (response.ok) {
@@ -426,11 +448,14 @@ export function ExternalSyncManageDialog({
     }
 
     try {
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           [field]: !currentValue,
+          password,
         }),
       });
 
@@ -484,6 +509,8 @@ export function ExternalSyncManageDialog({
       if (!editingSync) return false;
 
       try {
+        const password = getCachedPassword(calendarId);
+
         const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -495,6 +522,7 @@ export function ExternalSyncManageDialog({
             color: formColor,
             displayMode: formDisplayMode,
             autoSyncInterval: formAutoSyncInterval,
+            password,
           }),
         });
 

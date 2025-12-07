@@ -9,7 +9,7 @@ import { motion } from "motion/react";
 
 interface ShiftCardProps {
   shift: ShiftWithCalendar;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
@@ -49,7 +49,7 @@ export function ShiftCard({ shift, onDelete }: ShiftCardProps) {
               </p>
             )}
           </div>
-          {!shift.externalSyncId && (
+          {!shift.externalSyncId && onDelete && (
             <Button
               variant="ghost"
               size="icon"

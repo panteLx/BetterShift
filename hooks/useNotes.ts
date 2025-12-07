@@ -13,17 +13,30 @@ export function useNotes(calendarId: string | undefined) {
     if (!calendarId) return;
 
     try {
-      const response = await fetch(`/api/notes?calendarId=${calendarId}`);
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({ calendarId });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/notes?${params}`);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch notes: ${response.status} ${response.statusText}`
-        );
+        // Only clear notes for unauthorized responses (locked calendar)
+        if (response.status === 401 || response.status === 403) {
+          setNotes([]);
+        } else {
+          // For other errors (server errors, etc.), log but don't clear existing notes
+          console.error(
+            `Failed to fetch notes: ${response.status} ${response.statusText}`
+          );
+        }
+        return;
       }
       const data = await response.json();
       setNotes(data);
     } catch (error) {
+      // Network errors or other exceptions - don't clear existing notes
       console.error("Failed to fetch notes:", error);
-      setNotes([]);
     }
   };
 
@@ -80,7 +93,7 @@ export function useNotes(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "PUT",
@@ -119,7 +132,7 @@ export function useNotes(calendarId: string | undefined) {
     onPasswordRequired?: () => void
   ) => {
     try {
-      const password = calendarId ? getCachedPassword(calendarId) : null;
+      const password = getCachedPassword(calendarId);
 
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "DELETE",
