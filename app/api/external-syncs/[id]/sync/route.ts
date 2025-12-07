@@ -109,7 +109,12 @@ export async function syncExternalCalendar(
         shift.date,
         shift.startTime,
         shift.endTime,
-        shift.title
+        shift.title,
+        undefined,
+        // Only use externalEventId for iCloud/Google (stable UIDs)
+        externalSync.syncType !== "custom"
+          ? shift.externalEventId || undefined
+          : undefined
       );
       existingShiftsByFingerprint.set(fingerprint, shift);
     }
@@ -158,13 +163,16 @@ export async function syncExternalCalendar(
 
           const title = event.summary || "Untitled Event";
 
-          // Create fingerprint based on event content (not UID which may change)
-          // Note: We don't include dayIndex because we can't reconstruct it from DB
+          // Create fingerprint based on event content
+          // For iCloud/Google: include eventId for stable UID-based matching
+          // For custom: exclude eventId as UIDs may be unstable
           const fingerprint = createEventFingerprint(
             dayEntry.date,
             dayEntry.startTime,
             dayEntry.endTime,
-            title
+            title,
+            undefined,
+            externalSync.syncType !== "custom" ? eventId : undefined
           );
 
           processedFingerprints.add(fingerprint);
@@ -219,7 +227,12 @@ export async function syncExternalCalendar(
           shift.date,
           shift.startTime,
           shift.endTime,
-          shift.title
+          shift.title,
+          undefined,
+          // Only use externalEventId for iCloud/Google (stable UIDs)
+          externalSync.syncType !== "custom"
+            ? shift.externalEventId || undefined
+            : undefined
         );
         return !processedFingerprints.has(fingerprint);
       })

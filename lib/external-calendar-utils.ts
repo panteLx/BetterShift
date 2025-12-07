@@ -344,12 +344,16 @@ export function createEventFingerprint(
   startTime: string,
   endTime: string,
   title: string,
-  dayIndex?: number
+  dayIndex?: number,
+  externalEventId?: string
 ): string {
   const dateStr = new Date(date).toISOString().split("T")[0];
   const parts = [dateStr, startTime, endTime, title];
   if (dayIndex !== undefined) {
     parts.push(`day${dayIndex}`);
+  }
+  if (externalEventId) {
+    parts.push(externalEventId);
   }
   return parts.join("|");
 }
