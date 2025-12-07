@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts, externalSyncs } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
+import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
 // GET shifts for a calendar (with optional date filter)
@@ -16,6 +17,31 @@ export async function GET(request: Request) {
         { error: "Calendar ID is required" },
         { status: 400 }
       );
+    }
+
+    const password = searchParams.get("password");
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     let query = db
@@ -93,6 +119,7 @@ export async function POST(request: Request) {
       presetId,
       isAllDay,
       isSecondary,
+      password,
     } = body;
 
     if (!calendarId || !date || !title) {
@@ -100,6 +127,29 @@ export async function POST(request: Request) {
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    // Fetch calendar to check password
+    const [calendar] = await db
+      .select()
+      .from(calendars)
+      .where(eq(calendars.id, calendarId));
+
+    if (!calendar) {
+      return NextResponse.json(
+        { error: "Calendar not found" },
+        { status: 404 }
+      );
+    }
+
+    // Verify password if calendar is protected
+    if (calendar.passwordHash) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     const [shift] = await db
@@ -117,12 +167,6 @@ export async function POST(request: Request) {
         isSecondary: isSecondary || false,
       })
       .returning();
-
-    // Fetch calendar info
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
 
     // Emit event for SSE
     eventEmitter.emit("calendar-change", {

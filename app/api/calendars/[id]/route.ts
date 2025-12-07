@@ -11,6 +11,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get("password");
+
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -21,6 +24,16 @@ export async function GET(
         { error: "Calendar not found" },
         { status: 404 }
       );
+    }
+
+    // Verify password if calendar is protected AND locked
+    if (calendar.passwordHash && calendar.isLocked) {
+      if (!password || !verifyPassword(password, calendar.passwordHash)) {
+        return NextResponse.json(
+          { error: "Invalid password" },
+          { status: 401 }
+        );
+      }
     }
 
     const calendarShifts = await db

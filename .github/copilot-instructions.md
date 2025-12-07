@@ -64,32 +64,72 @@ export async function PUT(
 
 ### Password Protection
 
-Calendars can be password-protected. Implementation flow:
+Calendars support two-tier password protection via `passwordHash` and `isLocked` fields:
 
-1. Check localStorage via `getCachedPassword(calendarId)` from `lib/password-cache.ts`
-2. Verify via `verifyAndCachePassword(calendarId, password)` - automatically caches valid passwords
-3. On invalid password: Show `PasswordDialog`, which automatically caches on success
-4. Use `pendingAction` state to retry operation after authentication
+**Two-Tier Protection System**:
 
-**Important**: Always use the utilities from `lib/password-cache.ts` instead of direct localStorage access:
+- **Write-Only Protection** (`passwordHash` set, `isLocked=false`): Password required for mutations (POST/PUT/PATCH/DELETE), but read access (GET) is allowed without password
+- **Full Protection** (`passwordHash` set, `isLocked=true`): Password required for all operations including read access
 
-- `getCachedPassword(calendarId)` - Get cached password
-- `setCachedPassword(calendarId, password)` - Cache password after verification
-- `removeCachedPassword(calendarId)` - Remove cached password
-- `verifyAndCachePassword(calendarId, password)` - Verify and auto-cache if valid
-- `hasValidCachedPassword(calendarId)` - Check if cached password is still valid
+**API Route Implementation**:
 
 ```typescript
-// Example: Password check before action
-const password = getCachedPassword(calendarId);
-const result = await verifyAndCachePassword(calendarId, password);
+// GET endpoints - check both passwordHash AND isLocked
+if (calendar.passwordHash && calendar.isLocked) {
+  const { searchParams } = new URL(request.url);
+  const password = searchParams.get("password");
 
-if (result.protected && !result.valid) {
-  setPendingAction({ type: "edit", shiftId: id, formData });
-  setShowPasswordDialog(true);
-  return;
+  if (!password || !verifyPassword(password, calendar.passwordHash)) {
+    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+  }
+}
+
+// POST/PUT/PATCH/DELETE endpoints - check only passwordHash
+if (calendar.passwordHash) {
+  const { password } = await request.json();
+
+  if (!password || !verifyPassword(password, calendar.passwordHash)) {
+    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+  }
 }
 ```
+
+**Client-Side Password Flow**:
+
+1. **Password Caching**: Use utilities from `lib/password-cache.ts`:
+
+   - `getCachedPassword(calendarId)` - Retrieve password from localStorage
+   - `verifyAndCachePassword(calendarId, password)` - Verify with server and cache if valid
+   - `setCachedPassword(calendarId, password)` - Manually cache password
+   - `removeCachedPassword(calendarId)` - Clear cached password
+
+2. **Hooks Auto-Include Password**: All data-fetching hooks (`useShifts`, `usePresets`, `useNotes`) automatically:
+
+   - Call `getCachedPassword(calendarId)` before each fetch
+   - Append password as query parameter if present
+   - Return empty arrays on 401 responses (graceful degradation)
+
+3. **Locked Calendar UX**:
+
+   - When `isLocked=true` and no valid cached password: Show integrated password form in main UI
+   - After successful password entry: Call `handlePasswordSuccess(password)` which triggers:
+     - `refetchShifts()`, `refetchPresets()`, `refetchNotes()`
+     - `fetchExternalSyncs()`, `fetchSyncErrorStatus()`
+     - `setStatsRefreshTrigger((prev) => prev + 1)`
+   - All data loads immediately after unlock - no page reload needed
+
+4. **Mutation Password Protection**:
+   - Check cached password before mutation: `const result = await verifyAndCachePassword(calendarId, password)`
+   - If `result.protected && !result.valid`: Set `pendingAction` and show `PasswordDialog`
+   - On successful password entry: Execute pending action automatically
+
+**Important Implementation Notes**:
+
+- Never require password input twice - the integrated "Currently Locked" form is sufficient
+- All hooks handle 401 gracefully by returning empty arrays (prevents UI crashes)
+- Calendar list (GET `/api/calendars`) never requires password (allows calendar switching)
+- Password verification is asynchronous - always await `verifyAndCachePassword`
+- Cached passwords persist across sessions via localStorage
 
 ### State Management
 

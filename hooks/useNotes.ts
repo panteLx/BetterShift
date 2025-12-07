@@ -13,11 +13,17 @@ export function useNotes(calendarId: string | undefined) {
     if (!calendarId) return;
 
     try {
-      const response = await fetch(`/api/notes?calendarId=${calendarId}`);
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({ calendarId });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/notes?${params}`);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch notes: ${response.status} ${response.statusText}`
-        );
+        // Calendar is locked and no valid password - return empty array
+        setNotes([]);
+        return;
       }
       const data = await response.json();
       setNotes(data);

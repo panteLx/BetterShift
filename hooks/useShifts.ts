@@ -13,11 +13,23 @@ export function useShifts(calendarId: string | undefined) {
     if (!calendarId) return;
 
     try {
-      const response = await fetch(`/api/shifts?calendarId=${calendarId}`);
+      const password = getCachedPassword(calendarId);
+      const params = new URLSearchParams({ calendarId });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/shifts?${params}`);
+      if (!response.ok) {
+        // Calendar is locked and no valid password - return empty array
+        setShifts([]);
+        return;
+      }
       const data = await response.json();
       setShifts(data);
     } catch (error) {
       console.error("Failed to fetch shifts:", error);
+      setShifts([]);
     }
   };
 
@@ -42,12 +54,15 @@ export function useShifts(calendarId: string | undefined) {
     setShifts((prev) => [...prev, optimisticShift]);
 
     try {
+      const password = getCachedPassword(calendarId);
+
       const response = await fetch("/api/shifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           calendarId: calendarId,
+          password,
         }),
       });
 

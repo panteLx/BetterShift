@@ -60,7 +60,10 @@
     "errorMatch": "Passwords do not match",
     "errorIncorrect": "Incorrect password",
     "errorRequired": "Password required",
-    "unlock": "Unlock"
+    "unlock": "Unlock",
+    "unlockRequired": "Calendar is password protected",
+    "unlockRequiredDescription": "This calendar is password protected. Please unlock the calendar to manage presets and create shifts.",
+    "unlockCalendar": "Unlock Calendar"
   },
   "note": {
     "create": "New Note",

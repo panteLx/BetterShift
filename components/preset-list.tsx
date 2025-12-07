@@ -12,8 +12,9 @@ interface PresetListProps {
   presets: ShiftPreset[];
   selectedPresetId?: string;
   onSelectPreset: (presetId: string | undefined) => void;
-  onCreateNew: () => void;
-  onManageClick: () => void;
+  onCreateNew?: () => void;
+  onManageClick?: () => void;
+  onUnlock?: () => void;
   loading?: boolean;
 }
 
@@ -25,16 +26,19 @@ export function PresetList({
   onSelectPreset,
   onCreateNew,
   onManageClick,
+  onUnlock,
   loading = false,
 }: PresetListProps) {
   const t = useTranslations();
   const [showSecondary, setShowSecondary] = React.useState(false);
 
-  // Hide preset buttons if calendar is locked AND no valid password is cached
+  // Hide preset buttons if calendar requires password AND no valid password is cached
   const selectedCalendar = calendars.find((c) => c.id === calendarId);
-  const isCalendarLocked = selectedCalendar?.isLocked === true;
+  const requiresPassword = !!selectedCalendar?.passwordHash;
   const hasPassword = calendarId ? !!getCachedPassword(calendarId) : false;
-  const shouldHidePresetButtons = isCalendarLocked && !hasPassword;
+  const isLocked = selectedCalendar?.isLocked === true;
+  const shouldHidePresetButtons = requiresPassword && !hasPassword;
+  const shouldShowUnlockHint = shouldHidePresetButtons && !isLocked;
 
   const primaryPresets = presets.filter((p) => !p.isSecondary);
   const secondaryPresets = presets.filter((p) => p.isSecondary);
@@ -53,7 +57,56 @@ export function PresetList({
     );
   }
 
-  // Hide everything if calendar is locked and no password is cached
+  // Show unlock hint if calendar requires password and no password is cached (but not locked)
+  if (shouldShowUnlockHint) {
+    return (
+      <div className="border-2 border-dashed border-primary/30 rounded-lg p-4 sm:p-6 text-center space-y-3">
+        <div className="flex items-center justify-center gap-2 text-primary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <p className="text-sm font-semibold">
+            {t("password.unlockRequired")}
+          </p>
+        </div>
+        <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+          {t("password.unlockRequiredDescription")}
+        </p>
+        {onUnlock && (
+          <Button onClick={onUnlock} size="sm" className="gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+            </svg>
+            <span className="text-xs sm:text-sm">
+              {t("password.unlockCalendar")}
+            </span>
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // Hide everything if calendar requires password but no password is cached (regardless of unlock hint)
   if (shouldHidePresetButtons) {
     return null;
   }
@@ -70,7 +123,12 @@ export function PresetList({
         <p className="text-[10px] sm:text-xs text-muted-foreground max-w-md mx-auto">
           {t("preset.createFirstDescription")}
         </p>
-        <Button onClick={onCreateNew} size="sm" className="gap-2">
+        <Button
+          onClick={onCreateNew}
+          size="sm"
+          className="gap-2"
+          disabled={!onCreateNew}
+        >
           <Plus className="h-4 w-4" />
           <span className="text-xs sm:text-sm">
             {t("preset.createYourFirst")}
@@ -100,6 +158,7 @@ export function PresetList({
           variant="outline"
           size="sm"
           onClick={onCreateNew}
+          disabled={!onCreateNew}
           className="gap-1 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
         >
           <Plus className="h-3 sm:h-4 w-3 sm:w-4" />
@@ -111,6 +170,7 @@ export function PresetList({
           variant="ghost"
           size="sm"
           onClick={onManageClick}
+          disabled={!onManageClick}
           className="h-8 sm:h-9 w-8 sm:w-9 p-0"
         >
           <Settings className="h-3 sm:h-4 w-3 sm:w-4" />

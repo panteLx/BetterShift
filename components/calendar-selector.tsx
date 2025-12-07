@@ -41,10 +41,10 @@ export function CalendarSelector({
   const t = useTranslations();
 
   const selectedCalendar = calendars.find((c) => c.id === selectedId);
-  // Hide external sync buttons if calendar is locked AND no valid password is cached
-  const isCalendarLocked = selectedCalendar?.isLocked === true;
+  // Hide external sync buttons if calendar requires password AND no valid password is cached
+  const requiresPassword = !!selectedCalendar?.passwordHash;
   const hasPassword = selectedId ? !!getCachedPassword(selectedId) : false;
-  const shouldHideSyncButtons = isCalendarLocked && !hasPassword;
+  const shouldHideSyncButtons = requiresPassword && !hasPassword;
 
   // Desktop: Compact icon-based layout
   if (variant === "desktop") {

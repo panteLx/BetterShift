@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { getCachedPassword } from "@/lib/password-cache";
 import {
   Dialog,
   DialogContent,
@@ -61,9 +62,13 @@ export function SyncNotificationDialog({
         setLoading(true);
       }
       try {
-        const response = await fetch(
-          `/api/sync-logs?calendarId=${calendarId}&limit=20`
-        );
+        const password = getCachedPassword(calendarId);
+        const params = new URLSearchParams({ calendarId, limit: "20" });
+        if (password) {
+          params.append("password", password);
+        }
+
+        const response = await fetch(`/api/sync-logs?${params}`);
         if (response.ok) {
           const data = await response.json();
           setLogs(data);
@@ -133,8 +138,12 @@ export function SyncNotificationDialog({
 
     setIsDeleting(true);
     try {
+      const password = calendarId ? getCachedPassword(calendarId) : null;
+
       const response = await fetch(`/api/sync-logs?calendarId=${calendarId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
 
       if (response.ok) {
@@ -156,9 +165,15 @@ export function SyncNotificationDialog({
 
     setIsMarkingRead(true);
     try {
+      const password = calendarId ? getCachedPassword(calendarId) : null;
+
       const response = await fetch(
         `/api/sync-logs?calendarId=${calendarId}&action=markErrorsAsRead`,
-        { method: "PATCH" }
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        }
       );
 
       if (response.ok) {

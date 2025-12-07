@@ -110,9 +110,13 @@ function HomeContent() {
     }
 
     try {
-      const response = await fetch(
-        `/api/external-syncs?calendarId=${selectedCalendar}`
-      );
+      const password = getCachedPassword(selectedCalendar);
+      const params = new URLSearchParams({ calendarId: selectedCalendar });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/external-syncs?${params}`);
       if (response.ok) {
         const data = await response.json();
         setExternalSyncs(data);
@@ -130,9 +134,16 @@ function HomeContent() {
     }
 
     try {
-      const response = await fetch(
-        `/api/sync-logs?calendarId=${selectedCalendar}&limit=50`
-      );
+      const password = getCachedPassword(selectedCalendar);
+      const params = new URLSearchParams({
+        calendarId: selectedCalendar,
+        limit: "50",
+      });
+      if (password) {
+        params.append("password", password);
+      }
+
+      const response = await fetch(`/api/sync-logs?${params}`);
       if (response.ok) {
         const logs = await response.json();
         // Only show errors that are not read
@@ -204,6 +215,18 @@ function HomeContent() {
     commitHash?: string;
   } | null>(null);
 
+  // Check if UI elements should be hidden (password required but not cached)
+  const selectedCalendarData = useMemo(() => {
+    return calendars.find((c) => c.id === selectedCalendar);
+  }, [calendars, selectedCalendar]);
+
+  const shouldHideUIElements = useMemo(() => {
+    if (!selectedCalendar || !selectedCalendarData) return false;
+    const requiresPassword = !!selectedCalendarData.passwordHash;
+    const hasPassword = !!getCachedPassword(selectedCalendar);
+    return requiresPassword && !hasPassword;
+  }, [selectedCalendar, selectedCalendarData]);
+
   // SSE Connection for real-time updates
   useSSEConnection({
     calendarId: selectedCalendar,
@@ -263,6 +286,10 @@ function HomeContent() {
           verifyAndCachePassword(selectedCalendar, cachedPassword)
             .then((result) => {
               setIsCalendarUnlocked(result.valid);
+              if (result.valid) {
+                // Password is valid, refetch all data
+                handlePasswordSuccess(cachedPassword);
+              }
             })
             .catch(() => {
               // On error, keep calendar locked
@@ -341,6 +368,17 @@ function HomeContent() {
   };
 
   const handlePasswordSuccess = async (password: string) => {
+    // Refetch all data now that password is available
+    await Promise.all([
+      refetchShifts(),
+      refetchPresets(),
+      refetchNotes(),
+      fetchExternalSyncs(),
+      fetchSyncErrorStatus(),
+    ]);
+
+    setStatsRefreshTrigger((prev) => prev + 1);
+
     if (!pendingAction) return;
 
     try {
@@ -872,6 +910,8 @@ function HomeContent() {
                               password
                             );
                             setIsCalendarUnlocked(true);
+                            // Trigger data refetch after successful password entry
+                            handlePasswordSuccess(password);
                           } else {
                             toast.error(t("password.errorIncorrect"));
                           }
@@ -955,42 +995,50 @@ function HomeContent() {
               togglingDates={togglingDates}
               externalSyncs={externalSyncs}
               onDayClick={handleDayClick}
-              onDayRightClick={handleDayRightClick}
-              onNoteIconClick={handleNoteIconClick}
-              onLongPress={handleLongPressDay}
+              onDayRightClick={
+                shouldHideUIElements ? undefined : handleDayRightClick
+              }
+              onNoteIconClick={
+                shouldHideUIElements ? undefined : handleNoteIconClick
+              }
+              onLongPress={
+                shouldHideUIElements ? undefined : handleLongPressDay
+              }
               onShowAllShifts={handleShowAllShifts}
               onShowSyncedShifts={handleShowSyncedShifts}
             />
 
             {/* Note Hint */}
-            <motion.div
-              className="px-2 sm:px-0 mb-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
-                <div className="flex items-center gap-2.5">
-                  <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <StickyNote className="h-4 w-4 text-orange-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
-                      {t("note.hintMobile", {
-                        default:
-                          "Long press on a day to open notes. The note icon shows existing notes.",
-                      })}
-                    </p>
-                    <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
-                      {t("note.hintDesktop", {
-                        default:
-                          "Right-click on a day to open notes. The note icon shows existing notes.",
-                      })}
-                    </p>
+            {!shouldHideUIElements && (
+              <motion.div
+                className="px-2 sm:px-0 mb-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <StickyNote className="h-4 w-4 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
+                        {t("note.hintMobile", {
+                          default:
+                            "Long press on a day to open notes. The note icon shows existing notes.",
+                        })}
+                      </p>
+                      <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
+                        {t("note.hintDesktop", {
+                          default:
+                            "Right-click on a day to open notes. The note icon shows existing notes.",
+                        })}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* Shifts List */}
             <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
@@ -1003,7 +1051,9 @@ function HomeContent() {
               <ShiftsList
                 shifts={shifts}
                 currentDate={currentDate}
-                onDeleteShift={handleDeleteShift}
+                onDeleteShift={
+                  shouldHideUIElements ? undefined : handleDeleteShift
+                }
               />
             </div>
           </>
@@ -1011,7 +1061,7 @@ function HomeContent() {
       </div>
 
       {/* Floating Action Button for Manual Shift Creation - Desktop Only */}
-      {selectedCalendar && (
+      {selectedCalendar && !shouldHideUIElements && (
         <motion.div
           className="hidden sm:block fixed bottom-6 right-6 z-50"
           initial={{ scale: 0, opacity: 0 }}
