@@ -19,7 +19,7 @@ export function ThemeSwitcher() {
     return (
       <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
         <Sun className="h-4 w-4" />
-        <span className="sr-only">Loading theme</span>
+        <span className="sr-only">{t("common.loading")}</span>
       </Button>
     );
   }
