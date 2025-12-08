@@ -222,7 +222,11 @@ function HomeContent() {
   const [shiftsPerDay, setShiftsPerDay] = useState<number | null>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("shifts-per-day");
-      return stored ? (stored === "null" ? null : parseInt(stored)) : 3;
+      if (stored === "null") return null;
+      if (stored) {
+        const parsed = parseInt(stored);
+        return isNaN(parsed) ? 3 : parsed;
+      }
     }
     return 3;
   });
@@ -232,7 +236,11 @@ function HomeContent() {
   >(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("external-shifts-per-day");
-      return stored ? (stored === "null" ? null : parseInt(stored)) : 3;
+      if (stored === "null") return null;
+      if (stored) {
+        const parsed = parseInt(stored);
+        return isNaN(parsed) ? 3 : parsed;
+      }
     }
     return 3;
   });
