@@ -8,16 +8,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Maximize2, FileText, Type } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Maximize2, FileText, Infinity } from "lucide-react";
 
 interface ViewSettingsDialogProps {
   open: boolean;
@@ -60,74 +54,94 @@ export function ViewSettingsDialog({
 
         <div className="space-y-6 overflow-y-auto flex-1 px-6 py-6">
           {/* Regular Shifts per Day */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Maximize2 className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold">
-                {t("view.shiftsPerDay")}
-              </Label>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Maximize2 className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">
+                  {t("view.shiftsPerDay")}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
+                {shiftsPerDay === null ? (
+                  <>
+                    <Infinity className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-primary">
+                      {t("view.showAll")}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold text-primary">
+                    {shiftsPerDay}
+                  </span>
+                )}
+              </div>
             </div>
-            <Select
-              value={shiftsPerDay === null ? "all" : shiftsPerDay.toString()}
-              onValueChange={(value) =>
-                onShiftsPerDayChange(value === "all" ? null : parseInt(value))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1</SelectItem>
-                <SelectItem value="2">2</SelectItem>
-                <SelectItem value="3">3</SelectItem>
-                <SelectItem value="4">4</SelectItem>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="6">6</SelectItem>
-                <SelectItem value="8">8</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="all">{t("view.showAll")}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-3">
+              <Slider
+                value={[shiftsPerDay === null ? 11 : shiftsPerDay]}
+                onValueChange={(value) =>
+                  onShiftsPerDayChange(value[0] === 11 ? null : value[0])
+                }
+                min={1}
+                max={11}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>1</span>
+                <span>{t("view.showAll")}</span>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
               {t("view.shiftsPerDayHint")}
             </p>
           </div>
 
           {/* External Shifts per Day */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Maximize2 className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold">
-                {t("view.externalShiftsPerDay")}
-              </Label>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Maximize2 className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">
+                  {t("view.externalShiftsPerDay")}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
+                {externalShiftsPerDay === null ? (
+                  <>
+                    <Infinity className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-primary">
+                      {t("view.showAll")}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold text-primary">
+                    {externalShiftsPerDay}
+                  </span>
+                )}
+              </div>
             </div>
-            <Select
-              value={
-                externalShiftsPerDay === null
-                  ? "all"
-                  : externalShiftsPerDay.toString()
-              }
-              onValueChange={(value) =>
-                onExternalShiftsPerDayChange(
-                  value === "all" ? null : parseInt(value)
-                )
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1</SelectItem>
-                <SelectItem value="2">2</SelectItem>
-                <SelectItem value="3">3</SelectItem>
-                <SelectItem value="4">4</SelectItem>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="6">6</SelectItem>
-                <SelectItem value="8">8</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="all">{t("view.showAll")}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-3">
+              <Slider
+                value={[
+                  externalShiftsPerDay === null ? 11 : externalShiftsPerDay,
+                ]}
+                onValueChange={(value) =>
+                  onExternalShiftsPerDayChange(
+                    value[0] === 11 ? null : value[0]
+                  )
+                }
+                min={1}
+                max={11}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>1</span>
+                <span>{t("view.showAll")}</span>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
               {t("view.externalShiftsPerDayHint")}
             </p>

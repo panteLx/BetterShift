@@ -155,7 +155,7 @@
     "shiftsPerDayHint": "Maximum number of regular shifts to display per day",
     "externalShiftsPerDay": "External shifts per day",
     "externalShiftsPerDayHint": "Maximum number of external calendar shifts to display per day",
-    "showAll": "Show all",
+    "showAll": "All",
     "displayOptions": "Display Options",
     "showNotes": "Show shift notes",
     "showNotesHint": "Display shift notes in calendar grid",

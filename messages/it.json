@@ -155,7 +155,7 @@
     "shiftsPerDayHint": "Numero massimo di turni regolari da visualizzare per giorno",
     "externalShiftsPerDay": "Turni esterni al giorno",
     "externalShiftsPerDayHint": "Numero massimo di turni da calendari esterni da visualizzare per giorno",
-    "showAll": "Mostra tutti",
+    "showAll": "Tutti",
     "displayOptions": "Opzioni di Visualizzazione",
     "showNotes": "Mostra note turni",
     "showNotesHint": "Visualizza note dei turni nella griglia calendario",
