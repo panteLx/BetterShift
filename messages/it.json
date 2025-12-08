@@ -147,6 +147,21 @@
     "saturday": "Sab",
     "sunday": "Dom"
   },
+  "view": {
+    "settingsTitleShort": "Vista",
+    "settingsTitle": "Impostazioni Vista",
+    "settingsDescription": "Personalizza come vengono visualizzati i turni in tutti i calendari",
+    "shiftsPerDay": "Turni regolari al giorno",
+    "shiftsPerDayHint": "Numero massimo di turni regolari da visualizzare per giorno",
+    "externalShiftsPerDay": "Turni esterni al giorno",
+    "externalShiftsPerDayHint": "Numero massimo di turni da calendari esterni da visualizzare per giorno",
+    "showAll": "Mostra tutti",
+    "displayOptions": "Opzioni di Visualizzazione",
+    "showNotes": "Mostra note turni",
+    "showNotesHint": "Visualizza note dei turni nella griglia calendario",
+    "showFullTitles": "Mostra titoli completi",
+    "showFullTitlesHint": "Visualizza titoli completi dei turni senza troncamento"
+  },
   "stats": {
     "title": "Statistiche Turni",
     "week": "Settimana",

@@ -147,6 +147,21 @@
     "saturday": "Sa",
     "sunday": "So"
   },
+  "view": {
+    "settingsTitleShort": "Ansicht",
+    "settingsTitle": "Ansichtseinstellungen",
+    "settingsDescription": "Passe an, wie Schichten in allen Kalendern angezeigt werden",
+    "shiftsPerDay": "Normale Schichten pro Tag",
+    "shiftsPerDayHint": "Maximale Anzahl der normalen Schichten pro Tag",
+    "externalShiftsPerDay": "Externe Schichten pro Tag",
+    "externalShiftsPerDayHint": "Maximale Anzahl der Schichten aus externen Kalendern pro Tag",
+    "showAll": "Alle anzeigen",
+    "displayOptions": "Anzeigeoptionen",
+    "showNotes": "Schichtnotizen anzeigen",
+    "showNotesHint": "Notizen der Schichten im Kalender anzeigen",
+    "showFullTitles": "Vollständige Schichttitel anzeigen",
+    "showFullTitlesHint": "Schichttitel vollständig ohne Kürzung anzeigen"
+  },
 
   "stats": {
     "title": "Schichtenstatistik",
