@@ -175,6 +175,10 @@
     "github": "GitHub",
     "support": "Supporto"
   },
+  "theme": {
+    "switchToLight": "Passa alla modalità chiara",
+    "switchToDark": "Passa alla modalità scura"
+  },
   "externalSync": {
     "manageTitle": "Gestisci Calendari Esterni",
     "manageDescription": "Aggiungi e gestisci più calendari esterni per questo calendario",

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Coffee, Github } from "lucide-react";
 import { LanguageSwitcher } from "./language-switcher";
+import { ThemeSwitcher } from "./theme-switcher";
 
 interface VersionInfo {
   version: string;
@@ -28,9 +29,10 @@ export function AppFooter({ versionInfo }: AppFooterProps) {
       <div className="container max-w-4xl mx-auto p-3 sm:p-4">
         {/* Mobile: Two rows (language + links), Desktop: One row */}
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center sm:gap-4">
-          {/* Language switcher */}
-          <div className="flex justify-center sm:justify-start">
+          {/* Language and theme switcher */}
+          <div className="flex justify-center sm:justify-start items-center gap-2">
             <LanguageSwitcher />
+            <ThemeSwitcher />
           </div>
 
           {/* Links row - horizontal on all screen sizes */}

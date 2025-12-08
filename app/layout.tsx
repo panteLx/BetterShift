@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,25 +38,31 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className="dark">
+    <html lang={locale} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <NextIntlClientProvider messages={messages} locale={locale}>
-          {children}
-          <Toaster
-            position="bottom-left"
-            richColors
-            closeButton
-            theme="dark"
-            toastOptions={{
-              className: "text-sm",
-              style: {
-                padding: "12px 16px",
-              },
-            }}
-          />
-        </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange={false}
+        >
+          <NextIntlClientProvider messages={messages} locale={locale}>
+            {children}
+            <Toaster
+              position="bottom-left"
+              richColors
+              closeButton
+              toastOptions={{
+                className: "text-sm",
+                style: {
+                  padding: "12px 16px",
+                },
+              }}
+            />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

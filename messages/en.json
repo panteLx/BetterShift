@@ -176,6 +176,10 @@
     "github": "GitHub",
     "support": "Support"
   },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
   "externalSync": {
     "manageTitle": "Manage External Calendars",
     "manageDescription": "Add and manage multiple external calendars for this calendar",

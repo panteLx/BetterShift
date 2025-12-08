@@ -58,7 +58,10 @@ export function DeleteCalendarDialog({
             <div className="space-y-2.5 pt-2 pl-12">
               <div className="font-semibold text-foreground flex items-center gap-2">
                 <div className="w-1 h-4 bg-gradient-to-b from-destructive to-destructive/50 rounded-full"></div>
-                {t("calendar.deleteConfirm", { name: calendarName })}
+                {t("common.deleteConfirm", {
+                  item: t("calendar.title"),
+                  name: calendarName,
+                })}
               </div>
               <div className="text-sm text-muted-foreground bg-destructive/5 p-3 rounded-lg border border-destructive/20">
                 {t("calendar.deleteWarning", {
