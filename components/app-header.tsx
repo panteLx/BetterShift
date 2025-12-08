@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Settings2 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
 
 interface AppHeaderProps {
@@ -35,6 +35,7 @@ interface AppHeaderProps {
   onPasswordRequired: (action: () => Promise<void>) => void;
   onManualShiftCreation: () => void;
   onMobileCalendarDialogChange: (open: boolean) => void;
+  onViewSettingsClick: () => void;
   presetsLoading?: boolean;
 }
 
@@ -59,6 +60,7 @@ export function AppHeader({
   onPasswordRequired,
   onManualShiftCreation,
   onMobileCalendarDialogChange,
+  onViewSettingsClick,
   presetsLoading = false,
 }: AppHeaderProps) {
   const t = useTranslations();
@@ -215,19 +217,39 @@ export function AppHeader({
 
             {/* Preset Selector */}
             {selectedCalendar && (
-              <div className="px-0.5 sm:px-0">
-                <PresetSelector
-                  calendars={calendars}
-                  presets={presets}
-                  selectedPresetId={selectedPresetId}
-                  onSelectPreset={onSelectPreset}
-                  onPresetsChange={onPresetsChange}
-                  onShiftsChange={onShiftsChange}
-                  onStatsRefresh={onStatsRefresh}
-                  calendarId={selectedCalendar}
-                  onPasswordRequired={onPasswordRequired}
-                  loading={presetsLoading}
-                />
+              <div className="flex flex-col sm:flex-row gap-3 px-0.5 sm:px-0">
+                <div className="flex-1">
+                  <PresetSelector
+                    calendars={calendars}
+                    presets={presets}
+                    selectedPresetId={selectedPresetId}
+                    onSelectPreset={onSelectPreset}
+                    onPresetsChange={onPresetsChange}
+                    onShiftsChange={onShiftsChange}
+                    onStatsRefresh={onStatsRefresh}
+                    calendarId={selectedCalendar}
+                    onPasswordRequired={onPasswordRequired}
+                    loading={presetsLoading}
+                  />
+                </div>
+
+                {/* View Settings Button */}
+                <motion.div
+                  className="shrink-0"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onViewSettingsClick}
+                    className="h-10 w-full sm:w-auto gap-2 bg-muted/30 backdrop-blur-sm border-border/50 hover:bg-accent/50 shadow-sm"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    <span>{t("view.settingsTitleShort")}</span>
+                  </Button>
+                </motion.div>
               </div>
             )}
           </div>

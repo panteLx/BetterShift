@@ -147,6 +147,21 @@
     "saturday": "Sat",
     "sunday": "Sun"
   },
+  "view": {
+    "settingsTitleShort": "View",
+    "settingsTitle": "View Settings",
+    "settingsDescription": "Customize how shifts are displayed in all calendars",
+    "shiftsPerDay": "Regular shifts per day",
+    "shiftsPerDayHint": "Maximum number of regular shifts to display per day",
+    "externalShiftsPerDay": "External shifts per day",
+    "externalShiftsPerDayHint": "Maximum number of external calendar shifts to display per day",
+    "showAll": "All",
+    "displayOptions": "Display Options",
+    "showNotes": "Show shift notes",
+    "showNotesHint": "Display shift notes in calendar grid",
+    "showFullTitles": "Show full shift titles",
+    "showFullTitlesHint": "Display complete shift titles without truncation"
+  },
 
   "stats": {
     "title": "Shift Statistics",

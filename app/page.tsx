@@ -13,6 +13,7 @@ import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dial
 import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
+import { ViewSettingsDialog } from "@/components/view-settings-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppFooter } from "@/components/app-footer";
 import { ShiftStats } from "@/components/shift-stats";
@@ -184,6 +185,7 @@ function HomeContent() {
   const [syncLogRefreshTrigger, setSyncLogRefreshTrigger] = useState(0);
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
   const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
+  const [showViewSettingsDialog, setShowViewSettingsDialog] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [selectedDayShifts, setSelectedDayShifts] = useState<
     ShiftWithCalendar[]
@@ -215,6 +217,86 @@ function HomeContent() {
     githubUrl: string;
     commitHash?: string;
   } | null>(null);
+
+  // View density state with localStorage persistence
+  const [shiftsPerDay, setShiftsPerDay] = useState<number | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("shifts-per-day");
+      if (stored === "null") return null;
+      if (stored) {
+        const parsed = parseInt(stored);
+        return isNaN(parsed) ? 3 : parsed;
+      }
+    }
+    return 3;
+  });
+
+  const [externalShiftsPerDay, setExternalShiftsPerDay] = useState<
+    number | null
+  >(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("external-shifts-per-day");
+      if (stored === "null") return null;
+      if (stored) {
+        const parsed = parseInt(stored);
+        return isNaN(parsed) ? 3 : parsed;
+      }
+    }
+    return 3;
+  });
+
+  const [showShiftNotes, setShowShiftNotes] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("show-shift-notes");
+      return stored === "true";
+    }
+    return false;
+  });
+
+  const [showFullTitles, setShowFullTitles] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("show-full-titles");
+      return stored === "true";
+    }
+    return false;
+  });
+
+  const handleShiftsPerDayChange = useCallback((count: number | null) => {
+    setShiftsPerDay(count);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "shifts-per-day",
+        count === null ? "null" : count.toString()
+      );
+    }
+  }, []);
+
+  const handleExternalShiftsPerDayChange = useCallback(
+    (count: number | null) => {
+      setExternalShiftsPerDay(count);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "external-shifts-per-day",
+          count === null ? "null" : count.toString()
+        );
+      }
+    },
+    []
+  );
+
+  const handleShowShiftNotesChange = useCallback((show: boolean) => {
+    setShowShiftNotes(show);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("show-shift-notes", show.toString());
+    }
+  }, []);
+
+  const handleShowFullTitlesChange = useCallback((show: boolean) => {
+    setShowFullTitles(show);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("show-full-titles", show.toString());
+    }
+  }, []);
 
   // Check if UI elements should be hidden (password required but not cached)
   const selectedCalendarData = useMemo(() => {
@@ -855,6 +937,7 @@ function HomeContent() {
         onPasswordRequired={handlePresetPasswordRequired}
         onManualShiftCreation={handleManualShiftCreation}
         onMobileCalendarDialogChange={setShowMobileCalendarDialog}
+        onViewSettingsClick={() => setShowViewSettingsDialog(true)}
         presetsLoading={presetsLoading}
       />
 
@@ -996,6 +1079,12 @@ function HomeContent() {
               selectedPresetId={selectedPresetId}
               togglingDates={togglingDates}
               externalSyncs={externalSyncs}
+              maxShiftsToShow={shiftsPerDay === null ? undefined : shiftsPerDay}
+              maxExternalShiftsToShow={
+                externalShiftsPerDay === null ? undefined : externalShiftsPerDay
+              }
+              showShiftNotes={showShiftNotes}
+              showFullTitles={showFullTitles}
               onDayClick={handleDayClick}
               onDayRightClick={
                 shouldHideUIElements ? undefined : handleDayRightClick
@@ -1177,6 +1266,20 @@ function HomeContent() {
         onOpenChange={setShowSyncedShiftsDialog}
         date={selectedDayDate}
         shifts={selectedSyncedShifts}
+      />
+
+      {/* View Settings Dialog */}
+      <ViewSettingsDialog
+        open={showViewSettingsDialog}
+        onOpenChange={setShowViewSettingsDialog}
+        shiftsPerDay={shiftsPerDay}
+        externalShiftsPerDay={externalShiftsPerDay}
+        showShiftNotes={showShiftNotes}
+        showFullTitles={showFullTitles}
+        onShiftsPerDayChange={handleShiftsPerDayChange}
+        onExternalShiftsPerDayChange={handleExternalShiftsPerDayChange}
+        onShowShiftNotesChange={handleShowShiftNotesChange}
+        onShowFullTitlesChange={handleShowFullTitlesChange}
       />
 
       {/* Sync Notification Center */}
