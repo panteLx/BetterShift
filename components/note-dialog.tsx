@@ -42,6 +42,7 @@ export function NoteDialog({
   const initialNoteRef = useRef<string>("");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
+  const isNewNote = !note;
 
   useEffect(() => {
     if (open) {
@@ -58,9 +59,9 @@ export function NoteDialog({
     }
   }, [open, note]);
 
-  // Handle dialog close with immediate save if needed
+  // Handle dialog close with immediate save if needed (only for existing notes)
   const handleDialogClose = (open: boolean) => {
-    if (!open && noteText !== initialNoteRef.current) {
+    if (!open && !isNewNote && noteText !== initialNoteRef.current) {
       // Cancel pending timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -74,9 +75,9 @@ export function NoteDialog({
     onOpenChange(open);
   };
 
-  // Auto-save with debouncing
+  // Auto-save with debouncing (only for existing notes)
   useEffect(() => {
-    if (!open) return;
+    if (!open || isNewNote) return;
 
     // Skip initial mount
     if (isInitialMount.current) {
@@ -104,11 +105,18 @@ export function NoteDialog({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [noteText, open, onSubmit, onDelete, note]);
+  }, [noteText, open, onSubmit, isNewNote]);
 
   const handleDelete = () => {
     if (onDelete) {
       onDelete();
+      onOpenChange(false);
+    }
+  };
+
+  const handleAdd = () => {
+    if (noteText.trim()) {
+      onSubmit(noteText);
       onOpenChange(false);
     }
   };
@@ -173,6 +181,16 @@ export function NoteDialog({
               >
                 {t("common.close")}
               </Button>
+              {isNewNote && (
+                <Button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={!noteText.trim()}
+                  className="h-11 shadow-lg hover:shadow-xl transition-all"
+                >
+                  {t("common.add")}
+                </Button>
+              )}
             </div>
           </div>
         </div>
