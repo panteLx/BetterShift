@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { isSameDay } from "date-fns";
@@ -40,11 +40,23 @@ export function useShiftActions({
 }: UseShiftActionsProps) {
   const t = useTranslations();
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
+  const togglingDatesRef = useRef(togglingDates);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    togglingDatesRef.current = togglingDates;
+  }, [togglingDates]);
 
   const handleShiftSubmit = useCallback(
-    (formData: ShiftFormData) => {
-      createShift(formData);
-      onStatsRefresh();
+    async (formData: ShiftFormData) => {
+      try {
+        const result = await createShift(formData);
+        if (result) {
+          onStatsRefresh();
+        }
+      } catch (error) {
+        console.error("Failed to create shift:", error);
+      }
     },
     [createShift, onStatsRefresh]
   );
@@ -87,7 +99,7 @@ export function useShiftActions({
       const targetDate = new Date(date);
       const dateKey = formatDateToLocal(targetDate);
 
-      if (togglingDates.has(dateKey)) return;
+      if (togglingDatesRef.current.has(dateKey)) return;
 
       setTogglingDates((prev) => new Set(prev).add(dateKey));
 
@@ -190,7 +202,6 @@ export function useShiftActions({
       createShift,
       onStatsRefresh,
       onPasswordRequired,
-      togglingDates,
       t,
     ]
   );

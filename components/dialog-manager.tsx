@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { CalendarDialog } from "@/components/calendar-dialog";
 import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { PasswordDialog } from "@/components/password-dialog";
@@ -10,8 +9,8 @@ import { DayShiftsDialog } from "@/components/day-shifts-dialog";
 import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
 import { ViewSettingsDialog } from "@/components/view-settings-dialog";
 import { NoteDialog } from "@/components/note-dialog";
-import { Calendar } from "@/lib/db/schema";
-import { ShiftWithCalendar } from "@/lib/types";
+import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
+import { CalendarNote } from "@/lib/db/schema";
 
 interface DialogManagerProps {
   // Calendar Dialog
@@ -34,7 +33,7 @@ interface DialogManagerProps {
   // Password Dialog
   showPasswordDialog: boolean;
   onPasswordDialogChange: (open: boolean) => void;
-  calendars: Calendar[];
+  calendars: CalendarWithCount[];
   onPasswordSuccess: (password: string) => void;
 
   // Manage Password Dialog
@@ -100,7 +99,7 @@ interface DialogManagerProps {
   // Note Dialog
   showNoteDialog: boolean;
   onNoteDialogChange: (open: boolean) => void;
-  selectedNote: any;
+  selectedNote: CalendarNote | undefined;
   selectedNoteDate?: Date;
   onNoteSubmit: (text: string) => void;
   onNoteDelete?: () => void;

@@ -88,12 +88,13 @@ export function CalendarGrid({
         case "startTime":
           comparison = a.startTime.localeCompare(b.startTime);
           break;
-        case "createdAt":
+        case "createdAt": {
           // Handle null values by treating them as very old dates
           const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           comparison = aTime - bTime;
           break;
+        }
         case "title":
           comparison = a.title.localeCompare(b.title);
           break;

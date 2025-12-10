@@ -1,6 +1,4 @@
 import { useState, useCallback } from "react";
-import { toast } from "sonner";
-import { useTranslations } from "next-intl";
 import { CalendarNote } from "@/lib/db/schema";
 
 interface UseNoteActionsProps {
@@ -24,7 +22,6 @@ export function useNoteActions({
   deleteNote,
   onPasswordRequired,
 }: UseNoteActionsProps) {
-  const t = useTranslations();
   const [selectedNote, setSelectedNote] = useState<CalendarNote | undefined>();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showNoteDialog, setShowNoteDialog] = useState(false);
@@ -56,7 +53,14 @@ export function useNoteActions({
     const handlePasswordRequired = () => {
       onPasswordRequired(async () => {
         if (selectedNote) {
-          await deleteNote(selectedNote.id, handlePasswordRequired);
+          const success = await deleteNote(
+            selectedNote.id,
+            handlePasswordRequired
+          );
+          if (success) {
+            setShowNoteDialog(false);
+            setSelectedNote(undefined);
+          }
         }
       });
     };

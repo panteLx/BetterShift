@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { toast } from "sonner";
-import { useTranslations } from "next-intl";
 import {
   getCachedPassword,
   verifyAndCachePassword,
 } from "@/lib/password-cache";
-import { Calendar } from "@/lib/db/schema";
+import { CalendarWithCount } from "@/lib/types";
 import { ShiftFormData } from "@/components/shift-dialog";
 
 export interface PendingAction {
@@ -19,9 +17,8 @@ export interface PendingAction {
 
 export function usePasswordManagement(
   selectedCalendar: string | null,
-  calendars: Calendar[]
+  calendars: CalendarWithCount[]
 ) {
-  const t = useTranslations();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null
   );
@@ -87,7 +84,10 @@ export function usePasswordManagement(
   }, []);
 
   const verifyPasswordForAction = useCallback(
-    async (action: () => Promise<void>) => {
+    async (
+      action: () => Promise<void>,
+      actionType: "delete" | "edit" | "syncNotifications" = "edit"
+    ) => {
       if (!selectedCalendar) return false;
 
       const calendar = calendars.find((c) => c.id === selectedCalendar);
@@ -97,17 +97,22 @@ export function usePasswordManagement(
         const cachedPassword = getCachedPassword(selectedCalendar);
 
         if (cachedPassword) {
-          const result = await verifyAndCachePassword(
-            selectedCalendar,
-            cachedPassword
-          );
-          if (result.valid) {
-            await action();
-            return true;
+          try {
+            const result = await verifyAndCachePassword(
+              selectedCalendar,
+              cachedPassword
+            );
+            if (result.valid) {
+              await action();
+              return true;
+            }
+          } catch (error) {
+            console.error("Failed to verify password:", error);
+            // Continue to show password dialog on error
           }
         }
 
-        setPendingAction({ type: "edit", action });
+        setPendingAction({ type: actionType, action });
         return false;
       }
 

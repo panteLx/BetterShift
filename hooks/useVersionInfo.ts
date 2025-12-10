@@ -13,6 +13,20 @@ export function useVersionInfo() {
     const fetchVersion = async () => {
       try {
         const response = await fetch("/api/version");
+
+        if (!response.ok) {
+          let errorBody = "";
+          try {
+            const errorData = await response.json();
+            errorBody = JSON.stringify(errorData);
+          } catch {
+            errorBody = await response.text();
+          }
+          throw new Error(
+            `Fetch /api/version failed: ${response.status} ${response.statusText} - ${errorBody}`
+          );
+        }
+
         const data = await response.json();
         setVersionInfo({
           version: data.version,

@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { getDateLocale } from "@/lib/locales";
-import {
-  getCachedPassword,
-  verifyAndCachePassword,
-} from "@/lib/password-cache";
 import { motion } from "motion/react";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useShifts } from "@/hooks/useShifts";
@@ -93,10 +89,9 @@ function HomeContent() {
     setIsCalendarUnlocked,
     isVerifyingCalendarPassword,
     shouldHideUIElements,
-    selectedCalendarData,
     handlePasswordSuccess: baseHandlePasswordSuccess,
     verifyPasswordForAction,
-  } = usePasswordManagement(selectedCalendar || null, calendars as any);
+  } = usePasswordManagement(selectedCalendar || null, calendars);
 
   // View settings
   const viewSettings = useViewSettings();
@@ -426,7 +421,7 @@ function HomeContent() {
         onPresetsChange={refetchPresets}
         showPasswordDialog={dialogStates.showPasswordDialog}
         onPasswordDialogChange={dialogStates.setShowPasswordDialog}
-        calendars={calendars as any}
+        calendars={calendars}
         onPasswordSuccess={handlePasswordSuccess}
         showManagePasswordDialog={dialogStates.showManagePasswordDialog}
         onManagePasswordDialogChange={dialogStates.setShowManagePasswordDialog}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { verifyAndCachePassword } from "@/lib/password-cache";
 
 interface LockedCalendarViewProps {
   calendarId: string;
@@ -17,29 +18,19 @@ export function LockedCalendarView({
 }: LockedCalendarViewProps) {
   const t = useTranslations();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const password = formData.get("password") as string;
 
     if (password && calendarId) {
-      fetch(`/api/calendars/${calendarId}/verify-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.valid) {
-            localStorage.setItem(`calendar_password_${calendarId}`, password);
-            onUnlock(password);
-          } else {
-            toast.error(t("validation.passwordIncorrect"));
-          }
-        })
-        .catch(() => {
-          toast.error(t("validation.passwordIncorrect"));
-        });
+      const result = await verifyAndCachePassword(calendarId, password);
+
+      if (result.valid) {
+        onUnlock(password);
+      } else {
+        toast.error(t("validation.passwordIncorrect"));
+      }
     }
   };
 
@@ -78,7 +69,7 @@ export function LockedCalendarView({
               type="submit"
               className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
             >
-              {t("common.unlock", { default: "Unlock" })}
+              {t("common.unlock")}
             </Button>
           </form>
         </div>
