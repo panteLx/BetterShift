@@ -1,0 +1,95 @@
+name: Bug report
+description: Report a bug you encountered
+title: "bug: "
+labels:
+  - bug
+projects:
+  - panteLx/4
+body:
+  - type: dropdown
+    id: "deployment"
+    attributes:
+      label: Deployment Method
+      description: How are you hosting the app?
+      options:
+        - Docker
+        - Node
+        - Other, specify at description
+    validations:
+      required: true
+  - type: input
+    id: "version"
+    attributes:
+      label: App Version
+      description: What version of the app are you using, or what was the commit that your deployment was built off of?
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: "bugArea"
+    attributes:
+      label: Bug Area
+      description: Select what area of the app this issue affects
+      options:
+        - Deploying
+        - Configuring
+        - Using Features
+        - UI/UX
+        - Other, specify at description
+    validations:
+      required: true
+  - type: input
+    id: "deviceInfo"
+    attributes:
+      label: Device/Browser/OS/Platform Version
+      description: Details about the device this issue occurs on. Leave blank if not applicable (e.g. error within app logic).
+      placeholder: Google Chrome 120 on Windows 11
+  - type: textarea
+    id: "bugDescription"
+    attributes:
+      label: Bug Description / Steps to Reproduce
+      description: Precisely describe the bug you encountered and the steps to reproduce it. Avoid vague descriptions. Include relevant details.
+    validations:
+      required: true
+  - type: textarea
+    id: "expectedBehaviour"
+    attributes:
+      label: Expected Behavior
+      description: Describe what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: "screenshots"
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots of the bug and your configuration.
+  - type: checkboxes
+    id: "debuggingChecklist"
+    attributes:
+      label: Debugging Checklist
+      description: Confirm you have included at least some of the following debugging information. If you haven't, please do so before submitting the issue.
+      options:
+        - label: >-
+            If applicable, I have included debug logs
+          required: false
+  - type: checkboxes
+    id: "issueChecklist"
+    attributes:
+      label: Issue Checklist
+      description: Confirm that you have understood and followed these requirements
+      options:
+        - label: >-
+            I have written a short but informative title that clearly describes the issue.
+          required: true
+        - label: >-
+            I have given clear and descriptive steps to reproduce the issue.
+          required: true
+        - label: >-
+            I have checked open and closed issues and confirmed that this is not a duplicate of another issue.
+          required: true
+        - label: >-
+            I have filled out all of the requested information adequately.
+          required: true
+        - label: >-
+            I am using the [latest version](https://github.com/pantelx/bettershift/releases/latest).
+          required: true
