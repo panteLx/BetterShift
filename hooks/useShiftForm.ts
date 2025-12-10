@@ -123,9 +123,16 @@ export function useShiftForm({
         isAllDay: shift?.isAllDay || false,
       };
 
-      // Use a flag to prevent infinite loops
+      // Compare form data fields directly
       const needsUpdate =
-        JSON.stringify(formDataRef.current) !== JSON.stringify(newFormData);
+        formDataRef.current.date !== newFormData.date ||
+        formDataRef.current.startTime !== newFormData.startTime ||
+        formDataRef.current.endTime !== newFormData.endTime ||
+        formDataRef.current.title !== newFormData.title ||
+        formDataRef.current.notes !== newFormData.notes ||
+        formDataRef.current.color !== newFormData.color ||
+        formDataRef.current.isAllDay !== newFormData.isAllDay;
+
       if (needsUpdate) {
         setFormData(newFormData);
         setSaveAsPreset(false);

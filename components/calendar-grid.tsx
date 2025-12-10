@@ -344,13 +344,18 @@ export function CalendarGrid({
                             maxExternalShiftsToShow && (
                             <div
                               onClick={(e) => {
+                                if (selectedPresetId) return;
                                 e.stopPropagation();
                                 onShowSyncedShifts?.(
                                   day,
                                   sortedExternalNormalShifts
                                 );
                               }}
-                              className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-semibold text-center pt-0.5 hover:text-blue-500 dark:hover:text-blue-300 hover:underline cursor-pointer transition-colors"
+                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                                selectedPresetId
+                                  ? "cursor-not-allowed opacity-50"
+                                  : "hover:text-primary/80 hover:underline cursor-pointer"
+                              }`}
                             >
                               +
                               {sortedExternalNormalShifts.length -
@@ -417,7 +422,7 @@ export function CalendarGrid({
                               onClick={(e) => {
                                 if (selectedPresetId) return;
                                 e.stopPropagation();
-                                onShowAllShifts?.(
+                                onShowSyncedShifts?.(
                                   day,
                                   sortedExternalNormalShifts
                                 );

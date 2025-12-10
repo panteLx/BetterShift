@@ -9,7 +9,7 @@ import { verifyAndCachePassword } from "@/lib/password-cache";
 
 interface LockedCalendarViewProps {
   calendarId: string;
-  onUnlock: (password: string) => void;
+  onUnlock: () => void;
 }
 
 export function LockedCalendarView({
@@ -27,7 +27,7 @@ export function LockedCalendarView({
       const result = await verifyAndCachePassword(calendarId, password);
 
       if (result.valid) {
-        onUnlock(password);
+        onUnlock();
       } else {
         toast.error(t("validation.passwordIncorrect"));
       }
