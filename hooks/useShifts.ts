@@ -81,7 +81,7 @@ export function useShifts(calendarId: string | undefined) {
       setShifts((shifts) =>
         shifts.map((s) => (s.id === tempId ? newShift : s))
       );
-      toast.success(t("common.created", { item: t("shift.title") }));
+      toast.success(t("common.created", { item: t("shift.shift_one") }));
       return newShift;
     } catch (error) {
       console.error("Failed to create shift:", error);

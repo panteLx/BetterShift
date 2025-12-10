@@ -165,6 +165,8 @@ export async function POST(request: Request) {
         notes: notes || null,
         isAllDay: isAllDay || false,
         isSecondary: isSecondary || false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       })
       .returning();
 

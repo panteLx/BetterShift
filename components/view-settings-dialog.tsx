@@ -11,7 +11,14 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Maximize2, FileText, Infinity } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Maximize2, FileText, Infinity, ArrowUpDown } from "lucide-react";
 
 interface ViewSettingsDialogProps {
   open: boolean;
@@ -20,10 +27,16 @@ interface ViewSettingsDialogProps {
   externalShiftsPerDay: number | null;
   showShiftNotes: boolean;
   showFullTitles: boolean;
+  shiftSortType: "startTime" | "createdAt" | "title";
+  shiftSortOrder: "asc" | "desc";
+  combinedSortMode: boolean;
   onShiftsPerDayChange: (count: number | null) => void;
   onExternalShiftsPerDayChange: (count: number | null) => void;
   onShowShiftNotesChange: (show: boolean) => void;
   onShowFullTitlesChange: (show: boolean) => void;
+  onShiftSortTypeChange: (type: "startTime" | "createdAt" | "title") => void;
+  onShiftSortOrderChange: (order: "asc" | "desc") => void;
+  onCombinedSortModeChange: (combined: boolean) => void;
 }
 
 export function ViewSettingsDialog({
@@ -33,10 +46,16 @@ export function ViewSettingsDialog({
   externalShiftsPerDay,
   showShiftNotes,
   showFullTitles,
+  shiftSortType,
+  shiftSortOrder,
+  combinedSortMode,
   onShiftsPerDayChange,
   onExternalShiftsPerDayChange,
   onShowShiftNotesChange,
   onShowFullTitlesChange,
+  onShiftSortTypeChange,
+  onShiftSortOrderChange,
+  onCombinedSortModeChange,
 }: ViewSettingsDialogProps) {
   const t = useTranslations();
 
@@ -145,6 +164,84 @@ export function ViewSettingsDialog({
             <p className="text-xs text-muted-foreground">
               {t("view.externalShiftsPerDayHint")}
             </p>
+          </div>
+
+          {/* Shift Sorting */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold">
+                {t("view.sortOptions")}
+              </Label>
+            </div>
+            <div className="space-y-3 pl-6 border-l-2 border-border/50">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  {t("view.sortBy")}
+                </Label>
+                <Select
+                  value={shiftSortType}
+                  onValueChange={onShiftSortTypeChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="startTime">
+                      {t("view.sortByStartTime")}
+                    </SelectItem>
+                    <SelectItem value="createdAt">
+                      {t("view.sortByCreatedAt")}
+                    </SelectItem>
+                    <SelectItem value="title">
+                      {t("view.sortByTitle")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  {t("view.sortOrder")}
+                </Label>
+                <Select
+                  value={shiftSortOrder}
+                  onValueChange={onShiftSortOrderChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">
+                      {t("view.sortOrderAsc")}
+                    </SelectItem>
+                    <SelectItem value="desc">
+                      {t("view.sortOrderDesc")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-start gap-3 pt-2">
+                <Checkbox
+                  id="combined-sort"
+                  checked={combinedSortMode}
+                  onCheckedChange={onCombinedSortModeChange}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 space-y-1">
+                  <Label
+                    htmlFor="combined-sort"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    {t("view.combinedSort")}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("view.combinedSortHint")}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Show Shift Notes */}
