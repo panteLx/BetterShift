@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
@@ -29,6 +29,7 @@ export function ShiftStats({
   const [stats, setStats] = useState<ShiftStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const isInitialLoadRef = useRef(true);
 
   const fetchStats = useCallback(
     async (silent = false) => {
@@ -69,11 +70,10 @@ export function ShiftStats({
   // Fetch stats when dependencies change
   useEffect(() => {
     if (calendarId) {
-      const isInitialLoad = stats === null;
-      fetchStats(!isInitialLoad);
+      fetchStats(!isInitialLoadRef.current);
+      isInitialLoadRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calendarId, period, currentDate, refreshTrigger, fetchStats]);
+  }, [calendarId, refreshTrigger, fetchStats]);
 
   if (!calendarId) return null;
 

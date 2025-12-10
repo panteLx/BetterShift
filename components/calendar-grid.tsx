@@ -270,6 +270,19 @@ export function CalendarGrid({
                   allSortedShifts = [];
                 }
 
+                // Pre-compute index maps to avoid O(n²) complexity during rendering
+                const regularIndexMap = new Map<string, number>();
+                const externalIndexMap = new Map<string, number>();
+
+                if (combinedSortMode) {
+                  sortedRegularShifts.forEach((shift, index) => {
+                    regularIndexMap.set(shift.id, index);
+                  });
+                  sortedExternalNormalShifts.forEach((shift, index) => {
+                    externalIndexMap.set(shift.id, index);
+                  });
+                }
+
                 return (
                   <>
                     {combinedSortMode ? (
@@ -279,14 +292,10 @@ export function CalendarGrid({
                         {allSortedShifts.map((shift) => {
                           const isRegular = !shift.syncedFromExternal;
                           const regularIndex = isRegular
-                            ? sortedRegularShifts.findIndex(
-                                (s) => s.id === shift.id
-                              )
+                            ? regularIndexMap.get(shift.id) ?? -1
                             : -1;
                           const externalIndex = !isRegular
-                            ? sortedExternalNormalShifts.findIndex(
-                                (s) => s.id === shift.id
-                              )
+                            ? externalIndexMap.get(shift.id) ?? -1
                             : -1;
 
                           // Check if shift should be displayed based on its type's limit

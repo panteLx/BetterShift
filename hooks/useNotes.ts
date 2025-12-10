@@ -168,15 +168,16 @@ export function useNotes(calendarId: string | undefined) {
   };
 
   // Fetch notes when calendar changes
+
   useEffect(() => {
-    if (calendarId) {
-      fetchNotes();
-    } else {
+    if (!calendarId) {
+      // Data fetching on mount/calendar change is a valid effect use case
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNotes([]);
+      return;
     }
-    // fetchNotes is stable due to useCallback
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calendarId]);
+    fetchNotes();
+  }, [calendarId, fetchNotes]);
 
   return {
     notes,

@@ -47,10 +47,14 @@ export function usePasswordManagement(
 
   // Verify password when calendar changes
   useEffect(() => {
+    let cancelled = false;
+
     const verifyCalendar = async () => {
       if (!selectedCalendar) {
-        setIsCalendarUnlocked(true);
-        setIsVerifyingCalendarPassword(false);
+        if (!cancelled) {
+          setIsCalendarUnlocked(true);
+          setIsVerifyingCalendarPassword(false);
+        }
         return;
       }
 
@@ -58,30 +62,46 @@ export function usePasswordManagement(
         const cachedPassword = getCachedPassword(selectedCalendar);
 
         if (cachedPassword) {
-          setIsVerifyingCalendarPassword(true);
-          setIsCalendarUnlocked(false);
+          if (!cancelled) {
+            setIsVerifyingCalendarPassword(true);
+            setIsCalendarUnlocked(false);
+          }
 
           verifyAndCachePassword(selectedCalendar, cachedPassword)
             .then((result) => {
-              setIsCalendarUnlocked(result.valid);
+              if (!cancelled) {
+                setIsCalendarUnlocked(result.valid);
+              }
             })
             .catch(() => {
-              setIsCalendarUnlocked(false);
+              if (!cancelled) {
+                setIsCalendarUnlocked(false);
+              }
             })
             .finally(() => {
-              setIsVerifyingCalendarPassword(false);
+              if (!cancelled) {
+                setIsVerifyingCalendarPassword(false);
+              }
             });
         } else {
-          setIsCalendarUnlocked(false);
-          setIsVerifyingCalendarPassword(false);
+          if (!cancelled) {
+            setIsCalendarUnlocked(false);
+            setIsVerifyingCalendarPassword(false);
+          }
         }
       } else {
-        setIsCalendarUnlocked(true);
-        setIsVerifyingCalendarPassword(false);
+        if (!cancelled) {
+          setIsCalendarUnlocked(true);
+          setIsVerifyingCalendarPassword(false);
+        }
       }
     };
 
     verifyCalendar();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedCalendar, selectedCalendarIsLocked]);
 
   const handlePasswordSuccess = useCallback(() => {

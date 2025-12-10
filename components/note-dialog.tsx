@@ -44,8 +44,8 @@ export function NoteDialog({
   const prevNoteIdRef = useRef<string | undefined>(undefined);
   const isNewNote = !note;
 
-  // Initialize noteText based on note prop - use key to reset state
-  const [noteText, setNoteText] = useState(() => note?.note || "");
+  // State initialization - useEffect handles all updates
+  const [noteText, setNoteText] = useState("");
 
   // Update noteText when note changes (only when note ID actually changes)
   useEffect(() => {

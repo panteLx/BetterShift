@@ -33,13 +33,20 @@ export function DeleteCalendarDialog({
   const t = useTranslations();
   const [password, setPassword] = useState("");
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setPassword("");
+    }
+    onOpenChange(newOpen);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onConfirm(hasPassword ? password : undefined);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px] p-0 gap-0 border border-destructive/50 bg-gradient-to-b from-background via-background to-destructive/5 backdrop-blur-xl shadow-2xl shadow-destructive/10">
         <DialogHeader className="border-b border-destructive/30 bg-gradient-to-r from-destructive/15 via-destructive/10 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="flex items-center gap-2.5 text-destructive text-xl font-semibold">

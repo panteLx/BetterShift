@@ -169,15 +169,16 @@ export function useShifts(calendarId: string | undefined) {
   };
 
   // Fetch shifts when calendar changes
+
   useEffect(() => {
-    if (calendarId) {
-      fetchShifts();
-    } else {
+    if (!calendarId) {
+      // Data fetching on mount/calendar change is a valid effect use case
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShifts([]);
+      return;
     }
-    // fetchShifts is stable due to useCallback
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calendarId]);
+    fetchShifts();
+  }, [calendarId, fetchShifts]);
 
   return {
     shifts,

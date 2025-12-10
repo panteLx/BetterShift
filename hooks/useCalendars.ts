@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -11,6 +11,9 @@ export function useCalendars(initialCalendarId?: string | null) {
     string | undefined
   >();
   const [loading, setLoading] = useState(true);
+
+  // Capture initialCalendarId on mount to prevent dependency changes
+  const initialCalendarIdRef = useRef(initialCalendarId);
 
   const fetchCalendars = useCallback(async () => {
     try {
@@ -29,10 +32,12 @@ export function useCalendars(initialCalendarId?: string | null) {
         }
         // Otherwise, try initialCalendarId or fallback to first calendar
         if (
-          initialCalendarId &&
-          data.some((cal: CalendarWithCount) => cal.id === initialCalendarId)
+          initialCalendarIdRef.current &&
+          data.some(
+            (cal: CalendarWithCount) => cal.id === initialCalendarIdRef.current
+          )
         ) {
-          return initialCalendarId;
+          return initialCalendarIdRef.current;
         } else if (data.length > 0) {
           return data[0].id;
         }
@@ -43,7 +48,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [initialCalendarId]);
+  }, []);
 
   const createCalendar = async (
     name: string,
