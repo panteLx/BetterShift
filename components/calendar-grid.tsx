@@ -20,6 +20,9 @@ interface CalendarGridProps {
   maxExternalShiftsToShow?: number; // undefined = show all (external shifts)
   showShiftNotes?: boolean; // show notes in shift cards
   showFullTitles?: boolean; // show full titles without truncation
+  shiftSortType?: "startTime" | "createdAt" | "title"; // sort type
+  shiftSortOrder?: "asc" | "desc"; // sort order
+  combinedSortMode?: boolean; // sort all shifts together or separately
   onDayClick: (date: Date) => void;
   onDayRightClick?: (e: React.MouseEvent, date: Date) => void;
   onNoteIconClick?: (e: React.MouseEvent, date: Date) => void;
@@ -40,6 +43,9 @@ export function CalendarGrid({
   maxExternalShiftsToShow,
   showShiftNotes = false,
   showFullTitles = false,
+  shiftSortType = "createdAt",
+  shiftSortOrder = "asc",
+  combinedSortMode = false,
   onDayClick,
   onDayRightClick,
   onNoteIconClick,
@@ -72,6 +78,30 @@ export function CalendarGrid({
       date1.getMonth() === date2.getMonth() &&
       date1.getDate() === date2.getDate()
     );
+  };
+
+  const sortShifts = (shiftsToSort: ShiftWithCalendar[]) => {
+    return [...shiftsToSort].sort((a, b) => {
+      let comparison = 0;
+
+      switch (shiftSortType) {
+        case "startTime":
+          comparison = a.startTime.localeCompare(b.startTime);
+          break;
+        case "createdAt": {
+          // Handle null values by treating them as very old dates
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          comparison = aTime - bTime;
+          break;
+        }
+        case "title":
+          comparison = a.title.localeCompare(b.title);
+          break;
+      }
+
+      return shiftSortOrder === "asc" ? comparison : -comparison;
+    });
   };
 
   return (
@@ -218,73 +248,140 @@ export function CalendarGrid({
                   return sync && sync.displayMode === "normal";
                 });
 
+                // Apply sorting based on mode
+                let sortedRegularShifts: ShiftWithCalendar[];
+                let sortedExternalNormalShifts: ShiftWithCalendar[];
+                let allSortedShifts: ShiftWithCalendar[];
+
+                if (combinedSortMode) {
+                  // Combined mode: sort all shifts together
+                  const allNormalShifts = [
+                    ...regularShifts,
+                    ...externalNormalShifts,
+                  ];
+                  allSortedShifts = sortShifts(allNormalShifts);
+                  sortedRegularShifts = [];
+                  sortedExternalNormalShifts = [];
+                } else {
+                  // Separate mode: sort each group separately
+                  sortedRegularShifts = sortShifts(regularShifts);
+                  sortedExternalNormalShifts = sortShifts(externalNormalShifts);
+                  allSortedShifts = [];
+                }
+
                 return (
                   <>
-                    {/* Display regular shifts */}
-                    {(maxShiftsToShow === undefined
-                      ? regularShifts
-                      : regularShifts.slice(0, maxShiftsToShow)
-                    ).map((shift) => (
-                      <CalendarShiftCard
-                        key={shift.id}
-                        shift={shift}
-                        showShiftNotes={showShiftNotes}
-                        showFullTitles={showFullTitles}
-                      />
-                    ))}
+                    {combinedSortMode ? (
+                      // Combined mode: display all shifts together
+                      <>
+                        {(maxShiftsToShow === undefined
+                          ? allSortedShifts
+                          : allSortedShifts.slice(0, maxShiftsToShow)
+                        ).map((shift) => (
+                          <CalendarShiftCard
+                            key={shift.id}
+                            shift={shift}
+                            showShiftNotes={showShiftNotes}
+                            showFullTitles={showFullTitles}
+                          />
+                        ))}
 
-                    {/* Show "+X more" for regular shifts if limited by maxShiftsToShow */}
-                    {maxShiftsToShow !== undefined &&
-                      regularShifts.length > maxShiftsToShow && (
-                        <div
-                          onClick={(e) => {
-                            if (selectedPresetId) return;
-                            e.stopPropagation();
-                            onShowAllShifts?.(day, regularShifts);
-                          }}
-                          className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
-                            selectedPresetId
-                              ? "cursor-not-allowed opacity-50"
-                              : "hover:text-primary/80 hover:underline cursor-pointer"
-                          }`}
-                        >
-                          +{regularShifts.length - maxShiftsToShow}
-                        </div>
-                      )}
+                        {/* Show "+X more" if limited by maxShiftsToShow */}
+                        {maxShiftsToShow !== undefined &&
+                          allSortedShifts.length > maxShiftsToShow && (
+                            <div
+                              onClick={(e) => {
+                                if (selectedPresetId) return;
+                                e.stopPropagation();
+                                onShowAllShifts?.(day, allSortedShifts);
+                              }}
+                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                                selectedPresetId
+                                  ? "cursor-not-allowed opacity-50"
+                                  : "hover:text-primary/80 hover:underline cursor-pointer"
+                              }`}
+                            >
+                              +{allSortedShifts.length - maxShiftsToShow}
+                            </div>
+                          )}
+                      </>
+                    ) : (
+                      // Separate mode: display regular and external shifts separately
+                      <>
+                        {/* Display regular shifts */}
+                        {(maxShiftsToShow === undefined
+                          ? sortedRegularShifts
+                          : sortedRegularShifts.slice(0, maxShiftsToShow)
+                        ).map((shift) => (
+                          <CalendarShiftCard
+                            key={shift.id}
+                            shift={shift}
+                            showShiftNotes={showShiftNotes}
+                            showFullTitles={showFullTitles}
+                          />
+                        ))}
 
-                    {/* Display external shifts with normal display mode */}
-                    {(maxExternalShiftsToShow === undefined
-                      ? externalNormalShifts
-                      : externalNormalShifts.slice(0, maxExternalShiftsToShow)
-                    ).map((shift) => (
-                      <CalendarShiftCard
-                        key={shift.id}
-                        shift={shift}
-                        showShiftNotes={showShiftNotes}
-                        showFullTitles={showFullTitles}
-                      />
-                    ))}
+                        {/* Show "+X more" for regular shifts if limited by maxShiftsToShow */}
+                        {maxShiftsToShow !== undefined &&
+                          sortedRegularShifts.length > maxShiftsToShow && (
+                            <div
+                              onClick={(e) => {
+                                if (selectedPresetId) return;
+                                e.stopPropagation();
+                                onShowAllShifts?.(day, sortedRegularShifts);
+                              }}
+                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                                selectedPresetId
+                                  ? "cursor-not-allowed opacity-50"
+                                  : "hover:text-primary/80 hover:underline cursor-pointer"
+                              }`}
+                            >
+                              +{sortedRegularShifts.length - maxShiftsToShow}
+                            </div>
+                          )}
 
-                    {/* Show "+X more" for external shifts if limited by maxExternalShiftsToShow */}
-                    {maxExternalShiftsToShow !== undefined &&
-                      externalNormalShifts.length > maxExternalShiftsToShow && (
-                        <div
-                          onClick={(e) => {
-                            if (selectedPresetId) return;
-                            e.stopPropagation();
-                            onShowAllShifts?.(day, externalNormalShifts);
-                          }}
-                          className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
-                            selectedPresetId
-                              ? "cursor-not-allowed opacity-50"
-                              : "hover:text-primary/80 hover:underline cursor-pointer"
-                          }`}
-                        >
-                          +
-                          {externalNormalShifts.length -
-                            maxExternalShiftsToShow}
-                        </div>
-                      )}
+                        {/* Display external shifts with normal display mode */}
+                        {(maxExternalShiftsToShow === undefined
+                          ? sortedExternalNormalShifts
+                          : sortedExternalNormalShifts.slice(
+                              0,
+                              maxExternalShiftsToShow
+                            )
+                        ).map((shift) => (
+                          <CalendarShiftCard
+                            key={shift.id}
+                            shift={shift}
+                            showShiftNotes={showShiftNotes}
+                            showFullTitles={showFullTitles}
+                          />
+                        ))}
+
+                        {/* Show "+X more" for external shifts if limited by maxExternalShiftsToShow */}
+                        {maxExternalShiftsToShow !== undefined &&
+                          sortedExternalNormalShifts.length >
+                            maxExternalShiftsToShow && (
+                            <div
+                              onClick={(e) => {
+                                if (selectedPresetId) return;
+                                e.stopPropagation();
+                                onShowAllShifts?.(
+                                  day,
+                                  sortedExternalNormalShifts
+                                );
+                              }}
+                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                                selectedPresetId
+                                  ? "cursor-not-allowed opacity-50"
+                                  : "hover:text-primary/80 hover:underline cursor-pointer"
+                              }`}
+                            >
+                              +
+                              {sortedExternalNormalShifts.length -
+                                maxExternalShiftsToShow}
+                            </div>
+                          )}
+                      </>
+                    )}
 
                     {/* Show minimal badges for each sync with minimal display mode */}
                     {Object.entries(syncedShiftsByMode).map(
