@@ -20,15 +20,21 @@ export function useSSEConnection({
   onNoteUpdate,
   onStatsRefresh,
   onSyncLogUpdate,
-  isConnected,
   setIsConnected,
 }: SSEConnectionOptions) {
   const t = useTranslations();
   const eventSourceRef = useRef<EventSource | null>(null);
-  const lastSyncTimeRef = useRef<number>(Date.now());
+  const lastSyncTimeRef = useRef<number>(0);
   const disconnectTimeRef = useRef<number | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize lastSyncTimeRef on mount
+  useEffect(() => {
+    if (lastSyncTimeRef.current === 0) {
+      lastSyncTimeRef.current = Date.now();
+    }
+  }, []);
 
   // Refs to avoid stale closures in SSE handlers
   const shiftUpdateRef = useRef(onShiftUpdate);

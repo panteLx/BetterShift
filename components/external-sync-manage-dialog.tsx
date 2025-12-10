@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ExternalSync, SyncLog } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,6 @@ import {
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
-import { ExternalSync } from "@/lib/db/schema";
 import {
   Loader2,
   Trash2,
@@ -121,11 +121,11 @@ export function ExternalSyncManageDialog({
             // Get the latest error for each external sync
             data.forEach((sync: ExternalSync) => {
               const syncLogs = logs.filter(
-                (log: any) => log.externalSyncId === sync.id
+                (log: SyncLog) => log.externalSyncId === sync.id
               );
               // Only show unread errors
               const latestError = syncLogs.find(
-                (log: any) => log.status === "error" && !log.isRead
+                (log: SyncLog) => log.status === "error" && !log.isRead
               );
               if (latestError) {
                 errors[sync.id] =
@@ -287,55 +287,6 @@ export function ExternalSyncManageDialog({
       console.error("Failed to create sync:", error);
       toast.error(
         t("common.createError", { item: t("externalSync.syncTypeCustom") })
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpdateSync = async () => {
-    if (!editingSync || !formName.trim()) return;
-
-    setIsLoading(true);
-    try {
-      const password = getCachedPassword(calendarId);
-
-      const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formName.trim(),
-          calendarUrl: formUrl.trim() || undefined,
-          color: formColor,
-          displayMode: formDisplayMode,
-          autoSyncInterval: formAutoSyncInterval,
-          password,
-        }),
-      });
-
-      if (response.ok) {
-        setEditingSync(null);
-        setFormName("");
-        setFormUrl("");
-        setFormColor("#3b82f6");
-        setFormDisplayMode("normal");
-        setFormAutoSyncInterval(0);
-        await fetchSyncs();
-        onSyncComplete?.(); // Trigger refresh of shifts and externalSyncs
-        toast.success(
-          t("common.updated", { item: t("externalSync.syncTypeCustom") })
-        );
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error ||
-            t("common.updateError", { item: t("externalSync.syncTypeCustom") })
-        );
-      }
-    } catch (error) {
-      console.error("Failed to update sync:", error);
-      toast.error(
-        t("common.updateError", { item: t("externalSync.syncTypeCustom") })
       );
     } finally {
       setIsLoading(false);
@@ -590,6 +541,7 @@ export function ExternalSyncManageDialog({
       }
     },
     [
+      calendarId,
       editingSync,
       formName,
       formUrl,

@@ -88,7 +88,7 @@ export async function PATCH(
       }
     }
 
-    const updateData: any = {};
+    const updateData: Partial<typeof calendars.$inferInsert> = {};
     if (name) updateData.name = name;
     if (color) updateData.color = color;
     if (password !== undefined) {
@@ -141,7 +141,7 @@ export async function DELETE(
       try {
         const body = await request.json();
         password = body.password || null;
-      } catch (e) {
+      } catch {
         // If body parsing fails, continue with null password
       }
     }

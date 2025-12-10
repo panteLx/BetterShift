@@ -38,23 +38,27 @@ export function NoteDialog({
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
-  const [noteText, setNoteText] = useState("");
   const initialNoteRef = useRef<string>("");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
+  const prevNoteIdRef = useRef<string | undefined>(undefined);
   const isNewNote = !note;
 
+  // Initialize noteText based on note prop - use key to reset state
+  const [noteText, setNoteText] = useState(() => note?.note || "");
+
+  // Update noteText when note changes (only when note ID actually changes)
   useEffect(() => {
     if (open) {
-      const initialNote = note?.note || "";
-      setNoteText(initialNote);
-      initialNoteRef.current = initialNote;
-      isInitialMount.current = true;
-    } else {
-      // Clear timeout when dialog closes
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = null;
+      const currentNoteId = note?.id;
+      // Only update if note ID changed to avoid cascading renders
+      if (prevNoteIdRef.current !== currentNoteId) {
+        const currentNote = note?.note || "";
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setNoteText(currentNote);
+        initialNoteRef.current = currentNote;
+        isInitialMount.current = true;
+        prevNoteIdRef.current = currentNoteId;
       }
     }
   }, [open, note]);
@@ -127,7 +131,10 @@ export function NoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-[480px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
+      <DialogContent
+        key={note?.id || "new-note"}
+        className="sm:max-w-[480px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl"
+      >
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">

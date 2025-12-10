@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       }
     }
 
-    let query = db
+    const query = db
       .select({
         id: shifts.id,
         calendarId: shifts.calendarId,

@@ -158,6 +158,7 @@ export function PresetSelector({
 
         onPresetsChange();
         if (onShiftsChange) onShiftsChange();
+        if (onStatsRefresh) onStatsRefresh();
         toast.success(t("common.deleted", { item: t("preset.create") }));
       } catch (error) {
         console.error("Failed to delete preset:", error);

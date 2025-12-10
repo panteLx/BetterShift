@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest) {
       try {
         const body = await request.json();
         password = body.password || null;
-      } catch (e) {
+      } catch {
         // If body parsing fails, continue with null password
       }
     }
@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest) {
       try {
         const body = await request.json();
         password = body.password || null;
-      } catch (e) {
+      } catch {
         // If body parsing fails, continue with null password
       }
     }

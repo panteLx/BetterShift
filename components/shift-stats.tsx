@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
@@ -30,45 +30,50 @@ export function ShiftStats({
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
+  const fetchStats = useCallback(
+    async (silent = false) => {
+      if (!calendarId) return;
+
+      if (!silent) {
+        setLoading(true);
+      }
+
+      try {
+        const password = getCachedPassword(calendarId);
+        const params = new URLSearchParams({
+          calendarId,
+          period,
+          date: currentDate.toISOString(),
+        });
+        if (password) {
+          params.append("password", password);
+        }
+
+        const response = await fetch(`/api/shifts/stats?${params}`);
+        if (!response.ok) {
+          return; // Calendar is locked and no valid password
+        }
+        const data = await response.json();
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch shift statistics:", error);
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [calendarId, period, currentDate]
+  );
+
+  // Fetch stats when dependencies change
   useEffect(() => {
     if (calendarId) {
-      fetchStats();
+      const isInitialLoad = stats === null;
+      fetchStats(!isInitialLoad);
     }
-  }, [calendarId, period, currentDate, refreshTrigger]);
-
-  const fetchStats = async () => {
-    if (!calendarId) return;
-
-    const isInitialLoad = stats === null;
-    if (isInitialLoad) {
-      setLoading(true);
-    }
-
-    try {
-      const password = getCachedPassword(calendarId);
-      const params = new URLSearchParams({
-        calendarId,
-        period,
-        date: currentDate.toISOString(),
-      });
-      if (password) {
-        params.append("password", password);
-      }
-
-      const response = await fetch(`/api/shifts/stats?${params}`);
-      if (!response.ok) {
-        return; // Calendar is locked and no valid password
-      }
-      const data = await response.json();
-      setStats(data);
-    } catch (error) {
-      console.error("Failed to fetch shift statistics:", error);
-    } finally {
-      if (isInitialLoad) {
-        setLoading(false);
-      }
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarId, period, currentDate, refreshTrigger, fetchStats]);
 
   if (!calendarId) return null;
 

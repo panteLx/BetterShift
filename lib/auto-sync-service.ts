@@ -6,7 +6,7 @@
 
 import { db } from "@/lib/db";
 import { externalSyncs } from "@/lib/db/schema";
-import { gt, eq } from "drizzle-orm";
+import { gt } from "drizzle-orm";
 import { eventEmitter } from "@/lib/event-emitter";
 import { syncExternalCalendar } from "@/app/api/external-syncs/[id]/sync/route";
 

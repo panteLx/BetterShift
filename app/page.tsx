@@ -2,12 +2,13 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations, useLocale } from "next-intl";
+import { useLocale } from "next-intl";
 import { isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { getDateLocale } from "@/lib/locales";
 import { motion } from "motion/react";
+import { ShiftWithCalendar } from "@/lib/types";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useShifts } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
@@ -33,7 +34,6 @@ import { getCalendarDays } from "@/lib/calendar-utils";
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
 
@@ -161,7 +161,7 @@ function HomeContent() {
   }, [selectedCalendar, router]);
 
   // Handle password success with data refresh
-  const handlePasswordSuccess = async (password: string) => {
+  const handlePasswordSuccess = async () => {
     await Promise.all([
       refetchShifts(),
       refetchPresets(),
@@ -263,13 +263,16 @@ function HomeContent() {
     noteActions.openNoteDialog(date, existingNote);
   };
 
-  const handleShowAllShifts = (date: Date, dayShifts: any[]) => {
+  const handleShowAllShifts = (date: Date, dayShifts: ShiftWithCalendar[]) => {
     dialogStates.setSelectedDayDate(date);
     dialogStates.setSelectedDayShifts(dayShifts);
     dialogStates.setShowDayShiftsDialog(true);
   };
 
-  const handleShowSyncedShifts = (date: Date, syncedShifts: any[]) => {
+  const handleShowSyncedShifts = (
+    date: Date,
+    syncedShifts: ShiftWithCalendar[]
+  ) => {
     dialogStates.setSelectedDayDate(date);
     dialogStates.setSelectedSyncedShifts(syncedShifts);
     dialogStates.setShowSyncedShiftsDialog(true);
@@ -341,9 +344,9 @@ function HomeContent() {
         ) : selectedCalendar && !isCalendarUnlocked ? (
           <LockedCalendarView
             calendarId={selectedCalendar}
-            onUnlock={(password) => {
+            onUnlock={() => {
               setIsCalendarUnlocked(true);
-              handlePasswordSuccess(password);
+              handlePasswordSuccess();
             }}
           />
         ) : (

@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { ShiftFormData } from "@/components/shift-dialog";
 import { PRESET_COLORS } from "@/lib/constants";
-import { Check } from "lucide-react";
 
 interface ShiftFormFieldsProps {
   formData: ShiftFormData;
@@ -30,7 +29,6 @@ export function ShiftFormFields({
   onPresetNameChange,
   isEditing,
   onBlur,
-  showSaved = false,
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
 

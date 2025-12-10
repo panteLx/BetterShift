@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       }
     }
 
-    let query = db
+    const query = db
       .select()
       .from(calendarNotes)
       .where(eq(calendarNotes.calendarId, calendarId));

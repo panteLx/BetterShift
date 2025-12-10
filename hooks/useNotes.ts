@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CalendarNote } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ export function useNotes(calendarId: string | undefined) {
   const t = useTranslations();
   const [notes, setNotes] = useState<CalendarNote[]>([]);
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     if (!calendarId) return;
 
     try {
@@ -38,7 +38,7 @@ export function useNotes(calendarId: string | undefined) {
       // Network errors or other exceptions - don't clear existing notes
       console.error("Failed to fetch notes:", error);
     }
-  };
+  }, [calendarId]);
 
   const createNote = async (
     noteText: string,
@@ -167,12 +167,15 @@ export function useNotes(calendarId: string | undefined) {
     }
   };
 
+  // Fetch notes when calendar changes
   useEffect(() => {
     if (calendarId) {
       fetchNotes();
     } else {
       setNotes([]);
     }
+    // fetchNotes is stable due to useCallback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarId]);
 
   return {

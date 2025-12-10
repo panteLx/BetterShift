@@ -59,7 +59,6 @@ export function ShiftDialog({
     applyPreset,
     saveAsPresetHandler,
     resetForm,
-    refetchPresets,
   } = useShiftForm({ open, shift, selectedDate, calendarId });
 
   const initialDataRef = useRef<ShiftFormData | null>(null);

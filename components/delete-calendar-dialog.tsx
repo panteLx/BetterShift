@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -32,12 +32,6 @@ export function DeleteCalendarDialog({
 }: DeleteCalendarDialogProps) {
   const t = useTranslations();
   const [password, setPassword] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      setPassword("");
-    }
-  }, [open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ExternalSync } from "@/lib/db/schema";
+import { ExternalSync, SyncLog } from "@/lib/db/schema";
 import { getCachedPassword } from "@/lib/password-cache";
 
 export function useExternalSync(selectedCalendar: string | null) {
@@ -49,9 +49,9 @@ export function useExternalSync(selectedCalendar: string | null) {
 
       const response = await fetch(`/api/sync-logs?${params}`);
       if (response.ok) {
-        const logs = await response.json();
+        const logs: SyncLog[] = await response.json();
         const hasErrors = logs.some(
-          (log: any) => log.status === "error" && !log.isRead
+          (log: SyncLog) => log.status === "error" && !log.isRead
         );
         setHasSyncErrors(hasErrors);
       }
@@ -60,10 +60,15 @@ export function useExternalSync(selectedCalendar: string | null) {
     }
   }, [selectedCalendar]);
 
+  // Fetch syncs and error status when calendar changes
   useEffect(() => {
-    fetchExternalSyncs();
-    fetchSyncErrorStatus();
-  }, [fetchExternalSyncs, fetchSyncErrorStatus]);
+    if (selectedCalendar) {
+      const initializeData = async () => {
+        await Promise.all([fetchExternalSyncs(), fetchSyncErrorStatus()]);
+      };
+      initializeData();
+    }
+  }, [selectedCalendar, fetchExternalSyncs, fetchSyncErrorStatus]);
 
   return {
     externalSyncs,

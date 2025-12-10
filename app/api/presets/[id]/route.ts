@@ -174,7 +174,7 @@ export async function DELETE(
       try {
         const body = await request.json();
         password = body.password || null;
-      } catch (e) {
+      } catch {
         // If body parsing fails, continue with null password
       }
     }

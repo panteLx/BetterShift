@@ -31,7 +31,7 @@ function getDockerVersion(): string | null {
       cachedDockerVersion = readFileSync(versionFilePath, "utf-8").trim();
       return cachedDockerVersion;
     }
-  } catch (error) {
+  } catch {
     console.log("No .version file found, not running in Docker");
   }
 

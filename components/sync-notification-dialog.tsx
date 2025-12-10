@@ -43,7 +43,6 @@ export function SyncNotificationDialog({
   onOpenChange,
   calendarId,
   onErrorsMarkedRead,
-  onSyncLogUpdate,
   syncLogRefreshTrigger,
 }: SyncNotificationDialogProps) {
   const t = useTranslations();

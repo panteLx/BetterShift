@@ -43,23 +43,9 @@ export function PresetEditDialog({
   onSave,
 }: PresetEditDialogProps) {
   const t = useTranslations();
-  const [formData, setFormData] = useState<PresetFormData>({
-    title: "",
-    startTime: "09:00",
-    endTime: "17:00",
-    color: PRESET_COLORS[0].value,
-    notes: "",
-    isSecondary: false,
-    isAllDay: false,
-    hideFromStats: false,
-  });
-  const initialDataRef = useRef<PresetFormData | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitialMount = useRef(true);
-
-  useEffect(() => {
-    if (open && preset && !isCreating) {
-      const initialData = {
+  const [formData, setFormData] = useState<PresetFormData>(() => {
+    if (preset && !isCreating) {
+      return {
         title: preset.title,
         startTime: preset.startTime,
         endTime: preset.endTime,
@@ -69,29 +55,72 @@ export function PresetEditDialog({
         isAllDay: preset.isAllDay || false,
         hideFromStats: preset.hideFromStats || false,
       };
-      setFormData(initialData);
-      initialDataRef.current = initialData;
-      isInitialMount.current = true;
-    } else if (open && isCreating) {
-      const initialData = {
-        title: "",
-        startTime: "09:00",
-        endTime: "17:00",
-        color: PRESET_COLORS[0].value,
-        notes: "",
-        isSecondary: false,
-        isAllDay: false,
-        hideFromStats: false,
-      };
-      setFormData(initialData);
-      initialDataRef.current = initialData;
-      isInitialMount.current = true;
-    } else if (!open) {
+    }
+    return {
+      title: "",
+      startTime: "09:00",
+      endTime: "17:00",
+      color: PRESET_COLORS[0].value,
+      notes: "",
+      isSecondary: false,
+      isAllDay: false,
+      hideFromStats: false,
+    };
+  });
+  const initialDataRef = useRef<PresetFormData | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+  const prevPresetIdRef = useRef<string | undefined>(undefined);
+  const prevIsCreatingRef = useRef<boolean>(isCreating);
+
+  // Update formData when preset changes (only when preset ID or mode actually changes)
+  useEffect(() => {
+    if (!open) {
       // Clear timeout when dialog closes
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
       }
+      return;
+    }
+
+    const currentPresetId = preset?.id;
+    const modeChanged = prevIsCreatingRef.current !== isCreating;
+
+    // Only update if preset ID or mode changed to avoid cascading renders
+    if (prevPresetIdRef.current !== currentPresetId || modeChanged) {
+      if (preset && !isCreating) {
+        const initialData = {
+          title: preset.title,
+          startTime: preset.startTime,
+          endTime: preset.endTime,
+          color: preset.color,
+          notes: preset.notes || "",
+          isSecondary: preset.isSecondary || false,
+          isAllDay: preset.isAllDay || false,
+          hideFromStats: preset.hideFromStats || false,
+        };
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFormData(initialData);
+        initialDataRef.current = initialData;
+        isInitialMount.current = true;
+      } else if (isCreating) {
+        const initialData = {
+          title: "",
+          startTime: "09:00",
+          endTime: "17:00",
+          color: PRESET_COLORS[0].value,
+          notes: "",
+          isSecondary: false,
+          isAllDay: false,
+          hideFromStats: false,
+        };
+        setFormData(initialData);
+        initialDataRef.current = initialData;
+        isInitialMount.current = true;
+      }
+      prevPresetIdRef.current = currentPresetId;
+      prevIsCreatingRef.current = isCreating;
     }
   }, [open, preset, isCreating]);
 
@@ -147,7 +176,10 @@ export function PresetEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] max-w-[520px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
+      <DialogContent
+        key={preset?.id || "new-preset"}
+        className="max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] max-w-[520px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl"
+      >
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
             {isCreating ? t("preset.createNew") : t("preset.edit")}

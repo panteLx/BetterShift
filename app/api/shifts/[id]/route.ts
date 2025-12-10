@@ -129,7 +129,7 @@ export async function PATCH(
       }
     }
 
-    const updateData: any = {};
+    const updateData: Partial<typeof shifts.$inferInsert> = {};
     if (date) updateData.date = new Date(date);
     if (startTime !== undefined) updateData.startTime = startTime;
     if (endTime !== undefined) updateData.endTime = endTime;
@@ -179,7 +179,7 @@ export async function DELETE(
       try {
         const body = await request.json();
         password = body.password || null;
-      } catch (e) {
+      } catch {
         // If body parsing fails, continue with null password
       }
     }

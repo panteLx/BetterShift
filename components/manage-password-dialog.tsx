@@ -83,7 +83,11 @@ export function ManagePasswordDialog({
     setLoading(true);
 
     try {
-      const requestBody: any = {
+      const requestBody: {
+        currentPassword?: string;
+        isLocked: boolean;
+        password?: string | null;
+      } = {
         currentPassword: hasPassword ? currentPassword : undefined,
         isLocked: lockCalendar,
       };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -12,26 +12,38 @@ export function useCalendars(initialCalendarId?: string | null) {
   >();
   const [loading, setLoading] = useState(true);
 
-  const fetchCalendars = async () => {
+  const fetchCalendars = useCallback(async () => {
     try {
       const response = await fetch("/api/calendars");
       const data = await response.json();
       setCalendars(data);
 
-      if (
-        initialCalendarId &&
-        data.some((cal: CalendarWithCount) => cal.id === initialCalendarId)
-      ) {
-        setSelectedCalendar(initialCalendarId);
-      } else if (data.length > 0 && !selectedCalendar) {
-        setSelectedCalendar(data[0].id);
-      }
+      // Only auto-select on initial load
+      setSelectedCalendar((current) => {
+        // If a calendar is already selected and still exists, keep it
+        if (
+          current &&
+          data.some((cal: CalendarWithCount) => cal.id === current)
+        ) {
+          return current;
+        }
+        // Otherwise, try initialCalendarId or fallback to first calendar
+        if (
+          initialCalendarId &&
+          data.some((cal: CalendarWithCount) => cal.id === initialCalendarId)
+        ) {
+          return initialCalendarId;
+        } else if (data.length > 0) {
+          return data[0].id;
+        }
+        return undefined;
+      });
     } catch (error) {
       console.error("Failed to fetch calendars:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [initialCalendarId]);
 
   const createCalendar = async (
     name: string,
@@ -126,9 +138,10 @@ export function useCalendars(initialCalendarId?: string | null) {
     return false;
   };
 
+  // Initial calendar fetch
   useEffect(() => {
     fetchCalendars();
-  }, []);
+  }, [fetchCalendars]);
 
   return {
     calendars,
