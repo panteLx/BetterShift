@@ -215,6 +215,41 @@ $ npm run db:studio
 
 ---
 
+## 🧪 Testing & Quality Assurance
+
+### Automated CI Tests
+
+All pull requests are automatically tested with GitHub Actions:
+
+- **ESLint** — Checks code quality and style
+- **Build Test** — Ensures the application builds successfully (includes TypeScript validation)
+- **Database Migrations** — Verifies migrations run without errors
+
+### Local Testing
+
+Run these commands before submitting a pull request:
+
+```bash
+# Run all tests (lint + build with TypeScript check)
+$ npm test
+
+# Run individual checks
+$ npm run lint         # ESLint code quality check
+$ npm run build        # Next.js production build (includes TypeScript validation)
+
+# Full CI test suite (includes database migration test)
+$ npm run test:ci
+```
+
+**Recommended Pre-Commit Workflow:**
+
+1. Run `npm test` to catch issues early
+2. Fix any TypeScript or linting errors
+3. Ensure build completes successfully
+4. Commit and push your changes
+
+---
+
 ## 💖 Support the Project
 
 Your support helps maintain and improve this project! Please consider:
