@@ -5,12 +5,14 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
+import { formatDuration } from "@/lib/date-utils";
 
 interface ShiftStats {
   period: string;
   startDate: string;
   endDate: string;
-  stats: Record<string, number>;
+  stats: Record<string, { count: number; totalMinutes: number }>;
+  totalMinutes: number;
 }
 
 interface ShiftStatsProps {
@@ -79,8 +81,10 @@ export function ShiftStats({
 
   const totalShifts =
     stats && stats.stats
-      ? Object.values(stats.stats).reduce((sum, count) => sum + count, 0)
+      ? Object.values(stats.stats).reduce((sum, data) => sum + data.count, 0)
       : 0;
+
+  const totalMinutes = stats?.totalMinutes || 0;
 
   return (
     <div className="border border-border/50 rounded-xl bg-gradient-to-b from-card/80 via-card/60 to-card/40 backdrop-blur-sm overflow-hidden shadow-lg">
@@ -99,11 +103,20 @@ export function ShiftStats({
         </div>
         <div className="flex items-center gap-2">
           {!isExpanded && stats && totalShifts > 0 && (
-            <div className="px-3 py-1.5 bg-primary/10 rounded-full">
-              <span className="font-semibold text-primary text-xs sm:text-sm">
-                {totalShifts}
-              </span>
-            </div>
+            <>
+              <div className="px-2.5 py-1 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-lg">
+                <span className="font-bold text-primary text-xs sm:text-sm">
+                  {totalShifts}
+                </span>
+              </div>
+              {totalMinutes > 0 && (
+                <div className="px-2.5 py-1 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-lg">
+                  <span className="font-bold text-primary text-xs sm:text-sm">
+                    {formatDuration(totalMinutes)}
+                  </span>
+                </div>
+              )}
+            </>
           )}
           {!isExpanded && stats && totalShifts > 0 && (
             <div className="hidden sm:flex gap-1.5">
@@ -194,37 +207,82 @@ export function ShiftStats({
             </p>
           ) : stats && Object.keys(stats.stats).length > 0 ? (
             <div className="space-y-3.5">
-              <div className="flex justify-between items-center pb-2.5 border-b border-border/50">
-                <span className="font-semibold text-sm sm:text-base flex items-center gap-2">
-                  <div className="w-1 h-5 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-                  {t("stats.total")}
-                </span>
-                <span className="font-bold text-xl sm:text-2xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text">
-                  {totalShifts}
-                </span>
+              {/* Total Statistics Card */}
+              <div className="p-3 rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-xs sm:text-sm flex items-center gap-2">
+                    <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full shadow-sm shadow-primary/20"></div>
+                    {t("stats.total")}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {/* Shift Count */}
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] text-muted-foreground font-medium mb-0.5">
+                        Schichten
+                      </span>
+                      <div className="px-2.5 py-1 rounded-md bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30">
+                        <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                          {totalShifts}
+                        </span>
+                      </div>
+                    </div>
+                    {totalMinutes > 0 && (
+                      <>
+                        <div className="h-8 w-px bg-gradient-to-b from-transparent via-border to-transparent"></div>
+                        {/* Duration */}
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-muted-foreground font-medium mb-0.5">
+                            Stunden
+                          </span>
+                          <div className="px-2.5 py-1 rounded-md bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30">
+                            <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                              {formatDuration(totalMinutes)}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Individual Shift Types */}
               {Object.entries(stats.stats)
-                .sort(([, a], [, b]) => b - a)
-                .map(([title, count]) => (
+                .sort(([, a], [, b]) => b.count - a.count)
+                .map(([title, data]) => (
                   <div
                     key={title}
-                    className="flex justify-between items-center gap-3 p-2.5 rounded-lg bg-muted/30 border border-border/30 hover:bg-muted/50 transition-colors"
+                    className="group relative p-3 rounded-lg bg-gradient-to-br from-card via-card/80 to-card/60 border border-border/40 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all duration-200"
                   >
-                    <span className="text-sm font-medium truncate flex-shrink min-w-0">
-                      {title}
-                    </span>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      <div className="w-20 sm:w-28 h-2.5 bg-muted rounded-full overflow-hidden border border-border/30">
-                        <div
-                          className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all shadow-sm"
-                          style={{
-                            width: `${(count / totalShifts) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="font-bold text-sm w-6 sm:w-8 text-right">
-                        {count}
+                    <div className="flex justify-between items-center gap-3">
+                      <span className="text-sm font-semibold truncate flex-shrink min-w-0 group-hover:text-primary transition-colors">
+                        {title}
                       </span>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {/* Progress Bar */}
+                        <div className="w-24 sm:w-32 h-2 bg-muted/50 rounded-full overflow-hidden border border-border/20 shadow-inner">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary via-primary/90 to-primary/80 transition-all duration-300 shadow-sm"
+                            style={{
+                              width: `${(data.count / totalShifts) * 100}%`,
+                            }}
+                          />
+                        </div>
+                        {/* Count Badge */}
+                        <div className="min-w-[2.5rem] px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
+                          <span className="font-bold text-sm text-primary text-center block">
+                            {data.count}
+                          </span>
+                        </div>
+                        {/* Duration Badge */}
+                        {data.totalMinutes > 0 && (
+                          <div className="min-w-[3rem] sm:min-w-[3.5rem] px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
+                            <span className="font-semibold text-xs sm:text-sm text-primary text-center block">
+                              {formatDuration(data.totalMinutes)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

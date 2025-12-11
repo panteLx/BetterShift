@@ -6,7 +6,7 @@ import {
   shiftPresets,
   calendars,
 } from "@/lib/db/schema";
-import { eq, and, gte, lte, sql, or, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { verifyPassword } from "@/lib/password-utils";
 import {
   startOfWeek,
@@ -83,7 +83,9 @@ export async function GET(request: Request) {
     const result = await db
       .select({
         title: shifts.title,
-        count: sql<number>`count(*)`.as("count"),
+        startTime: shifts.startTime,
+        endTime: shifts.endTime,
+        isAllDay: shifts.isAllDay,
       })
       .from(shifts)
       .leftJoin(externalSyncs, eq(shifts.externalSyncId, externalSyncs.id))
@@ -104,21 +106,71 @@ export async function GET(request: Request) {
           // Exclude shifts from presets that are hidden from stats
           or(isNull(shifts.presetId), eq(shiftPresets.hideFromStats, false))
         )
-      )
-      .groupBy(shifts.title)
-      .orderBy(sql`count(*) DESC`);
+      );
+
+    // Calculate duration for each shift
+    const calculateDuration = (
+      startTime: string,
+      endTime: string,
+      isAllDay: boolean
+    ): number => {
+      if (isAllDay) return 0; // Don't count all-day shifts in duration
+
+      const [startHour, startMinute] = startTime.split(":").map(Number);
+      const [endHour, endMinute] = endTime.split(":").map(Number);
+
+      const startMinutes = startHour * 60 + startMinute;
+      let endMinutes = endHour * 60 + endMinute;
+
+      // Handle overnight shifts
+      if (endMinutes < startMinutes) {
+        endMinutes += 24 * 60;
+      }
+
+      return endMinutes - startMinutes;
+    };
+
+    // Group by title and calculate stats
+    const statsMap = new Map<string, { count: number; totalMinutes: number }>();
+
+    result.forEach((shift) => {
+      const existing = statsMap.get(shift.title) || {
+        count: 0,
+        totalMinutes: 0,
+      };
+      existing.count++;
+      existing.totalMinutes += calculateDuration(
+        shift.startTime,
+        shift.endTime,
+        shift.isAllDay || false
+      );
+      statsMap.set(shift.title, existing);
+    });
 
     // Transform result to object format
-    const stats = result.reduce((acc, item) => {
-      acc[item.title] = Number(item.count);
-      return acc;
-    }, {} as Record<string, number>);
+    const stats = Array.from(statsMap.entries()).reduce(
+      (acc, [title, data]) => {
+        acc[title] = {
+          count: data.count,
+          totalMinutes: data.totalMinutes,
+        };
+        return acc;
+      },
+      {} as Record<string, { count: number; totalMinutes: number }>
+    );
+
+    // Calculate total duration
+    const totalMinutes = Object.values(stats).reduce(
+      (sum, data) => sum + data.totalMinutes,
+      0
+    );
 
     return NextResponse.json({
       period,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       stats,
+      totalMinutes,
     });
   } catch (error) {
     console.error("Failed to fetch shift statistics:", error);
