@@ -218,7 +218,7 @@ export function ShiftStats({
                     {/* Shift Count */}
                     <div className="flex flex-col items-end">
                       <span className="text-[10px] text-muted-foreground font-medium mb-0.5">
-                        Schichten
+                        {t("common.shifts")}
                       </span>
                       <div className="px-2.5 py-1 rounded-md bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30">
                         <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
@@ -232,7 +232,7 @@ export function ShiftStats({
                         {/* Duration */}
                         <div className="flex flex-col items-end">
                           <span className="text-[10px] text-muted-foreground font-medium mb-0.5">
-                            Stunden
+                            {t("stats.hours")}
                           </span>
                           <div className="px-2.5 py-1 rounded-md bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30">
                             <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">

@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { verifyPassword } from "@/lib/password-utils";
+import { calculateShiftDuration } from "@/lib/date-utils";
 import {
   startOfWeek,
   endOfWeek,
@@ -108,28 +109,6 @@ export async function GET(request: Request) {
         )
       );
 
-    // Calculate duration for each shift
-    const calculateDuration = (
-      startTime: string,
-      endTime: string,
-      isAllDay: boolean
-    ): number => {
-      if (isAllDay) return 0; // Don't count all-day shifts in duration
-
-      const [startHour, startMinute] = startTime.split(":").map(Number);
-      const [endHour, endMinute] = endTime.split(":").map(Number);
-
-      const startMinutes = startHour * 60 + startMinute;
-      let endMinutes = endHour * 60 + endMinute;
-
-      // Handle overnight shifts
-      if (endMinutes < startMinutes) {
-        endMinutes += 24 * 60;
-      }
-
-      return endMinutes - startMinutes;
-    };
-
     // Group by title and calculate stats
     const statsMap = new Map<string, { count: number; totalMinutes: number }>();
 
@@ -139,11 +118,9 @@ export async function GET(request: Request) {
         totalMinutes: 0,
       };
       existing.count++;
-      existing.totalMinutes += calculateDuration(
-        shift.startTime,
-        shift.endTime,
-        shift.isAllDay || false
-      );
+      existing.totalMinutes += shift.isAllDay
+        ? 0
+        : calculateShiftDuration(shift.startTime, shift.endTime);
       statsMap.set(shift.title, existing);
     });
 

@@ -23,7 +23,8 @@
     "updateError": "{item} konnte nicht aktualisiert werden",
     "deleteError": "{item} konnte nicht gelöscht werden",
     "deleteConfirm": "{item} \"{name}\" wirklich löschen?",
-    "deleteConfirmWithWarning": "{item} \"{name}\" wirklich löschen? {warning}"
+    "deleteConfirmWithWarning": "{item} \"{name}\" wirklich löschen? {warning}",
+    "shifts": "Schichten"
   },
   "validation": {
     "passwordMatch": "Passwörter stimmen nicht überein",
@@ -97,7 +98,6 @@
     "hintDesktop": "Rechtsklick auf einen Tag öffnet Notizen. Das Notiz-Icon zeigt vorhandene Notizen an."
   },
   "shift": {
-    "title": "Schichten",
     "create": "Neue Schicht",
     "createDescription": "Füge eine neue Schicht zu deinem Kalender hinzu",
     "edit": "Schicht bearbeiten",
@@ -111,7 +111,6 @@
     "allDayShift": "Ganztägige Schicht",
     "noShiftsInMonth": "Keine Schichten in diesem Monat",
     "noShiftsInMonthDescription": "Füge Schichten hinzu, indem du auf Tage im Kalender oben klickst.",
-    "shifts": "Schichten",
     "shift_one": "Schicht",
     "selectPreset": "Vorlage auswählen",
     "none": "Keine",
@@ -179,7 +178,8 @@
     "month": "Monat",
     "year": "Jahr",
     "total": "Gesamt",
-    "noData": "Keine Schichten in diesem Zeitraum"
+    "noData": "Keine Schichten in diesem Zeitraum",
+    "hours": "Stunden"
   },
   "sync": {
     "refreshing": "Aktualisiere Daten...",
@@ -192,9 +192,6 @@
     "welcome": "Willkommen bei BetterShift",
     "description": "Erstelle deinen ersten Kalender, um deine Schichten zu verwalten.",
     "createCalendar": "Kalender erstellen"
-  },
-  "version": {
-    "label": "Version"
   },
   "footer": {
     "version": "Version",

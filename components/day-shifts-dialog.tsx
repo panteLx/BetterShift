@@ -49,7 +49,7 @@ export function DayShiftsDialog({
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {shifts.length}{" "}
-            {shifts.length === 1 ? t("shift.shift_one") : t("shift.shifts")}
+            {shifts.length === 1 ? t("shift.shift_one") : t("common.shifts")}
           </DialogDescription>
         </DialogHeader>
 
