@@ -23,7 +23,8 @@
     "updateError": "Impossibile aggiornare {item}",
     "deleteError": "Impossibile eliminare {item}",
     "deleteConfirm": "Eliminare davvero {item} \"{name}\"?",
-    "deleteConfirmWithWarning": "Eliminare davvero {item} \"{name}\"? {warning}"
+    "deleteConfirmWithWarning": "Eliminare davvero {item} \"{name}\"? {warning}",
+    "shifts": "Turni"
   },
   "validation": {
     "passwordMatch": "Le password non corrispondono",
@@ -97,7 +98,6 @@
     "hintDesktop": "Fai clic con il pulsante destro del mouse su un giorno per aprire le note. L'icona della nota indica le note esistenti."
   },
   "shift": {
-    "title": "Turni",
     "create": "Nuovo Turno",
     "createDescription": "Aggiungi un nuovo turno al tuo calendario",
     "edit": "Modifica Turno",
@@ -111,7 +111,6 @@
     "allDayShift": "Turno di un'intera giornata",
     "noShiftsInMonth": "Nessun turno questo mese",
     "noShiftsInMonthDescription": "Aggiungi turni cliccando sui giorni nel calendario in alto.",
-    "shifts": "turni",
     "shift_one": "turno",
     "selectPreset": "Seleziona Preset",
     "none": "Nessuno",
@@ -178,7 +177,8 @@
     "month": "Mese",
     "year": "Anno",
     "total": "Totale",
-    "noData": "Nessun turno in questo periodo"
+    "noData": "Nessun turno in questo periodo",
+    "hours": "Ore"
   },
   "sync": {
     "refreshing": "Aggiornamento dati...",
@@ -191,9 +191,6 @@
     "welcome": "Benvenuto in BetterShift",
     "description": "Crea il tuo primo calendario per gestire i tuoi turni.",
     "createCalendar": "Crea Calendario"
-  },
-  "version": {
-    "label": "Versione"
   },
   "footer": {
     "version": "Versione",

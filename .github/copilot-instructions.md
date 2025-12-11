@@ -163,7 +163,7 @@ The translation files use a centralized structure to eliminate duplicates and en
 
 ```typescript
 // Success/Error Messages - use {item} parameter
-toast.success(t("common.created", { item: t("shift.title") }));
+toast.success(t("common.created", { item: t("common.shifts") }));
 toast.error(t("common.createError", { item: t("calendar.title") }));
 toast.success(t("common.updated", { item: t("preset.create") }));
 toast.error(t("common.deleteError", { item: t("note.note") }));

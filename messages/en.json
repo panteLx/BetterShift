@@ -23,7 +23,8 @@
     "updateError": "Failed to update {item}",
     "deleteError": "Failed to delete {item}",
     "deleteConfirm": "Really delete {item} \"{name}\"?",
-    "deleteConfirmWithWarning": "Really delete {item} \"{name}\"? {warning}"
+    "deleteConfirmWithWarning": "Really delete {item} \"{name}\"? {warning}",
+    "shifts": "Shifts"
   },
   "validation": {
     "passwordMatch": "Passwords do not match",
@@ -97,7 +98,6 @@
     "hintDesktop": "Right-click on a day to open notes. The note icon shows existing notes."
   },
   "shift": {
-    "title": "Shifts",
     "create": "New Shift",
     "createDescription": "Add a new shift to your calendar",
     "edit": "Edit Shift",
@@ -111,7 +111,6 @@
     "allDayShift": "All-day shift",
     "noShiftsInMonth": "No shifts this month",
     "noShiftsInMonthDescription": "Add shifts by clicking on days in the calendar above.",
-    "shifts": "shifts",
     "shift_one": "shift",
     "selectPreset": "Select Preset",
     "none": "None",
@@ -179,7 +178,8 @@
     "month": "Month",
     "year": "Year",
     "total": "Total",
-    "noData": "No shifts in this period"
+    "noData": "No shifts in this period",
+    "hours": "Hours"
   },
   "sync": {
     "refreshing": "Refreshing data...",
@@ -192,9 +192,6 @@
     "welcome": "Welcome to BetterShift",
     "description": "Create your first calendar to manage your shifts.",
     "createCalendar": "Create Calendar"
-  },
-  "version": {
-    "label": "Version"
   },
   "footer": {
     "version": "Version",

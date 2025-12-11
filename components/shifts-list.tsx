@@ -58,7 +58,7 @@ export function ShiftsList({
             <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
           </div>
           <h3 className="text-sm sm:text-base font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("shift.title")}
+            {t("common.shifts")}
           </h3>
         </div>
         <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export function ShiftsList({
                             {dayShifts.length}{" "}
                             {dayShifts.length === 1
                               ? t("shift.shift_one")
-                              : t("shift.shifts")}
+                              : t("common.shifts")}
                           </div>
                         </div>
                       </div>
