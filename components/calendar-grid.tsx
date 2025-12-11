@@ -299,6 +299,15 @@ export function CalendarGrid({
                 const totalHiddenCount =
                   hiddenRegularCount + hiddenExternalCount;
 
+                // Filter to get all displayable shifts (regular + external with normal display mode)
+                const displayableShifts = dayShifts.filter(
+                  (s) =>
+                    !s.syncedFromExternal ||
+                    (s.externalSyncId &&
+                      externalSyncs.find((sync) => sync.id === s.externalSyncId)
+                        ?.displayMode === "normal")
+                );
+
                 return (
                   <>
                     {combinedSortMode ? (
@@ -342,17 +351,7 @@ export function CalendarGrid({
                               if (selectedPresetId) return;
                               e.stopPropagation();
                               // Show all shifts dialog with all day shifts
-                              onShowAllShifts?.(
-                                day,
-                                dayShifts.filter(
-                                  (s) =>
-                                    !s.syncedFromExternal ||
-                                    (s.externalSyncId &&
-                                      externalSyncs.find(
-                                        (sync) => sync.id === s.externalSyncId
-                                      )?.displayMode === "normal")
-                                )
-                              );
+                              onShowAllShifts?.(day, displayableShifts);
                             }}
                             className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
                               selectedPresetId
@@ -406,17 +405,7 @@ export function CalendarGrid({
                               if (selectedPresetId) return;
                               e.stopPropagation();
                               // Show all shifts dialog with all day shifts
-                              onShowAllShifts?.(
-                                day,
-                                dayShifts.filter(
-                                  (s) =>
-                                    !s.syncedFromExternal ||
-                                    (s.externalSyncId &&
-                                      externalSyncs.find(
-                                        (sync) => sync.id === s.externalSyncId
-                                      )?.displayMode === "normal")
-                                )
-                              );
+                              onShowAllShifts?.(day, displayableShifts);
                             }}
                             className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
                               selectedPresetId
