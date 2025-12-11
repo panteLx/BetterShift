@@ -283,6 +283,31 @@ export function CalendarGrid({
                   });
                 }
 
+                // Calculate total hidden shifts for unified display
+                const hiddenRegularCount =
+                  maxShiftsToShow !== undefined
+                    ? Math.max(0, sortedRegularShifts.length - maxShiftsToShow)
+                    : 0;
+                const hiddenExternalCount =
+                  maxExternalShiftsToShow !== undefined
+                    ? Math.max(
+                        0,
+                        sortedExternalNormalShifts.length -
+                          maxExternalShiftsToShow
+                      )
+                    : 0;
+                const totalHiddenCount =
+                  hiddenRegularCount + hiddenExternalCount;
+
+                // Filter to get all displayable shifts (regular + external with normal display mode)
+                const displayableShifts = dayShifts.filter(
+                  (s) =>
+                    !s.syncedFromExternal ||
+                    (s.externalSyncId &&
+                      externalSyncs.find((sync) => sync.id === s.externalSyncId)
+                        ?.displayMode === "normal")
+                );
+
                 return (
                   <>
                     {combinedSortMode ? (
@@ -319,49 +344,27 @@ export function CalendarGrid({
                           );
                         })}
 
-                        {/* Show "+X more" for regular shifts if limited */}
-                        {maxShiftsToShow !== undefined &&
-                          sortedRegularShifts.length > maxShiftsToShow && (
-                            <div
-                              onClick={(e) => {
-                                if (selectedPresetId) return;
-                                e.stopPropagation();
-                                onShowAllShifts?.(day, sortedRegularShifts);
-                              }}
-                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
-                                selectedPresetId
-                                  ? "cursor-not-allowed opacity-50"
-                                  : "hover:text-primary/80 hover:underline cursor-pointer"
-                              }`}
-                            >
-                              +{sortedRegularShifts.length - maxShiftsToShow}
-                            </div>
-                          )}
-
-                        {/* Show "+X more" for external shifts if limited */}
-                        {maxExternalShiftsToShow !== undefined &&
-                          sortedExternalNormalShifts.length >
-                            maxExternalShiftsToShow && (
-                            <div
-                              onClick={(e) => {
-                                if (selectedPresetId) return;
-                                e.stopPropagation();
-                                onShowSyncedShifts?.(
-                                  day,
-                                  sortedExternalNormalShifts
-                                );
-                              }}
-                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
-                                selectedPresetId
-                                  ? "cursor-not-allowed opacity-50"
-                                  : "hover:text-primary/80 hover:underline cursor-pointer"
-                              }`}
-                            >
-                              +
-                              {sortedExternalNormalShifts.length -
-                                maxExternalShiftsToShow}
-                            </div>
-                          )}
+                        {/* Show unified "+X shifts" when there are hidden shifts from either type */}
+                        {totalHiddenCount > 0 && (
+                          <div
+                            onClick={(e) => {
+                              if (selectedPresetId) return;
+                              e.stopPropagation();
+                              // Show all shifts dialog with all day shifts
+                              onShowAllShifts?.(day, displayableShifts);
+                            }}
+                            className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                              selectedPresetId
+                                ? "cursor-not-allowed opacity-50"
+                                : "hover:text-primary/80 hover:underline cursor-pointer"
+                            }`}
+                          >
+                            +{totalHiddenCount}{" "}
+                            {totalHiddenCount === 1
+                              ? t("shift.shift_one")
+                              : t("common.shifts")}
+                          </div>
+                        )}
                       </>
                     ) : (
                       // Separate mode: display regular and external shifts separately
@@ -379,25 +382,6 @@ export function CalendarGrid({
                           />
                         ))}
 
-                        {/* Show "+X more" for regular shifts if limited by maxShiftsToShow */}
-                        {maxShiftsToShow !== undefined &&
-                          sortedRegularShifts.length > maxShiftsToShow && (
-                            <div
-                              onClick={(e) => {
-                                if (selectedPresetId) return;
-                                e.stopPropagation();
-                                onShowAllShifts?.(day, sortedRegularShifts);
-                              }}
-                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
-                                selectedPresetId
-                                  ? "cursor-not-allowed opacity-50"
-                                  : "hover:text-primary/80 hover:underline cursor-pointer"
-                              }`}
-                            >
-                              +{sortedRegularShifts.length - maxShiftsToShow}
-                            </div>
-                          )}
-
                         {/* Display external shifts with normal display mode */}
                         {(maxExternalShiftsToShow === undefined
                           ? sortedExternalNormalShifts
@@ -414,30 +398,27 @@ export function CalendarGrid({
                           />
                         ))}
 
-                        {/* Show "+X more" for external shifts if limited by maxExternalShiftsToShow */}
-                        {maxExternalShiftsToShow !== undefined &&
-                          sortedExternalNormalShifts.length >
-                            maxExternalShiftsToShow && (
-                            <div
-                              onClick={(e) => {
-                                if (selectedPresetId) return;
-                                e.stopPropagation();
-                                onShowSyncedShifts?.(
-                                  day,
-                                  sortedExternalNormalShifts
-                                );
-                              }}
-                              className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
-                                selectedPresetId
-                                  ? "cursor-not-allowed opacity-50"
-                                  : "hover:text-primary/80 hover:underline cursor-pointer"
-                              }`}
-                            >
-                              +
-                              {sortedExternalNormalShifts.length -
-                                maxExternalShiftsToShow}
-                            </div>
-                          )}
+                        {/* Show unified "+X shifts" when there are hidden shifts from either type */}
+                        {totalHiddenCount > 0 && (
+                          <div
+                            onClick={(e) => {
+                              if (selectedPresetId) return;
+                              e.stopPropagation();
+                              // Show all shifts dialog with all day shifts
+                              onShowAllShifts?.(day, displayableShifts);
+                            }}
+                            className={`text-[10px] sm:text-xs text-primary font-semibold text-center pt-0.5 transition-colors ${
+                              selectedPresetId
+                                ? "cursor-not-allowed opacity-50"
+                                : "hover:text-primary/80 hover:underline cursor-pointer"
+                            }`}
+                          >
+                            +{totalHiddenCount}{" "}
+                            {totalHiddenCount === 1
+                              ? t("shift.shift_one")
+                              : t("common.shifts")}
+                          </div>
+                        )}
                       </>
                     )}
 
