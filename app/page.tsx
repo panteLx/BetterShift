@@ -32,6 +32,7 @@ import { AppHeader } from "@/components/app-header";
 import { DialogManager } from "@/components/dialog-manager";
 import { CalendarDialog } from "@/components/calendar-dialog";
 import { getCalendarDays } from "@/lib/calendar-utils";
+import { getCachedPassword } from "@/lib/password-cache";
 
 function HomeContent() {
   const router = useRouter();
@@ -290,10 +291,11 @@ function HomeContent() {
   // Calendar grid calculations
   const calendarDays = getCalendarDays(currentDate);
 
-  // Check if selected calendar is locked
+  // Check if selected calendar is locked and has no cached password
   const isSelectedCalendarLocked =
     selectedCalendar &&
-    calendars.find((c) => c.id === selectedCalendar)?.isLocked;
+    calendars.find((c) => c.id === selectedCalendar)?.isLocked &&
+    !getCachedPassword(selectedCalendar);
 
   // Loading state
   if (loading) {
@@ -351,7 +353,7 @@ function HomeContent() {
           isSelectedCalendarLocked ? (
             <LockedCalendarSkeleton />
           ) : (
-            <CalendarContentSkeleton />
+            <CalendarContentSkeleton daysCount={calendarDays.length} />
           )
         ) : selectedCalendar && !isCalendarUnlocked ? (
           <LockedCalendarView

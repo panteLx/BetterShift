@@ -1,6 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function CalendarContentSkeleton() {
+export function CalendarContentSkeleton({
+  daysCount = 42,
+}: {
+  daysCount?: number;
+}) {
   return (
     <div className="space-y-4">
       {/* Month Navigation Skeleton */}
@@ -18,7 +22,7 @@ export function CalendarContentSkeleton() {
         ))}
 
         {/* Calendar days */}
-        {Array.from({ length: 35 }).map((_, i) => (
+        {Array.from({ length: daysCount }).map((_, i) => (
           <div
             key={`day-${i}`}
             className="min-h-24 sm:min-h-28 border border-border/30 rounded-lg p-1.5 sm:p-2 space-y-1"
