@@ -5,6 +5,7 @@ import { Check, Plus, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
 import { getCachedPassword } from "@/lib/password-cache";
+import { PresetListSkeleton } from "@/components/preset-list-skeleton";
 
 interface PresetListProps {
   calendars: CalendarWithCount[];
@@ -45,16 +46,7 @@ export function PresetList({
 
   // Show loading state while fetching
   if (loading) {
-    return (
-      <div className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs sm:text-sm font-medium">
-            {t("common.loading")}
-          </p>
-        </div>
-      </div>
-    );
+    return <PresetListSkeleton />;
   }
 
   // Show unlock hint if calendar requires password and no password is cached (but not locked)

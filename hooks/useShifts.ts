@@ -8,10 +8,12 @@ import { getCachedPassword } from "@/lib/password-cache";
 export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
   const [shifts, setShifts] = useState<ShiftWithCalendar[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const fetchShifts = useCallback(async () => {
     if (!calendarId) return;
 
+    setLoading(true);
     try {
       const password = getCachedPassword(calendarId);
       const params = new URLSearchParams({ calendarId });
@@ -30,6 +32,8 @@ export function useShifts(calendarId: string | undefined) {
     } catch (error) {
       console.error("Failed to fetch shifts:", error);
       setShifts([]);
+    } finally {
+      setLoading(false);
     }
   }, [calendarId]);
 
@@ -172,8 +176,6 @@ export function useShifts(calendarId: string | undefined) {
 
   useEffect(() => {
     if (!calendarId) {
-      // Data fetching on mount/calendar change is a valid effect use case
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShifts([]);
       return;
     }
@@ -183,6 +185,7 @@ export function useShifts(calendarId: string | undefined) {
   return {
     shifts,
     setShifts,
+    loading,
     createShift,
     updateShift,
     deleteShift,

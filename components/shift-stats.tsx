@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 import { formatDuration } from "@/lib/date-utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ShiftStats {
   period: string;
@@ -202,9 +203,11 @@ export function ShiftStats({
 
           {/* Stats Display */}
           {loading ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              {t("common.loading")}
-            </p>
+            <div className="space-y-3">
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
           ) : stats && Object.keys(stats.stats).length > 0 ? (
             <div className="space-y-3.5">
               {/* Total Statistics Card */}

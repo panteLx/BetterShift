@@ -23,7 +23,8 @@ import { useDialogStates } from "@/hooks/useDialogStates";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { LockedCalendarView } from "@/components/locked-calendar-view";
-import { LoadingState } from "@/components/loading-state";
+import { CalendarSkeleton } from "@/components/calendar-skeleton";
+import { LockedCalendarSkeleton } from "@/components/locked-calendar-skeleton";
 import { CalendarContent } from "@/components/calendar-content";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
@@ -51,6 +52,7 @@ function HomeContent() {
   const {
     shifts,
     setShifts,
+    loading: shiftsLoading,
     createShift: createShiftHook,
     updateShift: updateShiftHook,
     deleteShift: deleteShiftHook,
@@ -289,7 +291,7 @@ function HomeContent() {
 
   // Loading state
   if (loading) {
-    return <LoadingState />;
+    return <CalendarSkeleton />;
   }
 
   // Empty state
@@ -335,12 +337,23 @@ function HomeContent() {
         onManualShiftCreation={handleManualShiftCreation}
         onMobileCalendarDialogChange={dialogStates.setShowMobileCalendarDialog}
         onViewSettingsClick={() => dialogStates.setShowViewSettingsDialog(true)}
-        presetsLoading={presetsLoading}
+        presetsLoading={
+          presetsLoading &&
+          !(
+            selectedCalendar &&
+            calendars.find((c) => c.id === selectedCalendar)?.isLocked
+          )
+        }
       />
 
       <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
-        {isVerifyingCalendarPassword ? (
-          <LoadingState />
+        {isVerifyingCalendarPassword || shiftsLoading ? (
+          selectedCalendar &&
+          calendars.find((c) => c.id === selectedCalendar)?.isLocked ? (
+            <LockedCalendarSkeleton />
+          ) : (
+            <CalendarSkeleton />
+          )
         ) : selectedCalendar && !isCalendarUnlocked ? (
           <LockedCalendarView
             calendarId={selectedCalendar}
