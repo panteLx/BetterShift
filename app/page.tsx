@@ -24,6 +24,7 @@ import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { LockedCalendarView } from "@/components/locked-calendar-view";
 import { CalendarSkeleton } from "@/components/calendar-skeleton";
+import { CalendarContentSkeleton } from "@/components/calendar-content-skeleton";
 import { LockedCalendarSkeleton } from "@/components/locked-calendar-skeleton";
 import { CalendarContent } from "@/components/calendar-content";
 import { AppFooter } from "@/components/app-footer";
@@ -289,6 +290,11 @@ function HomeContent() {
   // Calendar grid calculations
   const calendarDays = getCalendarDays(currentDate);
 
+  // Check if selected calendar is locked
+  const isSelectedCalendarLocked =
+    selectedCalendar &&
+    calendars.find((c) => c.id === selectedCalendar)?.isLocked;
+
   // Loading state
   if (loading) {
     return <CalendarSkeleton />;
@@ -337,22 +343,15 @@ function HomeContent() {
         onManualShiftCreation={handleManualShiftCreation}
         onMobileCalendarDialogChange={dialogStates.setShowMobileCalendarDialog}
         onViewSettingsClick={() => dialogStates.setShowViewSettingsDialog(true)}
-        presetsLoading={
-          presetsLoading &&
-          !(
-            selectedCalendar &&
-            calendars.find((c) => c.id === selectedCalendar)?.isLocked
-          )
-        }
+        presetsLoading={presetsLoading && !isSelectedCalendarLocked}
       />
 
       <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
         {isVerifyingCalendarPassword || shiftsLoading ? (
-          selectedCalendar &&
-          calendars.find((c) => c.id === selectedCalendar)?.isLocked ? (
+          isSelectedCalendarLocked ? (
             <LockedCalendarSkeleton />
           ) : (
-            <CalendarSkeleton />
+            <CalendarContentSkeleton />
           )
         ) : selectedCalendar && !isCalendarUnlocked ? (
           <LockedCalendarView

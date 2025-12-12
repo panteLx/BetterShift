@@ -1,3 +1,4 @@
+"use client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 import { BarChart3 } from "lucide-react";

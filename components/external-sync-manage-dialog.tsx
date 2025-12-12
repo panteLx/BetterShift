@@ -23,11 +23,17 @@ import {
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
-import { Trash2, RefreshCw, Plus, Edit2, ChevronDown } from "lucide-react";
+import {
+  Trash2,
+  RefreshCw,
+  Plus,
+  Edit2,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PRESET_COLORS } from "@/lib/constants";
 import { getCachedPassword } from "@/lib/password-cache";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -739,7 +745,7 @@ export function ExternalSyncManageDialog({
                             disabled={!!isSyncing || !!isDeleting}
                           >
                             {isSyncing === sync.id ? (
-                              <Skeleton className="h-4 w-4 rounded" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <RefreshCw className="h-4 w-4" />
                             )}
@@ -753,7 +759,7 @@ export function ExternalSyncManageDialog({
                           disabled={!!isSyncing || !!isDeleting}
                         >
                           {isDeleting === sync.id ? (
-                            <Skeleton className="h-4 w-4 rounded" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Trash2 className="h-4 w-4" />
                           )}
@@ -1088,7 +1094,7 @@ export function ExternalSyncManageDialog({
                     }
                   >
                     {isLoading ? (
-                      <Skeleton className="mr-2 h-4 w-4 rounded" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
                     {t("common.add")}
                   </Button>
