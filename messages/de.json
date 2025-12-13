@@ -60,7 +60,13 @@
     "select": "Dein BetterShift Kalender",
     "deleteCalendar": "Kalender löschen",
     "deleteWarning": "Alle Schichten, Presets und Notizen werden ebenfalls gelöscht.",
-    "managePassword": "Passwort verwalten"
+    "managePassword": "Passwort verwalten",
+    "settings": "Kalendereinstellungen für \"{name}\"",
+    "settingsDescription": "Passe Name, Farbe und Passwortschutz an",
+    "currentlyProtected": "Dieser Kalender ist derzeit passwortgeschützt.",
+    "lockCalendar": "Kalender komplett sperren",
+    "lockCalendarHint": "Sperrt Kalender komplett - Passwort zum sehen und verwalten erforderlich",
+    "lockRequiresPassword": "Kalendersperre erfordert ein Passwort"
   },
   "color": {
     "custom": "Eigene Farbe",
@@ -79,11 +85,6 @@
     "manage": "Passwort für \"{name}\" verwalten",
     "enter": "Passwort für \"{name}\" eingeben",
     "enterCalendarPassword": "Kalenderpasswort eingeben",
-    "currentlyProtected": "Dieser Kalender ist derzeit passwortgeschützt.",
-    "notProtected": "Dieser Kalender ist derzeit nicht passwortgeschützt.",
-    "lockCalendar": "Kalender komplett sperren",
-    "lockCalendarHint": "Sperrt Kalender komplett - Passwort zum sehen und verwalten erforderlich",
-    "lockRequiresPassword": "Kalendersperre erfordert ein Passwort",
     "currentlyLocked": "Dieser Kalender ist derzeit gesperrt.",
     "unlockRequired": "Kalender ist passwortgeschützt",
     "unlockRequiredDescription": "Dieser Kalender ist passwortgeschützt. Bitte entsperre den Kalender, um Vorlagen zu verwalten und Schichten zu erstellen.",

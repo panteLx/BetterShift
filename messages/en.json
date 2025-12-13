@@ -60,7 +60,13 @@
     "select": "Your BetterShift Calendar",
     "deleteCalendar": "Delete Calendar",
     "deleteWarning": "All shifts, presets and notes will also be deleted.",
-    "managePassword": "Manage Password"
+    "managePassword": "Manage Password",
+    "settings": "Calendar Settings for \"{name}\"",
+    "settingsDescription": "Customize name, color and password protection",
+    "currentlyProtected": "This calendar is currently password protected.",
+    "lockCalendar": "Lock calendar completely",
+    "lockCalendarHint": "Locks calendar completely - password required to view and manage",
+    "lockRequiresPassword": "Locking the calendar requires a password"
   },
   "color": {
     "custom": "Custom",
@@ -79,11 +85,6 @@
     "manage": "Manage Password for \"{name}\"",
     "enter": "Enter Password for \"{name}\"",
     "enterCalendarPassword": "Enter calendar password",
-    "currentlyProtected": "This calendar is currently password protected.",
-    "notProtected": "This calendar is currently not password protected.",
-    "lockCalendar": "Lock calendar completely",
-    "lockCalendarHint": "Locks calendar completely - password required to view and manage",
-    "lockRequiresPassword": "Locking the calendar requires a password",
     "currentlyLocked": "This calendar is currently locked.",
     "unlockRequired": "Calendar is password protected",
     "unlockRequiredDescription": "This calendar is password protected. Please unlock the calendar to manage presets and create shifts.",

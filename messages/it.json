@@ -60,7 +60,13 @@
     "select": "Il tuo Calendario BetterShift",
     "deleteCalendar": "Elimina Calendario",
     "deleteWarning": "Anche tutti i turni, i preset e le note verranno eliminati.",
-    "managePassword": "Gestisci Password"
+    "managePassword": "Gestisci Password",
+    "settings": "Impostazioni Calendario per \"{name}\"",
+    "settingsDescription": "Personalizza nome, colore e protezione password",
+    "currentlyProtected": "Questo calendario è attualmente protetto da password.",
+    "lockCalendar": "Blocca calendario completamente",
+    "lockCalendarHint": "Blocca il calendario completamente - è necessaria la password per visualizzare e gestire",
+    "lockRequiresPassword": "Il blocco del calendario richiede una password"
   },
   "color": {
     "custom": "Personalizzato",
@@ -79,11 +85,6 @@
     "manage": "Gestisci Password per \"{name}\"",
     "enter": "Inserisci Password per \"{name}\"",
     "enterCalendarPassword": "Inserisci la password del calendario",
-    "currentlyProtected": "Questo calendario è attualmente protetto da password.",
-    "notProtected": "Questo calendario non è attualmente protetto da password.",
-    "lockCalendar": "Blocca calendario completamente",
-    "lockCalendarHint": "Blocca il calendario completamente - è necessaria la password per visualizzare e gestire",
-    "lockRequiresPassword": "Il blocco del calendario richiede una password",
     "currentlyLocked": "Questo calendario è attualmente bloccato.",
     "unlockRequired": "Il calendario è protetto da password",
     "unlockRequiredDescription": "Questo calendario è protetto da password. Sblocca il calendario per gestire i preset e creare turni.",

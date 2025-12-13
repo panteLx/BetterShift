@@ -5,7 +5,7 @@ export function useDialogStates() {
   const [showCalendarDialog, setShowCalendarDialog] = useState(false);
   const [showShiftDialog, setShowShiftDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showManagePasswordDialog, setShowManagePasswordDialog] =
+  const [showCalendarSettingsDialog, setShowCalendarSettingsDialog] =
     useState(false);
   const [showMobileCalendarDialog, setShowMobileCalendarDialog] =
     useState(false);
@@ -36,8 +36,8 @@ export function useDialogStates() {
     setShowShiftDialog,
     showPasswordDialog,
     setShowPasswordDialog,
-    showManagePasswordDialog,
-    setShowManagePasswordDialog,
+    showCalendarSettingsDialog,
+    setShowCalendarSettingsDialog,
     showMobileCalendarDialog,
     setShowMobileCalendarDialog,
     showDeleteCalendarDialog,

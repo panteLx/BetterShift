@@ -15,27 +15,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { removeCachedPassword, setCachedPassword } from "@/lib/password-cache";
+import { PRESET_COLORS } from "@/lib/constants";
 
-interface ManagePasswordDialogProps {
+interface CalendarSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string;
   calendarName: string;
+  calendarColor: string;
   hasPassword: boolean;
   isLocked: boolean;
   onSuccess: () => void;
 }
 
-export function ManagePasswordDialog({
+export function CalendarSettingsDialog({
   open,
   onOpenChange,
   calendarId,
   calendarName,
+  calendarColor,
   hasPassword,
   isLocked,
   onSuccess,
-}: ManagePasswordDialogProps) {
+}: CalendarSettingsDialogProps) {
   const t = useTranslations();
+  const [name, setName] = useState(calendarName);
+  const [selectedColor, setSelectedColor] = useState(calendarColor);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -46,6 +51,8 @@ export function ManagePasswordDialog({
 
   useEffect(() => {
     if (open) {
+      setName(calendarName);
+      setSelectedColor(calendarColor);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -53,7 +60,7 @@ export function ManagePasswordDialog({
       setLockCalendar(isLocked);
       setError("");
     }
-  }, [open, isLocked]);
+  }, [open, calendarName, calendarColor, isLocked]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +83,7 @@ export function ManagePasswordDialog({
 
     // If trying to lock without password
     if (lockCalendar && removePassword) {
-      setError(t("password.lockRequiresPassword"));
+      setError(t("calendar.lockRequiresPassword"));
       return;
     }
 
@@ -84,10 +91,14 @@ export function ManagePasswordDialog({
 
     try {
       const requestBody: {
+        name?: string;
+        color?: string;
         currentPassword?: string;
         isLocked: boolean;
         password?: string | null;
       } = {
+        name: name !== calendarName ? name : undefined,
+        color: selectedColor !== calendarColor ? selectedColor : undefined,
         currentPassword: hasPassword ? currentPassword : undefined,
         isLocked: lockCalendar,
       };
@@ -132,7 +143,7 @@ export function ManagePasswordDialog({
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to update password:", error);
+      console.error("Failed to update calendar:", error);
       setError(t("validation.passwordIncorrect"));
     } finally {
       setLoading(false);
@@ -141,21 +152,74 @@ export function ManagePasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
+      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
         <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
           <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("password.manage", { name: calendarName })}
+            {t("calendar.settings", { name: calendarName })}
           </DialogTitle>
-          <DialogDescription asChild>
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-              {hasPassword
-                ? t("password.currentlyProtected")
-                : t("password.notProtected")}
-            </div>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {t("calendar.settingsDescription")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 overflow-y-auto flex-1 px-6 pb-6"
+        >
+          {/* Calendar Name */}
+          <div className="space-y-2.5 pt-6">
+            <Label
+              htmlFor="calendarName"
+              className="text-sm font-medium flex items-center gap-2"
+            >
+              <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+              {t("form.nameLabel")}
+            </Label>
+            <Input
+              id="calendarName"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("form.namePlaceholder", {
+                example: t("calendar.name"),
+              })}
+              className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
+              required
+            />
+          </div>
+
+          {/* Calendar Color */}
+          <div className="space-y-2.5">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+              {t("form.colorLabel")}
+            </Label>
+            <div className="grid grid-cols-4 gap-2">
+              {PRESET_COLORS.map((colorObj) => (
+                <button
+                  key={colorObj.value}
+                  type="button"
+                  onClick={() => setSelectedColor(colorObj.value)}
+                  className={`h-11 rounded-lg transition-all ${
+                    selectedColor === colorObj.value
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
+                      : "hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: colorObj.value }}
+                  title={colorObj.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Password Section Header */}
+          <div className="pt-2 pb-1">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="flex-1 h-px bg-border"></div>
+              <span>{t("password.optional")}</span>
+              <div className="flex-1 h-px bg-border"></div>
+            </div>
+          </div>
+
           {hasPassword && (
             <div className="space-y-2.5">
               <Label
@@ -172,8 +236,10 @@ export function ManagePasswordDialog({
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder={t("password.currentPasswordPlaceholder")}
                 className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
-                autoFocus
               />
+              <p className="text-xs text-muted-foreground">
+                {t("calendar.currentlyProtected")}
+              </p>
             </div>
           )}
 
@@ -212,10 +278,10 @@ export function ManagePasswordDialog({
                   htmlFor="lockCalendar"
                   className="text-sm font-medium cursor-pointer"
                 >
-                  {t("password.lockCalendar")}
+                  {t("calendar.lockCalendar")}
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t("password.lockCalendarHint")}
+                  {t("calendar.lockCalendarHint")}
                 </p>
               </div>
             </div>
@@ -246,7 +312,6 @@ export function ManagePasswordDialog({
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder={t("password.newPasswordPlaceholder")}
                   className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
-                  autoFocus={!hasPassword}
                 />
               </div>
 

@@ -61,7 +61,7 @@ export function CalendarDialog({
 
     // Can't lock without password
     if (lockCalendar && !usePassword) {
-      setError(t("password.lockRequiresPassword"));
+      setError(t("calendar.lockRequiresPassword"));
       return;
     }
 
@@ -218,10 +218,10 @@ export function CalendarDialog({
                       htmlFor="lockCalendar"
                       className="text-sm font-medium cursor-pointer"
                     >
-                      {t("password.lockCalendar")}
+                      {t("calendar.lockCalendar")}
                     </Label>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {t("password.lockCalendarHint")}
+                      {t("calendar.lockCalendarHint")}
                     </p>
                   </div>
                 </div>

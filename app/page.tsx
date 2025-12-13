@@ -331,7 +331,9 @@ function HomeContent() {
         onSelectCalendar={setSelectedCalendar}
         onSelectPreset={setSelectedPresetId}
         onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
-        onManagePassword={() => dialogStates.setShowManagePasswordDialog(true)}
+        onManagePassword={() =>
+          dialogStates.setShowCalendarSettingsDialog(true)
+        }
         onDeleteCalendar={initiateDeleteCalendar}
         onExternalSync={handleExternalSyncClick}
         onSyncNotifications={handleSyncNotifications}
@@ -440,9 +442,11 @@ function HomeContent() {
         onPasswordDialogChange={dialogStates.setShowPasswordDialog}
         calendars={calendars}
         onPasswordSuccess={handlePasswordSuccess}
-        showManagePasswordDialog={dialogStates.showManagePasswordDialog}
-        onManagePasswordDialogChange={dialogStates.setShowManagePasswordDialog}
-        onManagePasswordSuccess={refetchCalendars}
+        showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
+        onCalendarSettingsDialogChange={
+          dialogStates.setShowCalendarSettingsDialog
+        }
+        onCalendarSettingsSuccess={refetchCalendars}
         showDeleteCalendarDialog={dialogStates.showDeleteCalendarDialog}
         onDeleteCalendarDialogChange={dialogStates.setShowDeleteCalendarDialog}
         calendarToDelete={dialogStates.calendarToDelete}
