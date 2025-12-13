@@ -178,7 +178,7 @@ export function CalendarSelector({
               size="sm"
               variant="outline"
               className="h-9"
-              title={t("externalSync.manage")}
+              title={t("externalSync.manageTitle")}
             >
               <Cloud className="h-4 w-4" />
             </Button>

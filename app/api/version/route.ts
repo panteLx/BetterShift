@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
+/**
+ * Cache Strategy: 15 minutes unified across all version/release endpoints
+ * - Server-side cache (cachedVersion): 15 minutes
+ * - HTTP Cache-Control: 15 minutes
+ * - GitHub API revalidation: 15 minutes
+ * - Client polling interval: 15 minutes
+ */
+
 // Cache version info
 let cachedVersion: {
   version: string;
@@ -12,8 +20,9 @@ let cachedVersion: {
 let cachedDockerVersion: string | null = null;
 let cachedPackageVersion = "";
 
-const CACHE_DURATION = 3600 * 1000; // 1 hour
-const CACHE_SECONDS = 3600;
+// Unified cache duration: 15 minutes
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const CACHE_SECONDS = 15 * 60; // 15 minutes
 
 const GITHUB_REPO_OWNER = process.env.GITHUB_REPO_OWNER || "panteLx";
 const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME || "BetterShift";
@@ -99,6 +108,58 @@ function buildGitHubUrl(version: string, commitHash: string): string {
   return baseUrl;
 }
 
+async function getLatestRelease(): Promise<{
+  version: string;
+  url: string;
+} | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          ...(GITHUB_TOKEN && { Authorization: `Bearer ${GITHUB_TOKEN}` }),
+        },
+        next: { revalidate: CACHE_SECONDS },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return {
+      version: data.tag_name.replace(/^v/, ""), // Remove 'v' prefix
+      url: data.html_url,
+    };
+  } catch (error) {
+    console.error("Failed to fetch latest release:", error);
+    return null;
+  }
+}
+
+function compareVersions(current: string, latest: string): boolean {
+  // Returns true if latest is newer than current
+  const parseCurrent = current.split(".").map(Number);
+  const parseLatest = latest.split(".").map(Number);
+
+  for (let i = 0; i < 3; i++) {
+    const curr = parseCurrent[i] || 0;
+    const lat = parseLatest[i] || 0;
+
+    if (lat > curr) return true;
+    if (lat < curr) return false;
+  }
+
+  return false;
+}
+
+function isDevVersion(version: string): boolean {
+  // Check if version contains 'dev' or if it's a Docker :dev tag
+  return version.includes("dev") || version === "dev";
+}
+
 export async function GET() {
   // Check cache
   if (cachedVersion && Date.now() - cachedVersion.timestamp < CACHE_DURATION) {
@@ -106,11 +167,26 @@ export async function GET() {
       cachedVersion.version,
       cachedVersion.commitHash
     );
+
+    // Get latest release for update check (only if not dev version)
+    const isDev = isDevVersion(cachedVersion.version);
+    const latestRelease = !isDev ? await getLatestRelease() : null;
+    const hasUpdate =
+      latestRelease &&
+      !isDev &&
+      compareVersions(cachedVersion.version, latestRelease.version);
+
     return NextResponse.json(
       {
         version: cachedVersion.version,
         commitHash: cachedVersion.commitHash,
         githubUrl,
+        isDev,
+        ...(latestRelease && {
+          latestVersion: latestRelease.version,
+          latestUrl: latestRelease.url,
+          hasUpdate,
+        }),
       },
       {
         headers: {
@@ -133,11 +209,23 @@ export async function GET() {
 
   const githubUrl = buildGitHubUrl(version, commitHash);
 
+  // Get latest release for update check (only if not dev version)
+  const isDev = isDevVersion(version);
+  const latestRelease = !isDev ? await getLatestRelease() : null;
+  const hasUpdate =
+    latestRelease && !isDev && compareVersions(version, latestRelease.version);
+
   return NextResponse.json(
     {
       version,
       commitHash,
       githubUrl,
+      isDev,
+      ...(latestRelease && {
+        latestVersion: latestRelease.version,
+        latestUrl: latestRelease.url,
+        hasUpdate,
+      }),
     },
     {
       headers: {

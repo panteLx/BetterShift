@@ -268,5 +268,17 @@
     "markAsRead": "Segna come letto",
     "markedAsRead": "Errori segnati come letti",
     "read": "Letto"
+  },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Tutte le note di rilascio e modifiche di BetterShift",
+    "noReleases": "Nessun rilascio disponibile",
+    "viewOnGitHub": "Visualizza su GitHub"
+  },
+  "update": {
+    "available": "Aggiornamento disponibile",
+    "newVersion": "Versione {version} è disponibile",
+    "currentVersion": "Versione attuale: {version}",
+    "viewChangelog": "Visualizza changelog"
   }
 }

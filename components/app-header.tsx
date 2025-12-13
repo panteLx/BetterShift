@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { CalendarSelector } from "@/components/calendar-selector";
 import { PresetSelector } from "@/components/preset-selector";
@@ -11,8 +12,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Calendar as CalendarIcon, Plus, Settings2 } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  Settings2,
+  Bell,
+  ExternalLink,
+} from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
+import { useVersionInfo } from "@/hooks/useVersionUpdate";
+import { ChangelogDialog } from "@/components/changelog-dialog";
+import { useLocale } from "next-intl";
 
 interface AppHeaderProps {
   calendars: CalendarWithCount[];
@@ -64,6 +74,9 @@ export function AppHeader({
   presetsLoading = false,
 }: AppHeaderProps) {
   const t = useTranslations();
+  const locale = useLocale();
+  const { versionInfo } = useVersionInfo();
+  const [showChangelog, setShowChangelog] = useState(false);
 
   return (
     <>
@@ -141,6 +154,46 @@ export function AppHeader({
                 </div>
               </motion.div>
             </div>
+
+            {/* Update Notification Banner - Desktop & Mobile */}
+            {versionInfo?.hasUpdate && !versionInfo.isDev && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.15 }}
+                className="relative"
+              >
+                <button
+                  onClick={() => setShowChangelog(true)}
+                  className="w-full bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 backdrop-blur-sm border border-primary/30 rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:border-primary/40 transition-all shadow-sm hover:shadow-md active:scale-[0.99] group"
+                >
+                  <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                    <div className="relative shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                      <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-primary group-hover:scale-110 transition-transform" />
+                      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full animate-pulse shadow-sm"></div>
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="text-sm sm:text-base font-semibold text-primary mb-0.5">
+                        {t("update.available")}
+                      </p>
+                      <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                        {t("update.newVersion", {
+                          version: versionInfo.latestVersion || "unknown",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2 text-primary">
+                    <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                      {t("update.viewChangelog")}
+                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                      <ExternalLink className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+                    </div>
+                  </div>
+                </button>
+              </motion.div>
+            )}
 
             {/* Mobile: Logo Icon + Calendar Card + Add Button */}
             <div className="sm:hidden flex items-center gap-2">
@@ -304,6 +357,13 @@ export function AppHeader({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Changelog Dialog */}
+      <ChangelogDialog
+        open={showChangelog}
+        onOpenChange={setShowChangelog}
+        locale={locale}
+      />
     </>
   );
 }

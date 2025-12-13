@@ -145,9 +145,10 @@ Main page (`app/page.tsx`) patterns:
 next-intl setup with auto-detection:
 
 - Cookie `NEXT_LOCALE` overrides browser preference (`lib/i18n.ts`)
-- Translations: `messages/{de,en}.json`
+- Translations: `messages/{de,en,it}.json` (German, English, Italian)
 - Usage: `const t = useTranslations()` → `t("shift.create")`
-- Date formatting: `locale === "de" ? de : enUS`
+- Date formatting: `locale === "de" ? de : (locale === "it" ? it : enUS)`
+- **Important**: When adding new translation keys, ALWAYS add them to all three files (de.json, en.json, it.json)
 
 **Translation Structure (Optimized)**:
 
