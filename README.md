@@ -53,7 +53,7 @@
 
 ### 🌍 International by Design
 
-- **Multi-Language Support** — Full German and English translations built-in
+- **Multi-Language Support** — Full German, English, and Italian translations built-in
 - **Smart Language Detection** — Automatically uses your browser's language preference
 - **Persistent Settings** — Language choice saved in cookies across sessions
 - **Easy Switching** — Toggle languages anytime from the footer
@@ -62,6 +62,7 @@
 
 - **Flexible Time Periods** — View statistics for current month, last 30 days, or custom date ranges
 - **Real-Time Stats** — Shift totals and hour calculations update instantly when you make changes
+- **Shift Statistics** — Track total hours worked with precise duration calculations and more
 - **Work Pattern Analysis** — Understand your schedule with aggregated shift data
 
 ### ⚡ Live Updates & Sync
@@ -70,6 +71,19 @@
 - **Connection Monitoring** — Visual indicators show real-time sync status
 - **Offline Resilience** — Graceful handling when connection drops, auto-reconnect on restore
 - **Background Refresh** — Data updates silently without disrupting your workflow
+- **Skeleton Loading States** — Smooth loading experiences with skeleton placeholders
+
+### 🔔 Version Management & Updates
+
+- **Automatic Update Checks** — Detects new releases every 15 minutes with visual notifications
+- **Integrated Changelog** — View release notes and version history directly in the app
+
+### 🎨 Customizable Display
+
+- **Dark/Light Theme** — Toggle between dark and light modes with system preference detection
+- **View Settings** — Customize shift display options and calendar appearance
+- **Flexible Layouts** — Adjust calendar views to match your preferences
+- **Responsive Design** — Optimized for desktop and mobile devices
 
 ### 🛠️ Modern Foundation
 
