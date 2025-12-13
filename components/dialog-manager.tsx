@@ -1,7 +1,7 @@
 import { CalendarDialog } from "@/components/calendar-dialog";
 import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { PasswordDialog } from "@/components/password-dialog";
-import { ManagePasswordDialog } from "@/components/manage-password-dialog";
+import { CalendarSettingsDialog } from "@/components/calendar-settings-dialog";
 import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
 import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dialog";
 import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
@@ -36,10 +36,10 @@ interface DialogManagerProps {
   calendars: CalendarWithCount[];
   onPasswordSuccess: (password: string) => void;
 
-  // Manage Password Dialog
-  showManagePasswordDialog: boolean;
-  onManagePasswordDialogChange: (open: boolean) => void;
-  onManagePasswordSuccess: () => void;
+  // Calendar Settings Dialog
+  showCalendarSettingsDialog: boolean;
+  onCalendarSettingsDialogChange: (open: boolean) => void;
+  onCalendarSettingsSuccess: () => void;
 
   // Delete Calendar Dialog
   showDeleteCalendarDialog: boolean;
@@ -136,13 +136,17 @@ export function DialogManager(props: DialogManagerProps) {
             onSuccess={props.onPasswordSuccess}
           />
 
-          <ManagePasswordDialog
-            open={props.showManagePasswordDialog}
-            onOpenChange={props.onManagePasswordDialogChange}
+          <CalendarSettingsDialog
+            open={props.showCalendarSettingsDialog}
+            onOpenChange={props.onCalendarSettingsDialogChange}
             calendarId={props.selectedCalendar}
             calendarName={
               props.calendars.find((c) => c.id === props.selectedCalendar)
                 ?.name || ""
+            }
+            calendarColor={
+              props.calendars.find((c) => c.id === props.selectedCalendar)
+                ?.color || "#3b82f6"
             }
             hasPassword={
               !!props.calendars.find((c) => c.id === props.selectedCalendar)
@@ -152,7 +156,7 @@ export function DialogManager(props: DialogManagerProps) {
               props.calendars.find((c) => c.id === props.selectedCalendar)
                 ?.isLocked || false
             }
-            onSuccess={props.onManagePasswordSuccess}
+            onSuccess={props.onCalendarSettingsSuccess}
           />
 
           <ExternalSyncManageDialog

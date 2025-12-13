@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, KeyRound, Trash2, Cloud, Bell } from "lucide-react";
+import { Plus, CalendarCog, Trash2, Cloud, Bell } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 
 interface CalendarSelectorProps {
@@ -74,9 +74,11 @@ export function CalendarSelector({
             size="icon"
             variant="outline"
             className="h-9 w-9 sm:h-10 sm:w-10"
-            title={t("calendar.managePassword")}
+            title={t("calendar.settings", {
+              name: selectedCalendar?.name || "",
+            })}
           >
-            <KeyRound className="h-4 w-4" />
+            <CalendarCog className="h-4 w-4" />
           </Button>
         )}
         {onExternalSync && selectedId && !shouldHideSyncButtons && (
@@ -167,9 +169,11 @@ export function CalendarSelector({
               size="sm"
               variant="outline"
               className="h-9"
-              title={t("calendar.managePassword")}
+              title={t("calendar.settings", {
+                name: selectedCalendar?.name || "",
+              })}
             >
-              <KeyRound className="h-4 w-4" />
+              <CalendarCog className="h-4 w-4" />
             </Button>
           )}
           {onExternalSync && !shouldHideSyncButtons && (
