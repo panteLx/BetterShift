@@ -10,32 +10,39 @@ export function useShifts(calendarId: string | undefined) {
   const [shifts, setShifts] = useState<ShiftWithCalendar[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchShifts = useCallback(async () => {
-    if (!calendarId) return;
+  const fetchShifts = useCallback(
+    async (showLoading = true) => {
+      if (!calendarId) return;
 
-    setLoading(true);
-    try {
-      const password = getCachedPassword(calendarId);
-      const params = new URLSearchParams({ calendarId });
-      if (password) {
-        params.append("password", password);
+      if (showLoading) {
+        setLoading(true);
       }
+      try {
+        const password = getCachedPassword(calendarId);
+        const params = new URLSearchParams({ calendarId });
+        if (password) {
+          params.append("password", password);
+        }
 
-      const response = await fetch(`/api/shifts?${params}`);
-      if (!response.ok) {
-        // Calendar is locked and no valid password - return empty array
+        const response = await fetch(`/api/shifts?${params}`);
+        if (!response.ok) {
+          // Calendar is locked and no valid password - return empty array
+          setShifts([]);
+          return;
+        }
+        const data = await response.json();
+        setShifts(data);
+      } catch (error) {
+        console.error("Failed to fetch shifts:", error);
         setShifts([]);
-        return;
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
       }
-      const data = await response.json();
-      setShifts(data);
-    } catch (error) {
-      console.error("Failed to fetch shifts:", error);
-      setShifts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [calendarId]);
+    },
+    [calendarId]
+  );
 
   const createShift = async (formData: ShiftFormData) => {
     if (!calendarId) return null;
@@ -189,6 +196,6 @@ export function useShifts(calendarId: string | undefined) {
     createShift,
     updateShift,
     deleteShift,
-    refetchShifts: fetchShifts,
+    refetchShifts: () => fetchShifts(false), // Silent refresh for live updates
   };
 }

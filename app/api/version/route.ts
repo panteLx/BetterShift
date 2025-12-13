@@ -44,7 +44,10 @@ function getDockerVersion(): string | null {
   try {
     const versionFilePath = join(process.cwd(), ".version");
     if (existsSync(versionFilePath)) {
-      cachedDockerVersion = readFileSync(versionFilePath, "utf-8").trim();
+      // Remove 'v' prefix for consistent version comparison
+      cachedDockerVersion = readFileSync(versionFilePath, "utf-8")
+        .trim()
+        .replace(/^v/, "");
       return cachedDockerVersion;
     }
   } catch {
