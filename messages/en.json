@@ -279,7 +279,6 @@
   "update": {
     "available": "Update available",
     "newVersion": "Version {version} is available",
-    "currentVersion": "Current version: {version}",
     "viewChangelog": "View changelog"
   }
 }

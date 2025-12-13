@@ -17,6 +17,13 @@ let cachedVersion: {
   timestamp: number;
 } | null = null;
 
+// Cache latest release info
+let cachedLatestRelease: {
+  version: string;
+  url: string;
+} | null = null;
+let cachedLatestReleaseExpiresAt = 0;
+
 let cachedDockerVersion: string | null = null;
 let cachedPackageVersion = "";
 
@@ -112,6 +119,11 @@ async function getLatestRelease(): Promise<{
   version: string;
   url: string;
 } | null> {
+  // Return cached release if still valid
+  if (cachedLatestRelease && Date.now() < cachedLatestReleaseExpiresAt) {
+    return cachedLatestRelease;
+  }
+
   try {
     const response = await fetch(
       `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`,
@@ -129,10 +141,16 @@ async function getLatestRelease(): Promise<{
     }
 
     const data = await response.json();
-    return {
+    const release = {
       version: data.tag_name.replace(/^v/, ""), // Remove 'v' prefix
       url: data.html_url,
     };
+
+    // Cache the fetched release
+    cachedLatestRelease = release;
+    cachedLatestReleaseExpiresAt = Date.now() + CACHE_DURATION;
+
+    return release;
   } catch (error) {
     console.error("Failed to fetch latest release:", error);
     return null;

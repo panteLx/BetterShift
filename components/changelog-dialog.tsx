@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 import { Loader2, ExternalLink, Calendar, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { de, enUS } from "date-fns/locale";
+import { de, enUS, it } from "date-fns/locale";
 
 interface GitHubRelease {
   id: number;
@@ -65,167 +65,284 @@ export function ChangelogDialog({
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return format(date, "PPP", {
-      locale: locale === "de" ? de : enUS,
+      locale: locale === "de" ? de : locale === "it" ? it : enUS,
     });
   };
 
-  const formatMarkdown = (text: string) => {
-    // Enhanced markdown to HTML conversion with proper list and code block handling
+  // Sanitize and validate URLs to prevent XSS
+  const sanitizeUrl = (url: string): string | null => {
+    try {
+      const parsed = new URL(url, window.location.href);
+      // Only allow http, https, and data:image URLs
+      if (
+        parsed.protocol === "http:" ||
+        parsed.protocol === "https:" ||
+        (parsed.protocol === "data:" && url.startsWith("data:image/"))
+      ) {
+        return parsed.href;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Parse inline markdown elements (bold, code, links) into React elements
+  const parseInlineMarkdown = (text: string): ReactNode[] => {
+    const elements: ReactNode[] = [];
+    let currentText = "";
+    let index = 0;
+    let key = 0;
+
+    const flushText = () => {
+      if (currentText) {
+        elements.push(<Fragment key={`text-${key++}`}>{currentText}</Fragment>);
+        currentText = "";
+      }
+    };
+
+    while (index < text.length) {
+      // Auto-link URLs
+      const urlMatch = text
+        .slice(index)
+        .match(/^https?:\/\/[^\s<]+[^\s<.,;:!?"')]/);
+      if (urlMatch) {
+        flushText();
+        const url = urlMatch[0];
+        const sanitized = sanitizeUrl(url);
+        if (sanitized) {
+          elements.push(
+            <a
+              key={`link-${key++}`}
+              href={sanitized}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium break-all"
+            >
+              {url}
+            </a>
+          );
+        } else {
+          currentText += url;
+        }
+        index += url.length;
+        continue;
+      }
+
+      // Markdown links [text](url)
+      const linkMatch = text.slice(index).match(/^\[([^\]]+)\]\(([^)]+)\)/);
+      if (linkMatch) {
+        flushText();
+        const linkText = linkMatch[1];
+        const linkUrl = linkMatch[2];
+        const sanitized = sanitizeUrl(linkUrl);
+        if (sanitized) {
+          elements.push(
+            <a
+              key={`link-${key++}`}
+              href={sanitized}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium"
+            >
+              {linkText}
+            </a>
+          );
+        } else {
+          currentText += linkText;
+        }
+        index += linkMatch[0].length;
+        continue;
+      }
+
+      // Bold **text**
+      const boldMatch = text.slice(index).match(/^\*\*([^*]+)\*\*/);
+      if (boldMatch) {
+        flushText();
+        elements.push(
+          <strong
+            key={`bold-${key++}`}
+            className="font-semibold text-foreground"
+          >
+            {boldMatch[1]}
+          </strong>
+        );
+        index += boldMatch[0].length;
+        continue;
+      }
+
+      // Inline code `text`
+      const codeMatch = text.slice(index).match(/^`([^`]+)`/);
+      if (codeMatch) {
+        flushText();
+        elements.push(
+          <code
+            key={`code-${key++}`}
+            className="px-1.5 py-0.5 rounded bg-muted/80 text-xs font-mono text-foreground whitespace-nowrap"
+          >
+            {codeMatch[1]}
+          </code>
+        );
+        index += codeMatch[0].length;
+        continue;
+      }
+
+      // Regular character
+      currentText += text[index];
+      index++;
+    }
+
+    flushText();
+    return elements;
+  };
+
+  // Parse markdown text into React elements
+  const parseMarkdown = (text: string): ReactNode[] => {
     const lines = text.split("\n");
-    const result: string[] = [];
-    let inList = false;
+    const elements: ReactNode[] = [];
+    let listItems: ReactNode[] = [];
     let inCodeBlock = false;
-    let codeBlockContent: string[] = [];
+    let codeBlockLines: string[] = [];
+    let elementKey = 0;
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul
+            key={`list-${elementKey++}`}
+            className="list-disc ml-6 space-y-1 my-2"
+          >
+            {listItems}
+          </ul>
+        );
+        listItems = [];
+      }
+    };
 
     for (let i = 0; i < lines.length; i++) {
-      let line = lines[i];
+      const line = lines[i];
 
       // Code blocks (```)
       if (line.startsWith("```")) {
+        flushList();
         if (inCodeBlock) {
           // Close code block
-          result.push(
-            `<pre class="bg-muted/50 border border-border/50 rounded-lg p-4 my-3 overflow-x-auto"><code class="text-sm font-mono text-foreground block">${codeBlockContent
-              .map((l) => escapeHtml(l))
-              .join("\n")}</code></pre>`
+          elements.push(
+            <pre
+              key={`code-${elementKey++}`}
+              className="bg-muted/50 border border-border/50 rounded-lg p-4 my-3 overflow-x-auto"
+            >
+              <code className="text-sm font-mono text-foreground block">
+                {codeBlockLines.join("\n")}
+              </code>
+            </pre>
           );
-          codeBlockContent = [];
+          codeBlockLines = [];
           inCodeBlock = false;
         } else {
-          // Open code block
-          if (inList) {
-            result.push("</ul>");
-            inList = false;
-          }
           inCodeBlock = true;
-          // Language hint could be used: line.slice(3).trim()
         }
         continue;
       }
 
       // Inside code block
       if (inCodeBlock) {
-        codeBlockContent.push(line);
+        codeBlockLines.push(line);
         continue;
       }
 
       // Headers
       if (line.startsWith("### ")) {
-        if (inList) {
-          result.push("</ul>");
-          inList = false;
-        }
-        result.push(
-          `<h4 class="text-base font-semibold mt-4 mb-2 text-foreground">${formatInlineMarkdown(
-            line.slice(4)
-          )}</h4>`
+        flushList();
+        elements.push(
+          <h4
+            key={`h4-${elementKey++}`}
+            className="text-base font-semibold mt-4 mb-2 text-foreground"
+          >
+            {parseInlineMarkdown(line.slice(4))}
+          </h4>
         );
         continue;
       }
       if (line.startsWith("## ")) {
-        if (inList) {
-          result.push("</ul>");
-          inList = false;
-        }
-        result.push(
-          `<h3 class="text-lg font-semibold mt-5 mb-3 text-foreground">${formatInlineMarkdown(
-            line.slice(3)
-          )}</h3>`
+        flushList();
+        elements.push(
+          <h3
+            key={`h3-${elementKey++}`}
+            className="text-lg font-semibold mt-5 mb-3 text-foreground"
+          >
+            {parseInlineMarkdown(line.slice(3))}
+          </h3>
         );
         continue;
       }
       if (line.startsWith("# ")) {
-        if (inList) {
-          result.push("</ul>");
-          inList = false;
-        }
-        result.push(
-          `<h2 class="text-xl font-bold mt-6 mb-4 text-foreground">${formatInlineMarkdown(
-            line.slice(2)
-          )}</h2>`
+        flushList();
+        elements.push(
+          <h2
+            key={`h2-${elementKey++}`}
+            className="text-xl font-bold mt-6 mb-4 text-foreground"
+          >
+            {parseInlineMarkdown(line.slice(2))}
+          </h2>
         );
         continue;
       }
 
       // Bullet points
       if (line.startsWith("- ") || line.startsWith("* ")) {
-        if (!inList) {
-          result.push('<ul class="list-disc ml-6 space-y-1 my-2">');
-          inList = true;
-        }
-        let content = line.slice(2);
-        // Apply inline formatting
-        content = formatInlineMarkdown(content);
-        result.push(
-          `<li class="text-sm text-muted-foreground leading-relaxed">${content}</li>`
+        const content = line.slice(2);
+        listItems.push(
+          <li
+            key={`li-${elementKey++}`}
+            className="text-sm text-muted-foreground leading-relaxed"
+          >
+            {parseInlineMarkdown(content)}
+          </li>
         );
         continue;
       }
 
       // Close list if we're in one and hit a non-list line
-      if (inList && !line.startsWith("- ") && !line.startsWith("* ")) {
-        result.push("</ul>");
-        inList = false;
+      if (listItems.length > 0) {
+        flushList();
       }
 
       // Empty lines
       if (line.trim() === "") {
-        result.push("<div class='h-2'></div>");
+        elements.push(<div key={`space-${elementKey++}`} className="h-2" />);
         continue;
       }
 
       // Regular paragraphs
-      line = formatInlineMarkdown(line);
-      result.push(`<p class="text-sm text-muted-foreground my-1">${line}</p>`);
-    }
-
-    // Close list if still open at end
-    if (inList) {
-      result.push("</ul>");
-    }
-
-    // Close code block if still open at end
-    if (inCodeBlock) {
-      result.push(
-        `<pre class="bg-muted/50 border border-border/50 rounded-lg p-4 my-3 overflow-x-auto"><code class="text-sm font-mono text-foreground block">${codeBlockContent
-          .map((l) => escapeHtml(l))
-          .join("\n")}</code></pre>`
+      elements.push(
+        <p
+          key={`p-${elementKey++}`}
+          className="text-sm text-muted-foreground my-1"
+        >
+          {parseInlineMarkdown(line)}
+        </p>
       );
     }
 
-    return result.join("");
-  };
+    // Close list if still open at end
+    flushList();
 
-  const formatInlineMarkdown = (text: string): string => {
-    // Auto-link URLs that are not already in markdown link syntax
-    text = text.replace(
-      /(?<!\]\()https?:\/\/[^\s<]+[^\s<.,;:!?"')]/g,
-      (url) => {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium break-all">${url}</a>`;
-      }
-    );
-    // Markdown links [text](url)
-    text = text.replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">$1</a>'
-    );
-    // Bold
-    text = text.replace(
-      /\*\*([^*]+)\*\*/g,
-      '<strong class="font-semibold text-foreground">$1</strong>'
-    );
-    // Inline code
-    text = text.replace(
-      /`([^`]+)`/g,
-      '<code class="px-1.5 py-0.5 rounded bg-muted/80 text-xs font-mono text-foreground whitespace-nowrap">$1</code>'
-    );
-    return text;
-  };
+    // Close code block if still open at end
+    if (inCodeBlock) {
+      elements.push(
+        <pre
+          key={`code-${elementKey++}`}
+          className="bg-muted/50 border border-border/50 rounded-lg p-4 my-3 overflow-x-auto"
+        >
+          <code className="text-sm font-mono text-foreground block">
+            {codeBlockLines.join("\n")}
+          </code>
+        </pre>
+      );
+    }
 
-  const escapeHtml = (text: string): string => {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
+    return elements;
   };
 
   return (
@@ -286,12 +403,9 @@ export function ChangelogDialog({
                     </Button>
                   </div>
                   {release.body && (
-                    <div
-                      className="prose prose-sm max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{
-                        __html: formatMarkdown(release.body),
-                      }}
-                    />
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      {parseMarkdown(release.body)}
+                    </div>
                   )}
                 </div>
               ))}

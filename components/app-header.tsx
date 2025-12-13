@@ -20,7 +20,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
-import { useVersionInfo } from "@/hooks/useVersionUpdate";
+import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 import { useLocale } from "next-intl";
 
@@ -75,7 +75,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const { versionInfo } = useVersionInfo();
+  const { versionInfo } = useVersionUpdateCheck();
   const [showChangelog, setShowChangelog] = useState(false);
 
   return (

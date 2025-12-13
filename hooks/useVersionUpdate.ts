@@ -10,7 +10,7 @@ interface VersionInfo {
   hasUpdate?: boolean;
 }
 
-export function useVersionInfo() {
+export function useVersionUpdateCheck() {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 

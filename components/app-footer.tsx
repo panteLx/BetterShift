@@ -80,7 +80,7 @@ export function AppFooter({ versionInfo }: AppFooterProps) {
               >
                 <ExternalLink className="w-4 h-4" />
                 <span className="hidden sm:inline">{t("footer.github")}</span>
-              </a>{" "}
+              </a>
               {/* Buy Me a Coffee link */}
               <a
                 href="https://buymeacoffee.com/pantelx"
