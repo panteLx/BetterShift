@@ -2,7 +2,6 @@ import { CalendarDialog } from "@/components/calendar-dialog";
 import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
 import { PasswordDialog } from "@/components/password-dialog";
 import { CalendarSettingsDialog } from "@/components/calendar-settings-dialog";
-import { DeleteCalendarDialog } from "@/components/delete-calendar-dialog";
 import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dialog";
 import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
 import { DayShiftsDialog } from "@/components/day-shifts-dialog";
@@ -40,11 +39,6 @@ interface DialogManagerProps {
   showCalendarSettingsDialog: boolean;
   onCalendarSettingsDialogChange: (open: boolean) => void;
   onCalendarSettingsSuccess: () => void;
-
-  // Delete Calendar Dialog
-  showDeleteCalendarDialog: boolean;
-  onDeleteCalendarDialogChange: (open: boolean) => void;
-  calendarToDelete?: string;
   onDeleteCalendar: (password?: string) => void;
 
   // External Sync Dialog
@@ -157,6 +151,7 @@ export function DialogManager(props: DialogManagerProps) {
                 ?.isLocked || false
             }
             onSuccess={props.onCalendarSettingsSuccess}
+            onDelete={props.onDeleteCalendar}
           />
 
           <ExternalSyncManageDialog
@@ -176,22 +171,6 @@ export function DialogManager(props: DialogManagerProps) {
             syncLogRefreshTrigger={props.syncErrorRefreshTrigger}
           />
         </>
-      )}
-
-      {props.calendarToDelete && (
-        <DeleteCalendarDialog
-          open={props.showDeleteCalendarDialog}
-          onOpenChange={props.onDeleteCalendarDialogChange}
-          calendarName={
-            props.calendars.find((c) => c.id === props.calendarToDelete)
-              ?.name || ""
-          }
-          hasPassword={
-            !!props.calendars.find((c) => c.id === props.calendarToDelete)
-              ?.passwordHash
-          }
-          onConfirm={props.onDeleteCalendar}
-        />
       )}
 
       <DayShiftsDialog

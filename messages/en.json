@@ -119,7 +119,7 @@
     "saveChanges": "Save Changes"
   },
   "preset": {
-    "create": "New Preset",
+    "preset": "Preset",
     "createNew": "Create New Preset",
     "createYourFirst": "Create Your First Preset",
     "edit": "Edit Preset",
@@ -134,9 +134,11 @@
     "createFirstDescription": "Create your first preset to quickly add shifts to your calendar. Presets save your frequently used shift times and details.",
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
     "secondaryPresets": "Secondary Presets",
+    "secondary": "Secondary",
     "markAsSecondary": "Mark as secondary (collapsed by default)",
     "hideFromStats": "Hide from statistics",
-    "hideFromStatsHint": "Exclude shifts from this preset from statistics"
+    "hideFromStatsHint": "Exclude shifts from this preset from statistics",
+    "hiddenFromStats": "Hidden from statistics"
   },
   "calendar_grid": {
     "monday": "Mon",
@@ -148,7 +150,6 @@
     "sunday": "Sun"
   },
   "view": {
-    "settingsTitleShort": "View",
     "settingsTitle": "View Settings",
     "settingsDescription": "Customize how shifts are displayed in all calendars",
     "shiftsPerDay": "Regular shifts per day",

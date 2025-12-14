@@ -1,7 +1,14 @@
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Check,
+  Plus,
+  Settings,
+  Settings2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
 import { getCachedPassword } from "@/lib/password-cache";
@@ -15,6 +22,7 @@ interface PresetListProps {
   onSelectPreset: (presetId: string | undefined) => void;
   onCreateNew?: () => void;
   onManageClick?: () => void;
+  onViewSettingsClick?: () => void;
   onUnlock?: () => void;
   loading?: boolean;
 }
@@ -25,8 +33,8 @@ export function PresetList({
   presets,
   selectedPresetId,
   onSelectPreset,
-  onCreateNew,
   onManageClick,
+  onViewSettingsClick,
   onUnlock,
   loading = false,
 }: PresetListProps) {
@@ -116,10 +124,10 @@ export function PresetList({
           {t("preset.createFirstDescription")}
         </p>
         <Button
-          onClick={onCreateNew}
+          onClick={onManageClick}
           size="sm"
           className="gap-2"
-          disabled={!onCreateNew}
+          disabled={!onManageClick}
         >
           <Plus className="h-4 w-4" />
           <span className="text-xs sm:text-sm">
@@ -149,24 +157,27 @@ export function PresetList({
         <Button
           variant="outline"
           size="sm"
-          onClick={onCreateNew}
-          disabled={!onCreateNew}
-          className="gap-1 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
-        >
-          <Plus className="h-3 sm:h-4 w-3 sm:w-4" />
-          <span className="hidden xs:inline sm:inline">
-            {t("preset.create")}
-          </span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
           onClick={onManageClick}
           disabled={!onManageClick}
-          className="h-8 sm:h-9 w-8 sm:w-9 p-0"
+          className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+          title={t("preset.manage")}
         >
-          <Settings className="h-3 sm:h-4 w-3 sm:w-4" />
+          <Settings className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
         </Button>
+        {onViewSettingsClick && (
+          <>
+            <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onViewSettingsClick}
+              className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+              title={t("view.settingsTitle")}
+            >
+              <Settings2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Secondary Presets - Collapsible */}

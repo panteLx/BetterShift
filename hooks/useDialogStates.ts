@@ -9,8 +9,6 @@ export function useDialogStates() {
     useState(false);
   const [showMobileCalendarDialog, setShowMobileCalendarDialog] =
     useState(false);
-  const [showDeleteCalendarDialog, setShowDeleteCalendarDialog] =
-    useState(false);
   const [showExternalSyncDialog, setShowExternalSyncDialog] = useState(false);
   const [showSyncNotificationDialog, setShowSyncNotificationDialog] =
     useState(false);
@@ -25,9 +23,6 @@ export function useDialogStates() {
   const [selectedSyncedShifts, setSelectedSyncedShifts] = useState<
     ShiftWithCalendar[]
   >([]);
-  const [calendarToDelete, setCalendarToDelete] = useState<
-    string | undefined
-  >();
 
   return {
     showCalendarDialog,
@@ -40,8 +35,6 @@ export function useDialogStates() {
     setShowCalendarSettingsDialog,
     showMobileCalendarDialog,
     setShowMobileCalendarDialog,
-    showDeleteCalendarDialog,
-    setShowDeleteCalendarDialog,
     showExternalSyncDialog,
     setShowExternalSyncDialog,
     showSyncNotificationDialog,
@@ -58,7 +51,5 @@ export function useDialogStates() {
     setSelectedDayShifts,
     selectedSyncedShifts,
     setSelectedSyncedShifts,
-    calendarToDelete,
-    setCalendarToDelete,
   };
 }

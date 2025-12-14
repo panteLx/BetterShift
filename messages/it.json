@@ -119,7 +119,7 @@
     "saveChanges": "Salva Modifiche"
   },
   "preset": {
-    "create": "Nuovo Preset",
+    "preset": "Preset",
     "createNew": "Crea Nuovo Preset",
     "createYourFirst": "Crea il Tuo Primo Preset",
     "edit": "Modifica Preset",
@@ -134,9 +134,11 @@
     "createFirstDescription": "Crea il tuo primo preset per aggiungere rapidamente turni al tuo calendario. I preset salvano gli orari e i dettagli dei turni utilizzati di frequente.",
     "deleteConfirm": "Eliminare questo preset? Verranno eliminati anche tutti i turni creati da questo preset.",
     "secondaryPresets": "Preset Secondari",
+    "secondary": "Secondario",
     "markAsSecondary": "Segna come secondario (compresso di default)",
     "hideFromStats": "Nascondi dalle statistiche",
-    "hideFromStatsHint": "Escludi i turni da questo preset dalle statistiche"
+    "hideFromStatsHint": "Escludi i turni da questo preset dalle statistiche",
+    "hiddenFromStats": "Nascosto dalle statistiche"
   },
   "calendar_grid": {
     "monday": "Lun",
@@ -148,7 +150,6 @@
     "sunday": "Dom"
   },
   "view": {
-    "settingsTitleShort": "Vista",
     "settingsTitle": "Impostazioni Vista",
     "settingsDescription": "Personalizza come vengono visualizzati i turni in tutti i calendari",
     "shiftsPerDay": "Turni regolari al giorno",

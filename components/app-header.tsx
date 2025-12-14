@@ -15,7 +15,6 @@ import {
 import {
   Calendar as CalendarIcon,
   Plus,
-  Settings2,
   Bell,
   ExternalLink,
 } from "lucide-react";
@@ -36,7 +35,6 @@ interface AppHeaderProps {
   onSelectPreset: (id: string | undefined) => void;
   onCreateCalendar: () => void;
   onManagePassword: () => void;
-  onDeleteCalendar: (id: string) => void;
   onExternalSync: () => void;
   onSyncNotifications: () => void;
   onPresetsChange: () => void;
@@ -61,7 +59,6 @@ export function AppHeader({
   onSelectPreset,
   onCreateCalendar,
   onManagePassword,
-  onDeleteCalendar,
   onExternalSync,
   onSyncNotifications,
   onPresetsChange,
@@ -146,7 +143,6 @@ export function AppHeader({
                     onSelect={onSelectCalendar}
                     onCreateNew={onCreateCalendar}
                     onManagePassword={onManagePassword}
-                    onDelete={onDeleteCalendar}
                     onExternalSync={onExternalSync}
                     onSyncNotifications={onSyncNotifications}
                     hasSyncErrors={hasSyncErrors}
@@ -270,39 +266,20 @@ export function AppHeader({
 
             {/* Preset Selector */}
             {selectedCalendar && (
-              <div className="flex flex-col sm:flex-row gap-3 px-0.5 sm:px-0">
-                <div className="flex-1">
-                  <PresetSelector
-                    calendars={calendars}
-                    presets={presets}
-                    selectedPresetId={selectedPresetId}
-                    onSelectPreset={onSelectPreset}
-                    onPresetsChange={onPresetsChange}
-                    onShiftsChange={onShiftsChange}
-                    onStatsRefresh={onStatsRefresh}
-                    calendarId={selectedCalendar}
-                    onPasswordRequired={onPasswordRequired}
-                    loading={presetsLoading}
-                  />
-                </div>
-
-                {/* View Settings Button */}
-                <motion.div
-                  className="shrink-0"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onViewSettingsClick}
-                    className="h-10 w-full sm:w-auto gap-2 bg-muted/30 backdrop-blur-sm border-border/50 hover:bg-accent/50 shadow-sm"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    <span>{t("view.settingsTitleShort")}</span>
-                  </Button>
-                </motion.div>
+              <div className="px-0.5 sm:px-0">
+                <PresetSelector
+                  calendars={calendars}
+                  presets={presets}
+                  selectedPresetId={selectedPresetId}
+                  onSelectPreset={onSelectPreset}
+                  onPresetsChange={onPresetsChange}
+                  onShiftsChange={onShiftsChange}
+                  onStatsRefresh={onStatsRefresh}
+                  calendarId={selectedCalendar}
+                  onPasswordRequired={onPasswordRequired}
+                  onViewSettingsClick={onViewSettingsClick}
+                  loading={presetsLoading}
+                />
               </div>
             )}
           </div>
@@ -342,7 +319,6 @@ export function AppHeader({
                 onMobileCalendarDialogChange(false);
                 onManagePassword();
               }}
-              onDelete={onDeleteCalendar}
               onExternalSync={() => {
                 onMobileCalendarDialogChange(false);
                 onExternalSync();

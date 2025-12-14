@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { removeCachedPassword, setCachedPassword } from "@/lib/password-cache";
 import { PRESET_COLORS } from "@/lib/constants";
+import { AlertTriangle, Trash2 } from "lucide-react";
 
 interface CalendarSettingsDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ interface CalendarSettingsDialogProps {
   hasPassword: boolean;
   isLocked: boolean;
   onSuccess: () => void;
+  onDelete: (password?: string) => void;
 }
 
 export function CalendarSettingsDialog({
@@ -37,6 +39,7 @@ export function CalendarSettingsDialog({
   hasPassword,
   isLocked,
   onSuccess,
+  onDelete,
 }: CalendarSettingsDialogProps) {
   const t = useTranslations();
   const [name, setName] = useState(calendarName);
@@ -48,6 +51,7 @@ export function CalendarSettingsDialog({
   const [lockCalendar, setLockCalendar] = useState(isLocked);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -59,6 +63,7 @@ export function CalendarSettingsDialog({
       setRemovePassword(false);
       setLockCalendar(isLocked);
       setError("");
+      setShowDeleteConfirm(false);
     }
   }, [open, calendarName, calendarColor, isLocked]);
 
@@ -148,6 +153,15 @@ export function CalendarSettingsDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (hasPassword && !currentPassword) {
+      setError(t("validation.passwordRequired"));
+      return;
+    }
+    onDelete(hasPassword ? currentPassword : undefined);
+    onOpenChange(false);
   };
 
   return (
@@ -340,6 +354,69 @@ export function CalendarSettingsDialog({
               {error}
             </p>
           )}
+
+          {/* Delete Section */}
+          <div className="pt-4 mt-4 border-t border-border/50">
+            <div className="space-y-3">
+              {!showDeleteConfirm ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full h-11 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {t("calendar.deleteCalendar")}
+                </Button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-3"
+                >
+                  <div className="p-3 bg-destructive/5 rounded-lg border border-destructive/20">
+                    <div className="flex items-start gap-2.5 text-destructive mb-2">
+                      <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-semibold">
+                          {t("common.deleteConfirm", {
+                            item: t("calendar.title"),
+                            name: calendarName,
+                          })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("calendar.deleteWarning", {
+                            default:
+                              "This action cannot be undone. All shifts, presets, and notes will be permanently deleted.",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 h-11"
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      className="flex-1 h-11 shadow-lg shadow-destructive/25"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {t("common.delete")}
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </div>
 
           <div className="flex gap-2.5 pt-2">
             <Button

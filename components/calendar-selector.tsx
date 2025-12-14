@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, CalendarCog, Trash2, Cloud, Bell } from "lucide-react";
+import { Plus, CalendarCog, Cloud, Bell } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 
 interface CalendarSelectorProps {
@@ -19,7 +19,6 @@ interface CalendarSelectorProps {
   onSelect: (id: string) => void;
   onCreateNew: () => void;
   onManagePassword?: () => void;
-  onDelete?: (id: string) => void;
   onExternalSync?: () => void;
   onSyncNotifications?: () => void;
   hasSyncErrors?: boolean;
@@ -32,7 +31,6 @@ export function CalendarSelector({
   onSelect,
   onCreateNew,
   onManagePassword,
-  onDelete,
   onExternalSync,
   onSyncNotifications,
   hasSyncErrors = false,
@@ -114,17 +112,6 @@ export function CalendarSelector({
             )}
           </Button>
         )}
-        {onDelete && selectedId && (
-          <Button
-            onClick={() => onDelete(selectedId)}
-            size="icon"
-            variant="outline"
-            className="h-9 w-9 sm:h-10 sm:w-10 text-destructive hover:text-destructive"
-            title={t("calendar.deleteCalendar")}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
         <Button
           onClick={onCreateNew}
           size="icon"
@@ -162,7 +149,7 @@ export function CalendarSelector({
 
       {/* Action Buttons - Even distribution */}
       {selectedId && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {onManagePassword && (
             <Button
               onClick={onManagePassword}
@@ -207,17 +194,6 @@ export function CalendarSelector({
               {hasSyncErrors && (
                 <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-600 rounded-full border-2 border-background animate-pulse" />
               )}
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              onClick={() => onDelete(selectedId)}
-              size="sm"
-              variant="outline"
-              className="h-9 text-destructive hover:text-destructive"
-              title={t("calendar.deleteCalendar")}
-            >
-              <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>

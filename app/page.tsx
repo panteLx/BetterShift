@@ -184,20 +184,11 @@ function HomeContent() {
   };
 
   // Calendar operations
-  const initiateDeleteCalendar = (id: string) => {
-    dialogStates.setCalendarToDelete(id);
-    dialogStates.setShowDeleteCalendarDialog(true);
-  };
-
   const handleDeleteCalendar = async (password?: string) => {
-    if (!dialogStates.calendarToDelete) return;
-    const success = await deleteCalendarHook(
-      dialogStates.calendarToDelete,
-      password
-    );
+    if (!selectedCalendar) return;
+    const success = await deleteCalendarHook(selectedCalendar, password);
     if (success) {
-      dialogStates.setShowDeleteCalendarDialog(false);
-      dialogStates.setCalendarToDelete(undefined);
+      dialogStates.setShowCalendarSettingsDialog(false);
     }
   };
 
@@ -334,7 +325,6 @@ function HomeContent() {
         onManagePassword={() =>
           dialogStates.setShowCalendarSettingsDialog(true)
         }
-        onDeleteCalendar={initiateDeleteCalendar}
         onExternalSync={handleExternalSyncClick}
         onSyncNotifications={handleSyncNotifications}
         onPresetsChange={refetchPresets}
@@ -447,9 +437,6 @@ function HomeContent() {
           dialogStates.setShowCalendarSettingsDialog
         }
         onCalendarSettingsSuccess={refetchCalendars}
-        showDeleteCalendarDialog={dialogStates.showDeleteCalendarDialog}
-        onDeleteCalendarDialogChange={dialogStates.setShowDeleteCalendarDialog}
-        calendarToDelete={dialogStates.calendarToDelete}
         onDeleteCalendar={handleDeleteCalendar}
         showExternalSyncDialog={dialogStates.showExternalSyncDialog}
         onExternalSyncDialogChange={dialogStates.setShowExternalSyncDialog}

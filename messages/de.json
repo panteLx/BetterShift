@@ -119,7 +119,7 @@
     "saveChanges": "Änderungen speichern"
   },
   "preset": {
-    "create": "Neue Vorlage",
+    "preset": "Vorlage",
     "createNew": "Neue Vorlage erstellen",
     "createYourFirst": "Erstelle deine erste Vorlage",
     "edit": "Vorlage bearbeiten",
@@ -134,9 +134,11 @@
     "createFirstDescription": "Erstelle deine erste Vorlage, um Schichten schnell zu deinem Kalender hinzuzufügen. Vorlagen speichern deine häufig genutzten Schichtzeiten und Details.",
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
     "secondaryPresets": "Sekundäre Vorlagen",
+    "secondary": "Sekundär",
     "markAsSecondary": "Als sekundär markieren (standardmäßig eingeklappt)",
     "hideFromStats": "Aus Statistik ausblenden",
-    "hideFromStatsHint": "Schichten dieser Vorlage aus der Statistik ausschließen"
+    "hideFromStatsHint": "Schichten dieser Vorlage aus der Statistik ausschließen",
+    "hiddenFromStats": "Aus Statistik ausgeblendet"
   },
   "calendar_grid": {
     "monday": "Mo",
@@ -148,7 +150,6 @@
     "sunday": "So"
   },
   "view": {
-    "settingsTitleShort": "Ansicht",
     "settingsTitle": "Ansichtseinstellungen",
     "settingsDescription": "Passe an, wie Schichten in allen Kalendern angezeigt werden",
     "shiftsPerDay": "Normale Schichten pro Tag",
