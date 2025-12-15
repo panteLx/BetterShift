@@ -386,10 +386,7 @@ export function CalendarSettingsDialog({
                           })}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {t("calendar.deleteWarning", {
-                            default:
-                              "This action cannot be undone. All shifts, presets, and notes will be permanently deleted.",
-                          })}
+                          {t("calendar.deleteWarning")}
                         </p>
                       </div>
                     </div>

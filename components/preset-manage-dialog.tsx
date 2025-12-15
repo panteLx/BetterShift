@@ -35,7 +35,7 @@ interface PresetFormData {
 interface PresetManageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  calendarId: string | null;
+  calendarId: string;
   presets: ShiftPreset[];
   onPresetsChange: () => void;
 }
