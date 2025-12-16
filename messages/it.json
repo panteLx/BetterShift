@@ -24,7 +24,16 @@
     "deleteError": "Impossibile eliminare {item}",
     "deleteConfirm": "Eliminare davvero {item} \"{name}\"?",
     "deleteConfirmWithWarning": "Eliminare davvero {item} \"{name}\"? {warning}",
-    "shifts": "Turni"
+    "shifts": "Turni",
+    "weekday": {
+      "monday": "Lun",
+      "tuesday": "Mar",
+      "wednesday": "Mer",
+      "thursday": "Gio",
+      "friday": "Ven",
+      "saturday": "Sab",
+      "sunday": "Dom"
+    }
   },
   "validation": {
     "passwordMatch": "Le password non corrispondono",
@@ -143,15 +152,7 @@
     "showPresets": "Mostra preset",
     "hidePresets": "Nascondi preset"
   },
-  "calendar_grid": {
-    "monday": "Lun",
-    "tuesday": "Mar",
-    "wednesday": "Mer",
-    "thursday": "Gio",
-    "friday": "Ven",
-    "saturday": "Sab",
-    "sunday": "Dom"
-  },
+
   "view": {
     "settingsTitle": "Impostazioni Vista",
     "settingsDescription": "Personalizza come vengono visualizzati i turni in tutti i calendari",
@@ -181,9 +182,20 @@
     "week": "Settimana",
     "month": "Mese",
     "year": "Anno",
-    "total": "Totale",
     "noData": "Nessun turno in questo periodo",
-    "hours": "Ore"
+    "hours": "Ore",
+    "overview": "Panoramica",
+    "distribution": "Distribuzione",
+    "comparison": "Confronto",
+    "radar": "Radar",
+    "totalShifts": "Turni totali",
+    "totalHours": "Ore totali",
+    "avgPerShift": "⌀ per turno",
+    "shortestShift": "Turno più breve",
+    "longestShift": "Turno più lungo",
+    "byType": "Per tipo",
+    "avgHoursPerShift": "⌀ Ore/Turno",
+    "radarDescription": "Confronta i tipi di turno principali per ore totali e media"
   },
   "sync": {
     "refreshing": "Aggiornamento dati...",

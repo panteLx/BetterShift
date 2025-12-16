@@ -107,13 +107,13 @@ export function CalendarGrid({
   return (
     <div className="grid grid-cols-7 gap-0 sm:gap-1.5 mb-6">
       {[
-        t("calendar_grid.monday"),
-        t("calendar_grid.tuesday"),
-        t("calendar_grid.wednesday"),
-        t("calendar_grid.thursday"),
-        t("calendar_grid.friday"),
-        t("calendar_grid.saturday"),
-        t("calendar_grid.sunday"),
+        t("common.weekday.monday"),
+        t("common.weekday.tuesday"),
+        t("common.weekday.wednesday"),
+        t("common.weekday.thursday"),
+        t("common.weekday.friday"),
+        t("common.weekday.saturday"),
+        t("common.weekday.sunday"),
       ].map((day) => (
         <div
           key={day}

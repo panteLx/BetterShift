@@ -24,7 +24,16 @@
     "deleteError": "{item} konnte nicht gelöscht werden",
     "deleteConfirm": "{item} \"{name}\" wirklich löschen?",
     "deleteConfirmWithWarning": "{item} \"{name}\" wirklich löschen? {warning}",
-    "shifts": "Schichten"
+    "shifts": "Schichten",
+    "weekday": {
+      "monday": "Mo",
+      "tuesday": "Di",
+      "wednesday": "Mi",
+      "thursday": "Do",
+      "friday": "Fr",
+      "saturday": "Sa",
+      "sunday": "So"
+    }
   },
   "validation": {
     "passwordMatch": "Passwörter stimmen nicht überein",
@@ -143,15 +152,7 @@
     "hidePresets": "Vorlagen ausblenden",
     "hiddenFromStats": "Aus Statistik ausgeblendet"
   },
-  "calendar_grid": {
-    "monday": "Mo",
-    "tuesday": "Di",
-    "wednesday": "Mi",
-    "thursday": "Do",
-    "friday": "Fr",
-    "saturday": "Sa",
-    "sunday": "So"
-  },
+
   "view": {
     "settingsTitle": "Ansichtseinstellungen",
     "settingsDescription": "Passe an, wie Schichten in allen Kalendern angezeigt werden",
@@ -182,9 +183,20 @@
     "week": "Woche",
     "month": "Monat",
     "year": "Jahr",
-    "total": "Gesamt",
     "noData": "Keine Schichten in diesem Zeitraum",
-    "hours": "Stunden"
+    "hours": "Stunden",
+    "overview": "Übersicht",
+    "distribution": "Verteilung",
+    "comparison": "Vergleich",
+    "radar": "Radar",
+    "totalShifts": "Schichten gesamt",
+    "totalHours": "Stunden gesamt",
+    "avgPerShift": "⌀ pro Schicht",
+    "shortestShift": "Kürzeste Schicht",
+    "longestShift": "Längste Schicht",
+    "byType": "Nach Schichttyp",
+    "avgHoursPerShift": "⌀ Stunden/Schicht",
+    "radarDescription": "Vergleiche Top-Schichttypen nach Gesamtstunden und Durchschnitt"
   },
   "sync": {
     "refreshing": "Aktualisiere Daten...",

@@ -24,7 +24,16 @@
     "deleteError": "Failed to delete {item}",
     "deleteConfirm": "Really delete {item} \"{name}\"?",
     "deleteConfirmWithWarning": "Really delete {item} \"{name}\"? {warning}",
-    "shifts": "Shifts"
+    "shifts": "Shifts",
+    "weekday": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
+    }
   },
   "validation": {
     "passwordMatch": "Passwords do not match",
@@ -143,15 +152,7 @@
     "hidePresets": "Hide presets",
     "hiddenFromStats": "Hidden from statistics"
   },
-  "calendar_grid": {
-    "monday": "Mon",
-    "tuesday": "Tue",
-    "wednesday": "Wed",
-    "thursday": "Thu",
-    "friday": "Fri",
-    "saturday": "Sat",
-    "sunday": "Sun"
-  },
+
   "view": {
     "settingsTitle": "View Settings",
     "settingsDescription": "Customize how shifts are displayed in all calendars",
@@ -182,9 +183,20 @@
     "week": "Week",
     "month": "Month",
     "year": "Year",
-    "total": "Total",
     "noData": "No shifts in this period",
-    "hours": "Hours"
+    "hours": "Hours",
+    "overview": "Overview",
+    "distribution": "Distribution",
+    "comparison": "Comparison",
+    "radar": "Radar",
+    "totalShifts": "Total Shifts",
+    "totalHours": "Total Hours",
+    "avgPerShift": "⌀ per Shift",
+    "shortestShift": "Shortest Shift",
+    "longestShift": "Longest Shift",
+    "byType": "By Type",
+    "avgHoursPerShift": "⌀ Hours/Shift",
+    "radarDescription": "Compare top shift types by total hours and average"
   },
   "sync": {
     "refreshing": "Refreshing data...",

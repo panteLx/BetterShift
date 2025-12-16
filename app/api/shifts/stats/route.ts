@@ -83,7 +83,9 @@ export async function GET(request: Request) {
     // Fetch shifts for the period, excluding shifts from iCloud syncs or presets that are hidden from stats
     const result = await db
       .select({
+        id: shifts.id,
         title: shifts.title,
+        date: shifts.date,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
         isAllDay: shifts.isAllDay,
@@ -111,6 +113,12 @@ export async function GET(request: Request) {
 
     // Group by title and calculate stats
     const statsMap = new Map<string, { count: number; totalMinutes: number }>();
+    const dailyStats = new Map<
+      string,
+      { count: number; totalMinutes: number }
+    >();
+    let minDuration = Infinity;
+    let maxDuration = 0;
 
     result.forEach((shift) => {
       const existing = statsMap.get(shift.title) || {
@@ -118,10 +126,45 @@ export async function GET(request: Request) {
         totalMinutes: 0,
       };
       existing.count++;
-      existing.totalMinutes += shift.isAllDay
+      const duration = shift.isAllDay
         ? 0
         : calculateShiftDuration(shift.startTime, shift.endTime);
+      existing.totalMinutes += duration;
       statsMap.set(shift.title, existing);
+
+      // Track min/max duration (exclude all-day shifts)
+      if (!shift.isAllDay && duration > 0) {
+        minDuration = Math.min(minDuration, duration);
+        maxDuration = Math.max(maxDuration, duration);
+      }
+
+      // Daily breakdown for trend analysis
+      const shiftDate = shift.startTime || shift.endTime || shift.date;
+      if (shiftDate) {
+        try {
+          // Handle both Date objects and Unix timestamps (in seconds for SQLite)
+          const date =
+            shiftDate instanceof Date
+              ? shiftDate
+              : typeof shiftDate === "number"
+              ? new Date(shiftDate * 1000) // Convert seconds to milliseconds
+              : new Date(shiftDate);
+
+          if (!isNaN(date.getTime())) {
+            const dateKey = date.toISOString().split("T")[0];
+            const dailyExisting = dailyStats.get(dateKey) || {
+              count: 0,
+              totalMinutes: 0,
+            };
+            dailyExisting.count++;
+            dailyExisting.totalMinutes += duration;
+            dailyStats.set(dateKey, dailyExisting);
+          }
+        } catch {
+          // Skip invalid dates
+          console.warn(`Invalid date for shift: ${shift.id}`, shiftDate);
+        }
+      }
     });
 
     // Transform result to object format
@@ -136,11 +179,30 @@ export async function GET(request: Request) {
       {} as Record<string, { count: number; totalMinutes: number }>
     );
 
-    // Calculate total duration
+    // Calculate total duration and averages
     const totalMinutes = Object.values(stats).reduce(
       (sum, data) => sum + data.totalMinutes,
       0
     );
+
+    const totalShifts = result.length;
+    const avgMinutesPerShift = totalShifts > 0 ? totalMinutes / totalShifts : 0;
+
+    // Calculate days with shifts for accurate daily average
+    const daysWithShifts = dailyStats.size;
+    const avgShiftsPerDay =
+      daysWithShifts > 0 ? totalShifts / daysWithShifts : 0;
+    const avgMinutesPerDay =
+      daysWithShifts > 0 ? totalMinutes / daysWithShifts : 0;
+
+    // Convert daily stats to array for trend visualization
+    const trendData = Array.from(dailyStats.entries())
+      .map(([date, data]) => ({
+        date,
+        count: data.count,
+        totalMinutes: data.totalMinutes,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     return NextResponse.json({
       period,
@@ -148,6 +210,14 @@ export async function GET(request: Request) {
       endDate: endDate.toISOString(),
       stats,
       totalMinutes,
+      totalShifts,
+      avgMinutesPerShift: Math.round(avgMinutesPerShift),
+      avgShiftsPerDay: Math.round(avgShiftsPerDay * 10) / 10,
+      avgMinutesPerDay: Math.round(avgMinutesPerDay),
+      minDuration: minDuration === Infinity ? 0 : minDuration,
+      maxDuration,
+      daysWithShifts,
+      trendData,
     });
   } catch (error) {
     console.error("Failed to fetch shift statistics:", error);
