@@ -138,6 +138,8 @@
     "markAsSecondary": "Mark as secondary (collapsed by default)",
     "hideFromStats": "Hide from statistics",
     "hideFromStatsHint": "Exclude shifts from this preset from statistics",
+    "showPresets": "Show presets",
+    "hidePresets": "Hide presets",
     "hiddenFromStats": "Hidden from statistics"
   },
   "calendar_grid": {

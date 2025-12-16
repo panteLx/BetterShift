@@ -138,6 +138,8 @@
     "markAsSecondary": "Als sekundär markieren (standardmäßig eingeklappt)",
     "hideFromStats": "Aus Statistik ausblenden",
     "hideFromStatsHint": "Schichten dieser Vorlage aus der Statistik ausschließen",
+    "showPresets": "Vorlagen anzeigen",
+    "hidePresets": "Vorlagen ausblenden",
     "hiddenFromStats": "Aus Statistik ausgeblendet"
   },
   "calendar_grid": {

@@ -25,6 +25,8 @@ interface PresetListProps {
   onViewSettingsClick?: () => void;
   onUnlock?: () => void;
   loading?: boolean;
+  hidePresetHeader?: boolean;
+  onHidePresetHeaderChange?: (hide: boolean) => void;
 }
 
 export function PresetList({
@@ -37,6 +39,8 @@ export function PresetList({
   onViewSettingsClick,
   onUnlock,
   loading = false,
+  hidePresetHeader = false,
+  onHidePresetHeaderChange,
 }: PresetListProps) {
   const t = useTranslations();
   const [showSecondary, setShowSecondary] = React.useState(false);
@@ -54,7 +58,7 @@ export function PresetList({
 
   // Show loading state while fetching
   if (loading) {
-    return <PresetListSkeleton />;
+    return <PresetListSkeleton hidePresetHeader={hidePresetHeader} />;
   }
 
   // Show unlock hint if calendar requires password and no password is cached (but not locked)
@@ -139,49 +143,27 @@ export function PresetList({
   }
 
   return (
-    <div className="space-y-3">
-      {/* Primary Presets */}
-      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-        {primaryPresets.map((preset) => (
-          <PresetButton
-            key={preset.id}
-            preset={preset}
-            isSelected={selectedPresetId === preset.id}
-            onSelect={() =>
-              onSelectPreset(
-                selectedPresetId === preset.id ? undefined : preset.id
-              )
-            }
-          />
-        ))}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onManageClick}
-          disabled={!onManageClick}
-          className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
-          title={t("preset.manage")}
-        >
-          <Settings className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-        </Button>
-        {onViewSettingsClick && (
-          <>
-            <div className="flex-1" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onViewSettingsClick}
-              className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
-              title={t("view.settingsTitle")}
-            >
-              <Settings2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-            </Button>
-          </>
-        )}
-      </div>
+    <div className="space-y-2">
+      {/* Preset Buttons Row */}
+      {!hidePresetHeader && (
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {primaryPresets.map((preset) => (
+            <PresetButton
+              key={preset.id}
+              preset={preset}
+              isSelected={selectedPresetId === preset.id}
+              onSelect={() =>
+                onSelectPreset(
+                  selectedPresetId === preset.id ? undefined : preset.id
+                )
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {/* Secondary Presets - Collapsible */}
-      {secondaryPresets.length > 0 && (
+      {!hidePresetHeader && secondaryPresets.length > 0 && (
         <div className="space-y-1.5">
           <Button
             variant="ghost"
@@ -217,6 +199,53 @@ export function PresetList({
           )}
         </div>
       )}
+
+      {/* Control Buttons Row */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {!hidePresetHeader && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onManageClick}
+            disabled={!onManageClick}
+            className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+            title={t("preset.manage")}
+          >
+            <Settings className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+          </Button>
+        )}
+        <div className="flex-1" />
+        {onViewSettingsClick && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onViewSettingsClick}
+            className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+            title={t("view.settingsTitle")}
+          >
+            <Settings2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+          </Button>
+        )}
+        {onHidePresetHeaderChange && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onHidePresetHeaderChange(!hidePresetHeader)}
+            className="h-8 sm:h-9 w-8 sm:w-9 p-0 text-muted-foreground hover:text-foreground"
+            title={
+              hidePresetHeader
+                ? t("preset.showPresets")
+                : t("preset.hidePresets")
+            }
+          >
+            {hidePresetHeader ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

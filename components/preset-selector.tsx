@@ -19,6 +19,8 @@ interface PresetSelectorProps {
   onPasswordRequired: (action: () => Promise<void>) => void;
   onViewSettingsClick?: () => void;
   loading?: boolean;
+  hidePresetHeader?: boolean;
+  onHidePresetHeaderChange?: (hide: boolean) => void;
 }
 
 export function PresetSelector({
@@ -33,6 +35,8 @@ export function PresetSelector({
   onPasswordRequired,
   onViewSettingsClick,
   loading = false,
+  hidePresetHeader = false,
+  onHidePresetHeaderChange,
 }: PresetSelectorProps) {
   const [showManageDialog, setShowManageDialog] = useState(false);
 
@@ -66,6 +70,8 @@ export function PresetSelector({
         onViewSettingsClick={onViewSettingsClick}
         onUnlock={() => onPasswordRequired(async () => {})}
         loading={loading}
+        hidePresetHeader={hidePresetHeader}
+        onHidePresetHeaderChange={onHidePresetHeaderChange}
       />
 
       <PresetManageDialog

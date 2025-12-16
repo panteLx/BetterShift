@@ -45,6 +45,8 @@ interface AppHeaderProps {
   onMobileCalendarDialogChange: (open: boolean) => void;
   onViewSettingsClick: () => void;
   presetsLoading?: boolean;
+  hidePresetHeader?: boolean;
+  onHidePresetHeaderChange?: (hide: boolean) => void;
 }
 
 export function AppHeader({
@@ -69,6 +71,8 @@ export function AppHeader({
   onMobileCalendarDialogChange,
   onViewSettingsClick,
   presetsLoading = false,
+  hidePresetHeader = false,
+  onHidePresetHeaderChange,
 }: AppHeaderProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -279,6 +283,8 @@ export function AppHeader({
                   onPasswordRequired={onPasswordRequired}
                   onViewSettingsClick={onViewSettingsClick}
                   loading={presetsLoading}
+                  hidePresetHeader={hidePresetHeader}
+                  onHidePresetHeaderChange={onHidePresetHeaderChange}
                 />
               </div>
             )}

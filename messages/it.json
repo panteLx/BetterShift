@@ -138,7 +138,9 @@
     "markAsSecondary": "Segna come secondario (compresso di default)",
     "hideFromStats": "Nascondi dalle statistiche",
     "hideFromStatsHint": "Escludi i turni da questo preset dalle statistiche",
-    "hiddenFromStats": "Nascosto dalle statistiche"
+    "hiddenFromStats": "Nascosto dalle statistiche",
+    "showPresets": "Mostra preset",
+    "hidePresets": "Nascondi preset"
   },
   "calendar_grid": {
     "monday": "Lun",

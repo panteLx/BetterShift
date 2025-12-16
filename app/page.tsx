@@ -338,6 +338,8 @@ function HomeContent() {
         onMobileCalendarDialogChange={dialogStates.setShowMobileCalendarDialog}
         onViewSettingsClick={() => dialogStates.setShowViewSettingsDialog(true)}
         presetsLoading={presetsLoading && !isSelectedCalendarLocked}
+        hidePresetHeader={viewSettings.hidePresetHeader}
+        onHidePresetHeaderChange={viewSettings.handleHidePresetHeaderChange}
       />
 
       <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">

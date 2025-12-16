@@ -77,6 +77,14 @@ export function useViewSettings() {
     return false;
   });
 
+  const [hidePresetHeader, setHidePresetHeader] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("hide-preset-header");
+      return stored === "true";
+    }
+    return false;
+  });
+
   const handleShiftsPerDayChange = useCallback((count: number | null) => {
     setShiftsPerDay(count);
     if (typeof window !== "undefined") {
@@ -138,6 +146,13 @@ export function useViewSettings() {
     }
   }, []);
 
+  const handleHidePresetHeaderChange = useCallback((hide: boolean) => {
+    setHidePresetHeader(hide);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("hide-preset-header", hide.toString());
+    }
+  }, []);
+
   return {
     shiftsPerDay,
     externalShiftsPerDay,
@@ -146,6 +161,7 @@ export function useViewSettings() {
     shiftSortType,
     shiftSortOrder,
     combinedSortMode,
+    hidePresetHeader,
     handleShiftsPerDayChange,
     handleExternalShiftsPerDayChange,
     handleShowShiftNotesChange,
@@ -153,5 +169,6 @@ export function useViewSettings() {
     handleShiftSortTypeChange,
     handleShiftSortOrderChange,
     handleCombinedSortModeChange,
+    handleHidePresetHeaderChange,
   };
 }
