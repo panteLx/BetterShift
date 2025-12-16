@@ -139,7 +139,7 @@ export async function GET(request: Request) {
       }
 
       // Daily breakdown for trend analysis
-      const shiftDate = shift.startTime || shift.endTime || shift.date;
+      const shiftDate = shift.date;
       if (shiftDate) {
         try {
           // Handle both Date objects and Unix timestamps (in seconds for SQLite)
@@ -162,7 +162,6 @@ export async function GET(request: Request) {
           }
         } catch {
           // Skip invalid dates
-          console.warn(`Invalid date for shift: ${shift.id}`, shiftDate);
         }
       }
     });

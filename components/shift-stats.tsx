@@ -13,6 +13,31 @@ import {
 import { getCachedPassword } from "@/lib/password-cache";
 import { formatDuration } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Hook for responsive radius that's SSR-safe
+function useResponsiveRadius() {
+  const [radius, setRadius] = useState(120); // Safe default for SSR
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateRadius = () => {
+      setRadius(window.innerWidth < 640 ? 80 : 120);
+    };
+
+    // Set initial value
+    updateRadius();
+
+    // Add resize listener
+    window.addEventListener("resize", updateRadius);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", updateRadius);
+  }, []);
+
+  return radius;
+}
+
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -83,6 +108,7 @@ export function ShiftStats({
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const isInitialLoadRef = useRef(true);
+  const outerRadius = useResponsiveRadius();
 
   const fetchStats = useCallback(
     async (silent = false) => {
@@ -108,12 +134,6 @@ export function ShiftStats({
           return; // Calendar is locked and no valid password
         }
         const data = await response.json();
-        console.log("Stats API Response:", {
-          avgShiftsPerDay: data.avgShiftsPerDay,
-          daysWithShifts: data.daysWithShifts,
-          trendDataLength: data.trendData?.length,
-          trendDataFirst3: data.trendData?.slice(0, 3),
-        });
         setStats(data);
       } catch (error) {
         console.error("Failed to fetch shift statistics:", error);
@@ -169,7 +189,9 @@ export function ShiftStats({
           fullName: title,
           hours: Math.round((data.totalMinutes / 60) * 10) / 10,
           shifts: data.count,
-          avgHours: Math.round((data.totalMinutes / data.count / 60) * 10) / 10,
+          avgHours: data.count
+            ? Math.round((data.totalMinutes / data.count / 60) * 10) / 10
+            : 0,
         }))
     : [];
 
@@ -278,12 +300,12 @@ export function ShiftStats({
 
           {/* View Mode Selector */}
           {stats && Object.keys(stats.stats).length > 0 && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 sm:flex gap-2">
               <Button
                 variant={viewMode === "overview" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("overview")}
-                className="flex-1 sm:flex-none h-8 text-xs transition-all"
+                className="sm:flex-none h-8 text-xs transition-all"
               >
                 <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
                 {t("stats.overview")}
@@ -292,7 +314,7 @@ export function ShiftStats({
                 variant={viewMode === "pie" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("pie")}
-                className="flex-1 sm:flex-none h-8 text-xs transition-all"
+                className="sm:flex-none h-8 text-xs transition-all"
               >
                 <PieChart className="h-3.5 w-3.5 mr-1.5" />
                 {t("stats.distribution")}
@@ -301,7 +323,7 @@ export function ShiftStats({
                 variant={viewMode === "bar" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("bar")}
-                className="flex-1 sm:flex-none h-8 text-xs transition-all"
+                className="sm:flex-none h-8 text-xs transition-all"
               >
                 <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
                 {t("stats.comparison")}
@@ -310,7 +332,7 @@ export function ShiftStats({
                 variant={viewMode === "radar" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("radar")}
-                className="flex-1 sm:flex-none h-8 text-xs transition-all"
+                className="sm:flex-none h-8 text-xs transition-all"
               >
                 <RadarIcon className="h-3.5 w-3.5 mr-1.5" />
                 {t("stats.radar")}
@@ -358,7 +380,7 @@ export function ShiftStats({
                   </div>
 
                   {/* Additional Metrics */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {stats.minDuration > 0 && (
                       <div className="p-3 rounded-lg bg-gradient-to-br from-card via-card/80 to-card/60 border border-border/40">
                         <div className="text-[10px] text-muted-foreground font-medium mb-1">
@@ -446,7 +468,7 @@ export function ShiftStats({
                           label={({ name, percent }) =>
                             `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
                           }
-                          outerRadius={window.innerWidth < 640 ? 80 : 120}
+                          outerRadius={outerRadius}
                           fill="#8884d8"
                           dataKey="value"
                           animationBegin={0}
