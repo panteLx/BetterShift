@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import {
@@ -64,14 +64,16 @@ interface SortablePresetItemProps {
   onEdit: (preset: ShiftPreset) => void;
   onDelete: (id: string) => void;
   t: (key: string) => string;
+  showDragHandle?: boolean;
 }
 
-function SortablePresetItem({
+const SortablePresetItem = memo(function SortablePresetItem({
   preset,
   isDeleting,
   onEdit,
   onDelete,
   t,
+  showDragHandle = true,
 }: SortablePresetItemProps) {
   const {
     attributes,
@@ -97,12 +99,14 @@ function SortablePresetItem({
       {...attributes}
     >
       <div className="flex items-start gap-2">
-        <button
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted/50 rounded transition-colors shrink-0"
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </button>
+        {showDragHandle && (
+          <button
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted/50 rounded transition-colors shrink-0"
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
+        )}
         <div
           className="w-1 h-4 rounded-full shrink-0 mt-0.5"
           style={{ backgroundColor: preset.color }}
@@ -161,7 +165,7 @@ function SortablePresetItem({
       </div>
     </div>
   );
-}
+});
 
 export function PresetManageDialog({
   open,
@@ -602,6 +606,7 @@ export function PresetManageDialog({
                           onEdit={startEdit}
                           onDelete={handleDelete}
                           t={t}
+                          showDragHandle={orderedPrimaryPresets.length > 1}
                         />
                       ))}
                     </div>
@@ -636,6 +641,7 @@ export function PresetManageDialog({
                           onEdit={startEdit}
                           onDelete={handleDelete}
                           t={t}
+                          showDragHandle={orderedSecondaryPresets.length > 1}
                         />
                       ))}
                     </div>
@@ -653,6 +659,7 @@ export function PresetManageDialog({
                 onEdit={startEdit}
                 onDelete={handleDelete}
                 t={t}
+                showDragHandle={false}
               />
             </div>
           )}
