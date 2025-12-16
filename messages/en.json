@@ -133,6 +133,7 @@
     "noPresets": "No shift presets yet",
     "createFirstDescription": "Create your first preset to quickly add shifts to your calendar. Presets save your frequently used shift times and details.",
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
+    "primaryPresets": "Primary Presets",
     "secondaryPresets": "Secondary Presets",
     "secondary": "Secondary",
     "markAsSecondary": "Mark as secondary (collapsed by default)",

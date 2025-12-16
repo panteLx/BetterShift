@@ -133,6 +133,7 @@
     "noPresets": "Noch keine Schichtvorlagen",
     "createFirstDescription": "Erstelle deine erste Vorlage, um Schichten schnell zu deinem Kalender hinzuzufügen. Vorlagen speichern deine häufig genutzten Schichtzeiten und Details.",
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
+    "primaryPresets": "Primäre Vorlagen",
     "secondaryPresets": "Sekundäre Vorlagen",
     "secondary": "Sekundär",
     "markAsSecondary": "Als sekundär markieren (standardmäßig eingeklappt)",

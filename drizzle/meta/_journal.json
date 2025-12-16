@@ -78,6 +78,13 @@
       "when": 1765059800909,
       "tag": "0010_unusual_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1765917907080,
+      "tag": "0011_loose_bloodaxe",
+      "breakpoints": true
     }
   ]
 }

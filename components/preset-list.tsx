@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
 import { getCachedPassword } from "@/lib/password-cache";
@@ -45,6 +47,9 @@ export function PresetList({
   const t = useTranslations();
   const [showSecondary, setShowSecondary] = React.useState(false);
 
+  const primaryPresets = presets.filter((p) => !p.isSecondary);
+  const secondaryPresets = presets.filter((p) => p.isSecondary);
+
   // Hide preset buttons if calendar requires password AND no valid password is cached
   const selectedCalendar = calendars.find((c) => c.id === calendarId);
   const requiresPassword = !!selectedCalendar?.passwordHash;
@@ -52,9 +57,6 @@ export function PresetList({
   const isLocked = selectedCalendar?.isLocked === true;
   const shouldHidePresetButtons = requiresPassword && !hasPassword;
   const shouldShowUnlockHint = shouldHidePresetButtons && !isLocked;
-
-  const primaryPresets = presets.filter((p) => !p.isSecondary);
-  const secondaryPresets = presets.filter((p) => p.isSecondary);
 
   // Show loading state while fetching
   if (loading) {
@@ -338,5 +340,3 @@ function PresetButton({
     </motion.div>
   );
 }
-
-import React from "react";

@@ -100,6 +100,7 @@ export const shiftPresets = sqliteTable("shift_presets", {
   hideFromStats: integer("hide_from_stats", { mode: "boolean" })
     .notNull()
     .default(false),
+  order: integer("order").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

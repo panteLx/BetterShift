@@ -4,6 +4,23 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -17,7 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { ShiftPreset } from "@/lib/db/schema";
 import { PRESET_COLORS } from "@/lib/constants";
-import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Loader2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedPassword } from "@/lib/password-cache";
 
@@ -40,6 +57,112 @@ interface PresetManageDialogProps {
   onPresetsChange: () => void;
 }
 
+// Sortable preset item component
+interface SortablePresetItemProps {
+  preset: ShiftPreset;
+  isDeleting: boolean;
+  onEdit: (preset: ShiftPreset) => void;
+  onDelete: (id: string) => void;
+  t: (key: string) => string;
+}
+
+function SortablePresetItem({
+  preset,
+  isDeleting,
+  onEdit,
+  onDelete,
+  t,
+}: SortablePresetItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: preset.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? undefined : transition, // Disable transition during drag for smoother performance
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 transition-colors"
+      {...attributes}
+    >
+      <div className="flex items-start gap-2">
+        <button
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted/50 rounded transition-colors shrink-0"
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div
+          className="w-1 h-4 rounded-full shrink-0 mt-0.5"
+          style={{ backgroundColor: preset.color }}
+        />
+        <span className="font-semibold flex-1 min-w-0 break-words">
+          {preset.title}
+        </span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between pl-7">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {preset.isAllDay ? (
+              t("shift.allDay")
+            ) : (
+              <>
+                {preset.startTime} - {preset.endTime}
+              </>
+            )}
+          </span>
+          {preset.isSecondary && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
+              {t("preset.secondary")}
+            </span>
+          )}
+          {preset.hideFromStats && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20 font-medium">
+              {t("preset.hiddenFromStats")}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => onEdit(preset)}
+            disabled={isDeleting}
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => onDelete(preset.id)}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PresetManageDialog({
   open,
   onOpenChange,
@@ -52,6 +175,30 @@ export function PresetManageDialog({
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPreset, setEditingPreset] = useState<ShiftPreset | null>(null);
+  const [orderedPrimaryPresets, setOrderedPrimaryPresets] = useState<
+    ShiftPreset[]
+  >([]);
+  const [orderedSecondaryPresets, setOrderedSecondaryPresets] = useState<
+    ShiftPreset[]
+  >([]);
+
+  // Update local ordered presets when presets prop changes
+  useEffect(() => {
+    setOrderedPrimaryPresets(presets.filter((p) => !p.isSecondary));
+    setOrderedSecondaryPresets(presets.filter((p) => p.isSecondary));
+  }, [presets]);
+
+  // Drag and drop sensors with activation constraint to prevent accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Form state
   const [formData, setFormData] = useState<PresetFormData>({
@@ -68,6 +215,90 @@ export function PresetManageDialog({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialFormDataRef = useRef<PresetFormData | null>(null);
   const isInitialMount = useRef(true);
+
+  // Handle drag end for primary presets
+  const handlePrimaryDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = orderedPrimaryPresets.findIndex((p) => p.id === active.id);
+    const newIndex = orderedPrimaryPresets.findIndex((p) => p.id === over.id);
+
+    const newOrderedPrimary = arrayMove(
+      orderedPrimaryPresets,
+      oldIndex,
+      newIndex
+    );
+    setOrderedPrimaryPresets(newOrderedPrimary);
+
+    // Save new order to backend
+    await savePresetOrder([...newOrderedPrimary, ...orderedSecondaryPresets]);
+  };
+
+  // Handle drag end for secondary presets
+  const handleSecondaryDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = orderedSecondaryPresets.findIndex(
+      (p) => p.id === active.id
+    );
+    const newIndex = orderedSecondaryPresets.findIndex((p) => p.id === over.id);
+
+    const newOrderedSecondary = arrayMove(
+      orderedSecondaryPresets,
+      oldIndex,
+      newIndex
+    );
+    setOrderedSecondaryPresets(newOrderedSecondary);
+
+    // Save new order to backend
+    await savePresetOrder([...orderedPrimaryPresets, ...newOrderedSecondary]);
+  };
+
+  const savePresetOrder = async (allPresets: ShiftPreset[]) => {
+    try {
+      const password = getCachedPassword(calendarId);
+      const presetOrders = allPresets.map((preset, index) => ({
+        id: preset.id,
+        order: index,
+      }));
+
+      const response = await fetch("/api/presets/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          calendarId,
+          presetOrders,
+          password,
+        }),
+      });
+
+      if (response.ok) {
+        onPresetsChange();
+      } else {
+        const data = await response.json();
+        toast.error(
+          data.error || t("common.updateError", { item: t("preset.preset") })
+        );
+        // Revert order on error
+        setOrderedPrimaryPresets(presets.filter((p) => !p.isSecondary));
+        setOrderedSecondaryPresets(presets.filter((p) => p.isSecondary));
+      }
+    } catch (error) {
+      console.error("Failed to reorder presets:", error);
+      toast.error(t("common.updateError", { item: t("preset.preset") }));
+      // Revert order on error
+      setOrderedPrimaryPresets(presets.filter((p) => !p.isSecondary));
+      setOrderedSecondaryPresets(presets.filter((p) => p.isSecondary));
+    }
+  };
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -345,83 +576,84 @@ export function PresetManageDialog({
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto flex-1 p-6">
-          {/* Existing Presets List - hide when adding new preset, show only edited preset when editing */}
-          {presets.length > 0 && !showAddForm && (
-            <div className="space-y-3">
-              {presets
-                .filter(
-                  (preset) => !editingPreset || preset.id === editingPreset.id
-                )
-                .map((preset) => (
-                  <div
-                    key={preset.id}
-                    className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
-                    style={{
-                      borderLeftColor: preset.color,
-                      borderLeftWidth: 4,
-                    }}
+          {/* Primary Presets List */}
+          {orderedPrimaryPresets.length > 0 &&
+            !showAddForm &&
+            !editingPreset && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground px-1">
+                  {t("preset.primaryPresets")}
+                </h3>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handlePrimaryDragEnd}
+                >
+                  <SortableContext
+                    items={orderedPrimaryPresets.map((p) => p.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    {/* Title row */}
-                    <div className="flex items-start gap-2">
-                      <div
-                        className="w-1 h-4 rounded-full shrink-0 mt-0.5"
-                        style={{ backgroundColor: preset.color }}
-                      />
-                      <span className="font-semibold flex-1 min-w-0 break-words">
-                        {preset.title}
-                      </span>
+                    <div className="space-y-3">
+                      {orderedPrimaryPresets.map((preset) => (
+                        <SortablePresetItem
+                          key={preset.id}
+                          preset={preset}
+                          isDeleting={isDeleting === preset.id}
+                          onEdit={startEdit}
+                          onDelete={handleDelete}
+                          t={t}
+                        />
+                      ))}
                     </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
 
-                    {/* Info and buttons row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          {preset.isAllDay ? (
-                            t("shift.allDay")
-                          ) : (
-                            <>
-                              {preset.startTime} - {preset.endTime}
-                            </>
-                          )}
-                        </span>
-                        {preset.isSecondary && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
-                            {t("preset.secondary")}
-                          </span>
-                        )}
-                        {preset.hideFromStats && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20 font-medium">
-                            {t("preset.hiddenFromStats")}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => startEdit(preset)}
-                          disabled={!!isDeleting}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDelete(preset.id)}
-                          disabled={!!isDeleting}
-                        >
-                          {isDeleting === preset.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+          {/* Secondary Presets List */}
+          {orderedSecondaryPresets.length > 0 &&
+            !showAddForm &&
+            !editingPreset && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground px-1">
+                  {t("preset.secondaryPresets")}
+                </h3>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleSecondaryDragEnd}
+                >
+                  <SortableContext
+                    items={orderedSecondaryPresets.map((p) => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {orderedSecondaryPresets.map((preset) => (
+                        <SortablePresetItem
+                          key={preset.id}
+                          preset={preset}
+                          isDeleting={isDeleting === preset.id}
+                          onEdit={startEdit}
+                          onDelete={handleDelete}
+                          t={t}
+                        />
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
+
+          {/* Show edited preset */}
+          {editingPreset && (
+            <div className="space-y-3">
+              <SortablePresetItem
+                preset={editingPreset}
+                isDeleting={isDeleting === editingPreset.id}
+                onEdit={startEdit}
+                onDelete={handleDelete}
+                t={t}
+              />
             </div>
           )}
 

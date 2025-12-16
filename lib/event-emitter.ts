@@ -50,7 +50,7 @@ if (process.env.NODE_ENV !== "production") {
 // Event types
 export type CalendarChangeEvent = {
   type: "shift" | "preset" | "note" | "calendar" | "sync-log";
-  action: "create" | "update" | "delete";
+  action: "create" | "update" | "delete" | "reorder";
   calendarId: string;
   data?: unknown;
 };

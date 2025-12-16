@@ -133,6 +133,7 @@
     "noPresets": "Ancora nessun preset turno",
     "createFirstDescription": "Crea il tuo primo preset per aggiungere rapidamente turni al tuo calendario. I preset salvano gli orari e i dettagli dei turni utilizzati di frequente.",
     "deleteConfirm": "Eliminare questo preset? Verranno eliminati anche tutti i turni creati da questo preset.",
+    "primaryPresets": "Preset Primari",
     "secondaryPresets": "Preset Secondari",
     "secondary": "Secondario",
     "markAsSecondary": "Segna come secondario (compresso di default)",

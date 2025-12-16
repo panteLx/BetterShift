@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
     const presets = await db
       .select()
       .from(shiftPresets)
-      .where(eq(shiftPresets.calendarId, calendarId));
+      .where(eq(shiftPresets.calendarId, calendarId))
+      .orderBy(asc(shiftPresets.order));
     return NextResponse.json(presets);
   } catch (error) {
     console.error("Error fetching presets:", error);
@@ -104,6 +105,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get the max order value for this calendar to append new preset at the end
+    const existingPresets = await db
+      .select()
+      .from(shiftPresets)
+      .where(eq(shiftPresets.calendarId, calendarId));
+
+    const maxOrder =
+      existingPresets.length > 0
+        ? Math.max(...existingPresets.map((p) => p.order || 0))
+        : -1;
+
     const [preset] = await db
       .insert(shiftPresets)
       .values({
@@ -116,6 +128,7 @@ export async function POST(request: NextRequest) {
         isSecondary: isSecondary || false,
         isAllDay: isAllDay || false,
         hideFromStats: hideFromStats || false,
+        order: maxOrder + 1,
       })
       .returning();
 
