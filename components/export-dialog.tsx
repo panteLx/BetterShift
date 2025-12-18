@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useState, useEffect, useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,7 @@ export function ExportDialog({
   calendarName,
 }: ExportDialogProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const [exportFormat, setExportFormat] = useState<"ics" | "pdf">("ics");
   const [exportRange, setExportRange] = useState<"all" | "month" | "year">(
     "all"
@@ -45,39 +46,56 @@ export function ExportDialog({
   const [loading, setLoading] = useState(false);
 
   // Generate month options (current month ± 12 months)
-  const monthOptions = [];
-  const today = new Date();
-  for (let i = -12; i <= 12; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}`;
-    const label = date.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-    monthOptions.push({ value, label });
-  }
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    for (let i = -12; i <= 12; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const value = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const label = date.toLocaleDateString(locale, {
+        month: "long",
+        year: "numeric",
+      });
+      options.push({ value, label });
+    }
+    return options;
+  }, [locale]);
 
   // Generate year options (current year ± 5 years)
-  const yearOptions = [];
-  const currentYear = today.getFullYear();
-  for (let i = -5; i <= 5; i++) {
-    const year = currentYear + i;
-    yearOptions.push({ value: year.toString(), label: year.toString() });
-  }
+  const yearOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    for (let i = -5; i <= 5; i++) {
+      const year = currentYear + i;
+      options.push({ value: year.toString(), label: year.toString() });
+    }
+    return options;
+  }, []);
 
-  // Set default selections
-  if (!selectedMonth) {
-    const defaultMonth = `${today.getFullYear()}-${String(
-      today.getMonth() + 1
-    ).padStart(2, "0")}`;
-    setSelectedMonth(defaultMonth);
-  }
-  if (!selectedYear) {
-    setSelectedYear(currentYear.toString());
-  }
+  // Initialize or reset state when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      // Set default selections when dialog opens
+      const today = new Date();
+      const defaultMonth = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const currentYear = today.getFullYear();
+
+      setSelectedMonth(defaultMonth);
+      setSelectedYear(currentYear.toString());
+    } else {
+      // Reset state when dialog closes
+      setExportFormat("ics");
+      setExportRange("all");
+      setSelectedMonth("");
+      setSelectedYear("");
+      setLoading(false);
+    }
+  }, [open]);
 
   const handleExport = async () => {
     setLoading(true);
@@ -95,6 +113,9 @@ export function ExportDialog({
       }
 
       if (exportFormat === "pdf") {
+        // Add locale for proper date formatting and translations
+        params.append("locale", locale);
+
         if (exportRange === "month" && selectedMonth) {
           params.append("month", selectedMonth);
         } else if (exportRange === "year" && selectedYear) {

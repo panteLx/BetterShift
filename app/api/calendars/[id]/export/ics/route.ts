@@ -72,13 +72,27 @@ export async function GET(
 
       // Set times
       const shiftDate = new Date(shift.date);
-      const dateStr = shiftDate.toISOString().split("T")[0]; // YYYY-MM-DD
 
       if (shift.isAllDay) {
-        // All-day event
+        // All-day event (DTEND is exclusive per RFC 5545)
+        // Use local date methods to match how dates are stored in the database
+        const year = shiftDate.getFullYear();
+        const month = String(shiftDate.getMonth() + 1).padStart(2, "0");
+        const day = String(shiftDate.getDate()).padStart(2, "0");
+        const dateStr = `${year}-${month}-${day}`;
+
         const startTime = ICAL.Time.fromDateString(dateStr);
         event.startDate = startTime;
-        event.endDate = startTime;
+
+        // DTEND must be the day after DTSTART for single-day all-day events
+        const endDate = new Date(shiftDate);
+        endDate.setDate(endDate.getDate() + 1);
+        const endYear = endDate.getFullYear();
+        const endMonth = String(endDate.getMonth() + 1).padStart(2, "0");
+        const endDay = String(endDate.getDate()).padStart(2, "0");
+        const endDateStr = `${endYear}-${endMonth}-${endDay}`;
+
+        event.endDate = ICAL.Time.fromDateString(endDateStr);
       } else {
         // Timed event
         const [startHour, startMinute] = shift.startTime.split(":").map(Number);

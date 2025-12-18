@@ -15,6 +15,7 @@ export async function GET(
     const password = searchParams.get("password");
     const month = searchParams.get("month"); // Format: YYYY-MM
     const year = searchParams.get("year"); // Format: YYYY
+    const locale = searchParams.get("locale") || "en"; // Default to English
 
     // Get calendar
     const calendar = await db.query.calendars.findFirst({
@@ -88,9 +89,11 @@ export async function GET(
     // Date range
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    const dateRangeText = month ? `${month}` : year ? `${year}` : "All shifts";
-    doc.text(dateRangeText, pageWidth / 2, yPosition, { align: "center" });
-    yPosition += 10;
+    if (month || year) {
+      const dateRangeText = month ? `${month}` : `${year}`;
+      doc.text(dateRangeText, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 10;
+    }
 
     // Horizontal line
     doc.setDrawColor(200, 200, 200);
@@ -98,10 +101,8 @@ export async function GET(
     yPosition += 8;
 
     if (calendarShifts.length === 0) {
-      doc.setFontSize(12);
-      doc.text("No shifts found for this period", pageWidth / 2, yPosition, {
-        align: "center",
-      });
+      // Empty state - no text needed, the date range shows the filter
+      yPosition += 20;
     } else {
       // Group shifts by month
       const shiftsByMonth = new Map<string, typeof calendarShifts>();
@@ -123,7 +124,7 @@ export async function GET(
         const monthShifts = shiftsByMonth.get(monthKey)!;
         const [monthYear, monthNum] = monthKey.split("-");
         const monthDate = new Date(parseInt(monthYear), parseInt(monthNum) - 1);
-        const monthName = monthDate.toLocaleDateString("en-US", {
+        const monthName = monthDate.toLocaleDateString(locale, {
           month: "long",
           year: "numeric",
         });
@@ -144,7 +145,7 @@ export async function GET(
           checkPageBreak(15);
 
           const shiftDate = new Date(shift.date);
-          const dateStr = shiftDate.toLocaleDateString("en-US", {
+          const dateStr = shiftDate.toLocaleDateString(locale, {
             weekday: "short",
             day: "2-digit",
             month: "2-digit",
@@ -161,7 +162,7 @@ export async function GET(
           // Time
           doc.setFont("helvetica", "normal");
           const timeStr = shift.isAllDay
-            ? "All Day"
+            ? "—" // Em dash for all-day shifts
             : `${shift.startTime} - ${shift.endTime}`;
           doc.text(timeStr, margin + 35, yPosition);
 
