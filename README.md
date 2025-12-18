@@ -13,7 +13,7 @@
 
 > **Note**
 >
-> BetterShift is a modern shift management application built with Next.js 16 and SQLite. It helps you organize and manage work shifts across multiple calendars with customizable presets, color coding, password protection and external calendar synchronization. Perfect for anyone managing variable work schedules.
+> BetterShift is a modern shift management application designed to simplify variable work schedules. Manage unlimited calendars with one-click shift toggles, reusable presets, and real-time synchronization across devices. Features include external calendar integration (Google, Outlook, iCal), password-protected calendars, ICS/PDF export, live statistics, and multi-language support. Built with Next.js 16 and SQLite for fast, self-hosted deployment.
 
 ## 🔗 Quick Links
 
@@ -29,95 +29,48 @@
 
 ## ✨ Key Features
 
-### 📅 Smart Shift Calendar Management
+### 📅 Calendar & Shift Management
 
-- **Multiple Calendars** — Create unlimited shift calendars with custom names and colors for different jobs, people or schedules
-- **Interactive Month View** — Navigate shifts effortlessly with a clean, week-based calendar layout
-- **One-Click Shift Toggle** — Left-click any day to instantly add or remove shifts using your active preset
-- **Daily Notes** — Right-click any day to attach context notes (e.g., "Early shift for doctor appointment")
-- **External Calendar Sync** — Subscribe to external calendars (Google, Outlook, iCal) with automatic or manual refresh
-- **Sync Notification Center** — Monitor external calendar sync status, errors, and updates in real-time
+- **Multiple Calendars** — Unlimited calendars with custom names and colors
+- **Interactive Month View** — Clean, week-based calendar layout with one-click shift toggles
+- **Quick Actions** — Left-click to add/remove shifts, right-click to add notes
+- **External Calendar Sync** — Subscribe to Google, Outlook or iCal calendars with auto/manual refresh
+- **Sync Monitoring** — Real-time sync status and error notifications
 
-### 🎨 Flexible Customization
+### 🎨 Customization & Organization
 
-- **Shift Presets** — Build reusable templates with custom labels, times, and color-coded categories
-- **Visual Organization** — Color-code calendars and shifts for instant visual recognition
-- **Quick Preset Switching** — Change active presets on the fly to adapt to different shift patterns
-- **Auto-Save Templates** — Automatically save new shift configurations as presets for future use
+- **Shift Presets** — Reusable templates with custom labels, times, and colors
+- **Visual Organization** — Color-code calendars and shifts for instant recognition
+- **Auto-Save Templates** — Automatically save shift configurations for future use
+- **Export Options** — Download as ICS or PDF with flexible time range filters
 
-### 🔒 Privacy & Security
+### 🔒 Security & Privacy
 
-- **Password Protection** — Lock individual calendars with SHA-256 encrypted passwords
-- **Secure Local Storage** — All data stays on your server; passwords are hashed and never stored in plaintext
-- **Per-Calendar Access Control** — Different calendars can have different security levels
+- **Password Protection** — SHA-256 encrypted calendar passwords
+- **Per-Calendar Access** — Different security levels for each calendar
 
-### 🌍 International by Design
+### 📊 Analytics & Live Updates
 
-- **Multi-Language Support** — Full German, English, and Italian translations built-in
-- **Smart Language Detection** — Automatically uses your browser's language preference
-- **Persistent Settings** — Language choice saved in cookies across sessions
-- **Easy Switching** — Toggle languages anytime from the footer
+- **Real-Time Statistics** — Instant shift tracking and hour calculations with visual charts
+- **Server-Sent Events** — Changes sync instantly across all open browser tabs
 
-### 📊 Insightful Analytics
+### 🌍 Multi-Language & Themes
 
-- **Flexible Time Periods** — View statistics for current month, last 30 days, or custom date ranges
-- **Real-Time Stats** — Shift totals and hour calculations update instantly when you make changes
-- **Shift Statistics** — Track total hours worked with precise duration calculations and more
-- **Work Pattern Analysis** — Understand your schedule with aggregated shift data
-
-### ⚡ Live Updates & Sync
-
-- **Server-Sent Events (SSE)** — Changes appear instantly across all open browser tabs
-- **Connection Monitoring** — Visual indicators show real-time sync status
-- **Offline Resilience** — Graceful handling when connection drops, auto-reconnect on restore
-- **Background Refresh** — Data updates silently without disrupting your workflow
-- **Skeleton Loading States** — Smooth loading experiences with skeleton placeholders
-
-### 🔔 Version Management & Updates
-
-- **Automatic Update Checks** — Detects new releases every 15 minutes with visual notifications
-- **Integrated Changelog** — View release notes and version history directly in the app
-
-### 🎨 Customizable Display
-
-- **Dark/Light Theme** — Toggle between dark and light modes with system preference detection
-- **View Settings** — Customize shift display options and calendar appearance
-- **Flexible Layouts** — Adjust calendar views to match your preferences
+- **Built-in Translations** — Full German, English, and Italian support
+- **Dark/Light Theme** — Toggle themes with system preference detection
 - **Responsive Design** — Optimized for desktop and mobile devices
 
-### 🛠️ Modern Foundation
+### 🔔 Modern Stack & Updates
 
-- **Next.js 16 + React 19** — Built on the latest App Router architecture for peak performance
-- **SQLite + Drizzle ORM** — Lightweight file-based database with full TypeScript type safety
-- **Tailwind CSS 4** — Modern, responsive design with shadcn/ui component library
-- **Docker Ready** — One-command deployment with Docker Compose for easy self-hosting
+- **Auto Update Checks** — Detects new releases with visual notifications
+- **Integrated Changelog** — View release notes directly in the app
+- **Next.js 16 + React 19** — Latest App Router architecture
+- **SQLite + Drizzle ORM** — Type-safe database with file-based storage
+- **Docker Ready** — Two-command deployment with Docker Compose
 
 ---
 
 ## 🛠️ Deployment Guide
-
-### 💻 Local Development
-
-```bash
-# Clone the repository
-$ git clone https://github.com/pantelx/bettershift.git && cd bettershift
-
-# Install dependencies
-$ npm install
-
-# Copy the example environment file
-$ cp .env.example .env
-
-# Adjust .env settings as needed
-
-# Set up the database
-$ npm run db:migrate
-
-# Start the development server
-$ npm run dev
-
-# Open your browser at http://localhost:3000
-```
 
 ### 🐳 Docker Deployment
 
@@ -183,11 +136,32 @@ $ npm run build
 $ npm start
 ```
 
+### 💻 Local Development
+
+```bash
+# Clone the repository
+$ git clone https://github.com/pantelx/bettershift.git && cd bettershift
+
+# Install dependencies
+$ npm install
+
+# Copy the example environment file
+$ cp .env.example .env
+
+# Adjust .env settings as needed
+
+# Set up the database
+$ npm run db:migrate
+
+# Start the development server
+$ npm run dev
+
+# Open your browser at http://localhost:3000
+```
+
 ---
 
 ## 📦 Versioning & Releases
-
-BetterShift uses [Semantic Versioning](https://semver.org/) (semver) for version management. Releases are automatically created on GitHub when version tags are pushed.
 
 ### Available Docker Tags
 
@@ -201,10 +175,6 @@ BetterShift uses [Semantic Versioning](https://semver.org/) (semver) for version
 **Development Builds**:
 
 - `ghcr.io/pantelx/bettershift:dev` - Latest development build from main branch (unstable)
-
-**Pull Request Builds**:
-
-- `ghcr.io/pantelx/bettershift:pr-123` - Build for pull request #123 (testing only)
 
 ---
 
@@ -231,14 +201,6 @@ $ npm run db:studio
 
 ## 🧪 Testing & Quality Assurance
 
-### Automated CI Tests
-
-All pull requests are automatically tested with GitHub Actions:
-
-- **ESLint** — Checks code quality and style
-- **Build Test** — Ensures the application builds successfully (includes TypeScript validation)
-- **Database Migrations** — Verifies migrations run without errors
-
 ### Local Testing
 
 Run these commands before submitting a pull request:
@@ -247,12 +209,13 @@ Run these commands before submitting a pull request:
 # Run all tests (lint + build with TypeScript check)
 $ npm test
 
+# Full CI test suite (includes database migration test)
+$ npm run test:ci
+
 # Run individual checks
 $ npm run lint         # ESLint code quality check
 $ npm run build        # Next.js production build (includes TypeScript validation)
 
-# Full CI test suite (includes database migration test)
-$ npm run test:ci
 ```
 
 **Recommended Pre-Commit Workflow:**
