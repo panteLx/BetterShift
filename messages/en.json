@@ -289,13 +289,32 @@
   },
   "changelog": {
     "title": "Changelog",
-    "description": "All release notes and changes for BetterShift",
+    "description": "All release notes and changes of BetterShift",
     "noReleases": "No releases available",
     "viewOnGitHub": "View on GitHub"
   },
+  "export": {
+    "title": "Export Calendar",
+    "description": "Export your calendar as an ICS or PDF file",
+    "exportCalendar": "Export Calendar",
+    "formatLabel": "Export Format",
+    "icsFormat": "ICS (Calendar File)",
+    "pdfFormat": "PDF (Document)",
+    "icsHint": "Export as ICS file to import into other calendar apps (Apple Calendar, Google Calendar, Outlook, etc.)",
+    "pdfHint": "Export as PDF document for printing or sharing",
+    "rangeLabel": "Time Range",
+    "rangeAll": "All Shifts",
+    "rangeMonth": "Single Month",
+    "rangeYear": "Single Year",
+    "monthLabel": "Select Month",
+    "yearLabel": "Select Year",
+    "download": "Download",
+    "success": "Export successful",
+    "error": "Export failed"
+  },
   "update": {
-    "available": "Update available",
+    "available": "Update Available",
     "newVersion": "Version {version} is available",
-    "viewChangelog": "View changelog"
+    "viewChangelog": "View Changelog"
   }
 }

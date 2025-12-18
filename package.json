@@ -35,6 +35,7 @@
     "drizzle-kit": "^0.31.7",
     "drizzle-orm": "^0.44.7",
     "ical.js": "^2.2.1",
+    "jspdf": "^3.0.4",
     "lucide-react": "^0.555.0",
     "motion": "^12.23.25",
     "next": "16.0.10",

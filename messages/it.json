@@ -292,6 +292,25 @@
     "noReleases": "Nessun rilascio disponibile",
     "viewOnGitHub": "Visualizza su GitHub"
   },
+  "export": {
+    "title": "Esporta Calendario",
+    "description": "Esporta il tuo calendario come file ICS o PDF",
+    "exportCalendar": "Esporta Calendario",
+    "formatLabel": "Formato di esportazione",
+    "icsFormat": "ICS (File Calendario)",
+    "pdfFormat": "PDF (Documento)",
+    "icsHint": "Esporta come file ICS per importare in altre app di calendario (Apple Calendar, Google Calendar, Outlook, ecc.)",
+    "pdfHint": "Esporta come documento PDF per la stampa o la condivisione",
+    "rangeLabel": "Periodo di tempo",
+    "rangeAll": "Tutti i turni",
+    "rangeMonth": "Singolo mese",
+    "rangeYear": "Singolo anno",
+    "monthLabel": "Seleziona mese",
+    "yearLabel": "Seleziona anno",
+    "download": "Scarica",
+    "success": "Esportazione riuscita",
+    "error": "Esportazione fallita"
+  },
   "update": {
     "available": "Aggiornamento disponibile",
     "newVersion": "Versione {version} è disponibile",
