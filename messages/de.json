@@ -293,6 +293,25 @@
     "noReleases": "Keine Releases verfügbar",
     "viewOnGitHub": "Auf GitHub ansehen"
   },
+  "export": {
+    "title": "Kalender exportieren",
+    "description": "Exportiere deinen Kalender als ICS- oder PDF-Datei",
+    "exportCalendar": "Kalender exportieren",
+    "formatLabel": "Export-Format",
+    "icsFormat": "ICS (Kalenderdatei)",
+    "pdfFormat": "PDF (Dokument)",
+    "icsHint": "Exportiere als ICS-Datei zum Importieren in andere Kalender-Apps (Apple Kalender, Google Kalender, Outlook usw.)",
+    "pdfHint": "Exportiere als PDF-Dokument zum Drucken oder Teilen",
+    "rangeLabel": "Zeitraum",
+    "rangeAll": "Alle Schichten",
+    "rangeMonth": "Einzelner Monat",
+    "rangeYear": "Einzelnes Jahr",
+    "monthLabel": "Monat auswählen",
+    "yearLabel": "Jahr auswählen",
+    "download": "Herunterladen",
+    "success": "Export erfolgreich",
+    "error": "Export fehlgeschlagen"
+  },
   "update": {
     "available": "Update verfügbar",
     "newVersion": "Version {version} ist verfügbar",

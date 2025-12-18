@@ -14,9 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { removeCachedPassword, setCachedPassword } from "@/lib/password-cache";
+import {
+  removeCachedPassword,
+  setCachedPassword,
+  getCachedPassword,
+} from "@/lib/password-cache";
 import { PRESET_COLORS } from "@/lib/constants";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2, Download } from "lucide-react";
+import { ExportDialog } from "@/components/export-dialog";
 
 interface CalendarSettingsDialogProps {
   open: boolean;
@@ -52,6 +57,8 @@ export function CalendarSettingsDialog({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [canExport, setCanExport] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -64,8 +71,17 @@ export function CalendarSettingsDialog({
       setLockCalendar(isLocked);
       setError("");
       setShowDeleteConfirm(false);
+      setShowExportDialog(false);
+
+      // Check if export is allowed (no password or password is cached)
+      if (!hasPassword || !isLocked) {
+        setCanExport(true);
+      } else {
+        const cachedPassword = getCachedPassword(calendarId);
+        setCanExport(!!cachedPassword);
+      }
     }
-  }, [open, calendarName, calendarColor, isLocked]);
+  }, [open, calendarName, calendarColor, isLocked, hasPassword, calendarId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,6 +371,21 @@ export function CalendarSettingsDialog({
             </p>
           )}
 
+          {/* Export Section */}
+          {canExport && (
+            <div className="pt-4 mt-4 border-t border-border/50">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowExportDialog(true)}
+                className="w-full h-11 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t("export.exportCalendar")}
+              </Button>
+            </div>
+          )}
+
           {/* Delete Section */}
           <div className="pt-4 mt-4 border-t border-border/50">
             <div className="space-y-3">
@@ -434,6 +465,13 @@ export function CalendarSettingsDialog({
           </div>
         </form>
       </DialogContent>
+
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        calendarId={calendarId}
+        calendarName={calendarName}
+      />
     </Dialog>
   );
 }
