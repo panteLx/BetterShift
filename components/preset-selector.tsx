@@ -4,7 +4,7 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
 import { useState } from "react";
 import { PresetList } from "@/components/preset-list";
-import { PresetManageDialog } from "@/components/preset-manage-dialog";
+import { PresetManageSheet } from "@/components/preset-manage-sheet";
 import { usePasswordProtection } from "@/hooks/usePasswordProtection";
 
 interface PresetSelectorProps {
@@ -74,7 +74,7 @@ export function PresetSelector({
         onHidePresetHeaderChange={onHidePresetHeaderChange}
       />
 
-      <PresetManageDialog
+      <PresetManageSheet
         open={showManageDialog}
         onOpenChange={setShowManageDialog}
         calendarId={calendarId}

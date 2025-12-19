@@ -4,7 +4,7 @@ import {
   verifyAndCachePassword,
 } from "@/lib/password-cache";
 import { CalendarWithCount } from "@/lib/types";
-import { ShiftFormData } from "@/components/shift-dialog";
+import { ShiftFormData } from "@/components/shift-sheet";
 
 export interface PendingAction {
   type: "delete" | "edit" | "syncNotifications";

@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { isSameDay } from "date-fns";
-import { ShiftFormData } from "@/components/shift-dialog";
+import { ShiftFormData } from "@/components/shift-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";

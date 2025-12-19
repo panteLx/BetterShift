@@ -15,6 +15,7 @@ export interface CalendarWithCount {
 export interface ShiftWithCalendar {
   id: string;
   calendarId: string;
+  presetId?: string | null;
   calendar?: {
     id: string;
     name: string;

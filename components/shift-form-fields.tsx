@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
-import { ShiftFormData } from "@/components/shift-dialog";
+import { ShiftFormData } from "@/components/shift-sheet";
 import { PRESET_COLORS } from "@/lib/constants";
 
 interface ShiftFormFieldsProps {

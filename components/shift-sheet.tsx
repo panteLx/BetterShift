@@ -1,0 +1,177 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { BaseSheet } from "@/components/ui/base-sheet";
+import { ShiftWithCalendar } from "@/lib/types";
+import { ShiftFormFields } from "@/components/shift-form-fields";
+import { PresetSelect } from "@/components/preset-select";
+import { useShiftForm } from "@/hooks/useShiftForm";
+import { formatDateToLocal } from "@/lib/date-utils";
+
+interface ShiftSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (shift: ShiftFormData) => void;
+  selectedDate?: Date;
+  shift?: ShiftWithCalendar;
+  onPresetsChange?: () => void;
+  calendarId?: string;
+}
+
+export interface ShiftFormData {
+  date: string;
+  startTime: string;
+  endTime: string;
+  title: string;
+  color?: string;
+  notes?: string;
+  presetId?: string;
+  isAllDay?: boolean;
+}
+
+export function ShiftSheet({
+  open,
+  onOpenChange,
+  onSubmit,
+  selectedDate,
+  shift,
+  onPresetsChange,
+  calendarId,
+}: ShiftSheetProps) {
+  const t = useTranslations();
+  const [isSaving, setIsSaving] = useState(false);
+  const initialFormDataRef = useRef<string | null>(null);
+
+  const {
+    formData,
+    setFormData,
+    presets,
+    saveAsPreset,
+    setSaveAsPreset,
+    presetName,
+    setPresetName,
+    applyPreset,
+    saveAsPresetHandler,
+    resetForm,
+  } = useShiftForm({ open, shift, selectedDate, calendarId });
+
+  // Store initial form data when sheet opens
+  useEffect(() => {
+    if (open && shift) {
+      // Store initial data matching formData structure
+      const initialData: ShiftFormData = {
+        date:
+          shift.date && shift.date instanceof Date
+            ? formatDateToLocal(shift.date)
+            : formatDateToLocal(new Date()),
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        title: shift.title,
+        notes: shift.notes || "",
+        color: shift.color,
+        isAllDay: shift.isAllDay || false,
+        presetId: shift.presetId || undefined,
+      };
+      initialFormDataRef.current = JSON.stringify(initialData);
+    } else if (!open) {
+      initialFormDataRef.current = null;
+    }
+  }, [open, shift]);
+
+  const hasChanges = () => {
+    if (!shift || !initialFormDataRef.current) return false;
+
+    // Create comparable version of current formData
+    const currentData: ShiftFormData = {
+      date: formData.date,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      title: formData.title,
+      notes: formData.notes || "",
+      color: formData.color,
+      isAllDay: formData.isAllDay || false,
+      presetId: formData.presetId || undefined,
+    };
+
+    return JSON.stringify(currentData) !== initialFormDataRef.current;
+  };
+
+  const handleSave = async () => {
+    if (!formData.title.trim() || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      // If all-day, set default times for backend
+      const submitData = {
+        ...formData,
+        startTime: formData.isAllDay ? "00:00" : formData.startTime,
+        endTime: formData.isAllDay ? "23:59" : formData.endTime,
+      };
+
+      onSubmit(submitData);
+
+      // Save as preset if enabled and it's a new shift
+      if (!shift && saveAsPreset && presetName.trim()) {
+        const success = await saveAsPresetHandler(submitData);
+        if (success && onPresetsChange) {
+          onPresetsChange();
+        }
+      }
+
+      if (!shift) {
+        resetForm();
+      }
+      onOpenChange(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePresetSelect = async (
+    preset: Parameters<typeof applyPreset>[0]
+  ) => {
+    applyPreset(preset);
+  };
+
+  return (
+    <BaseSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={shift ? t("shift.edit") : t("shift.create")}
+      description={
+        shift
+          ? t("shift.editDescription", {
+              default: "Update the shift details",
+            })
+          : t("shift.createDescription", {
+              default: "Add a new shift to your calendar",
+            })
+      }
+      showSaveButton
+      showCancelButton
+      onSave={handleSave}
+      isSaving={isSaving}
+      saveDisabled={!formData.title.trim() || (shift && !hasChanges())}
+      hasUnsavedChanges={shift ? hasChanges() : false}
+      maxWidth="md"
+    >
+      <div className="space-y-5">
+        {/* Preset Selection */}
+        {!shift && (
+          <PresetSelect presets={presets} onPresetSelect={handlePresetSelect} />
+        )}
+
+        <ShiftFormFields
+          formData={formData}
+          onFormDataChange={setFormData}
+          saveAsPreset={saveAsPreset}
+          onSaveAsPresetChange={setSaveAsPreset}
+          presetName={presetName}
+          onPresetNameChange={setPresetName}
+          isEditing={!!shift}
+        />
+      </div>
+    </BaseSheet>
+  );
+}

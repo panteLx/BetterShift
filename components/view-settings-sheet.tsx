@@ -2,12 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Maximize2, FileText, Infinity, ArrowUpDown } from "lucide-react";
 
-interface ViewSettingsDialogProps {
+interface ViewSettingsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shiftsPerDay: number | null;
@@ -39,7 +39,7 @@ interface ViewSettingsDialogProps {
   onCombinedSortModeChange: (combined: boolean) => void;
 }
 
-export function ViewSettingsDialog({
+export function ViewSettingsSheet({
   open,
   onOpenChange,
   shiftsPerDay,
@@ -56,22 +56,25 @@ export function ViewSettingsDialog({
   onShiftSortTypeChange,
   onShiftSortOrderChange,
   onCombinedSortModeChange,
-}: ViewSettingsDialogProps) {
+}: ViewSettingsSheetProps) {
   const t = useTranslations();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
-        <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
-          <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-[600px] p-0 flex flex-col gap-0 border-l border-border/50 overflow-hidden"
+      >
+        <SheetHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-5 space-y-1.5">
+          <SheetTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
             {t("view.settingsTitle")}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+          </SheetTitle>
+          <SheetDescription className="text-sm text-muted-foreground">
             {t("view.settingsDescription")}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="space-y-6 overflow-y-auto flex-1 px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
           {/* Regular Shifts per Day */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -99,7 +102,7 @@ export function ViewSettingsDialog({
             <div className="space-y-3">
               <Slider
                 value={[shiftsPerDay === null ? 11 : shiftsPerDay]}
-                onValueChange={(value) =>
+                onValueChange={(value: number[]) =>
                   onShiftsPerDayChange(value[0] === 11 ? null : value[0])
                 }
                 min={1}
@@ -146,7 +149,7 @@ export function ViewSettingsDialog({
                 value={[
                   externalShiftsPerDay === null ? 11 : externalShiftsPerDay,
                 ]}
-                onValueChange={(value) =>
+                onValueChange={(value: number[]) =>
                   onExternalShiftsPerDayChange(
                     value[0] === 11 ? null : value[0]
                   )
@@ -226,7 +229,9 @@ export function ViewSettingsDialog({
                 <Checkbox
                   id="combined-sort"
                   checked={combinedSortMode}
-                  onCheckedChange={onCombinedSortModeChange}
+                  onCheckedChange={(checked: boolean) =>
+                    onCombinedSortModeChange(checked)
+                  }
                   className="mt-0.5"
                 />
                 <div className="flex-1 space-y-1">
@@ -257,7 +262,9 @@ export function ViewSettingsDialog({
                 <Checkbox
                   id="show-notes"
                   checked={showShiftNotes}
-                  onCheckedChange={onShowShiftNotesChange}
+                  onCheckedChange={(checked: boolean) =>
+                    onShowShiftNotesChange(checked)
+                  }
                   className="mt-0.5"
                 />
                 <div className="flex-1 space-y-1">
@@ -278,7 +285,9 @@ export function ViewSettingsDialog({
                 <Checkbox
                   id="show-full-titles"
                   checked={showFullTitles}
-                  onCheckedChange={onShowFullTitlesChange}
+                  onCheckedChange={(checked: boolean) =>
+                    onShowFullTitlesChange(checked)
+                  }
                   className="mt-0.5"
                 />
                 <div className="flex-1 space-y-1">
@@ -296,7 +305,7 @@ export function ViewSettingsDialog({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

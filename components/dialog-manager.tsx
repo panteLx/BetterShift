@@ -1,13 +1,12 @@
-import { CalendarDialog } from "@/components/calendar-dialog";
-import { ShiftDialog, ShiftFormData } from "@/components/shift-dialog";
+import { CalendarSheet } from "@/components/calendar-sheet";
+import { ShiftSheet, ShiftFormData } from "@/components/shift-sheet";
 import { PasswordDialog } from "@/components/password-dialog";
-import { CalendarSettingsDialog } from "@/components/calendar-settings-dialog";
-import { ExternalSyncManageDialog } from "@/components/external-sync-manage-dialog";
+import { CalendarSettingsSheet } from "@/components/calendar-settings-sheet";
+import { ExternalSyncManageSheet } from "@/components/external-sync-manage-sheet";
 import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
-import { DayShiftsDialog } from "@/components/day-shifts-dialog";
-import { SyncedShiftsDialog } from "@/components/synced-shifts-dialog";
-import { ViewSettingsDialog } from "@/components/view-settings-dialog";
-import { NoteDialog } from "@/components/note-dialog";
+import { ShiftsOverviewDialog } from "@/components/shifts-overview-dialog";
+import { ViewSettingsSheet } from "@/components/view-settings-sheet";
+import { NoteSheet } from "@/components/note-sheet";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 
@@ -41,7 +40,7 @@ interface DialogManagerProps {
   onCalendarSettingsSuccess: () => void;
   onDeleteCalendar: (password?: string) => void;
 
-  // External Sync Dialog
+  // External Sync Sheet
   showExternalSyncDialog: boolean;
   onExternalSyncDialogChange: (open: boolean) => void;
   syncErrorRefreshTrigger: number;
@@ -53,7 +52,7 @@ interface DialogManagerProps {
   onErrorsMarkedRead: () => void;
   onSyncLogUpdate: () => void;
 
-  // Day Shifts Dialog
+  // Shifts Overview Dialog (for day shifts and synced shifts)
   showDayShiftsDialog: boolean;
   onDayShiftsDialogChange: (open: boolean) => void;
   selectedDayDate: Date | null;
@@ -61,7 +60,7 @@ interface DialogManagerProps {
   locale: string;
   onDeleteShiftFromDayDialog: (id: string) => void;
 
-  // Synced Shifts Dialog
+  // Synced Shifts Overview
   showSyncedShiftsDialog: boolean;
   onSyncedShiftsDialogChange: (open: boolean) => void;
   selectedSyncedShifts: ShiftWithCalendar[];
@@ -102,13 +101,13 @@ interface DialogManagerProps {
 export function DialogManager(props: DialogManagerProps) {
   return (
     <>
-      <CalendarDialog
+      <CalendarSheet
         open={props.showCalendarDialog}
         onOpenChange={props.onCalendarDialogChange}
         onSubmit={props.onCreateCalendar}
       />
 
-      <ShiftDialog
+      <ShiftSheet
         open={props.showShiftDialog}
         onOpenChange={props.onShiftDialogChange}
         onSubmit={props.onShiftSubmit}
@@ -130,7 +129,7 @@ export function DialogManager(props: DialogManagerProps) {
             onSuccess={props.onPasswordSuccess}
           />
 
-          <CalendarSettingsDialog
+          <CalendarSettingsSheet
             open={props.showCalendarSettingsDialog}
             onOpenChange={props.onCalendarSettingsDialogChange}
             calendarId={props.selectedCalendar}
@@ -154,7 +153,7 @@ export function DialogManager(props: DialogManagerProps) {
             onDelete={props.onDeleteCalendar}
           />
 
-          <ExternalSyncManageDialog
+          <ExternalSyncManageSheet
             open={props.showExternalSyncDialog}
             onOpenChange={props.onExternalSyncDialogChange}
             calendarId={props.selectedCalendar}
@@ -173,23 +172,22 @@ export function DialogManager(props: DialogManagerProps) {
         </>
       )}
 
-      <DayShiftsDialog
+      <ShiftsOverviewDialog
         open={props.showDayShiftsDialog}
         onOpenChange={props.onDayShiftsDialogChange}
         date={props.selectedDayDate}
         shifts={props.selectedDayShifts}
-        locale={props.locale}
         onDeleteShift={props.onDeleteShiftFromDayDialog}
       />
 
-      <SyncedShiftsDialog
+      <ShiftsOverviewDialog
         open={props.showSyncedShiftsDialog}
         onOpenChange={props.onSyncedShiftsDialogChange}
         date={props.selectedDayDate}
         shifts={props.selectedSyncedShifts}
       />
 
-      <ViewSettingsDialog
+      <ViewSettingsSheet
         open={props.showViewSettingsDialog}
         onOpenChange={props.onViewSettingsDialogChange}
         shiftsPerDay={props.viewSettings.shiftsPerDay}
@@ -222,7 +220,7 @@ export function DialogManager(props: DialogManagerProps) {
         }
       />
 
-      <NoteDialog
+      <NoteSheet
         open={props.showNoteDialog}
         onOpenChange={props.onNoteDialogChange}
         onSubmit={props.onNoteSubmit}

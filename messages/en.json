@@ -6,16 +6,17 @@
   },
   "common": {
     "cancel": "Cancel",
-    "close": "Close",
     "save": "Save",
+    "saving": "Saving...",
     "delete": "Delete",
-    "edit": "Edit",
     "create": "Create",
     "loading": "Loading...",
     "required": "required",
     "unlock": "Unlock",
-    "manage": "Manage",
     "add": "Add",
+    "unsavedChanges": "Unsaved Changes",
+    "unsavedChangesDescription": "You have unsaved changes. Do you really want to close without saving?",
+    "closeWithoutSaving": "Close Without Saving",
     "created": "{item} created successfully",
     "updated": "{item} updated successfully",
     "deleted": "{item} deleted successfully",
@@ -25,6 +26,14 @@
     "deleteConfirm": "Really delete {item} \"{name}\"?",
     "deleteConfirmWithWarning": "Really delete {item} \"{name}\"? {warning}",
     "shifts": "Shifts",
+    "success": "Success",
+    "error": "Error",
+    "createdShort": "created",
+    "updatedShort": "updated",
+    "deletedShort": "deleted",
+    "createdCount": "{count} created",
+    "updatedCount": "{count} updated",
+    "deletedCount": "{count} deleted",
     "weekday": {
       "monday": "Mon",
       "tuesday": "Tue",
@@ -69,10 +78,11 @@
     "select": "Your BetterShift Calendar",
     "deleteCalendar": "Delete Calendar",
     "deleteWarning": "All shifts, presets and notes will also be deleted.",
-    "managePassword": "Manage Password",
     "settings": "Calendar Settings for \"{name}\"",
     "settingsDescription": "Customize name, color and password protection",
-    "currentlyProtected": "This calendar is currently password protected.",
+    "passwordProtected": "Calendar is password protected",
+    "passwordRequiredToEdit": "Please enter your current password to change settings.",
+    "currentPasswordRequired": "Required to save changes",
     "lockCalendar": "Lock calendar completely",
     "lockCalendarHint": "Locks calendar completely - password required to view and manage",
     "lockRequiresPassword": "Locking the calendar requires a password"
@@ -84,6 +94,7 @@
   },
   "password": {
     "optional": "Password Protection (optional)",
+    "management": "Password Management",
     "currentPassword": "Current Password",
     "currentPasswordPlaceholder": "Enter current password",
     "newPassword": "New Password",
@@ -91,7 +102,6 @@
     "confirmPassword": "Confirm Password",
     "confirmPasswordPlaceholder": "Confirm password",
     "removePassword": "Remove Password",
-    "manage": "Manage Password for \"{name}\"",
     "enter": "Enter Password for \"{name}\"",
     "enterCalendarPassword": "Enter calendar password",
     "currentlyLocked": "This calendar is currently locked.",
@@ -103,7 +113,7 @@
     "create": "New Note",
     "edit": "Edit Note",
     "note": "Note",
-    "notePlaceholder": "e.g., Early shift because appointment in the afternoon...",
+    "placeholder": "e.g., Early shift because appointment in the afternoon...",
     "hintMobile": "Long press on a day to open notes. The note icon shows existing notes.",
     "hintDesktop": "Right-click on a day to open notes. The note icon shows existing notes."
   },
@@ -123,9 +133,7 @@
     "noShiftsInMonthDescription": "Add shifts by clicking on days in the calendar above.",
     "shift_one": "shift",
     "selectPreset": "Select Preset",
-    "none": "None",
-    "addShift": "Add Shift",
-    "saveChanges": "Save Changes"
+    "none": "None"
   },
   "preset": {
     "preset": "Preset",
@@ -134,8 +142,6 @@
     "edit": "Edit Preset",
     "manage": "Manage Presets",
     "manageDescription": "Edit or delete your shift presets",
-    "createDescription": "Create a new preset for quick shift creation",
-    "editDescription": "Update preset details",
     "saveAsPreset": "Save as preset",
     "presetName": "Preset name",
     "presetNamePlaceholder": "e.g., Morning Shift, Evening Shift...",
@@ -152,7 +158,6 @@
     "hidePresets": "Hide presets",
     "hiddenFromStats": "Hidden from statistics"
   },
-
   "view": {
     "settingsTitle": "View Settings",
     "settingsDescription": "Customize how shifts are displayed in all calendars",
@@ -177,7 +182,6 @@
     "showFullTitles": "Show full shift titles",
     "showFullTitlesHint": "Display complete shift titles without truncation"
   },
-
   "stats": {
     "title": "Shift Statistics",
     "week": "Week",
@@ -237,8 +241,6 @@
     "displayModeNormal": "Normal (show all shifts)",
     "displayModeMinimal": "Minimal (show count only)",
     "displayModeHint": "Choose how synced shifts should be displayed in the calendar",
-    "viewSyncedShifts": "View Imported Shifts",
-    "syncedShiftsTitle": "Imported Shifts - {date}",
     "addNewSync": "Add New External Calendar",
     "editSync": "Edit External Calendar",
     "colorHint": "Choose the color for all imported shifts",
@@ -249,10 +251,6 @@
     "lastSynced": "Last synced",
     "syncError": "Failed to sync calendar",
     "deleteConfirm": "Delete this external calendar? All imported shifts will be removed.",
-    "syncSuccess": "Sync successful",
-    "statsCreated": "created",
-    "statsUpdated": "updated",
-    "statsDeleted": "deleted",
     "hintsTitle": "Finding Your Calendar URL",
     "hintsDescription": "Select your calendar type to see instructions:",
     "customCalendar": "Custom Calendar",
@@ -272,9 +270,6 @@
     "statusError": "Error",
     "syncTypeAuto": "Automatic",
     "syncTypeManual": "Manual",
-    "created": "{count} created",
-    "updated": "{count} updated",
-    "deleted": "{count} deleted",
     "noChanges": "No changes",
     "errorMessage": "Error message",
     "filterAll": "Show all",
@@ -308,9 +303,7 @@
     "rangeYear": "Single Year",
     "monthLabel": "Select Month",
     "yearLabel": "Select Year",
-    "download": "Download",
-    "success": "Export successful",
-    "error": "Export failed"
+    "download": "Download"
   },
   "update": {
     "available": "Update Available",

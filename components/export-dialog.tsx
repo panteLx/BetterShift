@@ -163,11 +163,11 @@ export function ExportDialog({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
 
-      toast.success(t("export.success"));
+      toast.success(t("common.success"));
       onOpenChange(false);
     } catch (error) {
       console.error("Export error:", error);
-      toast.error(t("export.error"));
+      toast.error(t("common.error"));
     } finally {
       setLoading(false);
     }

@@ -30,7 +30,6 @@ import { CalendarContent } from "@/components/calendar-content";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
 import { DialogManager } from "@/components/dialog-manager";
-import { CalendarDialog } from "@/components/calendar-dialog";
 import { getCalendarDays } from "@/lib/calendar-utils";
 import { getCachedPassword } from "@/lib/password-cache";
 
@@ -296,16 +295,9 @@ function HomeContent() {
   // Empty state
   if (calendars.length === 0) {
     return (
-      <>
-        <EmptyCalendarState
-          onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
-        />
-        <CalendarDialog
-          open={dialogStates.showCalendarDialog}
-          onOpenChange={dialogStates.setShowCalendarDialog}
-          onSubmit={createCalendarHook}
-        />
-      </>
+      <EmptyCalendarState
+        onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
+      />
     );
   }
 

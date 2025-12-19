@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ShiftWithCalendar } from "@/lib/types";
-import { ShiftFormData } from "@/components/shift-dialog";
+import { ShiftFormData } from "@/components/shift-sheet";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { getCachedPassword } from "@/lib/password-cache";

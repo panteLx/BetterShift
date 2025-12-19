@@ -317,7 +317,7 @@ export function SyncNotificationDialog({
                         {log.shiftsCreated > 0 && (
                           <div className="flex items-center gap-1.5 text-green-700">
                             <span className="font-medium">
-                              {t("syncNotifications.created", {
+                              {t("common.createdCount", {
                                 count: log.shiftsCreated,
                               })}
                             </span>
@@ -326,7 +326,7 @@ export function SyncNotificationDialog({
                         {log.shiftsUpdated > 0 && (
                           <div className="flex items-center gap-1.5 text-blue-700">
                             <span className="font-medium">
-                              {t("syncNotifications.updated", {
+                              {t("common.updatedCount", {
                                 count: log.shiftsUpdated,
                               })}
                             </span>
@@ -335,7 +335,7 @@ export function SyncNotificationDialog({
                         {log.shiftsDeleted > 0 && (
                           <div className="flex items-center gap-1.5 text-orange-700">
                             <span className="font-medium">
-                              {t("syncNotifications.deleted", {
+                              {t("common.deletedCount", {
                                 count: log.shiftsDeleted,
                               })}
                             </span>
