@@ -341,11 +341,13 @@ export function ViewSettingsSheet({
                   onCheckedChange={(checked: boolean) => {
                     onHighlightWeekendsChange(checked);
                     if (checked) {
-                      // Auto-select Saturday (6) and Sunday (0)
-                      const newDays = [0, 6];
+                      // Add Saturday (6) and Sunday (0) to existing weekdays
+                      const newDays = Array.from(
+                        new Set([...highlightedWeekdays, 0, 6])
+                      ).sort((a, b) => a - b);
                       onHighlightedWeekdaysChange(newDays);
                     } else {
-                      // Remove Saturday and Sunday
+                      // Remove Saturday and Sunday, keep other weekdays
                       const filtered = highlightedWeekdays.filter(
                         (d) => d !== 0 && d !== 6
                       );
