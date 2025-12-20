@@ -35,7 +35,6 @@ interface UseDirtyStateOptions {
  * ```
  */
 export function useDirtyState({
-  open,
   onClose,
   hasChanges,
   onConfirm,
