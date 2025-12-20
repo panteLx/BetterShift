@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -53,6 +54,7 @@ export function SyncNotificationDialog({
   const [filter, setFilter] = useState<"all" | "success" | "error">("all");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const fetchLogs = useCallback(
     async (showLoadingState = true) => {
@@ -134,9 +136,10 @@ export function SyncNotificationDialog({
 
   const handleDeleteLogs = async () => {
     if (!calendarId) return;
-    if (!confirm(t("syncNotifications.deleteConfirm"))) return;
 
     setIsDeleting(true);
+    setShowDeleteConfirm(false);
+
     try {
       const password = getCachedPassword(calendarId);
 
@@ -208,159 +211,172 @@ export function SyncNotificationDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
-        <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
-          <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("syncNotifications.title")}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
+          <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
+            <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              {t("syncNotifications.title")}
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Filter and Actions */}
-        <div className="flex flex-wrap gap-2 items-center pb-4 border-b border-border/50 px-6 pt-6">
-          <Select
-            value={filter}
-            onValueChange={(v: typeof filter) => setFilter(v)}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {t("syncNotifications.filterAll")}
-              </SelectItem>
-              <SelectItem value="success">
-                {t("syncNotifications.filterSuccess")}
-              </SelectItem>
-              <SelectItem value="error">
-                {t("syncNotifications.filterError")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex gap-2 ml-auto">
-            {logs.some((log) => log.status === "error" && !log.isRead) && (
+          {/* Filter and Actions */}
+          <div className="flex flex-wrap gap-2 items-center pb-4 border-b border-border/50 px-6 pt-6">
+            <Select
+              value={filter}
+              onValueChange={(v: typeof filter) => setFilter(v)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {t("syncNotifications.filterAll")}
+                </SelectItem>
+                <SelectItem value="success">
+                  {t("syncNotifications.filterSuccess")}
+                </SelectItem>
+                <SelectItem value="error">
+                  {t("syncNotifications.filterError")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2 ml-auto">
+              {logs.some((log) => log.status === "error" && !log.isRead) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMarkErrorsAsRead}
+                  disabled={isMarkingRead}
+                >
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  {t("syncNotifications.markAsRead")}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleMarkErrorsAsRead}
-                disabled={isMarkingRead}
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting || logs.length === 0}
               >
-                <CheckCheck className="h-4 w-4 mr-2" />
-                {t("syncNotifications.markAsRead")}
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t("syncNotifications.deleteAll")}
               </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDeleteLogs}
-              disabled={isDeleting || logs.length === 0}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t("syncNotifications.deleteAll")}
-            </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-4 overflow-y-auto flex-1 px-6 pb-6">
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full rounded-lg" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {logs.length === 0
-                ? t("syncNotifications.noLogs")
-                : t("syncNotifications.noLogsFiltered")}
-            </div>
-          ) : (
-            filteredLogs.map((log) => (
-              <div
-                key={log.id}
-                className="border rounded-lg p-4 space-y-3 hover:bg-accent/50 transition-colors"
-              >
-                {/* Header with status and sync type */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(log.status)}
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        {log.externalSyncName}
-                        {log.isRead && log.status === "error" && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                            {t("syncNotifications.read")}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        {formatDateTime(log.syncedAt)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    {getSyncTypeIcon(log.syncType)}
-                    <span>
-                      {log.syncType === "auto"
-                        ? t("syncNotifications.syncTypeAuto")
-                        : t("syncNotifications.syncTypeManual")}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Status and changes */}
-                {log.status === "success" ? (
-                  <div>
-                    {hasChanges(log) ? (
-                      <div className="flex flex-wrap gap-3 text-sm">
-                        {log.shiftsCreated > 0 && (
-                          <div className="flex items-center gap-1.5 text-green-700">
-                            <span className="font-medium">
-                              {t("common.createdCount", {
-                                count: log.shiftsCreated,
-                              })}
-                            </span>
-                          </div>
-                        )}
-                        {log.shiftsUpdated > 0 && (
-                          <div className="flex items-center gap-1.5 text-blue-700">
-                            <span className="font-medium">
-                              {t("common.updatedCount", {
-                                count: log.shiftsUpdated,
-                              })}
-                            </span>
-                          </div>
-                        )}
-                        {log.shiftsDeleted > 0 && (
-                          <div className="flex items-center gap-1.5 text-orange-700">
-                            <span className="font-medium">
-                              {t("common.deletedCount", {
-                                count: log.shiftsDeleted,
-                              })}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        {t("syncNotifications.noChanges")}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-sm text-red-100 bg-red-950/90 p-3 rounded border border-red-800">
-                    <div className="font-medium mb-1">
-                      {t("syncNotifications.errorMessage")}:
-                    </div>
-                    <div className="text-red-200">{log.errorMessage}</div>
-                  </div>
-                )}
+          <div className="space-y-4 overflow-y-auto flex-1 px-6 pb-6">
+            {loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
               </div>
-            ))
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            ) : filteredLogs.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {logs.length === 0
+                  ? t("syncNotifications.noLogs")
+                  : t("syncNotifications.noLogsFiltered")}
+              </div>
+            ) : (
+              filteredLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="border rounded-lg p-4 space-y-3 hover:bg-accent/50 transition-colors"
+                >
+                  {/* Header with status and sync type */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(log.status)}
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {log.externalSyncName}
+                          {log.isRead && log.status === "error" && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {t("syncNotifications.read")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          {formatDateTime(log.syncedAt)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      {getSyncTypeIcon(log.syncType)}
+                      <span>
+                        {log.syncType === "auto"
+                          ? t("syncNotifications.syncTypeAuto")
+                          : t("syncNotifications.syncTypeManual")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Status and changes */}
+                  {log.status === "success" ? (
+                    <div>
+                      {hasChanges(log) ? (
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          {log.shiftsCreated > 0 && (
+                            <div className="flex items-center gap-1.5 text-green-700">
+                              <span className="font-medium">
+                                {t("common.createdCount", {
+                                  count: log.shiftsCreated,
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {log.shiftsUpdated > 0 && (
+                            <div className="flex items-center gap-1.5 text-blue-700">
+                              <span className="font-medium">
+                                {t("common.updatedCount", {
+                                  count: log.shiftsUpdated,
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {log.shiftsDeleted > 0 && (
+                            <div className="flex items-center gap-1.5 text-orange-700">
+                              <span className="font-medium">
+                                {t("common.deletedCount", {
+                                  count: log.shiftsDeleted,
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          {t("syncNotifications.noChanges")}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-red-100 bg-red-950/90 p-3 rounded border border-red-800">
+                      <div className="font-medium mb-1">
+                        {t("syncNotifications.errorMessage")}:
+                      </div>
+                      <div className="text-red-200">{log.errorMessage}</div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmationDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleDeleteLogs}
+        title={t("syncNotifications.title") + " " + t("common.delete")}
+        description={t("syncNotifications.deleteConfirm")}
+        cancelText={t("common.cancel")}
+        confirmText={t("common.delete")}
+        confirmVariant="destructive"
+      />
+    </>
   );
 }

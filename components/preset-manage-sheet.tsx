@@ -36,10 +36,9 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { ShiftPreset } from "@/lib/db/schema";
 import { PRESET_COLORS } from "@/lib/constants";
 import { Plus, Trash2, Edit2, Loader2, GripVertical } from "lucide-react";
-import { toast } from "sonner";
-import { getCachedPassword } from "@/lib/password-cache";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useDirtyState } from "@/hooks/useDirtyState";
+import { usePresetManagement } from "@/hooks/usePresetManagement";
 
 interface PresetFormData {
   title: string;
@@ -193,6 +192,8 @@ export function PresetManageSheet({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [orderedPrimaryPresets, setOrderedPrimaryPresets] = useState<
     ShiftPreset[]
   >([]);
@@ -200,6 +201,12 @@ export function PresetManageSheet({
     ShiftPreset[]
   >([]);
   const initialFormDataRef = useRef<PresetFormData | null>(null);
+
+  const { createPreset, updatePreset, deletePreset, reorderPresets } =
+    usePresetManagement({
+      calendarId,
+      onSuccess: onPresetsChange,
+    });
 
   // Initialize ordered presets
   useEffect(() => {
@@ -261,37 +268,13 @@ export function PresetManageSheet({
   };
 
   const savePresetOrder = async (allPresets: ShiftPreset[]) => {
-    try {
-      const password = getCachedPassword(calendarId);
-      const presetOrders = allPresets.map((preset, index) => ({
-        id: preset.id,
-        order: index,
-      }));
+    const presetOrders = allPresets.map((preset, index) => ({
+      id: preset.id,
+      order: index,
+    }));
 
-      const response = await fetch("/api/presets/reorder", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          calendarId,
-          presetOrders,
-          password,
-        }),
-      });
-
-      if (response.ok) {
-        onPresetsChange();
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error || t("common.updateError", { item: t("preset.preset") })
-        );
-        // Revert order on error
-        setOrderedPrimaryPresets(presets.filter((p) => !p.isSecondary));
-        setOrderedSecondaryPresets(presets.filter((p) => p.isSecondary));
-      }
-    } catch (error) {
-      console.error("Failed to reorder presets:", error);
-      toast.error(t("common.updateError", { item: t("preset.preset") }));
+    const success = await reorderPresets(presetOrders);
+    if (!success) {
       // Revert order on error
       setOrderedPrimaryPresets(presets.filter((p) => !p.isSecondary));
       setOrderedSecondaryPresets(presets.filter((p) => p.isSecondary));
@@ -323,117 +306,55 @@ export function PresetManageSheet({
 
     setIsLoading(true);
     try {
-      const password = getCachedPassword(calendarId);
+      let success = false;
 
       if (editingPreset) {
-        // Update existing preset
-        const response = await fetch(`/api/presets/${editingPreset.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...formData,
-            password,
-          }),
-        });
-
-        if (response.ok) {
-          setEditingPreset(null);
-          setFormData({
-            title: "",
-            startTime: "09:00",
-            endTime: "17:00",
-            color: PRESET_COLORS[0].value,
-            notes: "",
-            isSecondary: false,
-            isAllDay: false,
-            hideFromStats: false,
-          });
-          onPresetsChange();
-          toast.success(t("common.updated", { item: t("preset.preset") }));
-        } else {
-          const data = await response.json();
-          toast.error(
-            data.error || t("common.updateError", { item: t("preset.preset") })
-          );
-        }
+        success = await updatePreset(editingPreset.id, formData);
       } else {
-        // Create new preset
-        const response = await fetch("/api/presets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            calendarId,
-            ...formData,
-            password,
-          }),
-        });
-
-        if (response.ok) {
-          setFormData({
-            title: "",
-            startTime: "09:00",
-            endTime: "17:00",
-            color: PRESET_COLORS[0].value,
-            notes: "",
-            isSecondary: false,
-            isAllDay: false,
-            hideFromStats: false,
-          });
-          setShowAddForm(false);
-          onPresetsChange();
-          toast.success(t("common.created", { item: t("preset.preset") }));
-        } else {
-          const data = await response.json();
-          toast.error(
-            data.error || t("common.createError", { item: t("preset.preset") })
-          );
-        }
+        success = await createPreset(formData);
       }
-    } catch (error) {
-      console.error("Failed to save preset:", error);
-      toast.error(
-        editingPreset
-          ? t("common.updateError", { item: t("preset.preset") })
-          : t("common.createError", { item: t("preset.preset") })
-      );
+
+      if (success) {
+        setEditingPreset(null);
+        setShowAddForm(false);
+        setFormData({
+          title: "",
+          startTime: "09:00",
+          endTime: "17:00",
+          color: PRESET_COLORS[0].value,
+          notes: "",
+          isSecondary: false,
+          isAllDay: false,
+          hideFromStats: false,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (presetId: string) => {
-    if (!confirm(t("preset.deleteConfirm"))) {
-      return;
-    }
+  const handleDeleteClick = (presetId: string) => {
+    setDeleteTargetId(presetId);
+    setShowDeleteConfirm(true);
+  };
 
-    setIsDeleting(presetId);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetId) return;
+
+    setIsDeleting(deleteTargetId);
+    setShowDeleteConfirm(false);
+
     try {
-      const password = getCachedPassword(calendarId);
-
-      const response = await fetch(`/api/presets/${presetId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      if (response.ok) {
-        onPresetsChange();
-        toast.success(t("common.deleted", { item: t("preset.preset") }));
+      const success = await deletePreset(deleteTargetId);
+      if (success) {
         // If we're editing the deleted preset, close the edit form
-        if (editingPreset?.id === presetId) {
+        if (editingPreset?.id === deleteTargetId) {
           setEditingPreset(null);
         }
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error || t("common.deleteError", { item: t("preset.preset") })
-        );
       }
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error(t("common.deleteError", { item: t("preset.preset") }));
     } finally {
       setIsDeleting(null);
+      setDeleteTargetId(null);
     }
   };
 
@@ -585,7 +506,7 @@ export function PresetManageSheet({
                             preset={preset}
                             isDeleting={isDeleting === preset.id}
                             onEdit={startEdit}
-                            onDelete={handleDelete}
+                            onDelete={handleDeleteClick}
                             t={t}
                             showDragHandle={orderedPrimaryPresets.length > 1}
                           />
@@ -620,7 +541,7 @@ export function PresetManageSheet({
                             preset={preset}
                             isDeleting={isDeleting === preset.id}
                             onEdit={startEdit}
-                            onDelete={handleDelete}
+                            onDelete={handleDeleteClick}
                             t={t}
                             showDragHandle={orderedSecondaryPresets.length > 1}
                           />
@@ -638,7 +559,7 @@ export function PresetManageSheet({
                   preset={editingPreset}
                   isDeleting={isDeleting === editingPreset.id}
                   onEdit={startEdit}
-                  onDelete={handleDelete}
+                  onDelete={handleDeleteClick}
                   t={t}
                   showDragHandle={false}
                 />
@@ -879,6 +800,19 @@ export function PresetManageSheet({
         open={showConfirmDialog}
         onOpenChange={setShowConfirmDialog}
         onConfirm={handleConfirmClose}
+        title={t("common.unsavedChanges")}
+        description={t("common.unsavedChangesDescription")}
+      />
+
+      <ConfirmationDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleDeleteConfirm}
+        title={t("preset.preset") + " " + t("common.delete")}
+        description={t("preset.deleteConfirm")}
+        cancelText={t("common.cancel")}
+        confirmText={t("common.delete")}
+        confirmVariant="destructive"
       />
     </>
   );

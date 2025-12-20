@@ -260,6 +260,7 @@
     "hideFromStatsHint": "Escludi i turni da questo calendario dalle statistiche",
     "lastSynced": "Ultima sincronizzazione",
     "syncError": "Impossibile sincronizzare il calendario",
+    "delete": "Elimina Calendario Esterno",
     "deleteConfirm": "Eliminare questo calendario esterno? Tutti i turni importati verranno rimossi.",
     "hintsTitle": "Trovare l'URL del Calendario",
     "hintsDescription": "Seleziona il tipo di calendario per visualizzare le istruzioni:",

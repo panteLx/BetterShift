@@ -260,6 +260,7 @@
     "hideFromStatsHint": "Exclude shifts from this calendar from statistics",
     "lastSynced": "Last synced",
     "syncError": "Failed to sync calendar",
+    "delete": "Delete External Calendar",
     "deleteConfirm": "Delete this external calendar? All imported shifts will be removed.",
     "hintsTitle": "Finding Your Calendar URL",
     "hintsDescription": "Select your calendar type to see instructions:",

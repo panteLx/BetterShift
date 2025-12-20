@@ -18,6 +18,9 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   title?: string;
   description?: string;
+  cancelText?: string;
+  confirmText?: string;
+  confirmVariant?: "default" | "destructive";
 }
 
 export function ConfirmationDialog({
@@ -26,6 +29,9 @@ export function ConfirmationDialog({
   onConfirm,
   title,
   description,
+  cancelText,
+  confirmText,
+  confirmVariant = "default",
 }: ConfirmationDialogProps) {
   const t = useTranslations();
 
@@ -41,9 +47,18 @@ export function ConfirmationDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>
-            {t("common.closeWithoutSaving")}
+          <AlertDialogCancel>
+            {cancelText || t("common.cancel")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className={
+              confirmVariant === "destructive"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : ""
+            }
+          >
+            {confirmText || t("common.closeWithoutSaving")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

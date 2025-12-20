@@ -1240,7 +1240,11 @@ export function ExternalSyncManageSheet({
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
         onConfirm={confirmDelete}
+        title={t("externalSync.delete")}
         description={t("externalSync.deleteConfirm")}
+        cancelText={t("common.cancel")}
+        confirmText={t("common.delete")}
+        confirmVariant="destructive"
       />
     </>
   );

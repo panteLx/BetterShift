@@ -260,6 +260,7 @@
     "hideFromStatsHint": "Schichten dieses Kalenders aus der Statistik ausschließen",
     "lastSynced": "Zuletzt synchronisiert",
     "syncError": "Kalender konnte nicht synchronisiert werden",
+    "delete": "Externen Kalender löschen",
     "deleteConfirm": "Diesen externen Kalender löschen? Alle importierten Schichten werden entfernt.",
     "hintsTitle": "Kalender-URL finden",
     "hintsDescription": "Wähle deinen Kalendertyp, um Anweisungen zu erhalten:",
