@@ -332,6 +332,7 @@ function HomeContent() {
       setSelectedCompareIds([]);
       setCompareCalendarData(new Map());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, calendars]);
 
   // Update URL when calendar or compare mode changes
