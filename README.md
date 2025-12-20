@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="public/android/android-launchericon-512-512.png" alt="BetterShift Logo" width="300" height="300" />
+</div>
+
 <h1 align="center" id="title">BetterShift</h1>
 <div align="center">
 

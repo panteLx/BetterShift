@@ -555,6 +555,13 @@ export function PresetManageSheet({
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
+            {/* Empty state when no presets exist */}
+            {presets.length === 0 && !showAddForm && !editingPreset && (
+              <p className="text-center text-muted-foreground py-8">
+                {t("preset.noPresets")}
+              </p>
+            )}
+
             {/* Primary Presets List */}
             {orderedPrimaryPresets.length > 0 &&
               !showAddForm &&
