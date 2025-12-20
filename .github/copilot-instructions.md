@@ -261,25 +261,10 @@ docker compose exec bettershift npm run db:migrate
 2. Export types: `export type TableName = typeof tableName.$inferSelect;`
 3. Run `npm run db:generate && npm run db:migrate`
 4. Create API routes: `app/api/tablename/route.ts` and `app/api/tablename/[id]/route.ts`
-5. Add traPrinciples
+5. Add translations to all language files (`messages/{de,en,it}.json`)
+6. Create custom hook in `hooks/` for CRUD operations (follow existing patterns)
 
-**Live Updates (SSE)**:
-
-- Use `useSSEConnection()` hook for real-time updates
-- Silent refresh pattern: `fetchData(false)` to avoid loading states
-- Counter-based refresh triggers for stats: `setStatsRefreshTrigger((prev) => prev + 1)`
-
-**Calendar Interactions**:
-
-- Left-click: Toggle shift with selected preset
-- Right-click: Open note dialog (prevent default context menu)
-- Long-press (mobile): Open note dialog
-- Toggle logic: Delete if exists, create if not
-- **Language**: All code, comments, variable names, and messages in English
-- **Comments**: Only add comments for complex logic or non-obvious behavior
-- **Migrations**: Never use `db:push` - prefer safe migrations (db:generate + manual review)
-- **Code clarity**: Write self-documenting code with clear variable/function names
-  evelopment Workflow
+## Development Workflow
 
 **Local Setup**:
 
@@ -303,15 +288,8 @@ docker compose exec bettershift npm run db:migrate
 - Build check: `npm run build`
 - All API errors logged via `console.error()`
 
-## Common Gotchas
-
-1. **Next.js 16**: Dynamic route params are async - always `await params`
-2. **Cascade Deletes**: Deleting calendar removes all shifts/presets/notes
-3. **Sheets vs Dialogs**: BaseSheet for forms, Dialogs for read-only/confirmations
-4. **Color Format**: Store hex (`#3b82f6`), use 20% opacity (`${color}20`)
-
 ## Code Style
 
 - **Language**: English for all code, comments, variable names
 - **Comments**: Only for complex/non-obvious logic
-- **Code clarity**: Self-documenting names over comment
+- **Code clarity**: Self-documenting names over comments
