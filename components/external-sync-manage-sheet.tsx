@@ -66,6 +66,8 @@ export function ExternalSyncManageSheet({
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSync, setEditingSync] = useState<ExternalSync | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -333,13 +335,18 @@ export function ExternalSyncManageSheet({
   };
 
   const handleDelete = async (syncId: string) => {
-    if (!confirm(t("externalSync.deleteConfirm"))) return;
+    setDeleteTargetId(syncId);
+    setShowDeleteConfirm(true);
+  };
 
-    setIsDeleting(syncId);
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+
+    setIsDeleting(deleteTargetId);
     try {
       const password = getCachedPassword(calendarId);
 
-      const response = await fetch(`/api/external-syncs/${syncId}`, {
+      const response = await fetch(`/api/external-syncs/${deleteTargetId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -359,12 +366,14 @@ export function ExternalSyncManageSheet({
         );
       }
     } catch (error) {
-      console.error("Delete error:", error);
+      console.error("Error deleting sync:", error);
       toast.error(
         t("common.deleteError", { item: t("externalSync.syncTypeCustom") })
       );
     } finally {
       setIsDeleting(null);
+      setDeleteTargetId(null);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -1226,6 +1235,14 @@ export function ExternalSyncManageSheet({
         open={showConfirmDialog}
         onOpenChange={setShowConfirmDialog}
         onConfirm={handleConfirmClose}
+      />
+
+      <ConfirmationDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={confirmDelete}
+        title={t("common.confirmDelete")}
+        description={t("externalSync.deleteConfirm")}
       />
     </>
   );

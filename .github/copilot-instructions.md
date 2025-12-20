@@ -321,6 +321,8 @@ const {
 #### Other Patterns
 
 - **Dialogs**: Only for read-only info or simple confirmations (no forms)
+- **Confirmation Dialogs**: NEVER use native `confirm()` - always use `ConfirmationDialog` component with state management
+
 - **Forms**: Prevent default, validate, show errors, use explicit save actions
 - **Colors**: Use `PRESET_COLORS` array, hex format (`#3b82f6`), 20% opacity for backgrounds
 - **Dates**: `formatDateToLocal()` for YYYY-MM-DD format
