@@ -60,7 +60,6 @@ export function BaseSheet({
     setShowConfirmDialog,
     handleConfirmClose,
   } = useDirtyState({
-    open,
     onClose: onOpenChange,
     hasChanges: () => hasUnsavedChanges,
   });
@@ -72,7 +71,7 @@ export function BaseSheet({
   };
 
   const handleCancelClick = () => {
-    handleClose(false);
+    handleClose();
   };
 
   return (

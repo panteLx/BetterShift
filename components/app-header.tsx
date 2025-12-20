@@ -94,8 +94,8 @@ export function AppHeader({
                 transition={{ duration: 0.3 }}
               >
                 <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center shadow-xl shadow-primary/30 ring-2 ring-primary/20">
-                    <CalendarIcon className="h-6 w-6 text-primary-foreground" />
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 flex items-center justify-center shadow-xl shadow-slate-900/50 dark:shadow-slate-950/70 ring-2 ring-slate-700/50 dark:ring-slate-600/50">
+                    <CalendarIcon className="h-6 w-6 text-white" />
                   </div>
                   {/* Connection Status Indicator */}
                   <div

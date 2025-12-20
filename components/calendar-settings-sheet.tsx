@@ -134,7 +134,6 @@ export function CalendarSettingsSheet({
     setShowConfirmDialog,
     handleConfirmClose,
   } = useDirtyState({
-    open,
     onClose: onOpenChange,
     hasChanges,
   });

@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="public/android/android-launchericon-512-512.png" alt="BetterShift Logo" width="300" height="300" />
+</div>
+
 <h1 align="center" id="title">BetterShift</h1>
 <div align="center">
 
@@ -64,6 +68,7 @@
 
 - **Auto Update Checks** — Detects new releases with visual notifications
 - **Integrated Changelog** — View release notes directly in the app
+- **PWA Support** — Installable as a Progressive Web App
 - **Next.js 16 + React 19** — Latest App Router architecture
 - **SQLite + Drizzle ORM** — Type-safe database with file-based storage
 - **Docker Ready** — Two-command deployment with Docker Compose

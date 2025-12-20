@@ -311,7 +311,6 @@ const {
   setShowConfirmDialog,
   handleConfirmClose,
 } = useDirtyState({
-  open,
   onClose: onOpenChange,
   hasChanges: () => name !== initialName,
   onConfirm: () => resetForm(), // Optional cleanup

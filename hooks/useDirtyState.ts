@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 interface UseDirtyStateOptions {
-  open: boolean;
   onClose: (open: boolean) => void;
   hasChanges: () => boolean;
   onConfirm?: () => void;
@@ -14,7 +13,6 @@ interface UseDirtyStateOptions {
  * ```tsx
  * const { handleClose, showConfirmDialog, setShowConfirmDialog, handleConfirmClose } =
  *   useDirtyState({
- *     open,
  *     onClose,
  *     hasChanges: () => name !== initialName,
  *     onConfirm: () => resetForm()
@@ -35,27 +33,18 @@ interface UseDirtyStateOptions {
  * ```
  */
 export function useDirtyState({
-  open,
   onClose,
   hasChanges,
   onConfirm,
 }: UseDirtyStateOptions) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const handleClose = (open: boolean) => {
-    // If opening, just open it
-    if (open) {
-      onClose(open);
-      return;
-    }
-
-    // If closing with unsaved changes, show confirmation
+  const handleClose = () => {
     if (hasChanges()) {
       setShowConfirmDialog(true);
       return;
     }
 
-    // Otherwise close normally
     onClose(false);
   };
 
