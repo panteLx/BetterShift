@@ -94,6 +94,66 @@ export function useCalendars(initialCalendarId?: string | null) {
     }
   };
 
+  const updateCalendar = async (
+    calendarId: string,
+    updates: {
+      name?: string;
+      color?: string;
+      currentPassword?: string;
+      isLocked: boolean;
+      password?: string | null;
+    }
+  ) => {
+    try {
+      const response = await fetch(`/api/calendars/${calendarId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.status === 401) {
+        toast.error(t("validation.passwordIncorrect"));
+        return { success: false, error: "unauthorized" as const };
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error ||
+          t("common.updateError", { item: t("calendar.title") });
+        toast.error(errorMessage);
+        return { success: false, error: "failed" as const };
+      }
+
+      const updatedCalendar = await response.json();
+
+      // Update local state
+      setCalendars((prev) =>
+        prev.map((cal) => (cal.id === calendarId ? updatedCalendar : cal))
+      );
+
+      // Handle password caching
+      if (updates.password === null) {
+        removeCachedPassword(calendarId);
+      } else if (updates.password) {
+        setCachedPassword(calendarId, updates.password);
+      } else if (updates.currentPassword) {
+        setCachedPassword(calendarId, updates.currentPassword);
+      }
+
+      toast.success(t("common.updated", { item: t("calendar.title") }));
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to update calendar:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("common.updateError", { item: t("calendar.title") })
+      );
+      return { success: false, error: "failed" as const };
+    }
+  };
+
   const deleteCalendar = async (calendarId: string, password?: string) => {
     try {
       const response = await fetch(`/api/calendars/${calendarId}`, {
@@ -154,6 +214,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     setSelectedCalendar,
     loading,
     createCalendar,
+    updateCalendar,
     deleteCalendar,
     refetchCalendars: fetchCalendars,
   };

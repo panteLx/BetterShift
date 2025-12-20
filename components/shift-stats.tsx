@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +10,9 @@ import {
   PieChart,
   Radar as RadarIcon,
 } from "lucide-react";
-import { getCachedPassword } from "@/lib/password-cache";
 import { formatDuration } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useShiftStats, ShiftStatsData } from "@/hooks/useShiftStats";
 
 // Hook for responsive radius that's SSR-safe
 function useResponsiveRadius() {
@@ -57,22 +57,6 @@ import {
   Radar,
 } from "recharts";
 
-interface ShiftStats {
-  period: string;
-  startDate: string;
-  endDate: string;
-  stats: Record<string, { count: number; totalMinutes: number }>;
-  totalMinutes: number;
-  totalShifts: number;
-  avgMinutesPerShift: number;
-  avgShiftsPerDay: number;
-  avgMinutesPerDay: number;
-  minDuration: number;
-  maxDuration: number;
-  daysWithShifts: number;
-  trendData: Array<{ date: string; count: number; totalMinutes: number }>;
-}
-
 interface ShiftStatsProps {
   calendarId: string | undefined;
   currentDate: Date;
@@ -104,55 +88,15 @@ export function ShiftStats({
   const t = useTranslations();
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
-  const [stats, setStats] = useState<ShiftStats | null>(null);
-  const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
-  const isInitialLoadRef = useRef(true);
   const outerRadius = useResponsiveRadius();
 
-  const fetchStats = useCallback(
-    async (silent = false) => {
-      if (!calendarId) return;
-
-      if (!silent) {
-        setLoading(true);
-      }
-
-      try {
-        const password = getCachedPassword(calendarId);
-        const params = new URLSearchParams({
-          calendarId,
-          period,
-          date: currentDate.toISOString(),
-        });
-        if (password) {
-          params.append("password", password);
-        }
-
-        const response = await fetch(`/api/shifts/stats?${params}`);
-        if (!response.ok) {
-          return; // Calendar is locked and no valid password
-        }
-        const data = await response.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Failed to fetch shift statistics:", error);
-      } finally {
-        if (!silent) {
-          setLoading(false);
-        }
-      }
-    },
-    [calendarId, period, currentDate]
-  );
-
-  // Fetch stats when dependencies change
-  useEffect(() => {
-    if (calendarId) {
-      fetchStats(!isInitialLoadRef.current);
-      isInitialLoadRef.current = false;
-    }
-  }, [calendarId, refreshTrigger, fetchStats]);
+  const { stats, loading } = useShiftStats({
+    calendarId,
+    currentDate,
+    period,
+    refreshTrigger,
+  });
 
   if (!calendarId) return null;
 
