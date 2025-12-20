@@ -90,7 +90,10 @@
     "selectToCompareDescription": "Wähle 2-3 Kalender aus, um sie nebeneinander zu vergleichen",
     "compareSelected": "{count} ausgewählt",
     "startComparing": "Vergleich starten",
-    "mobileNotOptimized": "Die Vergleichsansicht ist nicht für Mobile optimiert. Für die beste Erfahrung nutze bitte einen größeren Bildschirm."
+    "mobileNotOptimized": "Die Vergleichsansicht ist nicht für Mobile optimiert. Für die beste Erfahrung nutze bitte einen größeren Bildschirm.",
+    "shareLink": "Link teilen",
+    "shareLinkDescription": "Kopiere den Link zur Vergleichsansicht",
+    "linkCopied": "Link in Zwischenablage kopiert"
   },
   "color": {
     "custom": "Eigene Farbe",

@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { CalendarContent } from "@/components/calendar-content";
 import { PresetSelector } from "@/components/preset-selector";
 import { LockedCalendarView } from "@/components/locked-calendar-view";
-import { X } from "lucide-react";
+import { X, Link } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 import { motion } from "motion/react";
 import { Locale } from "date-fns";
+import { toast } from "sonner";
 
 interface CalendarCompareViewProps {
   calendars: CalendarWithCount[];
@@ -89,6 +90,20 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
       })()
     : null;
 
+  const handleShareLink = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("compare", props.selectedIds.join(","));
+
+    navigator.clipboard
+      .writeText(url.toString())
+      .then(() => {
+        toast.success(t("calendar.linkCopied"));
+      })
+      .catch(() => {
+        toast.error(t("common.error"));
+      });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -107,16 +122,29 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                   })}
                 </p>
               </div>
-              <Button
-                onClick={props.onExit}
-                variant="outline"
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                <span className="hidden sm:inline">
-                  {t("calendar.exitCompare")}
-                </span>
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleShareLink}
+                  variant="outline"
+                  className="gap-2"
+                  title={t("calendar.shareLinkDescription")}
+                >
+                  <Link className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {t("calendar.shareLink")}
+                  </span>
+                </Button>
+                <Button
+                  onClick={props.onExit}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {t("calendar.exitCompare")}
+                  </span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -243,7 +271,9 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                         onDateChange={props.onDateChange}
                         shifts={shifts}
                         notes={notes}
-                        selectedPresetId={props.selectedPresetId}
+                        selectedPresetId={
+                          isDisabled ? undefined : props.selectedPresetId
+                        }
                         togglingDates={togglingDates}
                         externalSyncs={externalSyncs}
                         maxShiftsToShow={props.maxShiftsToShow}
@@ -257,8 +287,10 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                         statsRefreshTrigger={props.statsRefreshTrigger}
                         shouldHideUIElements={false}
                         locale={props.locale}
-                        onDayClick={(date) =>
-                          props.onDayClick(calendar.id, date)
+                        onDayClick={
+                          isDisabled
+                            ? () => {}
+                            : (date) => props.onDayClick(calendar.id, date)
                         }
                         onDayRightClick={
                           props.onDayRightClick

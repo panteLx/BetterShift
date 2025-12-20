@@ -9,7 +9,12 @@ import { Plus } from "lucide-react";
 import { getDateLocale } from "@/lib/locales";
 import { motion, AnimatePresence } from "motion/react";
 import { ShiftWithCalendar } from "@/lib/types";
-import { ShiftPreset, CalendarNote, ExternalSync } from "@/lib/db/schema";
+import {
+  ShiftPreset,
+  CalendarNote,
+  ExternalSync,
+  Shift,
+} from "@/lib/db/schema";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useShifts } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
@@ -27,6 +32,7 @@ import { LockedCalendarView } from "@/components/locked-calendar-view";
 import { CalendarSkeleton } from "@/components/calendar-skeleton";
 import { CalendarContentSkeleton } from "@/components/calendar-content-skeleton";
 import { LockedCalendarSkeleton } from "@/components/locked-calendar-skeleton";
+import { CalendarCompareSkeleton } from "@/components/calendar-compare-skeleton";
 import { CalendarContent } from "@/components/calendar-content";
 import { CalendarCompareSheet } from "@/components/calendar-compare-sheet";
 import { CalendarCompareView } from "@/components/calendar-compare-view";
@@ -92,6 +98,7 @@ function HomeContent() {
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [showCompareSelector, setShowCompareSelector] = useState(false);
   const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([]);
+  const [compareDataLoading, setCompareDataLoading] = useState(false);
 
   const {
     notes,
@@ -246,71 +253,102 @@ function HomeContent() {
     if (!isCompareMode || selectedCompareIds.length === 0) return;
 
     const loadCompareData = async () => {
+      setCompareDataLoading(true);
       const dataMap = new Map();
 
-      for (const calendarId of selectedCompareIds) {
-        try {
-          const password = getCachedPassword(calendarId);
-          const passwordParam = password ? `&password=${password}` : "";
+      // Load all calendars in parallel
+      await Promise.all(
+        selectedCompareIds.map(async (calendarId) => {
+          try {
+            const password = getCachedPassword(calendarId);
+            const passwordParam = password ? `&password=${password}` : "";
 
-          // Fetch shifts
-          const shiftsRes = await fetch(
-            `/api/shifts?calendarId=${calendarId}${passwordParam}`
-          );
-          const shiftsData = shiftsRes.ok ? await shiftsRes.json() : [];
+            // Fetch all data for this calendar in parallel
+            const [shiftsRes, notesRes, syncsRes, presetsRes] =
+              await Promise.all([
+                fetch(`/api/shifts?calendarId=${calendarId}${passwordParam}`),
+                fetch(`/api/notes?calendarId=${calendarId}${passwordParam}`),
+                fetch(
+                  `/api/external-syncs?calendarId=${calendarId}${passwordParam}`
+                ),
+                fetch(`/api/presets?calendarId=${calendarId}${passwordParam}`),
+              ]);
 
-          // Fetch notes
-          const notesRes = await fetch(
-            `/api/notes?calendarId=${calendarId}${passwordParam}`
-          );
-          const notesData = notesRes.ok ? await notesRes.json() : [];
+            const [shiftsData, notesData, syncsData, presetsData] =
+              await Promise.all([
+                shiftsRes.ok ? shiftsRes.json() : [],
+                notesRes.ok ? notesRes.json() : [],
+                syncsRes.ok ? syncsRes.json() : [],
+                presetsRes.ok ? presetsRes.json() : [],
+              ]);
 
-          // Fetch external syncs
-          const syncsRes = await fetch(
-            `/api/external-syncs?calendarId=${calendarId}${passwordParam}`
-          );
-          const syncsData = syncsRes.ok ? await syncsRes.json() : [];
-
-          // Fetch presets
-          const presetsRes = await fetch(
-            `/api/presets?calendarId=${calendarId}${passwordParam}`
-          );
-          const presetsData = presetsRes.ok ? await presetsRes.json() : [];
-
-          dataMap.set(calendarId, {
-            shifts: shiftsData,
-            notes: notesData,
-            externalSyncs: syncsData,
-            presets: presetsData,
-            togglingDates: new Set<string>(),
-          });
-        } catch (error) {
-          console.error(
-            `Error loading data for calendar ${calendarId}:`,
-            error
-          );
-          dataMap.set(calendarId, {
-            shifts: [],
-            notes: [],
-            externalSyncs: [],
-            presets: [],
-            togglingDates: new Set<string>(),
-          });
-        }
-      }
+            dataMap.set(calendarId, {
+              shifts: shiftsData,
+              notes: notesData,
+              externalSyncs: syncsData,
+              presets: presetsData,
+              togglingDates: new Set<string>(),
+            });
+          } catch (error) {
+            console.error(
+              `Error loading data for calendar ${calendarId}:`,
+              error
+            );
+            dataMap.set(calendarId, {
+              shifts: [],
+              notes: [],
+              externalSyncs: [],
+              presets: [],
+              togglingDates: new Set<string>(),
+            });
+          }
+        })
+      );
 
       setCompareCalendarData(dataMap);
+      setCompareDataLoading(false);
     };
 
     loadCompareData();
   }, [isCompareMode, selectedCompareIds]);
 
-  // Update URL when calendar changes
+  // Load compare mode from URL on initial load
   useEffect(() => {
-    if (selectedCalendar) {
+    const compareParam = searchParams.get("compare");
+    if (compareParam && !isCompareMode) {
+      const calendarIds = compareParam.split(",").filter((id) => id.trim());
+      if (calendarIds.length >= 2 && calendarIds.length <= 3) {
+        // Verify that all calendars exist
+        const validIds = calendarIds.filter((id) =>
+          calendars.some((cal) => cal.id === id)
+        );
+        if (validIds.length >= 2) {
+          setSelectedCompareIds(validIds);
+          setIsCompareMode(true);
+        }
+      }
+    } else if (!compareParam && isCompareMode) {
+      // If compare param is removed from URL, exit compare mode
+      setIsCompareMode(false);
+      setSelectedCompareIds([]);
+      setCompareCalendarData(new Map());
+    }
+  }, [searchParams, calendars]);
+
+  // Update URL when calendar or compare mode changes
+  useEffect(() => {
+    if (isCompareMode && selectedCompareIds.length >= 2) {
+      // In compare mode
+      router.replace(`/?compare=${selectedCompareIds.join(",")}`, {
+        scroll: false,
+      });
+    } else if (selectedCalendar && !isCompareMode) {
+      // Normal mode with selected calendar
       router.replace(`/?id=${selectedCalendar}`, { scroll: false });
     }
-  }, [selectedCalendar, router]);
+  }, [selectedCalendar, isCompareMode, selectedCompareIds, router]);
+
+  // Old URL update effect removed - now handled above
 
   // Handle password success with data refresh
   const handlePasswordSuccess = async () => {
@@ -468,6 +506,12 @@ function HomeContent() {
     setIsCompareMode(false);
     setSelectedCompareIds([]);
     setCompareCalendarData(new Map());
+    // Immediately update URL to prevent re-loading from URL parameter
+    if (selectedCalendar) {
+      router.replace(`/?id=${selectedCalendar}`, { scroll: false });
+    } else {
+      router.replace(`/`, { scroll: false });
+    }
   };
 
   // Compare mode interaction handlers
@@ -520,6 +564,20 @@ function HomeContent() {
       // Check password if needed
       const result = await verifyAndCachePassword(calendarId, password);
       if (result.protected && !result.valid) {
+        // Clear toggling state before showing password dialog
+        setCompareCalendarData((prev) => {
+          const updated = new Map(prev);
+          const data = updated.get(calendarId);
+          if (data) {
+            const newTogglingDates = new Set(data.togglingDates);
+            newTogglingDates.delete(dateKey);
+            updated.set(calendarId, {
+              ...data,
+              togglingDates: newTogglingDates,
+            });
+          }
+          return updated;
+        });
         setPendingAction({
           type: "edit",
           calendarId: calendarId,
@@ -698,6 +756,16 @@ function HomeContent() {
 
   // If in compare mode, render compare view
   if (isCompareMode) {
+    // Show skeleton while loading
+    if (compareDataLoading) {
+      return (
+        <CalendarCompareSkeleton
+          count={selectedCompareIds.length}
+          hidePresetHeader={viewSettings.hidePresetHeader}
+        />
+      );
+    }
+
     return (
       <>
         <CalendarCompareView
@@ -817,15 +885,34 @@ function HomeContent() {
           onShiftsChange={() => {
             // Reload shifts for all calendars
             const loadShifts = async () => {
-              const dataMap = new Map(compareCalendarData);
-              for (const calendarId of selectedCompareIds) {
-                try {
-                  const password = getCachedPassword(calendarId);
-                  const passwordParam = password ? `&password=${password}` : "";
-                  const shiftsRes = await fetch(
-                    `/api/shifts?calendarId=${calendarId}${passwordParam}`
-                  );
-                  const shiftsData = shiftsRes.ok ? await shiftsRes.json() : [];
+              // Build updates for each calendar in parallel
+              const updates = new Map<string, Shift[]>();
+              await Promise.all(
+                selectedCompareIds.map(async (calendarId) => {
+                  try {
+                    const password = getCachedPassword(calendarId);
+                    const passwordParam = password
+                      ? `&password=${password}`
+                      : "";
+                    const shiftsRes = await fetch(
+                      `/api/shifts?calendarId=${calendarId}${passwordParam}`
+                    );
+                    const shiftsData = shiftsRes.ok
+                      ? await shiftsRes.json()
+                      : [];
+                    updates.set(calendarId, shiftsData);
+                  } catch (error) {
+                    console.error(
+                      `Error loading shifts for calendar ${calendarId}:`,
+                      error
+                    );
+                  }
+                })
+              );
+              // Apply updates using functional state updater
+              setCompareCalendarData((prev) => {
+                const dataMap = new Map(prev);
+                for (const [calendarId, shiftsData] of updates.entries()) {
                   const currentData = dataMap.get(calendarId);
                   if (currentData) {
                     dataMap.set(calendarId, {
@@ -833,14 +920,9 @@ function HomeContent() {
                       shifts: shiftsData,
                     });
                   }
-                } catch (error) {
-                  console.error(
-                    `Error loading shifts for calendar ${calendarId}:`,
-                    error
-                  );
                 }
-              }
-              setCompareCalendarData(dataMap);
+                return dataMap;
+              });
             };
             loadShifts();
           }}

@@ -90,7 +90,10 @@
     "selectToCompareDescription": "Choose 2-3 calendars to view them side by side",
     "compareSelected": "{count} selected",
     "startComparing": "Start Comparing",
-    "mobileNotOptimized": "The comparison view is not optimized for mobile. Please use a larger screen for the best experience."
+    "mobileNotOptimized": "The comparison view is not optimized for mobile. Please use a larger screen for the best experience.",
+    "shareLink": "Share Link",
+    "shareLinkDescription": "Copy link to comparison view",
+    "linkCopied": "Link copied to clipboard"
   },
   "color": {
     "custom": "Custom",

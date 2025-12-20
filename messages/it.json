@@ -90,7 +90,10 @@
     "selectToCompareDescription": "Scegli 2-3 calendari per visualizzarli affiancati",
     "compareSelected": "{count} selezionati",
     "startComparing": "Inizia Confronto",
-    "mobileNotOptimized": "La vista confronto non è ottimizzata per dispositivi mobili. Utilizza uno schermo più grande per un'esperienza migliore."
+    "mobileNotOptimized": "La vista confronto non è ottimizzata per dispositivi mobili. Utilizza uno schermo più grande per un'esperienza migliore.",
+    "shareLink": "Condividi Link",
+    "shareLinkDescription": "Copia link alla vista confronto",
+    "linkCopied": "Link copiato negli appunti"
   },
   "color": {
     "custom": "Personalizzato",
