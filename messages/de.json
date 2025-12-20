@@ -82,7 +82,15 @@
     "currentPasswordRequired": "Erforderlich, um Änderungen zu speichern",
     "lockCalendar": "Kalender komplett sperren",
     "lockCalendarHint": "Sperrt Kalender komplett - Passwort zum sehen und verwalten erforderlich",
-    "lockRequiresPassword": "Kalendersperre erfordert ein Passwort"
+    "lockRequiresPassword": "Kalendersperre erfordert ein Passwort",
+    "compare": "Vergleichen",
+    "compareMode": "Vergleichsmodus",
+    "exitCompare": "Vergleich beenden",
+    "selectToCompare": "Wähle Kalender zum Vergleichen",
+    "selectToCompareDescription": "Wähle 2-3 Kalender aus, um sie nebeneinander zu vergleichen",
+    "compareSelected": "{count} ausgewählt",
+    "startComparing": "Vergleich starten",
+    "mobileNotOptimized": "Die Vergleichsansicht ist nicht für Mobile optimiert. Für die beste Erfahrung nutze bitte einen größeren Bildschirm."
   },
   "color": {
     "custom": "Eigene Farbe",
@@ -153,7 +161,8 @@
     "hideFromStatsHint": "Schichten dieser Vorlage aus der Statistik ausschließen",
     "showPresets": "Vorlagen anzeigen",
     "hidePresets": "Vorlagen ausblenden",
-    "hiddenFromStats": "Aus Statistik ausgeblendet"
+    "hiddenFromStats": "Aus Statistik ausgeblendet",
+    "cannotAddPresetHint": "Diese Vorlage gehört zu einem anderen Kalender und kann hier nicht hinzugefügt werden."
   },
   "view": {
     "settingsTitle": "Ansichtseinstellungen",

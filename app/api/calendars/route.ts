@@ -18,7 +18,7 @@ export async function GET() {
         updatedAt: calendars.updatedAt,
         _count:
           sql<number>`(SELECT COUNT(*) FROM ${shifts} WHERE ${shifts.calendarId} = ${calendars.id})`.as(
-            "shift_count"
+            "_count"
           ),
       })
       .from(calendars)

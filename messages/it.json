@@ -82,7 +82,15 @@
     "currentPasswordRequired": "Richiesto per salvare le modifiche",
     "lockCalendar": "Blocca calendario completamente",
     "lockCalendarHint": "Blocca il calendario completamente - è necessaria la password per visualizzare e gestire",
-    "lockRequiresPassword": "Il blocco del calendario richiede una password"
+    "lockRequiresPassword": "Il blocco del calendario richiede una password",
+    "compare": "Confronta Calendari",
+    "compareMode": "Modalità Confronto",
+    "exitCompare": "Esci dal Confronto",
+    "selectToCompare": "Seleziona calendari da confrontare",
+    "selectToCompareDescription": "Scegli 2-3 calendari per visualizzarli affiancati",
+    "compareSelected": "{count} selezionati",
+    "startComparing": "Inizia Confronto",
+    "mobileNotOptimized": "La vista confronto non è ottimizzata per dispositivi mobili. Utilizza uno schermo più grande per un'esperienza migliore."
   },
   "color": {
     "custom": "Personalizzato",
@@ -153,7 +161,8 @@
     "hideFromStatsHint": "Escludi i turni da questo preset dalle statistiche",
     "showPresets": "Mostra preset",
     "hidePresets": "Nascondi preset",
-    "hiddenFromStats": "Nascosto dalle statistiche"
+    "hiddenFromStats": "Nascosto dalle statistiche",
+    "cannotAddPresetHint": "Questo preset appartiene a un altro calendario e non può essere aggiunto qui."
   },
   "view": {
     "settingsTitle": "Impostazioni Vista",

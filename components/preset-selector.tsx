@@ -21,6 +21,7 @@ interface PresetSelectorProps {
   loading?: boolean;
   hidePresetHeader?: boolean;
   onHidePresetHeaderChange?: (hide: boolean) => void;
+  hideManageButton?: boolean;
 }
 
 export function PresetSelector({
@@ -37,6 +38,7 @@ export function PresetSelector({
   loading = false,
   hidePresetHeader = false,
   onHidePresetHeaderChange,
+  hideManageButton = false,
 }: PresetSelectorProps) {
   const [showManageDialog, setShowManageDialog] = useState(false);
 
@@ -72,6 +74,7 @@ export function PresetSelector({
         loading={loading}
         hidePresetHeader={hidePresetHeader}
         onHidePresetHeaderChange={onHidePresetHeaderChange}
+        hideManageButton={hideManageButton}
       />
 
       <PresetManageSheet

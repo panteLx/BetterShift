@@ -8,6 +8,7 @@ import { ShiftFormData } from "@/components/shift-sheet";
 
 export interface PendingAction {
   type: "delete" | "edit" | "syncNotifications";
+  calendarId?: string;
   shiftId?: string;
   formData?: ShiftFormData;
   presetAction?: () => Promise<void>;

@@ -82,7 +82,15 @@
     "currentPasswordRequired": "Required to save changes",
     "lockCalendar": "Lock calendar completely",
     "lockCalendarHint": "Locks calendar completely - password required to view and manage",
-    "lockRequiresPassword": "Locking the calendar requires a password"
+    "lockRequiresPassword": "Locking the calendar requires a password",
+    "compare": "Compare Calendars",
+    "compareMode": "Comparison Mode",
+    "exitCompare": "Exit Comparison",
+    "selectToCompare": "Select calendars to compare",
+    "selectToCompareDescription": "Choose 2-3 calendars to view them side by side",
+    "compareSelected": "{count} selected",
+    "startComparing": "Start Comparing",
+    "mobileNotOptimized": "The comparison view is not optimized for mobile. Please use a larger screen for the best experience."
   },
   "color": {
     "custom": "Custom",
@@ -153,7 +161,8 @@
     "hideFromStatsHint": "Exclude shifts from this preset from statistics",
     "showPresets": "Show presets",
     "hidePresets": "Hide presets",
-    "hiddenFromStats": "Hidden from statistics"
+    "hiddenFromStats": "Hidden from statistics",
+    "cannotAddPresetHint": "This preset belongs to a different calendar and cannot be added here."
   },
   "view": {
     "settingsTitle": "View Settings",

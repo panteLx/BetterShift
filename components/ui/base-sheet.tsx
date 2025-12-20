@@ -26,6 +26,7 @@ interface BaseSheetProps {
   onSave?: () => void | Promise<void>;
   isSaving?: boolean;
   saveDisabled?: boolean;
+  saveLabel?: string;
   hasUnsavedChanges?: boolean;
   maxWidth?: "sm" | "md" | "lg" | "xl";
 }
@@ -49,6 +50,7 @@ export function BaseSheet({
   onSave,
   isSaving = false,
   saveDisabled = false,
+  saveLabel,
   hasUnsavedChanges = false,
   maxWidth = "md",
 }: BaseSheetProps) {
@@ -118,7 +120,9 @@ export function BaseSheet({
                       disabled={saveDisabled || isSaving}
                       className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
                     >
-                      {isSaving ? t("common.saving") : t("common.save")}
+                      {isSaving
+                        ? t("common.saving")
+                        : saveLabel || t("common.save")}
                     </Button>
                   )}
                 </div>

@@ -29,6 +29,7 @@ interface PresetListProps {
   loading?: boolean;
   hidePresetHeader?: boolean;
   onHidePresetHeaderChange?: (hide: boolean) => void;
+  hideManageButton?: boolean;
 }
 
 export function PresetList({
@@ -43,6 +44,7 @@ export function PresetList({
   loading = false,
   hidePresetHeader = false,
   onHidePresetHeaderChange,
+  hideManageButton = false,
 }: PresetListProps) {
   const t = useTranslations();
   const [showSecondary, setShowSecondary] = React.useState(false);
@@ -129,17 +131,19 @@ export function PresetList({
         <p className="text-[10px] sm:text-xs text-muted-foreground max-w-md mx-auto">
           {t("preset.createFirstDescription")}
         </p>
-        <Button
-          onClick={onManageClick}
-          size="sm"
-          className="gap-2"
-          disabled={!onManageClick}
-        >
-          <Plus className="h-4 w-4" />
-          <span className="text-xs sm:text-sm">
-            {t("preset.createYourFirst")}
-          </span>
-        </Button>
+        {!hideManageButton && (
+          <Button
+            onClick={onManageClick}
+            size="sm"
+            className="gap-2"
+            disabled={!onManageClick}
+          >
+            <Plus className="h-4 w-4" />
+            <span className="text-xs sm:text-sm">
+              {t("preset.createYourFirst")}
+            </span>
+          </Button>
+        )}
       </div>
     );
   }
@@ -204,7 +208,7 @@ export function PresetList({
 
       {/* Control Buttons Row */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {!hidePresetHeader && (
+        {!hidePresetHeader && !hideManageButton && (
           <Button
             variant="outline"
             size="sm"

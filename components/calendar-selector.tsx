@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, CalendarCog, Cloud, Bell } from "lucide-react";
+import { Plus, CalendarCog, Cloud, Bell, Copy } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 
 interface CalendarSelectorProps {
@@ -21,6 +21,7 @@ interface CalendarSelectorProps {
   onManagePassword?: () => void;
   onExternalSync?: () => void;
   onSyncNotifications?: () => void;
+  onCompare?: () => void;
   hasSyncErrors?: boolean;
   variant?: "desktop" | "mobile";
 }
@@ -33,6 +34,7 @@ export function CalendarSelector({
   onManagePassword,
   onExternalSync,
   onSyncNotifications,
+  onCompare,
   hasSyncErrors = false,
   variant = "desktop",
 }: CalendarSelectorProps) {
@@ -43,6 +45,7 @@ export function CalendarSelector({
   const requiresPassword = !!selectedCalendar?.passwordHash;
   const hasPassword = selectedId ? !!getCachedPassword(selectedId) : false;
   const shouldHideSyncButtons = requiresPassword && !hasPassword;
+  const canCompare = calendars.length >= 2;
 
   // Desktop: Compact icon-based layout
   if (variant === "desktop") {
@@ -110,6 +113,17 @@ export function CalendarSelector({
             {hasSyncErrors && (
               <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-600 rounded-full border-2 border-background animate-pulse" />
             )}
+          </Button>
+        )}
+        {onCompare && canCompare && (
+          <Button
+            onClick={onCompare}
+            size="icon"
+            variant="outline"
+            className="h-9 w-9 sm:h-10 sm:w-10"
+            title={t("calendar.compare")}
+          >
+            <Copy className="h-4 w-4" />
           </Button>
         )}
         <Button
@@ -199,11 +213,29 @@ export function CalendarSelector({
         </div>
       )}
 
-      {/* Create New Button - Full Width */}
-      <Button onClick={onCreateNew} size="sm" variant="outline" className="h-9">
-        <Plus className="h-4 w-4 mr-2" />
-        {t("common.create")}
-      </Button>
+      {/* Compare and Create Buttons */}
+      <div className="grid grid-cols-2 gap-2">
+        {onCompare && canCompare && (
+          <Button
+            onClick={onCompare}
+            size="sm"
+            variant="outline"
+            className="h-9"
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            {t("calendar.compare")}
+          </Button>
+        )}
+        <Button
+          onClick={onCreateNew}
+          size="sm"
+          variant="outline"
+          className={`h-9 ${canCompare && onCompare ? "" : "col-span-2"}`}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t("common.create")}
+        </Button>
+      </div>
     </div>
   );
 }

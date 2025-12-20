@@ -37,6 +37,7 @@ interface AppHeaderProps {
   onManagePassword: () => void;
   onExternalSync: () => void;
   onSyncNotifications: () => void;
+  onCompare?: () => void;
   onPresetsChange: () => void;
   onShiftsChange: () => void;
   onStatsRefresh: () => void;
@@ -63,6 +64,7 @@ export function AppHeader({
   onManagePassword,
   onExternalSync,
   onSyncNotifications,
+  onCompare,
   onPresetsChange,
   onShiftsChange,
   onStatsRefresh,
@@ -149,6 +151,7 @@ export function AppHeader({
                     onManagePassword={onManagePassword}
                     onExternalSync={onExternalSync}
                     onSyncNotifications={onSyncNotifications}
+                    onCompare={onCompare}
                     hasSyncErrors={hasSyncErrors}
                   />
                 </div>
@@ -333,6 +336,14 @@ export function AppHeader({
                 onMobileCalendarDialogChange(false);
                 onSyncNotifications();
               }}
+              onCompare={
+                onCompare
+                  ? () => {
+                      onMobileCalendarDialogChange(false);
+                      onCompare();
+                    }
+                  : undefined
+              }
               hasSyncErrors={hasSyncErrors}
               variant="mobile"
             />
