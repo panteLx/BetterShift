@@ -18,7 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Maximize2, FileText, Infinity, ArrowUpDown } from "lucide-react";
+import {
+  Maximize2,
+  FileText,
+  Infinity,
+  ArrowUpDown,
+  Highlighter,
+} from "lucide-react";
+import { PRESET_COLORS } from "@/lib/constants";
 
 interface ViewSettingsSheetProps {
   open: boolean;
@@ -30,6 +37,9 @@ interface ViewSettingsSheetProps {
   shiftSortType: "startTime" | "createdAt" | "title";
   shiftSortOrder: "asc" | "desc";
   combinedSortMode: boolean;
+  highlightWeekends: boolean;
+  highlightedWeekdays: number[];
+  highlightColor: string;
   onShiftsPerDayChange: (count: number | null) => void;
   onExternalShiftsPerDayChange: (count: number | null) => void;
   onShowShiftNotesChange: (show: boolean) => void;
@@ -37,6 +47,9 @@ interface ViewSettingsSheetProps {
   onShiftSortTypeChange: (type: "startTime" | "createdAt" | "title") => void;
   onShiftSortOrderChange: (order: "asc" | "desc") => void;
   onCombinedSortModeChange: (combined: boolean) => void;
+  onHighlightWeekendsChange: (highlight: boolean) => void;
+  onHighlightedWeekdaysChange: (days: number[]) => void;
+  onHighlightColorChange: (color: string) => void;
 }
 
 export function ViewSettingsSheet({
@@ -49,6 +62,9 @@ export function ViewSettingsSheet({
   shiftSortType,
   shiftSortOrder,
   combinedSortMode,
+  highlightWeekends,
+  highlightedWeekdays,
+  highlightColor,
   onShiftsPerDayChange,
   onExternalShiftsPerDayChange,
   onShowShiftNotesChange,
@@ -56,6 +72,9 @@ export function ViewSettingsSheet({
   onShiftSortTypeChange,
   onShiftSortOrderChange,
   onCombinedSortModeChange,
+  onHighlightWeekendsChange,
+  onHighlightedWeekdaysChange,
+  onHighlightColorChange,
 }: ViewSettingsSheetProps) {
   const t = useTranslations();
 
@@ -300,6 +319,137 @@ export function ViewSettingsSheet({
                   <p className="text-xs text-muted-foreground">
                     {t("view.showFullTitlesHint")}
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Day Highlighting */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Highlighter className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold">
+                {t("view.dayHighlighting")}
+              </Label>
+            </div>
+            <div className="space-y-4 pl-6 border-l-2 border-border/50">
+              {/* Quick Toggle: Weekends */}
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="highlight-weekends"
+                  checked={highlightWeekends}
+                  onCheckedChange={(checked: boolean) => {
+                    onHighlightWeekendsChange(checked);
+                    if (checked) {
+                      // Auto-select Saturday (6) and Sunday (0)
+                      const newDays = [0, 6];
+                      onHighlightedWeekdaysChange(newDays);
+                    } else {
+                      // Remove Saturday and Sunday
+                      const filtered = highlightedWeekdays.filter(
+                        (d) => d !== 0 && d !== 6
+                      );
+                      onHighlightedWeekdaysChange(filtered);
+                    }
+                  }}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 space-y-1">
+                  <Label
+                    htmlFor="highlight-weekends"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    {t("view.highlightWeekends")}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("view.highlightWeekendsHint")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Custom Weekdays */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  {t("view.customWeekdays")}
+                </Label>
+                <div className="grid grid-cols-7 gap-1">
+                  {[
+                    { day: 1, label: t("view.monday") },
+                    { day: 2, label: t("view.tuesday") },
+                    { day: 3, label: t("view.wednesday") },
+                    { day: 4, label: t("view.thursday") },
+                    { day: 5, label: t("view.friday") },
+                    { day: 6, label: t("view.saturday") },
+                    { day: 0, label: t("view.sunday") },
+                  ].map(({ day, label }) => {
+                    const isSelected = highlightedWeekdays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => {
+                          const newDays = isSelected
+                            ? highlightedWeekdays.filter((d) => d !== day)
+                            : [...highlightedWeekdays, day];
+                          onHighlightedWeekdaysChange(newDays);
+
+                          // Update weekends toggle state
+                          const hasWeekends =
+                            newDays.includes(0) && newDays.includes(6);
+                          if (hasWeekends !== highlightWeekends) {
+                            onHighlightWeekendsChange(hasWeekends);
+                          }
+                        }}
+                        className={`
+                          px-1 py-2 text-xs font-medium rounded-md transition-all border-2
+                          ${
+                            isSelected
+                              ? "bg-primary/20 border-primary text-primary"
+                              : "bg-muted/30 border-border/30 text-muted-foreground hover:bg-muted/50"
+                          }
+                        `}
+                        title={label}
+                      >
+                        {label.substring(0, 2)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("view.customWeekdaysHint")}
+                </p>
+              </div>
+
+              {/* Highlight Color */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  {t("view.highlightColor")}
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {PRESET_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => onHighlightColorChange(color.value)}
+                      className={`
+                        h-10 rounded-lg border-2 transition-all
+                        ${
+                          highlightColor === color.value
+                            ? "border-foreground ring-2 ring-foreground/20 scale-105"
+                            : "border-border/30 hover:border-border"
+                        }
+                      `}
+                      style={{
+                        backgroundColor: `${color.value}20`,
+                      }}
+                      title={color.name}
+                    >
+                      <div
+                        className="h-4 w-4 rounded-full mx-auto"
+                        style={{ backgroundColor: color.value }}
+                      />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

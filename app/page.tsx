@@ -832,6 +832,8 @@ function HomeContent() {
           shiftSortType={viewSettings.shiftSortType}
           shiftSortOrder={viewSettings.shiftSortOrder}
           combinedSortMode={viewSettings.combinedSortMode}
+          highlightedWeekdays={viewSettings.highlightedWeekdays}
+          highlightColor={viewSettings.highlightColor}
           statsRefreshTrigger={statsRefreshTrigger}
           locale={dateLocale}
           onDayClick={handleCompareDayClick}
@@ -1040,6 +1042,11 @@ function HomeContent() {
             handleShiftSortOrderChange: viewSettings.handleShiftSortOrderChange,
             handleCombinedSortModeChange:
               viewSettings.handleCombinedSortModeChange,
+            handleHighlightWeekendsChange:
+              viewSettings.handleHighlightWeekendsChange,
+            handleHighlightedWeekdaysChange:
+              viewSettings.handleHighlightedWeekdaysChange,
+            handleHighlightColorChange: viewSettings.handleHighlightColorChange,
           }}
           showNoteDialog={noteActions.showNoteDialog}
           onNoteDialogChange={noteActions.handleNoteDialogChange}
@@ -1158,6 +1165,8 @@ function HomeContent() {
             shiftSortType={viewSettings.shiftSortType}
             shiftSortOrder={viewSettings.shiftSortOrder}
             combinedSortMode={viewSettings.combinedSortMode}
+            highlightedWeekdays={viewSettings.highlightedWeekdays}
+            highlightColor={viewSettings.highlightColor}
             selectedCalendar={selectedCalendar || null}
             statsRefreshTrigger={statsRefreshTrigger}
             shouldHideUIElements={shouldHideUIElements}
@@ -1248,6 +1257,11 @@ function HomeContent() {
           handleShiftSortOrderChange: viewSettings.handleShiftSortOrderChange,
           handleCombinedSortModeChange:
             viewSettings.handleCombinedSortModeChange,
+          handleHighlightWeekendsChange:
+            viewSettings.handleHighlightWeekendsChange,
+          handleHighlightedWeekdaysChange:
+            viewSettings.handleHighlightedWeekdaysChange,
+          handleHighlightColorChange: viewSettings.handleHighlightColorChange,
         }}
         showNoteDialog={noteActions.showNoteDialog}
         onNoteDialogChange={noteActions.handleNoteDialogChange}

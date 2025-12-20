@@ -85,6 +85,38 @@ export function useViewSettings() {
     return false;
   });
 
+  const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("highlight-weekends");
+      return stored === "true";
+    }
+    return false;
+  });
+
+  const [highlightedWeekdays, setHighlightedWeekdays] = useState<number[]>(
+    () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("highlighted-weekdays");
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch {
+            return [];
+          }
+        }
+      }
+      return [];
+    }
+  );
+
+  const [highlightColor, setHighlightColor] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("highlight-color");
+      if (stored) return stored;
+    }
+    return "#fbbf24"; // Default amber
+  });
+
   const handleShiftsPerDayChange = useCallback((count: number | null) => {
     setShiftsPerDay(count);
     if (typeof window !== "undefined") {
@@ -153,6 +185,27 @@ export function useViewSettings() {
     }
   }, []);
 
+  const handleHighlightWeekendsChange = useCallback((highlight: boolean) => {
+    setHighlightWeekends(highlight);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("highlight-weekends", highlight.toString());
+    }
+  }, []);
+
+  const handleHighlightedWeekdaysChange = useCallback((days: number[]) => {
+    setHighlightedWeekdays(days);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("highlighted-weekdays", JSON.stringify(days));
+    }
+  }, []);
+
+  const handleHighlightColorChange = useCallback((color: string) => {
+    setHighlightColor(color);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("highlight-color", color);
+    }
+  }, []);
+
   return {
     shiftsPerDay,
     externalShiftsPerDay,
@@ -162,6 +215,9 @@ export function useViewSettings() {
     shiftSortOrder,
     combinedSortMode,
     hidePresetHeader,
+    highlightWeekends,
+    highlightedWeekdays,
+    highlightColor,
     handleShiftsPerDayChange,
     handleExternalShiftsPerDayChange,
     handleShowShiftNotesChange,
@@ -170,5 +226,8 @@ export function useViewSettings() {
     handleShiftSortOrderChange,
     handleCombinedSortModeChange,
     handleHidePresetHeaderChange,
+    handleHighlightWeekendsChange,
+    handleHighlightedWeekdaysChange,
+    handleHighlightColorChange,
   };
 }

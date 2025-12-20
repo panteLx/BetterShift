@@ -189,7 +189,20 @@
     "showNotes": "Show shift notes",
     "showNotesHint": "Display shift notes in calendar grid",
     "showFullTitles": "Show full shift titles",
-    "showFullTitlesHint": "Display complete shift titles without truncation"
+    "showFullTitlesHint": "Display complete shift titles without truncation",
+    "dayHighlighting": "Day Highlighting",
+    "highlightWeekends": "Highlight Weekends",
+    "highlightWeekendsHint": "Highlight Saturdays and Sundays with color",
+    "customWeekdays": "Custom Weekdays",
+    "customWeekdaysHint": "Select individual weekdays to highlight",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "highlightColor": "Highlight Color"
   },
   "stats": {
     "title": "Shift Statistics",

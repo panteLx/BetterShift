@@ -23,6 +23,8 @@ interface CalendarGridProps {
   shiftSortType?: "startTime" | "createdAt" | "title"; // sort type
   shiftSortOrder?: "asc" | "desc"; // sort order
   combinedSortMode?: boolean; // sort all shifts together or separately
+  highlightedWeekdays?: number[]; // weekdays to highlight (0=Sunday, 6=Saturday)
+  highlightColor?: string; // color for highlighted days
   onDayClick: (date: Date) => void;
   onDayRightClick?: (e: React.MouseEvent, date: Date) => void;
   onNoteIconClick?: (e: React.MouseEvent, date: Date) => void;
@@ -46,6 +48,8 @@ export function CalendarGrid({
   shiftSortType = "createdAt",
   shiftSortOrder = "asc",
   combinedSortMode = false,
+  highlightedWeekdays = [],
+  highlightColor = "#fbbf24",
   onDayClick,
   onDayRightClick,
   onNoteIconClick,
@@ -149,6 +153,10 @@ export function CalendarGrid({
           }
         };
 
+        const isHighlighted =
+          highlightedWeekdays.length > 0 &&
+          highlightedWeekdays.includes(day.getDay());
+
         return (
           <motion.button
             key={idx}
@@ -168,6 +176,11 @@ export function CalendarGrid({
               WebkitUserSelect: "none",
               userSelect: "none",
               WebkitTouchCallout: "none",
+              ...(isHighlighted &&
+                !isTodayDate && {
+                  backgroundColor: `${highlightColor}15`,
+                  borderColor: `${highlightColor}40`,
+                }),
             }}
             className={`
               min-h-25 sm:min-h-28 px-1 py-1.5 sm:p-2.5 rounded-md sm:rounded-lg text-sm transition-all relative flex flex-col border sm:border-2
