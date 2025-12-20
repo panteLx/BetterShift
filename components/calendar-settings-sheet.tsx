@@ -56,7 +56,7 @@ export function CalendarSettingsSheet({
 }: CalendarSettingsSheetProps) {
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
-  
+
   // Use props directly as initial state, controlled by key prop on component
   const [name, setName] = useState(calendarName);
   const [selectedColor, setSelectedColor] = useState(calendarColor);
@@ -73,7 +73,8 @@ export function CalendarSettingsSheet({
   const currentPasswordRef = useRef<HTMLInputElement>(null);
 
   // Calculate export permission based on password state (no useEffect needed)
-  const canExport = !hasPassword || !isLocked || !!getCachedPassword(calendarId);
+  const canExport =
+    !hasPassword || !isLocked || !!getCachedPassword(calendarId);
 
   // Initialize form state reference when opening
   useEffect(() => {
