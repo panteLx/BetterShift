@@ -68,6 +68,7 @@
 
 - **Auto Update Checks** — Detects new releases with visual notifications
 - **Integrated Changelog** — View release notes directly in the app
+- **PWA Support** — Installable as a Progressive Web App for offline access
 - **Next.js 16 + React 19** — Latest App Router architecture
 - **SQLite + Drizzle ORM** — Type-safe database with file-based storage
 - **Docker Ready** — Two-command deployment with Docker Compose

@@ -66,27 +66,15 @@ const withPWA = withPWAInit({
       },
     },
     {
-      urlPattern: /\/api\/.*$/i,
+      urlPattern: /^(?!\/_next|\/api\/).*$/i,
       handler: "NetworkFirst",
       options: {
-        cacheName: "api-cache",
-        expiration: {
-          maxEntries: 16,
-          maxAgeSeconds: 5 * 60, // 5 minutes
-        },
-        networkTimeoutSeconds: 10,
-      },
-    },
-    {
-      urlPattern: /.*/i,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "others",
+        cacheName: "document-cache",
         expiration: {
           maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+          maxAgeSeconds: 60 * 60, // 1 hour
         },
-        networkTimeoutSeconds: 10,
+        networkTimeoutSeconds: 3,
       },
     },
   ],

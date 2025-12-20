@@ -603,7 +603,6 @@ export function ExternalSyncManageSheet({
     setShowConfirmDialog,
     handleConfirmClose,
   } = useDirtyState({
-    open,
     onClose: onOpenChange,
     hasChanges: hasFormChanges,
     onConfirm: () => {

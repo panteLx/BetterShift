@@ -517,7 +517,6 @@ export function PresetManageSheet({
     setShowConfirmDialog,
     handleConfirmClose,
   } = useDirtyState({
-    open,
     onClose: onOpenChange,
     hasChanges: () => (editingPreset || showAddForm) && hasChanges(),
     onConfirm: resetForm,
