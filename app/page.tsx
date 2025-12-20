@@ -215,7 +215,6 @@ function HomeContent() {
 
   // Version info
   const versionInfo = useVersionInfo();
-  // Compare calendar data state
 
   // Shift actions
   const shiftActions = useShiftActions({

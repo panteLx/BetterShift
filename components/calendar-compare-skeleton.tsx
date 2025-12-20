@@ -1,5 +1,4 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarContentSkeleton } from "@/components/calendar-content-skeleton";
 import { PresetListSkeleton } from "@/components/preset-list-skeleton";
 
 interface CalendarCompareSkeletonProps {
