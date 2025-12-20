@@ -477,27 +477,44 @@ export function ExternalSyncManageSheet({
 
   // Function to check if form has changes
   const hasFormChanges = useCallback((): boolean => {
-    if (!editingSync || !initialFormDataRef.current) return false;
+    // For edit mode: compare with initial values
+    if (editingSync && initialFormDataRef.current) {
+      const currentFormData = {
+        name: formName,
+        url: formUrl,
+        color: formColor,
+        displayMode: formDisplayMode,
+        autoSyncInterval: formAutoSyncInterval,
+      };
 
-    const currentFormData = {
-      name: formName,
-      url: formUrl,
-      color: formColor,
-      displayMode: formDisplayMode,
-      autoSyncInterval: formAutoSyncInterval,
-    };
+      return (
+        JSON.stringify(currentFormData) !==
+        JSON.stringify(initialFormDataRef.current)
+      );
+    }
 
-    return (
-      JSON.stringify(currentFormData) !==
-      JSON.stringify(initialFormDataRef.current)
-    );
+    // For add mode: check if any field has been filled
+    if (showAddForm) {
+      return !!(
+        formName.trim() ||
+        formUrl.trim() ||
+        formColor !== "#3b82f6" ||
+        formDisplayMode !== "normal" ||
+        formAutoSyncInterval !== 0 ||
+        icsFile
+      );
+    }
+
+    return false;
   }, [
     editingSync,
+    showAddForm,
     formName,
     formUrl,
     formColor,
     formDisplayMode,
     formAutoSyncInterval,
+    icsFile,
   ]);
 
   // Shared function to save external sync changes
@@ -579,8 +596,18 @@ export function ExternalSyncManageSheet({
   } = useDirtyState({
     open,
     onClose: onOpenChange,
-    hasChanges: () => !!(editingSync && hasFormChanges()),
-    onConfirm: cancelEdit,
+    hasChanges: hasFormChanges,
+    onConfirm: () => {
+      // Reset form state for both add and edit modes
+      if (showAddForm) {
+        setShowAddForm(false);
+      }
+      if (editingSync) {
+        cancelEdit();
+      }
+      // Ensure the sheet closes
+      onOpenChange(false);
+    },
   });
 
   // Get URL placeholder - show generic placeholder for all
@@ -612,6 +639,13 @@ export function ExternalSyncManageSheet({
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
+            {/* Empty state when no syncs exist */}
+            {syncs.length === 0 && !showAddForm && !editingSync && (
+              <p className="text-center text-muted-foreground py-8">
+                {t("externalSync.noSyncs")}
+              </p>
+            )}
+
             {/* Existing Syncs List - hide when adding new sync, show only edited sync when editing */}
             {syncs.length > 0 && !showAddForm && (
               <div className="space-y-3">

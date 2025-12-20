@@ -223,6 +223,7 @@
   "externalSync": {
     "manageTitle": "Manage External Calendars",
     "manageDescription": "Add and manage multiple external calendars for this calendar",
+    "noSyncs": "No external calendars added yet",
     "syncTypeICloud": "iCloud",
     "syncTypeGoogle": "Google",
     "syncTypeCustom": "Custom Calendar",
