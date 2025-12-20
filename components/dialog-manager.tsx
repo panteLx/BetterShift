@@ -76,6 +76,9 @@ interface DialogManagerProps {
     shiftSortType: "startTime" | "createdAt" | "title";
     shiftSortOrder: "asc" | "desc";
     combinedSortMode: boolean;
+    highlightWeekends: boolean;
+    highlightedWeekdays: number[];
+    highlightColor: string;
   };
   onViewSettingsChange: {
     handleShiftsPerDayChange: (count: number | null) => void;
@@ -87,6 +90,9 @@ interface DialogManagerProps {
     ) => void;
     handleShiftSortOrderChange: (order: "asc" | "desc") => void;
     handleCombinedSortModeChange: (combined: boolean) => void;
+    handleHighlightWeekendsChange: (highlight: boolean) => void;
+    handleHighlightedWeekdaysChange: (days: number[]) => void;
+    handleHighlightColorChange: (color: string) => void;
   };
 
   // Note Dialog
@@ -198,6 +204,9 @@ export function DialogManager(props: DialogManagerProps) {
         shiftSortType={props.viewSettings.shiftSortType}
         shiftSortOrder={props.viewSettings.shiftSortOrder}
         combinedSortMode={props.viewSettings.combinedSortMode}
+        highlightWeekends={props.viewSettings.highlightWeekends}
+        highlightedWeekdays={props.viewSettings.highlightedWeekdays}
+        highlightColor={props.viewSettings.highlightColor}
         onShiftsPerDayChange={
           props.onViewSettingsChange.handleShiftsPerDayChange
         }
@@ -218,6 +227,15 @@ export function DialogManager(props: DialogManagerProps) {
         }
         onCombinedSortModeChange={
           props.onViewSettingsChange.handleCombinedSortModeChange
+        }
+        onHighlightWeekendsChange={
+          props.onViewSettingsChange.handleHighlightWeekendsChange
+        }
+        onHighlightedWeekdaysChange={
+          props.onViewSettingsChange.handleHighlightedWeekdaysChange
+        }
+        onHighlightColorChange={
+          props.onViewSettingsChange.handleHighlightColorChange
         }
       />
 

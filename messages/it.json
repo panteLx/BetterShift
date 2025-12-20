@@ -189,7 +189,20 @@
     "showNotes": "Mostra note turni",
     "showNotesHint": "Visualizza note dei turni nella griglia calendario",
     "showFullTitles": "Mostra titoli completi",
-    "showFullTitlesHint": "Visualizza titoli completi dei turni senza troncamento"
+    "showFullTitlesHint": "Visualizza titoli completi dei turni senza troncamento",
+    "dayHighlighting": "Evidenziazione Giorni",
+    "highlightWeekends": "Evidenzia Fine Settimana",
+    "highlightWeekendsHint": "Evidenzia sabato e domenica con colore",
+    "customWeekdays": "Giorni della Settimana Personalizzati",
+    "customWeekdaysHint": "Seleziona singoli giorni della settimana da evidenziare",
+    "monday": "Lunedì",
+    "tuesday": "Martedì",
+    "wednesday": "Mercoledì",
+    "thursday": "Giovedì",
+    "friday": "Venerdì",
+    "saturday": "Sabato",
+    "sunday": "Domenica",
+    "highlightColor": "Colore Evidenziazione"
   },
   "stats": {
     "title": "Statistiche Turni",

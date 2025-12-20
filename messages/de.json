@@ -189,7 +189,20 @@
     "showNotes": "Schichtnotizen anzeigen",
     "showNotesHint": "Notizen der Schichten im Kalender anzeigen",
     "showFullTitles": "Vollständige Schichttitel anzeigen",
-    "showFullTitlesHint": "Schichttitel vollständig ohne Kürzung anzeigen"
+    "showFullTitlesHint": "Schichttitel vollständig ohne Kürzung anzeigen",
+    "dayHighlighting": "Tage hervorheben",
+    "highlightWeekends": "Wochenenden hervorheben",
+    "highlightWeekendsHint": "Samstage und Sonntage farbig hervorheben",
+    "customWeekdays": "Eigene Wochentage",
+    "customWeekdaysHint": "Wähle einzelne Wochentage zum Hervorheben aus",
+    "monday": "Montag",
+    "tuesday": "Dienstag",
+    "wednesday": "Mittwoch",
+    "thursday": "Donnerstag",
+    "friday": "Freitag",
+    "saturday": "Samstag",
+    "sunday": "Sonntag",
+    "highlightColor": "Hervorhebungsfarbe"
   },
   "stats": {
     "title": "Schichtenstatistik",

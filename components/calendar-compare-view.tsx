@@ -34,6 +34,8 @@ interface CalendarCompareViewProps {
   shiftSortType: "startTime" | "createdAt" | "title";
   shiftSortOrder: "asc" | "desc";
   combinedSortMode: boolean;
+  highlightedWeekdays?: number[];
+  highlightColor?: string;
   statsRefreshTrigger: number;
   locale?: Locale;
   onDayClick: (calendarId: string, date: Date) => void;
@@ -283,6 +285,8 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                         shiftSortType={props.shiftSortType}
                         shiftSortOrder={props.shiftSortOrder}
                         combinedSortMode={props.combinedSortMode}
+                        highlightedWeekdays={props.highlightedWeekdays}
+                        highlightColor={props.highlightColor}
                         selectedCalendar={calendar.id}
                         statsRefreshTrigger={props.statsRefreshTrigger}
                         shouldHideUIElements={false}

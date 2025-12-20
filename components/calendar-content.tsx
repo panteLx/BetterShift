@@ -25,6 +25,8 @@ interface CalendarContentProps {
   shiftSortType: "startTime" | "createdAt" | "title";
   shiftSortOrder: "asc" | "desc";
   combinedSortMode: boolean;
+  highlightedWeekdays?: number[];
+  highlightColor?: string;
   selectedCalendar: string | null;
   statsRefreshTrigger: number;
   shouldHideUIElements: boolean;
@@ -64,6 +66,8 @@ export function CalendarContent(props: CalendarContentProps) {
         shiftSortType={props.shiftSortType}
         shiftSortOrder={props.shiftSortOrder}
         combinedSortMode={props.combinedSortMode}
+        highlightedWeekdays={props.highlightedWeekdays}
+        highlightColor={props.highlightColor}
         onDayClick={props.onDayClick}
         onDayRightClick={props.onDayRightClick}
         onNoteIconClick={props.onNoteIconClick}
