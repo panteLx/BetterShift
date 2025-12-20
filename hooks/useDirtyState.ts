@@ -1,56 +1,75 @@
-import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useState } from "react";
 
-interface UseDirtyStateOptions<T> {
+interface UseDirtyStateOptions {
   open: boolean;
-  initialData: T | null;
-  currentData: T;
   onClose: (open: boolean) => void;
+  hasChanges: () => boolean;
+  onConfirm?: () => void;
 }
 
-export function useDirtyState<T>({
+/**
+ * Hook for managing dirty state (unsaved changes) in sheets with ConfirmationDialog.
+ *
+ * @example
+ * ```tsx
+ * const { handleClose, showConfirmDialog, setShowConfirmDialog, handleConfirmClose } =
+ *   useDirtyState({
+ *     open,
+ *     onClose,
+ *     hasChanges: () => name !== initialName,
+ *     onConfirm: () => resetForm()
+ *   });
+ *
+ * return (
+ *   <>
+ *     <Sheet open={open} onOpenChange={handleClose}>
+ *       {/* Sheet content *\/}
+ *     </Sheet>
+ *     <ConfirmationDialog
+ *       open={showConfirmDialog}
+ *       onOpenChange={setShowConfirmDialog}
+ *       onConfirm={handleConfirmClose}
+ *     />
+ *   </>
+ * );
+ * ```
+ */
+export function useDirtyState({
   open,
-  initialData,
-  currentData,
   onClose,
-}: UseDirtyStateOptions<T>) {
-  const t = useTranslations();
+  hasChanges,
+  onConfirm,
+}: UseDirtyStateOptions) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  // Store initial snapshot when sheet opens
-  const [initialSnapshot, setInitialSnapshot] = useState<T | null>(null);
-
-  // Update snapshot when sheet opens
-  if (open && initialSnapshot === null && initialData !== null) {
-    setInitialSnapshot(JSON.parse(JSON.stringify(initialData)));
-  }
-
-  // Reset snapshot when sheet closes
-  if (!open && initialSnapshot !== null) {
-    setInitialSnapshot(null);
-  }
-
-  // Compute isDirty from current vs initial snapshot
-  const isDirty = useMemo(() => {
-    if (!open || initialSnapshot === null) {
-      return false;
+  const handleClose = (open: boolean) => {
+    // If opening, just open it
+    if (open) {
+      onClose(open);
+      return;
     }
-    return JSON.stringify(currentData) !== JSON.stringify(initialSnapshot);
-  }, [open, initialSnapshot, currentData]);
 
-  const handleClose = () => {
-    if (isDirty) {
-      const confirmed = confirm(t("common.unsavedChanges"));
-      if (!confirmed) {
-        return false;
-      }
+    // If closing with unsaved changes, show confirmation
+    if (hasChanges()) {
+      setShowConfirmDialog(true);
+      return;
     }
+
+    // Otherwise close normally
     onClose(false);
-    return true;
+  };
+
+  const handleConfirmClose = () => {
+    setShowConfirmDialog(false);
+    onConfirm?.();
+    onClose(false);
   };
 
   return {
-    isDirty,
+    isDirty: hasChanges(),
     handleClose,
-    resetDirty: () => setInitialSnapshot(null),
+    showConfirmDialog,
+    setShowConfirmDialog,
+    handleConfirmClose,
   };
 }

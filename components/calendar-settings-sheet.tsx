@@ -25,6 +25,7 @@ import { AlertTriangle, Trash2, Download } from "lucide-react";
 import { ExportDialog } from "@/components/export-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
+import { useDirtyState } from "@/hooks/useDirtyState";
 
 interface CalendarSettingsSheetProps {
   open: boolean;
@@ -68,7 +69,6 @@ export function CalendarSettingsSheet({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [canExport, setCanExport] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const initialFormStateRef = useRef<FormState | null>(null);
   const currentPasswordRef = useRef<HTMLInputElement>(null);
@@ -127,27 +127,17 @@ export function CalendarSettingsSheet({
     return basicChanges || passwordChanges;
   };
 
-  const handleClose = (open: boolean) => {
-    // If opening, just open it
-    if (open) {
-      onOpenChange(open);
-      return;
-    }
-
-    // If closing with unsaved changes, show confirmation
-    if (hasChanges()) {
-      setShowConfirmDialog(true);
-      return;
-    }
-
-    // Otherwise close normally
-    onOpenChange(false);
-  };
-
-  const handleConfirmClose = () => {
-    setShowConfirmDialog(false);
-    onOpenChange(false);
-  };
+  const {
+    isDirty,
+    handleClose,
+    showConfirmDialog,
+    setShowConfirmDialog,
+    handleConfirmClose,
+  } = useDirtyState({
+    open,
+    onClose: onOpenChange,
+    hasChanges,
+  });
 
   const handleSubmit = async () => {
     // Always require current password when calendar has password
@@ -204,12 +194,18 @@ export function CalendarSettingsSheet({
 
       if (response.status === 401) {
         toast.error(t("validation.passwordIncorrect"));
+        setPasswordError(true);
+        currentPasswordRef.current?.focus();
         setLoading(false);
         return;
       }
 
       if (!response.ok) {
-        toast.error(t("validation.passwordIncorrect"));
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(
+          errorData.error ||
+            t("common.updateError", { item: t("calendar.title") })
+        );
         setLoading(false);
         return;
       }
@@ -230,7 +226,11 @@ export function CalendarSettingsSheet({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to update calendar:", error);
-      toast.error(t("validation.passwordIncorrect"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("common.updateError", { item: t("calendar.title") })
+      );
     } finally {
       setLoading(false);
     }
@@ -358,9 +358,15 @@ export function CalendarSettingsSheet({
                           : "border-amber-500/30 focus:border-amber-500/50 focus:ring-amber-500/20"
                       }`}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {t("calendar.currentPasswordRequired")}
-                    </p>
+                    {passwordError ? (
+                      <p className="text-xs text-destructive">
+                        {t("validation.passwordRequired")}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {t("calendar.currentPasswordRequired")}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-2 pt-2">
@@ -548,7 +554,7 @@ export function CalendarSettingsSheet({
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || !hasChanges()}
+                disabled={loading || !isDirty}
                 className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
               >
                 {loading ? t("common.saving") : t("common.save")}

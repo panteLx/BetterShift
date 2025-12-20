@@ -39,6 +39,7 @@ import { Plus, Trash2, Edit2, Loader2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedPassword } from "@/lib/password-cache";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useDirtyState } from "@/hooks/useDirtyState";
 
 interface PresetFormData {
   title: string;
@@ -198,7 +199,6 @@ export function PresetManageSheet({
   const [orderedSecondaryPresets, setOrderedSecondaryPresets] = useState<
     ShiftPreset[]
   >([]);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const initialFormDataRef = useRef<PresetFormData | null>(null);
 
   // Initialize ordered presets
@@ -455,6 +455,21 @@ export function PresetManageSheet({
     initialFormDataRef.current = editFormData;
   };
 
+  const cancelEdit = () => {
+    setEditingPreset(null);
+    setFormData({
+      title: "",
+      startTime: "09:00",
+      endTime: "17:00",
+      color: PRESET_COLORS[0].value,
+      notes: "",
+      isSecondary: false,
+      isAllDay: false,
+      hideFromStats: false,
+    });
+    initialFormDataRef.current = null;
+  };
+
   const hasChanges = () => {
     if (editingPreset && initialFormDataRef.current) {
       // Edit mode: check if data changed from initial
@@ -477,25 +492,7 @@ export function PresetManageSheet({
     return false;
   };
 
-  const handleClose = (open: boolean) => {
-    // If opening, just open it
-    if (open) {
-      onOpenChange(open);
-      return;
-    }
-
-    // If closing with unsaved changes (edit or add mode), show confirmation
-    if ((editingPreset || showAddForm) && hasChanges()) {
-      setShowConfirmDialog(true);
-      return;
-    }
-
-    // Otherwise close normally
-    onOpenChange(false);
-  };
-
-  const handleConfirmClose = () => {
-    setShowConfirmDialog(false);
+  const resetForm = () => {
     if (editingPreset) {
       cancelEdit();
     } else if (showAddForm) {
@@ -511,23 +508,20 @@ export function PresetManageSheet({
         hideFromStats: false,
       });
     }
-    onOpenChange(false);
   };
 
-  const cancelEdit = () => {
-    setEditingPreset(null);
-    setFormData({
-      title: "",
-      startTime: "09:00",
-      endTime: "17:00",
-      color: PRESET_COLORS[0].value,
-      notes: "",
-      isSecondary: false,
-      isAllDay: false,
-      hideFromStats: false,
-    });
-    initialFormDataRef.current = null;
-  };
+  const {
+    isDirty,
+    handleClose,
+    showConfirmDialog,
+    setShowConfirmDialog,
+    handleConfirmClose,
+  } = useDirtyState({
+    open,
+    onClose: onOpenChange,
+    hasChanges: () => (editingPreset || showAddForm) && hasChanges(),
+    onConfirm: resetForm,
+  });
 
   const startAdd = () => {
     setShowAddForm(true);
@@ -856,7 +850,7 @@ export function PresetManageSheet({
                   disabled={
                     isLoading ||
                     !formData.title.trim() ||
-                    (!!editingPreset && !hasChanges())
+                    (!!editingPreset && !isDirty)
                   }
                   className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
                 >

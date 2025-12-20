@@ -1,15 +1,21 @@
-# BetterShift AI Coding Assistant Instructions
+# BetterShift Copilot Instructions
 
-## Architecture Overview
+## Quick Reference
 
-**BetterShift** is a Next.js 16 App Router shift management application with SQLite database for managing work schedules across multiple calendars.
+- **Framework**: Next.js 16 App Router + React 19
+- **Database**: SQLite + Drizzle ORM (`./data/sqlite.db`)
+- **UI**: Tailwind CSS 4 + shadcn/ui + BaseSheet component
+- **i18n**: next-intl (de/en/it) - always use informal "du" in German
+- **Critical**: Never use `db:push`, always generate migrations
+
+## Core Architecture
 
 ### Tech Stack
 
 - **Framework**: Next.js 16 with App Router (`app/` directory)
 - **UI**: React 19, Tailwind CSS 4, shadcn/ui components (`components/ui/`)
 - **Database**: SQLite via Drizzle ORM (file: `./data/sqlite.db`)
-- **i18n**: next-intl (German/English, cookie-based + browser detection)
+- **i18n**: next-intl (German/English/Italian, cookie-based + browser detection)
 - **State**: Client-side with React hooks, custom hooks in `hooks/`
 
 ### Database Schema (`lib/db/schema.ts`)
@@ -221,27 +227,48 @@ When adding new features, ensure all translation keys are actually used in compo
 
 ### Component Design Patterns
 
-- **Sheets (Primary UI Pattern)**: Use shadcn/ui Sheets instead of Dialogs for better UX
-  - Control state via props, reset on close
-  - Always include explicit Save button in SheetFooter (no auto-save)
-  - Save button must be accessible without scrolling (sticky footer)
-  - Show loading state during save: `isSaving ? t("common.saving") : t("common.save")`
-  - Side panels slide from right (`side="right"`)
-  - Full-height layout with scrollable content area
-- **Forms**: Prevent default, validate, show errors, use explicit save actions
-- **Colors**: Use `PRESET_COLORS` array, hex format (`#3b82f6`), 20% opacity for backgrounds
-- **Dates**: `formatDateToLocal()` for YYYY-MM-DD format
+#### BaseSheet Component (Preferred)
 
-### UI/UX Design Principles
+**Use `BaseSheet` from `components/ui/base-sheet.tsx` for simple sheets** (create, edit, settings). Only build custom sheets for complex multi-step forms or specialized layouts.
 
-**Live Updates**: All components must support real-time updates via Server-Sent Events (SSE):
+**BaseSheet Usage**:
 
-- Listen to relevant SSE events (shift, preset, note, sync-log updates)
-- Use silent refresh patterns: `fetchData(false)` to update without loading states
-- Implement refresh triggers: counter-based props (e.g., `syncLogRefreshTrigger`)
-- Avoid flashing/blinking during updates - update data smoothly without UI disruption
+```typescript
+import { BaseSheet } from "@/components/ui/base-sheet";
 
-**Consistent Sheet Design**: All sheets must follow the unified design pattern:
+<BaseSheet
+  open={open}
+  onOpenChange={onOpenChange}
+  title={t("sheet.title")}
+  description={t("sheet.description")}
+  showSaveButton
+  onSave={handleSave}
+  isSaving={isSaving}
+  saveDisabled={!isValid || !isDirty}
+  hasUnsavedChanges={isDirty}
+  maxWidth="md" // sm(480px) | md(600px) | lg(700px) | xl(800px)
+>
+  {/* Your form content */}
+</BaseSheet>;
+```
+
+**BaseSheet Features**:
+
+- Automatic dirty state tracking with confirmation dialog
+- Built-in Save/Cancel buttons with loading states
+- Consistent styling (gradients, borders, spacing)
+- Responsive max-width options
+- Custom footer support via `footer` prop
+
+**When to Use Custom Sheets**:
+
+- Multi-step wizards
+- Complex layouts with tabs or sidebars
+- Sheets requiring custom footer actions (e.g., Delete + Save)
+
+#### Custom Sheet Pattern (Complex Cases Only)
+
+For complex sheets, follow this structure:
 
 ```tsx
 <SheetContent
@@ -263,11 +290,7 @@ When adding new features, ensure all translation keys are actually used in compo
 
   <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
     <div className="flex gap-2.5 w-full">
-      <Button
-        variant="outline"
-        onClick={() => onOpenChange(false)}
-        disabled={isSaving}
-      >
+      <Button variant="outline" onClick={handleClose} disabled={isSaving}>
         {t("common.cancel")}
       </Button>
       <Button onClick={handleSave} disabled={!isValid || isSaving}>
@@ -278,15 +301,52 @@ When adding new features, ensure all translation keys are actually used in compo
 </SheetContent>
 ```
 
-Key design elements:
+**Dirty State Tracking**: ALWAYS use `useDirtyState` hook for unsaved changes:
 
-- Gradient backgrounds for visual depth
-- Consistent padding (`px-6`, `py-6`, `py-4`)
-- Border styling with reduced opacity (`border-border/50`)
-- Sticky footer with always-visible Save button
-- Full-height layout: `flex flex-col` with `flex-1 overflow-y-auto`
-- Backdrop blur effects for modern aesthetics
-- Gradient text for titles (`bg-gradient-to-r from-foreground to-foreground/70`)
+```typescript
+const {
+  isDirty,
+  handleClose,
+  showConfirmDialog,
+  setShowConfirmDialog,
+  handleConfirmClose,
+} = useDirtyState({
+  open,
+  onClose: onOpenChange,
+  hasChanges: () => name !== initialName,
+  onConfirm: () => resetForm(), // Optional cleanup
+});
+```
+
+#### Other Patterns
+
+- **Dialogs**: Only for read-only info or simple confirmations (no forms)
+- **Forms**: Prevent default, validate, show errors, use explicit save actions
+- **Colors**: Use `PRESET_COLORS` array, hex format (`#3b82f6`), 20% opacity for backgrounds
+- **Dates**: `formatDateToLocal()` for YYYY-MM-DD format
+
+### UI/UX Design Principles
+
+#### Live Updates via SSE
+
+All components must support real-time updates via Server-Sent Events:
+
+- Listen to relevant SSE events (shift, preset, note, sync-log updates)
+- Use silent refresh patterns: `fetchData(false)` to update without loading states
+- Implement refresh triggers: counter-based props (e.g., `syncLogRefreshTrigger`)
+- Avoid flashing/blinking during updates - update data smoothly without UI disruption
+
+#### Sheet Design Standards
+
+- **Simple Sheets**: Use `BaseSheet` component (handles styling, dirty state, buttons)
+- **Complex Sheets**: Follow custom pattern (see Component Design Patterns section)
+- **Key Requirements**:
+  - Gradient backgrounds for visual depth
+  - Consistent padding (`px-6`, `py-6`, `py-4`)
+  - Border styling with reduced opacity (`border-border/50`)
+  - Sticky footer with always-visible Save button
+  - Full-height layout: `flex flex-col` with `flex-1 overflow-y-auto`
+  - Gradient text for titles (`bg-gradient-to-r from-foreground to-foreground/70`)
 
 ### Calendar Interactions
 
@@ -320,7 +380,7 @@ docker compose exec bettershift npm run db:migrate
 1. **Next.js 16**: Dynamic route params are async - always `await params`
 2. **SQLite Timestamps**: Use `{ mode: "timestamp" }`, stored as integers, auto-converted to Date
 3. **Cascade Deletes**: Deleting calendar removes all shifts/presets/notes
-4. **Sheets vs Dialogs**: Use Sheets for forms with save actions, Dialogs only for read-only info or confirmations
+4. **Sheets vs Dialogs**: Use BaseSheet for simple forms, custom sheets for complex layouts, Dialogs only for read-only info
 5. **Color Format**: Store hex (`#3b82f6`), use 20% opacity for backgrounds (`${color}20`)
 6. **Mobile UI**: Separate calendar selector with `showMobileCalendarDialog`
 
@@ -336,12 +396,13 @@ docker compose exec bettershift npm run db:migrate
 
 ### New Component with Sheet
 
-1. Create in `components/` using shadcn/ui Sheet
+1. Create in `components/` - prefer `BaseSheet` for simple forms
 2. Props: `open`, `onOpenChange`, `onSubmit`, optional `onDelete`
 3. Use `useTranslations()` for all text
-4. Include explicit Save button in SheetFooter with loading state
-5. Reset local state when `open` changes to false
-6. Import and integrate in parent component
+4. For BaseSheet: Pass `showSaveButton`, `onSave`, `isSaving`, `saveDisabled`, `hasUnsavedChanges`
+5. For custom sheets: Include explicit Save button in SheetFooter with loading state
+6. Reset local state when `open` changes to false
+7. Import and integrate in parent component
 
 ### New Component with Dialog
 

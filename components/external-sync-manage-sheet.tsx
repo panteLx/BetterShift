@@ -41,6 +41,7 @@ import {
   type CalendarSyncType,
 } from "@/lib/external-calendar-utils";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useDirtyState } from "@/hooks/useDirtyState";
 
 interface ExternalSyncManageSheetProps {
   open: boolean;
@@ -79,7 +80,6 @@ export function ExternalSyncManageSheet({
   const [expandedHint, setExpandedHint] = useState<CalendarSyncType | null>(
     null
   );
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const initialFormDataRef = useRef<{
     name: string;
@@ -318,11 +318,11 @@ export function ExternalSyncManageSheet({
       // Show sync statistics
       const stats = data.stats || { created: 0, updated: 0, deleted: 0 };
       toast.success(
-        `${t("common.success")}: ${stats.created} ${t(
-          "common.createdShort"
-        )}, ${stats.updated} ${t("common.updatedShort")}, ${stats.deleted} ${t(
-          "common.deletedShort"
-        )}`
+        `${t("common.success")}: ${t("common.createdCount", {
+          count: stats.created,
+        })}, ${t("common.updatedCount", {
+          count: stats.updated,
+        })}, ${t("common.deletedCount", { count: stats.deleted })}`
       );
     } catch (error) {
       console.error("Sync error:", error);
@@ -570,29 +570,18 @@ export function ExternalSyncManageSheet({
     t,
   ]);
 
-  // Handle dialog close - no auto-save, just check for unsaved changes
-  const handleDialogClose = (open: boolean) => {
-    // If opening, just open it
-    if (open) {
-      onOpenChange(open);
-      return;
-    }
-
-    // If closing and editing with unsaved changes, show confirmation
-    if (editingSync && hasFormChanges()) {
-      setShowConfirmDialog(true);
-      return;
-    }
-
-    // Otherwise close normally
-    onOpenChange(false);
-  };
-
-  const handleConfirmClose = () => {
-    setShowConfirmDialog(false);
-    cancelEdit();
-    onOpenChange(false);
-  };
+  const {
+    isDirty,
+    handleClose: handleDialogClose,
+    showConfirmDialog,
+    setShowConfirmDialog,
+    handleConfirmClose,
+  } = useDirtyState({
+    open,
+    onClose: onOpenChange,
+    hasChanges: () => !!(editingSync && hasFormChanges()),
+    onConfirm: cancelEdit,
+  });
 
   // Get URL placeholder - show generic placeholder for all
   const getUrlPlaceholder = () => {
@@ -1141,9 +1130,7 @@ export function ExternalSyncManageSheet({
                 <Button
                   type="button"
                   onClick={saveExternalSyncChanges}
-                  disabled={
-                    isSavingEdit || !formName.trim() || !hasFormChanges()
-                  }
+                  disabled={isSavingEdit || !formName.trim() || !isDirty}
                   className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
                 >
                   {isSavingEdit ? t("common.saving") : t("common.save")}

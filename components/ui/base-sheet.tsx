@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useDirtyState } from "@/hooks/useDirtyState";
 
 interface BaseSheetProps {
   open: boolean;
@@ -52,25 +53,26 @@ export function BaseSheet({
   maxWidth = "md",
 }: BaseSheetProps) {
   const t = useTranslations();
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const handleClose = () => {
-    if (hasUnsavedChanges) {
-      setShowConfirmDialog(true);
-    } else {
-      onOpenChange(false);
-    }
-  };
-
-  const handleConfirmClose = () => {
-    setShowConfirmDialog(false);
-    onOpenChange(false);
-  };
+  const {
+    handleClose,
+    showConfirmDialog,
+    setShowConfirmDialog,
+    handleConfirmClose,
+  } = useDirtyState({
+    open,
+    onClose: onOpenChange,
+    hasChanges: () => hasUnsavedChanges,
+  });
 
   const handleSave = async () => {
     if (onSave) {
       await onSave();
     }
+  };
+
+  const handleCancelClick = () => {
+    handleClose(false);
   };
 
   return (
@@ -103,7 +105,7 @@ export function BaseSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handleClose}
+                      onClick={handleCancelClick}
                       disabled={isSaving}
                       className="flex-1 h-11 border-border/50 hover:bg-muted/50"
                     >

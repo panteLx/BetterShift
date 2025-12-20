@@ -12,7 +12,7 @@ import { formatDateToLocal } from "@/lib/date-utils";
 interface ShiftSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (shift: ShiftFormData) => void;
+  onSubmit: (shift: ShiftFormData) => void | Promise<void>;
   selectedDate?: Date;
   shift?: ShiftWithCalendar;
   onPresetsChange?: () => void;
@@ -80,21 +80,30 @@ export function ShiftSheet({
   }, [open, shift]);
 
   const hasChanges = () => {
-    if (!shift || !initialFormDataRef.current) return false;
+    // For existing shifts, compare with initial data
+    if (shift && initialFormDataRef.current) {
+      // Create comparable version of current formData
+      const currentData: ShiftFormData = {
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        title: formData.title,
+        notes: formData.notes || "",
+        color: formData.color,
+        isAllDay: formData.isAllDay || false,
+        presetId: formData.presetId || undefined,
+      };
 
-    // Create comparable version of current formData
-    const currentData: ShiftFormData = {
-      date: formData.date,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      title: formData.title,
-      notes: formData.notes || "",
-      color: formData.color,
-      isAllDay: formData.isAllDay || false,
-      presetId: formData.presetId || undefined,
-    };
+      return JSON.stringify(currentData) !== initialFormDataRef.current;
+    }
 
-    return JSON.stringify(currentData) !== initialFormDataRef.current;
+    // For new shifts, check if user has entered any data
+    return (
+      formData.title.trim() !== "" ||
+      formData.notes?.trim() !== "" ||
+      saveAsPreset ||
+      presetName.trim() !== ""
+    );
   };
 
   const handleSave = async () => {
@@ -109,7 +118,7 @@ export function ShiftSheet({
         endTime: formData.isAllDay ? "23:59" : formData.endTime,
       };
 
-      onSubmit(submitData);
+      await onSubmit(submitData);
 
       // Save as preset if enabled and it's a new shift
       if (!shift && saveAsPreset && presetName.trim()) {
@@ -140,20 +149,14 @@ export function ShiftSheet({
       onOpenChange={onOpenChange}
       title={shift ? t("shift.edit") : t("shift.create")}
       description={
-        shift
-          ? t("shift.editDescription", {
-              default: "Update the shift details",
-            })
-          : t("shift.createDescription", {
-              default: "Add a new shift to your calendar",
-            })
+        shift ? t("shift.editDescription") : t("shift.createDescription")
       }
       showSaveButton
       showCancelButton
       onSave={handleSave}
       isSaving={isSaving}
       saveDisabled={!formData.title.trim() || (shift && !hasChanges())}
-      hasUnsavedChanges={shift ? hasChanges() : false}
+      hasUnsavedChanges={hasChanges()}
       maxWidth="md"
     >
       <div className="space-y-5">
