@@ -12,7 +12,25 @@ import {
 } from "lucide-react";
 import { formatDuration } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useShiftStats, ShiftStatsData } from "@/hooks/useShiftStats";
+import { useShiftStats } from "@/hooks/useShiftStats";
+import {
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from "recharts";
 
 // Hook for responsive radius that's SSR-safe
 function useResponsiveRadius() {
@@ -38,24 +56,38 @@ function useResponsiveRadius() {
   return radius;
 }
 
-import {
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-} from "recharts";
+// CustomTooltip component - declared outside to avoid recreation on each render
+const CustomTooltip = ({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    color: string;
+    dataKey?: string;
+    payload: { fullName?: string; name?: string };
+  }>;
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-semibold text-sm mb-1">
+          {payload[0].payload.fullName || payload[0].name}
+        </p>
+        {payload.map((entry) => (
+          <p key={entry.name} className="text-xs text-muted-foreground">
+            <span style={{ color: entry.color }}>{entry.name}:</span>{" "}
+            {entry.value}
+            {entry.name === "hours" || entry.dataKey === "hours" ? "h" : ""}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 interface ShiftStatsProps {
   calendarId: string | undefined;
@@ -138,38 +170,6 @@ export function ShiftStats({
             : 0,
         }))
     : [];
-
-  const CustomTooltip = ({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{
-      name: string;
-      value: number;
-      color: string;
-      dataKey?: string;
-      payload: { fullName?: string; name?: string };
-    }>;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-semibold text-sm mb-1">
-            {payload[0].payload.fullName || payload[0].name}
-          </p>
-          {payload.map((entry) => (
-            <p key={entry.name} className="text-xs text-muted-foreground">
-              <span style={{ color: entry.color }}>{entry.name}:</span>{" "}
-              {entry.value}
-              {entry.name === "hours" || entry.dataKey === "hours" ? "h" : ""}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="border border-border/50 rounded-xl bg-gradient-to-b from-card/80 via-card/60 to-card/40 backdrop-blur-sm overflow-hidden shadow-lg">

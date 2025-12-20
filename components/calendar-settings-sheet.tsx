@@ -56,6 +56,8 @@ export function CalendarSettingsSheet({
 }: CalendarSettingsSheetProps) {
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
+  
+  // Use props directly as initial state, controlled by key prop on component
   const [name, setName] = useState(calendarName);
   const [selectedColor, setSelectedColor] = useState(calendarColor);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -66,43 +68,27 @@ export function CalendarSettingsSheet({
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [canExport, setCanExport] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const initialFormStateRef = useRef<FormState | null>(null);
   const currentPasswordRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (open) {
-      setName(calendarName);
-      setSelectedColor(calendarColor);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setRemovePassword(false);
-      setLockCalendar(isLocked);
-      setPasswordError(false);
-      setShowDeleteConfirm(false);
-      setShowExportDialog(false);
+  // Calculate export permission based on password state (no useEffect needed)
+  const canExport = !hasPassword || !isLocked || !!getCachedPassword(calendarId);
 
-      // Store initial form state for change detection
+  // Initialize form state reference when opening
+  useEffect(() => {
+    if (open && !initialFormStateRef.current) {
       initialFormStateRef.current = {
         name: calendarName,
         selectedColor: calendarColor,
         lockCalendar: isLocked,
         removePassword: false,
       };
-
-      // Check if export is allowed (no password or password is cached)
-      if (!hasPassword || !isLocked) {
-        setCanExport(true);
-      } else {
-        const cachedPassword = getCachedPassword(calendarId);
-        setCanExport(!!cachedPassword);
-      }
-    } else {
+    }
+    if (!open) {
       initialFormStateRef.current = null;
     }
-  }, [open, calendarName, calendarColor, isLocked, hasPassword, calendarId]);
+  }, [open, calendarName, calendarColor, isLocked]);
 
   const hasChanges = () => {
     if (!initialFormStateRef.current) return false;

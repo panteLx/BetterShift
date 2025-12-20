@@ -130,6 +130,7 @@ export function DialogManager(props: DialogManagerProps) {
           />
 
           <CalendarSettingsSheet
+            key={`settings-${props.selectedCalendar}-${props.showCalendarSettingsDialog}`}
             open={props.showCalendarSettingsDialog}
             onOpenChange={props.onCalendarSettingsDialogChange}
             calendarId={props.selectedCalendar}
