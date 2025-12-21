@@ -82,7 +82,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { calendarId, date, note, password } = body;
+    const {
+      calendarId,
+      date,
+      note,
+      type,
+      color,
+      recurringPattern,
+      recurringInterval,
+      password,
+    } = body;
 
     if (!calendarId || !date || !note) {
       return NextResponse.json(
@@ -120,6 +129,10 @@ export async function POST(request: Request) {
         calendarId,
         date: new Date(date),
         note,
+        type: type || "note",
+        color: color || null,
+        recurringPattern: recurringPattern || "none",
+        recurringInterval: recurringInterval || null,
       })
       .returning();
 

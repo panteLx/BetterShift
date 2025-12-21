@@ -37,7 +37,7 @@
 
 - **Multiple Calendars** — Unlimited calendars with custom names and colors
 - **Interactive Month View** — Clean, week-based calendar layout with one-click shift toggles
-- **Quick Actions** — Left-click to add/remove shifts, right-click to add notes
+- **Quick Actions** — Left-click to add/remove shifts, right-click to add notes or events
 - **External Calendar Sync** — Subscribe to Google, Outlook or iCal calendars with auto/manual refresh
 - **Sync Monitoring** — Real-time sync status and error notifications
 - **Calendar Comparison** — Overlay multiple calendars for easy shift comparison

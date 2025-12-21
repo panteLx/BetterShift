@@ -118,12 +118,25 @@
     "unlockCalendar": "Unlock Calendar"
   },
   "note": {
-    "create": "New Note",
-    "edit": "Edit Note",
+    "create": "Create {item}",
+    "edit": "Edit {item}",
     "note": "Note",
     "placeholder": "e.g., Early shift because appointment in the afternoon...",
-    "hintMobile": "Long press on a day to open notes. The note icon shows existing notes.",
-    "hintDesktop": "Right-click on a day to open notes. The note icon shows existing notes."
+    "hintMobile": "To add or edit a note or event, long press on a day in the calendar.",
+    "hintDesktop": "To add or edit a note or event, right-click on a day in the calendar.",
+    "type": "Type",
+    "typeNote": "Note",
+    "typeEvent": "Event",
+    "eventColor": "Event Color",
+    "eventTitle": "Event Name",
+    "eventPlaceholder": "e.g., Christmas, Birthday...",
+    "recurring": "Repeat",
+    "recurringNone": "Don't repeat",
+    "recurringCustom": "Custom",
+    "customInterval": "Interval",
+    "every": "Every",
+    "weeks": "weeks",
+    "months": "months"
   },
   "shift": {
     "create": "New Shift",

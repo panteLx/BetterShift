@@ -45,6 +45,7 @@ import {
   verifyAndCachePassword,
 } from "@/lib/password-cache";
 import { formatDateToLocal } from "@/lib/date-utils";
+import { findEventForDate, findNoteForDate } from "@/lib/event-utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
@@ -146,8 +147,20 @@ function HomeContent() {
   });
 
   // Wrapper for note submit that reloads compare data
-  const handleNoteSubmit = async (noteText: string) => {
-    await noteActions.handleNoteSubmit(noteText);
+  const handleNoteSubmit = async (
+    noteText: string,
+    type: "note" | "event",
+    color?: string,
+    recurringPattern?: string,
+    recurringInterval?: number
+  ) => {
+    await noteActions.handleNoteSubmit(
+      noteText,
+      type,
+      color,
+      recurringPattern,
+      recurringInterval
+    );
 
     // Reload notes for the specific calendar in compare mode
     if (isCompareMode && compareNoteCalendarId) {
@@ -442,24 +455,21 @@ function HomeContent() {
 
   const handleDayRightClick = (e: React.MouseEvent, date: Date) => {
     e.preventDefault();
-    const existingNote = notes.find(
-      (note) => note.date && isSameDay(new Date(note.date), date)
-    );
+    // Use findNoteForDate to get notes or events (including recurring)
+    const existingNote = findNoteForDate(notes, date);
     noteActions.openNoteDialog(date, existingNote);
   };
 
   const handleNoteIconClick = (e: React.MouseEvent, date: Date) => {
     e.stopPropagation();
-    const existingNote = notes.find(
-      (note) => note.date && isSameDay(new Date(note.date), date)
-    );
+    // Use findNoteForDate to get notes or events (including recurring)
+    const existingNote = findNoteForDate(notes, date);
     noteActions.openNoteDialog(date, existingNote);
   };
 
   const handleLongPressDay = (date: Date) => {
-    const existingNote = notes.find(
-      (note) => note.date && isSameDay(new Date(note.date), date)
-    );
+    // Use findNoteForDate to get notes or events (including recurring)
+    const existingNote = findNoteForDate(notes, date);
     noteActions.openNoteDialog(date, existingNote);
   };
 
@@ -698,9 +708,8 @@ function HomeContent() {
     const calendarData = compareCalendarData.get(calendarId);
     if (!calendarData) return;
 
-    const existingNote = calendarData.notes.find(
-      (note) => note.date && isSameDay(new Date(note.date), date)
-    );
+    // Use findEventForDate to get the original event for recurring events
+    const existingNote = findEventForDate(calendarData.notes, date);
     setCompareNoteCalendarId(calendarId);
     noteActions.openNoteDialog(date, existingNote);
   };
@@ -718,9 +727,8 @@ function HomeContent() {
     const calendarData = compareCalendarData.get(calendarId);
     if (!calendarData) return;
 
-    const existingNote = calendarData.notes.find(
-      (note) => note.date && isSameDay(new Date(note.date), date)
-    );
+    // Use findEventForDate to get the original event for recurring events
+    const existingNote = findEventForDate(calendarData.notes, date);
     setCompareNoteCalendarId(calendarId);
     noteActions.openNoteDialog(date, existingNote);
   };
@@ -1069,9 +1077,76 @@ function HomeContent() {
   // Empty state
   if (calendars.length === 0) {
     return (
-      <EmptyCalendarState
-        onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
-      />
+      <>
+        <EmptyCalendarState
+          onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
+        />
+        <DialogManager
+          showCalendarDialog={dialogStates.showCalendarDialog}
+          onCalendarDialogChange={dialogStates.setShowCalendarDialog}
+          onCreateCalendar={createCalendarHook}
+          showShiftDialog={dialogStates.showShiftDialog}
+          onShiftDialogChange={dialogStates.setShowShiftDialog}
+          onShiftSubmit={shiftActions.handleShiftSubmit}
+          selectedDate={selectedDate}
+          selectedCalendar={selectedCalendar || null}
+          onPresetsChange={refetchPresets}
+          showPasswordDialog={dialogStates.showPasswordDialog}
+          onPasswordDialogChange={dialogStates.setShowPasswordDialog}
+          calendars={calendars}
+          onPasswordSuccess={handlePasswordSuccess}
+          showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
+          onCalendarSettingsDialogChange={
+            dialogStates.setShowCalendarSettingsDialog
+          }
+          onCalendarSettingsSuccess={refetchCalendars}
+          onDeleteCalendar={handleDeleteCalendar}
+          showExternalSyncDialog={dialogStates.showExternalSyncDialog}
+          onExternalSyncDialogChange={dialogStates.setShowExternalSyncDialog}
+          syncErrorRefreshTrigger={syncLogRefreshTrigger}
+          onSyncComplete={handleSyncComplete}
+          showSyncNotificationDialog={dialogStates.showSyncNotificationDialog}
+          onSyncNotificationDialogChange={
+            dialogStates.setShowSyncNotificationDialog
+          }
+          onErrorsMarkedRead={fetchSyncErrorStatus}
+          onSyncLogUpdate={() => setSyncLogRefreshTrigger((prev) => prev + 1)}
+          showDayShiftsDialog={dialogStates.showDayShiftsDialog}
+          onDayShiftsDialogChange={dialogStates.setShowDayShiftsDialog}
+          selectedDayDate={dialogStates.selectedDayDate}
+          selectedDayShifts={dialogStates.selectedDayShifts}
+          locale={locale}
+          onDeleteShiftFromDayDialog={handleDeleteShiftFromDayDialog}
+          showSyncedShiftsDialog={dialogStates.showSyncedShiftsDialog}
+          onSyncedShiftsDialogChange={dialogStates.setShowSyncedShiftsDialog}
+          selectedSyncedShifts={dialogStates.selectedSyncedShifts}
+          showViewSettingsDialog={dialogStates.showViewSettingsDialog}
+          onViewSettingsDialogChange={dialogStates.setShowViewSettingsDialog}
+          viewSettings={viewSettings}
+          onViewSettingsChange={{
+            handleShiftsPerDayChange: viewSettings.handleShiftsPerDayChange,
+            handleExternalShiftsPerDayChange:
+              viewSettings.handleExternalShiftsPerDayChange,
+            handleShowShiftNotesChange: viewSettings.handleShowShiftNotesChange,
+            handleShowFullTitlesChange: viewSettings.handleShowFullTitlesChange,
+            handleShiftSortTypeChange: viewSettings.handleShiftSortTypeChange,
+            handleShiftSortOrderChange: viewSettings.handleShiftSortOrderChange,
+            handleCombinedSortModeChange:
+              viewSettings.handleCombinedSortModeChange,
+            handleHighlightWeekendsChange:
+              viewSettings.handleHighlightWeekendsChange,
+            handleHighlightedWeekdaysChange:
+              viewSettings.handleHighlightedWeekdaysChange,
+            handleHighlightColorChange: viewSettings.handleHighlightColorChange,
+          }}
+          showNoteDialog={noteActions.showNoteDialog}
+          onNoteDialogChange={noteActions.handleNoteDialogChange}
+          selectedNote={noteActions.selectedNote}
+          selectedNoteDate={noteActions.selectedDate}
+          onNoteSubmit={handleNoteSubmit}
+          onNoteDelete={noteActions.selectedNote ? handleNoteDelete : undefined}
+        />
+      </>
     );
   }
 

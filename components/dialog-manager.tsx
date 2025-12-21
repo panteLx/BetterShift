@@ -100,7 +100,13 @@ interface DialogManagerProps {
   onNoteDialogChange: (open: boolean) => void;
   selectedNote: CalendarNote | undefined;
   selectedNoteDate?: Date;
-  onNoteSubmit: (text: string) => void;
+  onNoteSubmit: (
+    note: string,
+    type: "note" | "event",
+    color?: string,
+    recurringPattern?: string,
+    recurringInterval?: number
+  ) => void;
   onNoteDelete?: () => void;
 }
 

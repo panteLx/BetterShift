@@ -43,7 +43,11 @@ export function useNotes(calendarId: string | undefined) {
   const createNote = async (
     noteText: string,
     date: Date,
-    onPasswordRequired?: () => void
+    onPasswordRequired?: () => void,
+    type?: "note" | "event",
+    color?: string,
+    recurringPattern?: string,
+    recurringInterval?: number
   ) => {
     if (!calendarId) return false;
 
@@ -57,6 +61,10 @@ export function useNotes(calendarId: string | undefined) {
           calendarId: calendarId,
           date: formatDateToLocal(date),
           note: noteText,
+          type: type,
+          color: color,
+          recurringPattern: recurringPattern,
+          recurringInterval: recurringInterval,
           password,
         }),
       });
@@ -78,11 +86,13 @@ export function useNotes(calendarId: string | undefined) {
 
       const newNote = await response.json();
       setNotes((prev) => [...prev, newNote]);
-      toast.success(t("common.created", { item: t("note.note") }));
+      const itemType = type === "event" ? t("note.typeEvent") : t("note.note");
+      toast.success(t("common.created", { item: itemType }));
       return true;
     } catch (error) {
       console.error("Failed to create note:", error);
-      toast.error(t("common.createError", { item: t("note.note") }));
+      const itemType = type === "event" ? t("note.typeEvent") : t("note.note");
+      toast.error(t("common.createError", { item: itemType }));
       return false;
     }
   };
@@ -90,7 +100,11 @@ export function useNotes(calendarId: string | undefined) {
   const updateNote = async (
     noteId: string,
     noteText: string,
-    onPasswordRequired?: () => void
+    onPasswordRequired?: () => void,
+    type?: "note" | "event",
+    color?: string,
+    recurringPattern?: string,
+    recurringInterval?: number
   ) => {
     try {
       const password = getCachedPassword(calendarId);
@@ -98,7 +112,14 @@ export function useNotes(calendarId: string | undefined) {
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: noteText, password }),
+        body: JSON.stringify({
+          note: noteText,
+          type: type,
+          color: color,
+          recurringPattern: recurringPattern,
+          recurringInterval: recurringInterval,
+          password,
+        }),
       });
 
       if (response.status === 401) {
@@ -118,11 +139,13 @@ export function useNotes(calendarId: string | undefined) {
 
       const updatedNote = await response.json();
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
-      toast.success(t("common.updated", { item: t("note.note") }));
+      const itemType = type === "event" ? t("note.typeEvent") : t("note.note");
+      toast.success(t("common.updated", { item: itemType }));
       return true;
     } catch (error) {
       console.error("Failed to update note:", error);
-      toast.error(t("common.updateError", { item: t("note.note") }));
+      const itemType = type === "event" ? t("note.typeEvent") : t("note.note");
+      toast.error(t("common.updateError", { item: itemType }));
       return false;
     }
   };

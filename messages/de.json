@@ -118,12 +118,25 @@
     "unlockCalendar": "Kalender entsperren"
   },
   "note": {
-    "create": "Neue Notiz",
-    "edit": "Notiz bearbeiten",
+    "create": "{item} erstellen",
+    "edit": "{item} bearbeiten",
     "note": "Notiz",
     "placeholder": "z.B. Frühdienst weil nachmittags Termin...",
-    "hintMobile": "Langes Drücken auf einen Tag öffnet Notizen. Das Notiz-Icon zeigt vorhandene Notizen an.",
-    "hintDesktop": "Rechtsklick auf einen Tag öffnet Notizen. Das Notiz-Icon zeigt vorhandene Notizen an."
+    "hintMobile": "Um eine Notiz oder ein Event hinzuzufügen oder zu bearbeiten, drücke lange auf einen Tag im Kalender.",
+    "hintDesktop": "Um eine Notiz oder ein Event hinzuzufügen oder zu bearbeiten, mache einen Rechtsklick auf einen Tag im Kalender.",
+    "type": "Typ",
+    "typeNote": "Notiz",
+    "typeEvent": "Event",
+    "eventColor": "Event-Farbe",
+    "eventTitle": "Event-Name",
+    "eventPlaceholder": "z.B. Weihnachten, Geburtstag...",
+    "recurring": "Wiederholen",
+    "recurringNone": "Nicht wiederholen",
+    "recurringCustom": "Benutzerdefiniert",
+    "customInterval": "Intervall",
+    "every": "Alle",
+    "weeks": "Wochen",
+    "months": "Monate"
   },
   "shift": {
     "create": "Neue Schicht",

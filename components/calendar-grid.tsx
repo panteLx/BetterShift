@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { StickyNote, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { isToday } from "date-fns";
@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useRef, useEffect } from "react";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { CalendarShiftCard } from "./calendar-shift-card";
+import { findEventForDate } from "@/lib/event-utils";
 
 interface CalendarGridProps {
   calendarDays: Date[];
@@ -128,9 +129,34 @@ export function CalendarGrid({
       ))}
       {calendarDays.map((day, idx) => {
         const dayShifts = getShiftsForDate(day);
-        const dayNote = notes.find(
-          (note) => note.date && isSameDay(new Date(note.date), day)
-        );
+
+        // Find notes/events for this day using new event-utils
+        const matchingNotes = notes.filter((note) => {
+          if (!note.date) return false;
+          const noteDate = new Date(note.date);
+
+          // Always match exact date for both notes and events
+          if (isSameDay(noteDate, day)) return true;
+
+          // For events with recurring patterns, use findEventForDate
+          if (
+            note.type === "event" &&
+            note.recurringPattern &&
+            note.recurringPattern !== "none"
+          ) {
+            const foundEvent = findEventForDate(notes, day);
+            return foundEvent?.id === note.id;
+          }
+
+          return false;
+        });
+
+        // Get the first note for display (regular notes)
+        const dayNote = matchingNotes.find((n) => n.type === "note");
+
+        // Get the first event for border styling and name display
+        const dayEvent = matchingNotes.find((n) => n.type === "event");
+
         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
         const isTodayDate = isToday(day);
 
@@ -181,6 +207,12 @@ export function CalendarGrid({
                   backgroundColor: `${highlightColor}15`,
                   borderColor: `${highlightColor}40`,
                 }),
+              // Event border styling (overrides highlight if both present)
+              ...(dayEvent &&
+                !isTodayDate && {
+                  borderColor: dayEvent.color || "#3b82f6",
+                  borderWidth: "2px",
+                }),
             }}
             className={`
               min-h-25 sm:min-h-28 px-1 py-1.5 sm:p-2.5 rounded-md sm:rounded-lg text-sm transition-all relative flex flex-col border sm:border-2
@@ -188,6 +220,8 @@ export function CalendarGrid({
               ${
                 isTodayDate
                   ? "border-primary shadow-lg shadow-primary/20 bg-primary/5 ring-2 ring-primary/20"
+                  : dayEvent
+                  ? "" // Event border is handled by inline style
                   : "border-border/30 sm:border-border/50"
               }
               ${
@@ -202,27 +236,49 @@ export function CalendarGrid({
             `}
           >
             <div
-              className={`text-sm sm:text-sm font-semibold mb-1 flex items-center justify-between ${
+              className={`text-sm sm:text-sm font-semibold mb-1 flex items-center gap-1 ${
                 isTodayDate ? "text-primary" : ""
               }`}
             >
-              <span>{day.getDate()}</span>
-              {dayNote && onNoteIconClick && (
-                <motion.div
-                  className="group/note relative"
-                  onClick={(e) => onNoteIconClick(e, day)}
-                  title={dayNote.note}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+              <span className="shrink-0">{day.getDate()}</span>
+              {/* Display event title - clickable if no preset selected */}
+              {dayEvent && (
+                <span
+                  className={`text-[10px] sm:text-xs font-medium truncate opacity-75 min-w-0 ${
+                    !selectedPresetId && onNoteIconClick
+                      ? "cursor-pointer hover:opacity-100 transition-opacity"
+                      : ""
+                  }`}
+                  style={{ color: dayEvent.color || "#3b82f6" }}
+                  title={dayEvent.note}
+                  onClick={(e) => {
+                    if (!selectedPresetId && onNoteIconClick) {
+                      e.stopPropagation();
+                      onNoteIconClick(e, day);
+                    }
+                  }}
                 >
-                  <StickyNote className="h-3.5 w-3.5 text-orange-500 cursor-pointer hover:text-orange-600 transition-colors" />
-                  <div className="hidden sm:block absolute z-50 bottom-full right-0 mb-1 invisible group-hover/note:visible opacity-0 group-hover/note:opacity-100 transition-opacity duration-200">
-                    <div className="bg-popover text-popover-foreground text-xs rounded-md shadow-lg border p-2 max-w-[200px] whitespace-normal break-words">
-                      {dayNote.note}
-                      <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-popover"></div>
-                    </div>
-                  </div>
-                </motion.div>
+                  {dayEvent.note}
+                </span>
+              )}
+              {/* Display note title if no event - clickable if no preset selected */}
+              {!dayEvent && dayNote && (
+                <span
+                  className={`text-[10px] sm:text-xs font-medium text-orange-500 truncate opacity-75 min-w-0 ${
+                    !selectedPresetId && onNoteIconClick
+                      ? "cursor-pointer hover:opacity-100 transition-opacity"
+                      : ""
+                  }`}
+                  title={dayNote.note}
+                  onClick={(e) => {
+                    if (!selectedPresetId && onNoteIconClick) {
+                      e.stopPropagation();
+                      onNoteIconClick(e, day);
+                    }
+                  }}
+                >
+                  {dayNote.note}
+                </span>
               )}
             </div>
             <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">

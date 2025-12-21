@@ -68,7 +68,8 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { note, password } = body;
+    const { note, type, color, recurringPattern, recurringInterval, password } =
+      body;
 
     if (!note) {
       return NextResponse.json({ error: "Note is required" }, { status: 400 });
@@ -114,6 +115,12 @@ export async function PUT(
       .update(calendarNotes)
       .set({
         note,
+        type: type !== undefined ? type : existingNote.type,
+        color: color !== undefined ? color : null,
+        recurringPattern:
+          recurringPattern !== undefined ? recurringPattern : null,
+        recurringInterval:
+          recurringInterval !== undefined ? recurringInterval : null,
         updatedAt: new Date(),
       })
       .where(eq(calendarNotes.id, id))

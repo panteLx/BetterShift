@@ -118,12 +118,25 @@
     "unlockCalendar": "Sblocca Calendario"
   },
   "note": {
-    "create": "Nuova Nota",
-    "edit": "Modifica Nota",
+    "create": "Crea {item}",
+    "edit": "Modifica {item}",
     "note": "Nota",
     "placeholder": "es., Turno mattutino perché ho un appuntamento nel pomeriggio...",
-    "hintMobile": "Premi a lungo su un giorno per aprire le note. L'icona della nota indica le note esistenti.",
-    "hintDesktop": "Fai clic con il pulsante destro del mouse su un giorno per aprire le note. L'icona della nota indica le note esistenti."
+    "hintMobile": "Per aggiungere o modificare una nota o un evento, premi a lungo su un giorno nel calendario.",
+    "hintDesktop": "Per aggiungere o modificare una nota o un evento, fai clic destro su un giorno nel calendario.",
+    "type": "Tipo",
+    "typeNote": "Nota",
+    "typeEvent": "Evento",
+    "eventColor": "Colore Evento",
+    "eventTitle": "Nome Evento",
+    "eventPlaceholder": "es., Natale, Compleanno...",
+    "recurring": "Ripeti",
+    "recurringNone": "Non ripetere",
+    "recurringCustom": "Personalizzato",
+    "customInterval": "Intervallo",
+    "every": "Ogni",
+    "weeks": "settimane",
+    "months": "mesi"
   },
   "shift": {
     "create": "Nuovo Turno",

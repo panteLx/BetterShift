@@ -5,12 +5,20 @@ interface UseNoteActionsProps {
   createNote: (
     text: string,
     date: Date,
-    onPasswordRequired: () => void
+    onPasswordRequired: () => void,
+    type?: "note" | "event",
+    color?: string,
+    recurringPattern?: string,
+    recurringInterval?: number
   ) => Promise<boolean>;
   updateNote: (
     id: string,
     text: string,
-    onPasswordRequired: () => void
+    onPasswordRequired: () => void,
+    type?: "note" | "event",
+    color?: string,
+    recurringPattern?: string,
+    recurringInterval?: number
   ) => Promise<boolean>;
   deleteNote: (id: string, onPasswordRequired: () => void) => Promise<boolean>;
   onPasswordRequired: (action: () => Promise<void>) => void;
@@ -27,21 +35,59 @@ export function useNoteActions({
   const [showNoteDialog, setShowNoteDialog] = useState(false);
 
   const handleNoteSubmit = useCallback(
-    async (noteText: string) => {
+    async (
+      noteText: string,
+      type?: "note" | "event",
+      color?: string,
+      recurringPattern?: string,
+      recurringInterval?: number
+    ) => {
       const handlePasswordRequired = () => {
         onPasswordRequired(async () => {
           if (selectedNote) {
-            await updateNote(selectedNote.id, noteText, handlePasswordRequired);
+            await updateNote(
+              selectedNote.id,
+              noteText,
+              handlePasswordRequired,
+              type,
+              color,
+              recurringPattern,
+              recurringInterval
+            );
           } else if (selectedDate) {
-            await createNote(noteText, selectedDate, handlePasswordRequired);
+            await createNote(
+              noteText,
+              selectedDate,
+              handlePasswordRequired,
+              type,
+              color,
+              recurringPattern,
+              recurringInterval
+            );
           }
         });
       };
 
       if (selectedNote) {
-        await updateNote(selectedNote.id, noteText, handlePasswordRequired);
+        await updateNote(
+          selectedNote.id,
+          noteText,
+          handlePasswordRequired,
+          type,
+          color,
+          recurringPattern,
+          recurringInterval
+        );
       } else if (selectedDate) {
-        await createNote(noteText, selectedDate, handlePasswordRequired);
+        await createNote(
+          noteText,
+          selectedDate,
+          handlePasswordRequired,
+          type,
+          color,
+          recurringPattern,
+          recurringInterval
+        );
       }
     },
     [selectedNote, selectedDate, createNote, updateNote, onPasswordRequired]

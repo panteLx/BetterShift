@@ -17,7 +17,7 @@ interface CalendarSheetProps {
     color: string,
     password?: string,
     isLocked?: boolean
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 export function CalendarSheet({
