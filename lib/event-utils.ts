@@ -58,11 +58,12 @@ export function matchesRecurringEvent(
   }
 }
 
-export function findEventForDate(
+// Find all events for a specific date (including recurring)
+export function findEventsForDate(
   notes: CalendarNote[],
   date: Date
-): CalendarNote | undefined {
-  return notes.find((note) => {
+): CalendarNote[] {
+  return notes.filter((note) => {
     if (note.type !== "event" || !note.date) return false;
     const noteDate = new Date(note.date);
 
@@ -85,11 +86,12 @@ export function findEventForDate(
   });
 }
 
-export function findNoteForDate(
+// Find all notes for a specific date (both notes and events, including recurring)
+export function findNotesForDate(
   notes: CalendarNote[],
   date: Date
-): CalendarNote | undefined {
-  return notes.find((note) => {
+): CalendarNote[] {
+  return notes.filter((note) => {
     if (!note.date) return false;
     const noteDate = new Date(note.date);
 
@@ -114,4 +116,19 @@ export function findNoteForDate(
 
     return false;
   });
+}
+
+// Legacy functions for backwards compatibility - return first match
+export function findEventForDate(
+  notes: CalendarNote[],
+  date: Date
+): CalendarNote | undefined {
+  return findEventsForDate(notes, date)[0];
+}
+
+export function findNoteForDate(
+  notes: CalendarNote[],
+  date: Date
+): CalendarNote | undefined {
+  return findNotesForDate(notes, date)[0];
 }

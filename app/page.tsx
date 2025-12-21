@@ -45,7 +45,7 @@ import {
   verifyAndCachePassword,
 } from "@/lib/password-cache";
 import { formatDateToLocal } from "@/lib/date-utils";
-import { findEventForDate, findNoteForDate } from "@/lib/event-utils";
+import { findNotesForDate } from "@/lib/event-utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
@@ -210,6 +210,61 @@ function HomeContent() {
         console.error("Failed to reload notes:", error);
       }
     }
+  };
+
+  // Notes list dialog handlers
+  const handleEditNoteFromList = (note: CalendarNote) => {
+    dialogStates.setShowNotesListDialog(false);
+    noteActions.openNoteDialog(
+      dialogStates.selectedDayDate || new Date(),
+      note
+    );
+  };
+
+  const handleDeleteNoteFromList = async (noteId: string) => {
+    const success = await deleteNoteHook(noteId, () => {
+      dialogStates.setShowPasswordDialog(true);
+    });
+
+    if (success) {
+      // Update the notes list in the dialog
+      const updatedNotes = dialogStates.selectedDayNotes.filter(
+        (n) => n.id !== noteId
+      );
+      dialogStates.setSelectedDayNotes(updatedNotes);
+
+      // If no notes left, close the dialog
+      if (updatedNotes.length === 0) {
+        dialogStates.setShowNotesListDialog(false);
+      }
+
+      // Reload compare mode data if needed
+      if (isCompareMode && compareNoteCalendarId) {
+        const password = getCachedPassword(compareNoteCalendarId);
+        const passwordParam = password ? `&password=${password}` : "";
+        try {
+          const notesRes = await fetch(
+            `/api/notes?calendarId=${compareNoteCalendarId}${passwordParam}`
+          );
+          const notesData = notesRes.ok ? await notesRes.json() : [];
+          setCompareCalendarData((prev) => {
+            const updated = new Map(prev);
+            const data = updated.get(compareNoteCalendarId);
+            if (data) {
+              updated.set(compareNoteCalendarId, { ...data, notes: notesData });
+            }
+            return updated;
+          });
+        } catch (error) {
+          console.error("Failed to reload notes:", error);
+        }
+      }
+    }
+  };
+
+  const handleAddNewNoteFromList = () => {
+    const date = dialogStates.selectedDayDate || new Date();
+    noteActions.openNoteDialog(date, undefined);
   };
 
   // External sync management
@@ -455,22 +510,49 @@ function HomeContent() {
 
   const handleDayRightClick = (e: React.MouseEvent, date: Date) => {
     e.preventDefault();
-    // Use findNoteForDate to get notes or events (including recurring)
-    const existingNote = findNoteForDate(notes, date);
-    noteActions.openNoteDialog(date, existingNote);
+    // Get all notes/events for this date (including recurring)
+    const allDayNotes = findNotesForDate(notes, date);
+
+    // Always show list dialog when notes exist (to allow adding more)
+    if (allDayNotes.length >= 1) {
+      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayNotes(allDayNotes);
+      dialogStates.setShowNotesListDialog(true);
+    } else {
+      // No notes - show note edit dialog to create new
+      noteActions.openNoteDialog(date, undefined);
+    }
   };
 
   const handleNoteIconClick = (e: React.MouseEvent, date: Date) => {
     e.stopPropagation();
-    // Use findNoteForDate to get notes or events (including recurring)
-    const existingNote = findNoteForDate(notes, date);
-    noteActions.openNoteDialog(date, existingNote);
+    // Get all notes/events for this date (including recurring)
+    const allDayNotes = findNotesForDate(notes, date);
+
+    // Always show list dialog when notes exist (to allow adding more)
+    if (allDayNotes.length >= 1) {
+      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayNotes(allDayNotes);
+      dialogStates.setShowNotesListDialog(true);
+    } else {
+      // No notes - show note edit dialog to create new
+      noteActions.openNoteDialog(date, undefined);
+    }
   };
 
   const handleLongPressDay = (date: Date) => {
-    // Use findNoteForDate to get notes or events (including recurring)
-    const existingNote = findNoteForDate(notes, date);
-    noteActions.openNoteDialog(date, existingNote);
+    // Get all notes/events for this date (including recurring)
+    const allDayNotes = findNotesForDate(notes, date);
+
+    // Always show list dialog when notes exist (to allow adding more)
+    if (allDayNotes.length >= 1) {
+      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayNotes(allDayNotes);
+      dialogStates.setShowNotesListDialog(true);
+    } else {
+      // No notes - show note edit dialog to create new
+      noteActions.openNoteDialog(date, undefined);
+    }
   };
 
   const handleShowAllShifts = (date: Date, dayShifts: ShiftWithCalendar[]) => {
@@ -708,10 +790,20 @@ function HomeContent() {
     const calendarData = compareCalendarData.get(calendarId);
     if (!calendarData) return;
 
-    // Use findEventForDate to get the original event for recurring events
-    const existingNote = findEventForDate(calendarData.notes, date);
-    setCompareNoteCalendarId(calendarId);
-    noteActions.openNoteDialog(date, existingNote);
+    // Get all notes/events for this date (including recurring)
+    const allDayNotes = findNotesForDate(calendarData.notes, date);
+
+    // Always show list dialog when notes exist (to allow adding more)
+    if (allDayNotes.length >= 1) {
+      setCompareNoteCalendarId(calendarId);
+      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayNotes(allDayNotes);
+      dialogStates.setShowNotesListDialog(true);
+    } else {
+      // No notes - show note edit dialog to create new
+      setCompareNoteCalendarId(calendarId);
+      noteActions.openNoteDialog(date, undefined);
+    }
   };
 
   const handleCompareNoteIconClick = (
@@ -720,17 +812,43 @@ function HomeContent() {
     date: Date
   ) => {
     e.stopPropagation();
-    handleCompareDayRightClick(calendarId, e, date);
+    const calendarData = compareCalendarData.get(calendarId);
+    if (!calendarData) return;
+
+    // Get all notes/events for this date (including recurring)
+    const allDayNotes = findNotesForDate(calendarData.notes, date);
+
+    // Always show list dialog when notes exist (to allow adding more)
+    if (allDayNotes.length >= 1) {
+      setCompareNoteCalendarId(calendarId);
+      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayNotes(allDayNotes);
+      dialogStates.setShowNotesListDialog(true);
+    } else {
+      // No notes - show note edit dialog to create new
+      setCompareNoteCalendarId(calendarId);
+      noteActions.openNoteDialog(date, undefined);
+    }
   };
 
   const handleCompareLongPress = (calendarId: string, date: Date) => {
     const calendarData = compareCalendarData.get(calendarId);
     if (!calendarData) return;
 
-    // Use findEventForDate to get the original event for recurring events
-    const existingNote = findEventForDate(calendarData.notes, date);
-    setCompareNoteCalendarId(calendarId);
-    noteActions.openNoteDialog(date, existingNote);
+    // Get all notes/events for this date (including recurring)
+    const allDayNotes = findNotesForDate(calendarData.notes, date);
+
+    // Always show list dialog when notes exist (to allow adding more)
+    if (allDayNotes.length >= 1) {
+      setCompareNoteCalendarId(calendarId);
+      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayNotes(allDayNotes);
+      dialogStates.setShowNotesListDialog(true);
+    } else {
+      // No notes - show note edit dialog to create new
+      setCompareNoteCalendarId(calendarId);
+      noteActions.openNoteDialog(date, undefined);
+    }
   };
 
   const handleCompareShowAllShifts = (
@@ -1062,6 +1180,12 @@ function HomeContent() {
           selectedNoteDate={noteActions.selectedDate}
           onNoteSubmit={handleNoteSubmit}
           onNoteDelete={noteActions.selectedNote ? handleNoteDelete : undefined}
+          showNotesListDialog={dialogStates.showNotesListDialog}
+          onNotesListDialogChange={dialogStates.setShowNotesListDialog}
+          selectedDayNotes={dialogStates.selectedDayNotes}
+          onEditNoteFromList={handleEditNoteFromList}
+          onDeleteNoteFromList={handleDeleteNoteFromList}
+          onAddNewNote={handleAddNewNoteFromList}
         />
 
         <AppFooter versionInfo={versionInfo} />
@@ -1145,6 +1269,12 @@ function HomeContent() {
           selectedNoteDate={noteActions.selectedDate}
           onNoteSubmit={handleNoteSubmit}
           onNoteDelete={noteActions.selectedNote ? handleNoteDelete : undefined}
+          showNotesListDialog={dialogStates.showNotesListDialog}
+          onNotesListDialogChange={dialogStates.setShowNotesListDialog}
+          selectedDayNotes={dialogStates.selectedDayNotes}
+          onEditNoteFromList={handleEditNoteFromList}
+          onDeleteNoteFromList={handleDeleteNoteFromList}
+          onAddNewNote={handleAddNewNoteFromList}
         />
       </>
     );
@@ -1344,6 +1474,12 @@ function HomeContent() {
         selectedNoteDate={noteActions.selectedDate}
         onNoteSubmit={handleNoteSubmit}
         onNoteDelete={noteActions.selectedNote ? handleNoteDelete : undefined}
+        showNotesListDialog={dialogStates.showNotesListDialog}
+        onNotesListDialogChange={dialogStates.setShowNotesListDialog}
+        selectedDayNotes={dialogStates.selectedDayNotes}
+        onEditNoteFromList={handleEditNoteFromList}
+        onDeleteNoteFromList={handleDeleteNoteFromList}
+        onAddNewNote={handleAddNewNoteFromList}
       />
 
       <AppFooter versionInfo={versionInfo} />

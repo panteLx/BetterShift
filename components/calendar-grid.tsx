@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useRef, useEffect } from "react";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { CalendarShiftCard } from "./calendar-shift-card";
-import { findEventForDate } from "@/lib/event-utils";
+import { findNotesForDate } from "@/lib/event-utils";
 
 interface CalendarGridProps {
   calendarDays: Date[];
@@ -130,34 +130,17 @@ export function CalendarGrid({
       {calendarDays.map((day, idx) => {
         const dayShifts = getShiftsForDate(day);
 
-        // Find recurring event for this day once
-        const recurringEventForDay = findEventForDate(notes, day);
+        // Find all notes/events for this day (including recurring)
+        const allDayNotes = findNotesForDate(notes, day);
 
-        // Find notes/events for this day
-        const matchingNotes = notes.filter((note) => {
-          if (!note.date) return false;
-          const noteDate = new Date(note.date);
+        // Count events and regular notes separately
+        const dayEvents = allDayNotes.filter((n) => n.type === "event");
+        const dayRegularNotes = allDayNotes.filter((n) => n.type !== "event");
+        const totalNotesCount = allDayNotes.length;
 
-          // Always match exact date for both notes and events
-          if (isSameDay(noteDate, day)) return true;
-
-          // For recurring events, check if this is the matching event
-          if (
-            note.type === "event" &&
-            recurringEventForDay &&
-            recurringEventForDay.id === note.id
-          ) {
-            return true;
-          }
-
-          return false;
-        });
-
-        // Get the first note for display (regular notes)
-        const dayNote = matchingNotes.find((n) => n.type === "note");
-
-        // Get the first event for border styling and name display
-        const dayEvent = matchingNotes.find((n) => n.type === "event");
+        // Get first event and note for display
+        const dayEvent = dayEvents[0];
+        const dayNote = dayRegularNotes[0];
 
         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
         const isTodayDate = isToday(day);
@@ -185,6 +168,17 @@ export function CalendarGrid({
           highlightedWeekdays.length > 0 &&
           highlightedWeekdays.includes(day.getDay());
 
+        // Create gradient border for multiple events
+        // Note: borderImage doesn't support border-radius, so we use a different approach
+        const hasMultiEventBorder = dayEvents.length > 1 && !isTodayDate;
+        const eventBorderStyle =
+          dayEvents.length === 1 && !isTodayDate
+            ? {
+                borderColor: dayEvents[0].color || "#3b82f6",
+                borderWidth: "2px",
+              }
+            : {};
+
         return (
           <motion.button
             key={idx}
@@ -210,11 +204,16 @@ export function CalendarGrid({
                   borderColor: `${highlightColor}40`,
                 }),
               // Event border styling (overrides highlight if both present)
-              ...(dayEvent &&
-                !isTodayDate && {
-                  borderColor: dayEvent.color || "#3b82f6",
-                  borderWidth: "2px",
-                }),
+              ...eventBorderStyle,
+              // Multi-event gradient border using background trick to support border-radius
+              ...(hasMultiEventBorder && {
+                backgroundImage: `linear-gradient(var(--background), var(--background)), linear-gradient(to right, ${dayEvents
+                  .map((e) => e.color || "#3b82f6")
+                  .join(", ")})`,
+                backgroundOrigin: "border-box",
+                backgroundClip: "padding-box, border-box",
+                border: "2px solid transparent",
+              }),
             }}
             className={`
               min-h-25 sm:min-h-28 px-1 py-1.5 sm:p-2.5 rounded-md sm:rounded-lg text-sm transition-all relative flex flex-col border sm:border-2
@@ -238,50 +237,73 @@ export function CalendarGrid({
             `}
           >
             <div
-              className={`text-sm sm:text-sm font-semibold mb-1 flex items-center gap-1 ${
+              className={`text-sm sm:text-sm font-semibold mb-1 flex items-center justify-between gap-1 ${
                 isTodayDate ? "text-primary" : ""
               }`}
             >
               <span className="shrink-0">{day.getDate()}</span>
-              {/* Display event title - clickable if no preset selected */}
-              {dayEvent && (
-                <span
-                  className={`text-[10px] sm:text-xs font-medium truncate opacity-75 min-w-0 ${
-                    !selectedPresetId && onNoteIconClick
-                      ? "cursor-pointer hover:opacity-100 transition-opacity"
-                      : ""
-                  }`}
-                  style={{ color: dayEvent.color || "#3b82f6" }}
-                  title={dayEvent.note}
-                  onClick={(e) => {
-                    if (!selectedPresetId && onNoteIconClick) {
-                      e.stopPropagation();
-                      onNoteIconClick(e, day);
-                    }
-                  }}
-                >
-                  {dayEvent.note}
-                </span>
-              )}
-              {/* Display note title if no event - clickable if no preset selected */}
-              {!dayEvent && dayNote && (
-                <span
-                  className={`text-[10px] sm:text-xs font-medium text-orange-500 truncate opacity-75 min-w-0 ${
-                    !selectedPresetId && onNoteIconClick
-                      ? "cursor-pointer hover:opacity-100 transition-opacity"
-                      : ""
-                  }`}
-                  title={dayNote.note}
-                  onClick={(e) => {
-                    if (!selectedPresetId && onNoteIconClick) {
-                      e.stopPropagation();
-                      onNoteIconClick(e, day);
-                    }
-                  }}
-                >
-                  {dayNote.note}
-                </span>
-              )}
+              <div className="flex items-center gap-1 min-w-0">
+                {/* Multi-indicator badge when multiple notes/events exist */}
+                {totalNotesCount > 1 && (
+                  <span
+                    className={`inline-flex items-center justify-center text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 ${
+                      !selectedPresetId && onNoteIconClick
+                        ? "cursor-pointer hover:bg-primary/30 transition-colors"
+                        : ""
+                    }`}
+                    title={t("note.multipleEntries", {
+                      count: totalNotesCount,
+                    })}
+                    onClick={(e) => {
+                      if (!selectedPresetId && onNoteIconClick) {
+                        e.stopPropagation();
+                        onNoteIconClick(e, day);
+                      }
+                    }}
+                  >
+                    {totalNotesCount}
+                  </span>
+                )}
+                {/* Display first event title - clickable if no preset selected */}
+                {dayEvent && totalNotesCount === 1 && (
+                  <span
+                    className={`text-[10px] sm:text-xs font-medium truncate opacity-75 min-w-0 ${
+                      !selectedPresetId && onNoteIconClick
+                        ? "cursor-pointer hover:opacity-100 transition-opacity"
+                        : ""
+                    }`}
+                    style={{ color: dayEvent.color || "#3b82f6" }}
+                    title={dayEvent.note}
+                    onClick={(e) => {
+                      if (!selectedPresetId && onNoteIconClick) {
+                        e.stopPropagation();
+                        onNoteIconClick(e, day);
+                      }
+                    }}
+                  >
+                    {dayEvent.note}
+                  </span>
+                )}
+                {/* Display first note title if no event and only one entry - clickable if no preset selected */}
+                {!dayEvent && dayNote && totalNotesCount === 1 && (
+                  <span
+                    className={`text-[10px] sm:text-xs font-medium text-orange-500 truncate opacity-75 min-w-0 ${
+                      !selectedPresetId && onNoteIconClick
+                        ? "cursor-pointer hover:opacity-100 transition-opacity"
+                        : ""
+                    }`}
+                    title={dayNote.note}
+                    onClick={(e) => {
+                      if (!selectedPresetId && onNoteIconClick) {
+                        e.stopPropagation();
+                        onNoteIconClick(e, day);
+                      }
+                    }}
+                  >
+                    {dayNote.note}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">
               {(() => {

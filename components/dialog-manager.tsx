@@ -7,6 +7,7 @@ import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
 import { ShiftsOverviewDialog } from "@/components/shifts-overview-dialog";
 import { ViewSettingsSheet } from "@/components/view-settings-sheet";
 import { NoteSheet } from "@/components/note-sheet";
+import { NotesListDialog } from "@/components/notes-list-dialog";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 
@@ -108,6 +109,14 @@ interface DialogManagerProps {
     recurringInterval?: number
   ) => void;
   onNoteDelete?: () => void;
+
+  // Notes List Dialog
+  showNotesListDialog: boolean;
+  onNotesListDialogChange: (open: boolean) => void;
+  selectedDayNotes: CalendarNote[];
+  onEditNoteFromList: (note: CalendarNote) => void;
+  onDeleteNoteFromList: (noteId: string) => void;
+  onAddNewNote: () => void;
 }
 
 export function DialogManager(props: DialogManagerProps) {
@@ -245,6 +254,17 @@ export function DialogManager(props: DialogManagerProps) {
         }
       />
 
+      {props.selectedDayDate && (
+        <NotesListDialog
+          open={props.showNotesListDialog}
+          onOpenChange={props.onNotesListDialogChange}
+          date={props.selectedDayDate}
+          notes={props.selectedDayNotes}
+          onEditNote={props.onEditNoteFromList}
+          onDeleteNote={props.onDeleteNoteFromList}
+          onAddNew={props.onAddNewNote}
+        />
+      )}
       <NoteSheet
         open={props.showNoteDialog}
         onOpenChange={props.onNoteDialogChange}

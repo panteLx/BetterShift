@@ -125,18 +125,22 @@
     "hintMobile": "Per aggiungere o modificare una nota o un evento, premi a lungo su un giorno nel calendario.",
     "hintDesktop": "Per aggiungere o modificare una nota o un evento, fai clic destro su un giorno nel calendario.",
     "type": "Tipo",
-    "typeNote": "Nota",
-    "typeEvent": "Evento",
+    "typeNote": "Notas",
+    "typeEvent": "Eventos",
     "eventColor": "Colore Evento",
     "eventTitle": "Nome Evento",
     "eventPlaceholder": "es., Natale, Compleanno...",
     "recurring": "Ripeti",
     "recurringNone": "Non ripetere",
     "recurringCustom": "Personalizzato",
+    "recurringEveryWeeks": "Ogni {count} settimane",
+    "recurringEveryMonths": "Ogni {count} mesi",
     "customInterval": "Intervallo",
     "every": "Ogni",
     "weeks": "settimane",
-    "months": "mesi"
+    "months": "mesi",
+    "multipleEntries": "{count} voci",
+    "noEntries": "Nessuna nota o evento disponibile"
   },
   "shift": {
     "create": "Nuovo Turno",
@@ -298,7 +302,7 @@
     "autoSyncLabel": "Sincronizzazione Automatica",
     "autoSyncHint": "Scegli la frequenza con cui questo calendario deve essere sincronizzato automaticamente",
     "autoSyncManual": "Manuale",
-    "autoSync24hShort": "24 ore"
+    "autoSync24hShort": "24 h"
   },
   "syncNotifications": {
     "title": "Notifiche di Sincronizzazione",

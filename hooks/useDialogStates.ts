@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ShiftWithCalendar } from "@/lib/types";
+import { CalendarNote } from "@/lib/db/schema";
 
 export function useDialogStates() {
   const [showCalendarDialog, setShowCalendarDialog] = useState(false);
@@ -15,6 +16,7 @@ export function useDialogStates() {
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
   const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
   const [showViewSettingsDialog, setShowViewSettingsDialog] = useState(false);
+  const [showNotesListDialog, setShowNotesListDialog] = useState(false);
 
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [selectedDayShifts, setSelectedDayShifts] = useState<
@@ -23,6 +25,7 @@ export function useDialogStates() {
   const [selectedSyncedShifts, setSelectedSyncedShifts] = useState<
     ShiftWithCalendar[]
   >([]);
+  const [selectedDayNotes, setSelectedDayNotes] = useState<CalendarNote[]>([]);
 
   return {
     showCalendarDialog,
@@ -45,11 +48,15 @@ export function useDialogStates() {
     setShowSyncedShiftsDialog,
     showViewSettingsDialog,
     setShowViewSettingsDialog,
+    showNotesListDialog,
+    setShowNotesListDialog,
     selectedDayDate,
     setSelectedDayDate,
     selectedDayShifts,
     setSelectedDayShifts,
     selectedSyncedShifts,
     setSelectedSyncedShifts,
+    selectedDayNotes,
+    setSelectedDayNotes,
   };
 }
