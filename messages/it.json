@@ -297,7 +297,7 @@
     "noChanges": "Nessuna modifica",
     "errorMessage": "Messaggio di errore",
     "filterAll": "Mostra tutto",
-    "filterSuccess": "Solo successo",
+    "filterSuccess": "Solo riuscita",
     "filterError": "Solo errori",
     "deleteAll": "Elimina tutto",
     "deleteConfirm": "Sei sicuro di voler eliminare tutti i log di sincronizzazione?",
