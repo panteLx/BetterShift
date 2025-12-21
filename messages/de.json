@@ -140,7 +140,8 @@
     "weeks": "Wochen",
     "months": "Monate",
     "multipleEntries": "{count} Einträge",
-    "noEntries": "Keine Notizen oder Events vorhanden"
+    "noEntries": "Keine Notizen oder Events vorhanden",
+    "recurringEditWarning": "Dies ist ein wiederkehrendes Event. Änderungen wirken sich auf alle Wiederholungen aus."
   },
   "shift": {
     "create": "Neue Schicht",

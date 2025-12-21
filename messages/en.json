@@ -140,7 +140,8 @@
     "weeks": "weeks",
     "months": "months",
     "multipleEntries": "{count} entries",
-    "noEntries": "No notes or events available"
+    "noEntries": "No notes or events available",
+    "recurringEditWarning": "This is a recurring event. Changes will affect all occurrences."
   },
   "shift": {
     "create": "New Shift",

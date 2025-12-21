@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { CalendarWithCount } from "@/lib/types";
 import { BaseSheet } from "@/components/ui/base-sheet";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Smartphone } from "lucide-react";
 import { motion } from "motion/react";
 
 interface CalendarCompareSheetProps {
@@ -42,11 +44,12 @@ export function CalendarCompareSheet({
     >
       {/* Mobile Warning */}
       <div className="lg:hidden mb-3">
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-          <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+        <Alert className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+          <Smartphone className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+          <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
             {t("calendar.mobileNotOptimized")}
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       </div>
 
       <div className="space-y-3">

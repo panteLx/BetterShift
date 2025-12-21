@@ -42,7 +42,6 @@ export function matchesRecurringEvent(
     case "custom-months": {
       // Custom monthly interval (e.g., every 3 months)
       if (!recurringInterval || recurringInterval <= 0) return false;
-      if (eventDay !== targetDay) return false;
       if (targetDate < eventDate) return false;
 
       // Calculate total months from a common reference point to handle year boundaries
@@ -50,7 +49,19 @@ export function matchesRecurringEvent(
       const targetTotalMonths = targetYear * 12 + targetMonth;
       const monthsDiff = targetTotalMonths - eventTotalMonths;
 
-      return monthsDiff % recurringInterval === 0;
+      // Check if the month interval matches
+      if (monthsDiff % recurringInterval !== 0) return false;
+
+      // Handle day matching with edge case for months with fewer days
+      // E.g., event on Jan 31 should match Feb 28/29, Apr 30, etc.
+      const lastDayOfTargetMonth = new Date(
+        targetYear,
+        targetMonth + 1,
+        0
+      ).getDate();
+      const expectedDay = Math.min(eventDay, lastDayOfTargetMonth);
+
+      return targetDay === expectedDay;
     }
 
     default:

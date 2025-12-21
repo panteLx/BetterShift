@@ -19,7 +19,8 @@ import { CalendarNote } from "@/lib/db/schema";
 import { format } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
 import { PRESET_COLORS } from "@/lib/constants";
-import { Check } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface NoteSheetProps {
   open: boolean;
@@ -255,6 +256,19 @@ export function NoteSheet({
       maxWidth="md"
     >
       <div className="space-y-6">
+        {/* Recurring Event Warning */}
+        {note &&
+          type === "event" &&
+          note.recurringPattern &&
+          note.recurringPattern !== "none" && (
+            <Alert className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+                {t("note.recurringEditWarning")}
+              </AlertDescription>
+            </Alert>
+          )}
+
         {/* Type Selection */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">{t("note.type")}</Label>

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { CalendarContent } from "@/components/calendar-content";
 import { PresetSelector } from "@/components/preset-selector";
 import { LockedCalendarView } from "@/components/locked-calendar-view";
-import { X, Link } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { X, Link, Smartphone } from "lucide-react";
 import { getCachedPassword } from "@/lib/password-cache";
 import { motion } from "motion/react";
 import { Locale } from "date-fns";
@@ -154,11 +155,12 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
 
       {/* Mobile Warning */}
       <div className="lg:hidden mx-3 mt-3 mb-1">
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-          <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+        <Alert className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+          <Smartphone className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+          <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
             {t("calendar.mobileNotOptimized")}
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       </div>
 
       {/* Calendars Grid */}

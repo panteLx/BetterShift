@@ -125,8 +125,8 @@
     "hintMobile": "Per aggiungere o modificare una nota o un evento, premi a lungo su un giorno nel calendario.",
     "hintDesktop": "Per aggiungere o modificare una nota o un evento, fai clic destro su un giorno nel calendario.",
     "type": "Tipo",
-    "typeNote": "Notas",
-    "typeEvent": "Eventos",
+    "typeNote": "Note",
+    "typeEvent": "Eventi",
     "eventColor": "Colore Evento",
     "eventTitle": "Nome Evento",
     "eventPlaceholder": "es., Natale, Compleanno...",
@@ -140,7 +140,8 @@
     "weeks": "settimane",
     "months": "mesi",
     "multipleEntries": "{count} voci",
-    "noEntries": "Nessuna nota o evento disponibile"
+    "noEntries": "Nessuna nota o evento disponibile",
+    "recurringEditWarning": "Questo è un evento ricorrente. Le modifiche interesseranno tutte le occorrenze."
   },
   "shift": {
     "create": "Nuovo Turno",
@@ -314,7 +315,7 @@
     "noChanges": "Nessuna modifica",
     "errorMessage": "Messaggio di errore",
     "filterAll": "Mostra tutto",
-    "filterSuccess": "Solo successo",
+    "filterSuccess": "Solo riuscita",
     "filterError": "Solo errori",
     "deleteAll": "Elimina tutto",
     "deleteConfirm": "Sei sicuro di voler eliminare tutti i log di sincronizzazione?",
