@@ -111,16 +111,33 @@ export async function PUT(
       }
     }
 
+    // Determine the final type value
+    const finalType = type !== undefined ? type : existingNote.type;
+
     const [updated] = await db
       .update(calendarNotes)
       .set({
         note,
-        type: type !== undefined ? type : existingNote.type,
-        color: color !== undefined ? color : null,
+        type: finalType,
+        // Clear event-specific fields when converting to note
+        color:
+          finalType === "note"
+            ? null
+            : color !== undefined
+            ? color
+            : existingNote.color,
         recurringPattern:
-          recurringPattern !== undefined ? recurringPattern : null,
+          finalType === "note"
+            ? "none"
+            : recurringPattern !== undefined
+            ? recurringPattern
+            : existingNote.recurringPattern,
         recurringInterval:
-          recurringInterval !== undefined ? recurringInterval : null,
+          finalType === "note"
+            ? null
+            : recurringInterval !== undefined
+            ? recurringInterval
+            : existingNote.recurringInterval,
         updatedAt: new Date(),
       })
       .where(eq(calendarNotes.id, id))

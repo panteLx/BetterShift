@@ -100,6 +100,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate type field
+    if (type && type !== "note" && type !== "event") {
+      return NextResponse.json(
+        { error: "Invalid type. Must be 'note' or 'event'" },
+        { status: 400 }
+      );
+    }
+
     // Fetch calendar to check password
     const [calendar] = await db
       .select()

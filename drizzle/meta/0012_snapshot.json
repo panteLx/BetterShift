@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "fd0a7f47-cfda-4bca-88c7-709c4e4258eb",
+  "id": "2c15a455-784b-48ee-b191-1feef86ebaed",
   "prevId": "14b7ff8f-884d-4bbf-b0d8-fe65ea2750ae",
   "tables": {
     "calendar_notes": {
@@ -54,7 +54,7 @@
           "name": "recurring_pattern",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false,
           "default": "'none'"
         },

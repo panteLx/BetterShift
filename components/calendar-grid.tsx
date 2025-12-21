@@ -130,7 +130,10 @@ export function CalendarGrid({
       {calendarDays.map((day, idx) => {
         const dayShifts = getShiftsForDate(day);
 
-        // Find notes/events for this day using new event-utils
+        // Find recurring event for this day once
+        const recurringEventForDay = findEventForDate(notes, day);
+
+        // Find notes/events for this day
         const matchingNotes = notes.filter((note) => {
           if (!note.date) return false;
           const noteDate = new Date(note.date);
@@ -138,14 +141,13 @@ export function CalendarGrid({
           // Always match exact date for both notes and events
           if (isSameDay(noteDate, day)) return true;
 
-          // For events with recurring patterns, use findEventForDate
+          // For recurring events, check if this is the matching event
           if (
             note.type === "event" &&
-            note.recurringPattern &&
-            note.recurringPattern !== "none"
+            recurringEventForDay &&
+            recurringEventForDay.id === note.id
           ) {
-            const foundEvent = findEventForDate(notes, day);
-            return foundEvent?.id === note.id;
+            return true;
           }
 
           return false;

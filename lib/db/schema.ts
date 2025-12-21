@@ -120,7 +120,7 @@ export const calendarNotes = sqliteTable("calendar_notes", {
   note: text("note").notNull(),
   type: text("type").notNull().default("note"), // note or event
   color: text("color"), // for events only
-  recurringPattern: text("recurring_pattern").default("none"), // none, yearly, half-yearly, quarterly, monthly, weekly, custom
+  recurringPattern: text("recurring_pattern").notNull().default("none"), // none, custom-weeks, custom-months
   recurringInterval: integer("recurring_interval"), // for custom pattern (e.g., every 3 months)
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
