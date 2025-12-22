@@ -6,6 +6,7 @@ import { BaseSheet } from "@/components/ui/base-sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -19,7 +20,7 @@ import { CalendarNote } from "@/lib/db/schema";
 import { format } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
 import { PRESET_COLORS } from "@/lib/constants";
-import { Check, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface NoteSheetProps {
@@ -299,27 +300,12 @@ export function NoteSheet({
         {type === "event" && (
           <div className="space-y-4 pl-6 border-l-2 border-border/50">
             {/* Color Selection */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                {t("note.eventColor")}
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_COLORS.map((presetColor) => (
-                  <button
-                    key={presetColor.value}
-                    type="button"
-                    onClick={() => setColor(presetColor.value)}
-                    className="relative w-10 h-10 rounded-lg border-2 border-border/30 hover:border-border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    style={{ backgroundColor: presetColor.value }}
-                    aria-label={presetColor.name}
-                  >
-                    {color === presetColor.value && (
-                      <Check className="absolute inset-0 m-auto h-5 w-5 text-white drop-shadow-md" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ColorPicker
+              color={color}
+              onChange={setColor}
+              label={t("note.eventColor")}
+              presetColors={PRESET_COLORS}
+            />
 
             {/* Recurring Pattern */}
             <div className="space-y-2">

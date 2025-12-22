@@ -7,6 +7,7 @@ import { BaseSheet } from "@/components/ui/base-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { PRESET_COLORS } from "@/lib/constants";
 
 interface CalendarSheetProps {
@@ -131,50 +132,12 @@ export function CalendarSheet({
           />
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-sm font-medium flex items-center gap-2">
-            <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-            {t("form.colorLabel")}
-          </Label>
-          <div className="grid grid-cols-4 gap-3 p-4 bg-muted/30 rounded-xl border border-border/30">
-            {PRESET_COLORS.map((colorObj) => (
-              <button
-                key={colorObj.value}
-                type="button"
-                onClick={() => setSelectedColor(colorObj.value)}
-                className={`
-                    relative w-full aspect-square rounded-xl transition-all duration-200
-                    hover:scale-110 active:scale-95
-                    ${
-                      selectedColor === colorObj.value
-                        ? "ring-4 ring-primary/30 shadow-lg scale-105"
-                        : "ring-2 ring-border/20 hover:ring-border/40"
-                    }
-                  `}
-                style={{
-                  backgroundColor: colorObj.value,
-                  boxShadow:
-                    selectedColor === colorObj.value
-                      ? `0 8px 24px ${colorObj.value}40`
-                      : `0 2px 8px ${colorObj.value}20`,
-                }}
-                aria-label={colorObj.name}
-              >
-                {selectedColor === colorObj.value && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                      <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    </div>
-                  </motion.div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <ColorPicker
+          color={selectedColor}
+          onChange={setSelectedColor}
+          label={t("form.colorLabel")}
+          presetColors={PRESET_COLORS}
+        />
 
         <div className="space-y-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
           <div className="flex items-center space-x-2">
