@@ -191,7 +191,8 @@ t("common.created", { item: t("shift.shift_one") }); // Parametrized
 
 - **Dialogs**: Read-only info or confirmations only (no forms)
 - **Confirmation**: Use `ConfirmationDialog` component (NEVER native `confirm()`)
-- **Colors**: `PRESET_COLORS` array, hex format, 20% opacity for backgrounds
+- **Colors**: Use `ColorPicker` component (`components/ui/color-picker.tsx`) for all color selections - supports preset colors + custom picker
+- **Color Format**: `PRESET_COLORS` array, hex format, 20% opacity for backgrounds
 - **Dates**: `formatDateToLocal()` for YYYY-MM-DD
 
 ### UI/UX Design Principles

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { getCachedPassword } from "@/lib/password-cache";
 import { useCalendars } from "@/hooks/useCalendars";
 import { PRESET_COLORS } from "@/lib/constants";
@@ -238,28 +239,12 @@ export function CalendarSettingsSheet({
             </div>
 
             {/* Calendar Color */}
-            <div className="space-y-2.5">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-                {t("form.colorLabel")}
-              </Label>
-              <div className="grid grid-cols-4 gap-2">
-                {PRESET_COLORS.map((colorObj) => (
-                  <button
-                    key={colorObj.value}
-                    type="button"
-                    onClick={() => setSelectedColor(colorObj.value)}
-                    className={`h-11 rounded-lg transition-all ${
-                      selectedColor === colorObj.value
-                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
-                        : "hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: colorObj.value }}
-                    title={colorObj.name}
-                  />
-                ))}
-              </div>
-            </div>
+            <ColorPicker
+              color={selectedColor}
+              onChange={setSelectedColor}
+              label={t("form.colorLabel")}
+              presetColors={PRESET_COLORS}
+            />
 
             {/* Password Section */}
             <div className="space-y-4 pt-2">
