@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
-import { verifyPassword } from "@/lib/password-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -34,15 +33,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Verify password if calendar is protected AND locked
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const query = db
       .select()
@@ -121,15 +113,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const [calendarNote] = await db
       .insert(calendarNotes)

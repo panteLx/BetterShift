@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { hashPassword, verifyPassword } from "@/lib/password-utils";
 
 // GET single calendar
 export async function GET(
@@ -26,15 +25,8 @@ export async function GET(
       );
     }
 
-    // Verify password if calendar is protected AND locked
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const calendarShifts = await db
       .select()
@@ -75,39 +67,13 @@ export async function PATCH(
       );
     }
 
-    // Always verify password if calendar is protected
-    if (existingCalendar.passwordHash) {
-      if (
-        !currentPassword ||
-        !verifyPassword(currentPassword, existingCalendar.passwordHash)
-      ) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const updateData: Partial<typeof calendars.$inferInsert> = {};
     if (name) updateData.name = name;
     if (color) updateData.color = color;
-    if (password !== undefined) {
-      updateData.passwordHash = password ? hashPassword(password) : null;
-      // If removing password, also unlock calendar
-      if (password === null) {
-        updateData.isLocked = false;
-      }
-    }
-    if (isLocked !== undefined) {
-      // Only allow locking if password exists or is being set
-      if (isLocked && !existingCalendar.passwordHash && !password) {
-        return NextResponse.json(
-          { error: "Cannot lock calendar without password" },
-          { status: 400 }
-        );
-      }
-      updateData.isLocked = isLocked;
-    }
+    // TEMP: Skip password/lock updates during auth migration
 
     const [calendar] = await db
       .update(calendars)
@@ -159,15 +125,8 @@ export async function DELETE(
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     await db.delete(calendars).where(eq(calendars.id, id));
 

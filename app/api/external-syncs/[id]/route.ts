@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter } from "@/lib/event-emitter";
 import {
   isValidCalendarUrl,
@@ -45,15 +44,8 @@ export async function GET(
       );
     }
 
-    // Verify password if calendar is protected AND locked
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     return NextResponse.json(externalSync);
   } catch (error) {
@@ -110,16 +102,8 @@ export async function PATCH(
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      const { password } = body;
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     // Validate calendar URL if provided
     if (calendarUrl !== undefined) {
@@ -268,15 +252,8 @@ export async function DELETE(
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     await db.delete(externalSyncs).where(eq(externalSyncs.id, id));
 

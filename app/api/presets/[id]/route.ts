@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
 // GET single preset
@@ -37,15 +36,8 @@ export async function GET(
       );
     }
 
-    // Verify password if calendar is protected AND locked
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     return NextResponse.json(preset);
   } catch (error) {
@@ -100,15 +92,8 @@ export async function PATCH(
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const [updatedPreset] = await db
       .update(shiftPresets)
@@ -202,15 +187,8 @@ export async function DELETE(
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     // Delete all shifts that were created from this preset
     await db.delete(shifts).where(eq(shifts.presetId, id));

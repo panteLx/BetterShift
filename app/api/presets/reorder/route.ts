@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
 // PATCH reorder presets
@@ -47,15 +46,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     // Verify all preset IDs belong to the specified calendarId
     const presetIds = presetOrders.map(

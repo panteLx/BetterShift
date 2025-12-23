@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import ICAL from "ical.js";
 
 export async function GET(
@@ -26,15 +25,8 @@ export async function GET(
       );
     }
 
-    // Check password protection
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     // Get all shifts for this calendar
     const calendarShifts = await db.query.shifts.findMany({

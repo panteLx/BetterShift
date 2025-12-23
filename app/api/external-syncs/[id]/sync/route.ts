@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import ICAL from "ical.js";
 import {
   expandRecurringEvents,
@@ -384,15 +383,8 @@ export async function POST(
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const stats = await syncExternalCalendar(syncId, "manual");
 

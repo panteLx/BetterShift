@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
-import { hashPassword } from "@/lib/password-utils";
 
 // GET all calendars
 export async function GET() {
@@ -12,8 +11,7 @@ export async function GET() {
         id: calendars.id,
         name: calendars.name,
         color: calendars.color,
-        passwordHash: calendars.passwordHash,
-        isLocked: calendars.isLocked,
+        ownerId: calendars.ownerId,
         createdAt: calendars.createdAt,
         updatedAt: calendars.updatedAt,
         _count:
@@ -38,7 +36,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, color, password, isLocked } = body;
+    const { name, color } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -47,21 +45,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Can't lock without password
-    if (isLocked && !password) {
-      return NextResponse.json(
-        { error: "Cannot lock calendar without password" },
-        { status: 400 }
-      );
-    }
+    // TEMP: Password/lock logic removed during auth migration (Phase 0-2)
+    // Will be replaced with owner assignment in Phase 3
 
     const [calendar] = await db
       .insert(calendars)
       .values({
         name,
         color: color || "#3b82f6",
-        passwordHash: password ? hashPassword(password) : null,
-        isLocked: isLocked || false,
+        ownerId: null, // Will be set to current user in Phase 3
       })
       .returning();
 

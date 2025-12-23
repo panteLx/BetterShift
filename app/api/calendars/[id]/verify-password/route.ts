@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 
 // POST verify calendar password
 export async function POST(
@@ -27,20 +26,9 @@ export async function POST(
       );
     }
 
-    // Check if calendar has a password
-    if (!calendar.passwordHash) {
-      return NextResponse.json({ valid: true, protected: false });
-    }
-
-    // If no password provided in request but calendar is protected
-    if (!password) {
-      return NextResponse.json({ valid: false, protected: true });
-    }
-
-    // Verify password
-    const isValid = verifyPassword(password, calendar.passwordHash);
-
-    return NextResponse.json({ valid: isValid, protected: true });
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
+    return NextResponse.json({ valid: true, protected: false });
   } catch (error) {
     console.error("Failed to verify password:", error);
     return NextResponse.json(

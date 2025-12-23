@@ -7,7 +7,6 @@ import {
   calendars,
 } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import { calculateShiftDuration } from "@/lib/date-utils";
 import {
   startOfWeek,
@@ -48,15 +47,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Verify password if calendar is protected AND locked
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const referenceDate = date ? new Date(date) : new Date();
 

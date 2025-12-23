@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { CalendarSelector } from "@/components/calendar-selector";
 import { PresetSelector } from "@/components/preset-selector";
+import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -121,41 +122,53 @@ export function AppHeader({
                 </div>
               </motion.div>
 
-              {/* Calendar Selector - Desktop */}
-              <motion.div
-                className="flex items-center gap-3 min-w-0 flex-1 max-w-md bg-muted/30 rounded-xl p-2 border border-border/50"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-              >
-                <div
-                  className="w-1 h-8 bg-gradient-to-b rounded-full transition-colors duration-300"
-                  style={{
-                    backgroundImage: selectedCalendar
-                      ? `linear-gradient(to bottom, ${
-                          calendars.find((c) => c.id === selectedCalendar)
-                            ?.color || "hsl(var(--primary))"
-                        }, ${
-                          calendars.find((c) => c.id === selectedCalendar)
-                            ?.color || "hsl(var(--primary))"
-                        }80)`
-                      : "linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--primary) / 0.5))",
-                  }}
-                ></div>
-                <div className="flex-1 min-w-0">
-                  <CalendarSelector
-                    calendars={calendars}
-                    selectedId={selectedCalendar}
-                    onSelect={onSelectCalendar}
-                    onCreateNew={onCreateCalendar}
-                    onManagePassword={onManagePassword}
-                    onExternalSync={onExternalSync}
-                    onSyncNotifications={onSyncNotifications}
-                    onCompare={onCompare}
-                    hasSyncErrors={hasSyncErrors}
-                  />
-                </div>
-              </motion.div>
+              {/* Right Section: Calendar Selector + User Menu */}
+              <div className="flex items-center gap-3">
+                {/* Calendar Selector - Desktop */}
+                <motion.div
+                  className="flex items-center gap-3 min-w-0 flex-1 max-w-md bg-muted/30 rounded-xl p-2 border border-border/50"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                >
+                  <div
+                    className="w-1 h-8 bg-gradient-to-b rounded-full transition-colors duration-300"
+                    style={{
+                      backgroundImage: selectedCalendar
+                        ? `linear-gradient(to bottom, ${
+                            calendars.find((c) => c.id === selectedCalendar)
+                              ?.color || "hsl(var(--primary))"
+                          }, ${
+                            calendars.find((c) => c.id === selectedCalendar)
+                              ?.color || "hsl(var(--primary))"
+                          }80)`
+                        : "linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--primary) / 0.5))",
+                    }}
+                  ></div>
+                  <div className="flex-1 min-w-0">
+                    <CalendarSelector
+                      calendars={calendars}
+                      selectedId={selectedCalendar}
+                      onSelect={onSelectCalendar}
+                      onCreateNew={onCreateCalendar}
+                      onManagePassword={onManagePassword}
+                      onExternalSync={onExternalSync}
+                      onSyncNotifications={onSyncNotifications}
+                      onCompare={onCompare}
+                      hasSyncErrors={hasSyncErrors}
+                    />
+                  </div>
+                </motion.div>
+
+                {/* User Menu */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.15 }}
+                >
+                  <UserMenu />
+                </motion.div>
+              </div>
             </div>
 
             {/* Update Notification Banner - Desktop & Mobile */}

@@ -19,32 +19,36 @@ export function useCalendars(initialCalendarId?: string | null) {
     try {
       const response = await fetch("/api/calendars");
       const data = await response.json();
-      setCalendars(data);
+
+      // Ensure data is an array
+      const calendarsData = Array.isArray(data) ? data : [];
+      setCalendars(calendarsData);
 
       // Only auto-select on initial load
       setSelectedCalendar((current) => {
         // If a calendar is already selected and still exists, keep it
         if (
           current &&
-          data.some((cal: CalendarWithCount) => cal.id === current)
+          calendarsData.some((cal: CalendarWithCount) => cal.id === current)
         ) {
           return current;
         }
         // Otherwise, try initialCalendarId or fallback to first calendar
         if (
           initialCalendarIdRef.current &&
-          data.some(
+          calendarsData.some(
             (cal: CalendarWithCount) => cal.id === initialCalendarIdRef.current
           )
         ) {
           return initialCalendarIdRef.current;
-        } else if (data.length > 0) {
-          return data[0].id;
+        } else if (calendarsData.length > 0) {
+          return calendarsData[0].id;
         }
         return undefined;
       });
     } catch (error) {
       console.error("Failed to fetch calendars:", error);
+      setCalendars([]);
     } finally {
       setLoading(false);
     }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { verifyPassword } from "@/lib/password-utils";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 
 // GET all presets for a calendar
@@ -33,15 +32,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify password if calendar is protected AND locked
-    if (calendar.passwordHash && calendar.isLocked) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     const presets = await db
       .select()
@@ -95,15 +87,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password if calendar is protected
-    if (calendar.passwordHash) {
-      if (!password || !verifyPassword(password, calendar.passwordHash)) {
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
-      }
-    }
+    // TEMP: Password checks disabled during auth migration (Phase 0-2)
+    // Will be replaced with permission system in Phase 3
 
     // Get the max order value for this calendar to append new preset at the end
     const existingPresets = await db
