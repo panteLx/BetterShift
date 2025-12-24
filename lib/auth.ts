@@ -3,6 +3,22 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth } from "better-auth/plugins";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GITHUB_CLIENT_ID,
+  GITHUB_CLIENT_SECRET,
+  DISCORD_CLIENT_ID,
+  DISCORD_CLIENT_SECRET,
+  CUSTOM_OIDC_ENABLED,
+  CUSTOM_OIDC_CLIENT_ID,
+  CUSTOM_OIDC_CLIENT_SECRET,
+  CUSTOM_OIDC_ISSUER,
+  CUSTOM_OIDC_SCOPES,
+  SESSION_MAX_AGE,
+  SESSION_UPDATE_AGE,
+  BETTER_AUTH_TRUSTED_ORIGINS,
+} from "@/lib/auth/env";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -15,27 +31,26 @@ export const auth = betterAuth({
   // Email and Password authentication
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
   },
 
   // Built-in social providers
   socialProviders: {
-    google: process.env.GOOGLE_CLIENT_ID
+    google: GOOGLE_CLIENT_ID
       ? {
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          clientId: GOOGLE_CLIENT_ID,
+          clientSecret: GOOGLE_CLIENT_SECRET!,
         }
       : undefined,
-    github: process.env.GITHUB_CLIENT_ID
+    github: GITHUB_CLIENT_ID
       ? {
-          clientId: process.env.GITHUB_CLIENT_ID,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+          clientId: GITHUB_CLIENT_ID,
+          clientSecret: GITHUB_CLIENT_SECRET!,
         }
       : undefined,
-    discord: process.env.DISCORD_CLIENT_ID
+    discord: DISCORD_CLIENT_ID
       ? {
-          clientId: process.env.DISCORD_CLIENT_ID,
-          clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+          clientId: DISCORD_CLIENT_ID,
+          clientSecret: DISCORD_CLIENT_SECRET!,
         }
       : undefined,
   },
@@ -45,15 +60,14 @@ export const auth = betterAuth({
     genericOAuth({
       config: [
         // Custom OIDC Provider
-        ...(process.env.CUSTOM_OIDC_ENABLED === "true" &&
-        process.env.CUSTOM_OIDC_CLIENT_ID
+        ...(CUSTOM_OIDC_ENABLED && CUSTOM_OIDC_CLIENT_ID
           ? [
               {
                 providerId: "custom-oidc",
-                clientId: process.env.CUSTOM_OIDC_CLIENT_ID,
-                clientSecret: process.env.CUSTOM_OIDC_CLIENT_SECRET!,
-                discoveryUrl: process.env.CUSTOM_OIDC_ISSUER!,
-                scopes: process.env.CUSTOM_OIDC_SCOPES?.split(" ") || [
+                clientId: CUSTOM_OIDC_CLIENT_ID,
+                clientSecret: CUSTOM_OIDC_CLIENT_SECRET!,
+                discoveryUrl: CUSTOM_OIDC_ISSUER!,
+                scopes: CUSTOM_OIDC_SCOPES?.split(" ") || [
                   "openid",
                   "profile",
                   "email",
@@ -67,8 +81,8 @@ export const auth = betterAuth({
 
   // Session configuration
   session: {
-    expiresIn: parseInt(process.env.SESSION_MAX_AGE || "604800"), // 7 days
-    updateAge: parseInt(process.env.SESSION_UPDATE_AGE || "86400"), // 1 day
+    expiresIn: SESSION_MAX_AGE,
+    updateAge: SESSION_UPDATE_AGE,
   },
 
   // Advanced settings
@@ -83,10 +97,13 @@ export const auth = betterAuth({
     changeEmail: {
       enabled: true,
     },
+    deleteUser: {
+      enabled: true,
+    },
   },
 
   // Trust host for deployment
-  trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",") || [],
+  trustedOrigins: BETTER_AUTH_TRUSTED_ORIGINS,
 });
 
 export type Session = typeof auth.$Infer.Session.session;

@@ -29,10 +29,23 @@ export function useVersionUpdateCheck() {
     try {
       // Server has 15-minute cache, no need for cache-busting
       const response = await fetch("/api/version");
-      if (response.ok) {
-        const data = await response.json();
-        setVersionInfo(data);
+      if (!response.ok) {
+        console.error(
+          "Failed to fetch version info:",
+          response.status,
+          response.statusText
+        );
+        return;
       }
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Invalid content type for version info:", contentType);
+        return;
+      }
+
+      const data = await response.json();
+      setVersionInfo(data);
     } catch (error) {
       console.error("Failed to fetch version info:", error);
     } finally {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { AUTH_ENABLED } from "@/lib/auth/env";
 
 /**
  * Proxy for authentication and route protection (Next.js 16)
@@ -13,11 +14,8 @@ import type { NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if auth is enabled
-  const authEnabled = process.env.AUTH_ENABLED === "true";
-
   // If auth is disabled, allow all routes
-  if (!authEnabled) {
+  if (!AUTH_ENABLED) {
     return NextResponse.next();
   }
 
@@ -25,9 +23,7 @@ export async function proxy(request: NextRequest) {
   const publicRoutes = [
     "/login",
     "/register",
-    "/forgot-password",
     "/api/auth", // Better Auth API routes
-    "/api/health", // Health check
   ];
 
   // Check if the current route is public

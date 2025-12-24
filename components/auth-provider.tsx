@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     process.env.NEXT_PUBLIC_AUTH_ENABLED === "true";
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/login", "/register", "/forgot-password"];
+  const publicRoutes = ["/login", "/register"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );

@@ -55,16 +55,6 @@ CREATE TABLE `user` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
-CREATE TABLE `verification` (
-	`id` text PRIMARY KEY NOT NULL,
-	`identifier` text NOT NULL,
-	`value` text NOT NULL,
-	`expires_at` integer NOT NULL,
-	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
-	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);--> statement-breakpoint
 ALTER TABLE `calendars` ADD `owner_id` text REFERENCES user(id);--> statement-breakpoint
 CREATE INDEX `calendars_ownerId_idx` ON `calendars` (`owner_id`);--> statement-breakpoint
 ALTER TABLE `calendars` DROP COLUMN `password_hash`;--> statement-breakpoint

@@ -73,24 +73,6 @@ export const account = sqliteTable(
   (table) => [index("account_userId_idx").on(table.userId)]
 );
 
-export const verification = sqliteTable(
-  "verification",
-  {
-    id: text("id").primaryKey(),
-    identifier: text("identifier").notNull(),
-    value: text("value").notNull(),
-    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [index("verification_identifier_idx").on(table.identifier)]
-);
-
 // =====================================================
 // BetterShift Application Tables
 // =====================================================
@@ -304,7 +286,6 @@ export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
-export type Verification = typeof verification.$inferSelect;
 export type CalendarShare = typeof calendarShares.$inferSelect;
 export type NewCalendarShare = typeof calendarShares.$inferInsert;
 

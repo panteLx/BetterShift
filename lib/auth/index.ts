@@ -11,13 +11,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-
-// Check if auth is enabled via env var
-// Note: Uses NEXT_PUBLIC_ prefix so it's available client + server side
-const authEnabled = process.env.NEXT_PUBLIC_AUTH_ENABLED === "true";
+import {
+  AUTH_ENABLED,
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GITHUB_CLIENT_ID,
+  GITHUB_CLIENT_SECRET,
+  DISCORD_CLIENT_ID,
+  DISCORD_CLIENT_SECRET,
+  SESSION_MAX_AGE,
+  SESSION_UPDATE_AGE,
+  BETTER_AUTH_TRUSTED_ORIGINS,
+} from "./env";
 
 // Only initialize Better Auth if auth is enabled
-export const auth = authEnabled
+export const auth = AUTH_ENABLED
   ? betterAuth({
       database: drizzleAdapter(db, {
         provider: "sqlite",
@@ -25,40 +33,39 @@ export const auth = authEnabled
           user: schema.user,
           session: schema.session,
           account: schema.account,
-          verification: schema.verification,
         },
       }),
       emailAndPassword: {
         enabled: true,
-        requireEmailVerification: false,
       },
       socialProviders: {
-        google: process.env.GOOGLE_CLIENT_ID
+        google: GOOGLE_CLIENT_ID
           ? {
-              clientId: process.env.GOOGLE_CLIENT_ID,
-              clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+              clientId: GOOGLE_CLIENT_ID,
+              clientSecret: GOOGLE_CLIENT_SECRET,
             }
           : undefined,
-        github: process.env.GITHUB_CLIENT_ID
+        github: GITHUB_CLIENT_ID
           ? {
-              clientId: process.env.GITHUB_CLIENT_ID,
-              clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+              clientId: GITHUB_CLIENT_ID,
+              clientSecret: GITHUB_CLIENT_SECRET,
             }
           : undefined,
-        discord: process.env.DISCORD_CLIENT_ID
+        discord: DISCORD_CLIENT_ID
           ? {
-              clientId: process.env.DISCORD_CLIENT_ID,
-              clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+              clientId: DISCORD_CLIENT_ID,
+              clientSecret: DISCORD_CLIENT_SECRET,
             }
           : undefined,
       },
       session: {
-        expiresIn: parseInt(process.env.SESSION_MAX_AGE || "604800", 10), // 7 days default
-        updateAge: parseInt(process.env.SESSION_UPDATE_AGE || "86400", 10), // 1 day default
+        expiresIn: SESSION_MAX_AGE,
+        updateAge: SESSION_UPDATE_AGE,
       },
-      trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS
-        ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",")
-        : undefined,
+      trustedOrigins:
+        BETTER_AUTH_TRUSTED_ORIGINS.length > 0
+          ? BETTER_AUTH_TRUSTED_ORIGINS
+          : undefined,
     })
   : // Fallback mock when auth is disabled
     ({

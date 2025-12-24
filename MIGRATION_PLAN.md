@@ -7,6 +7,25 @@
 
 ---
 
+## ⚠️ Important: Better Auth Documentation First
+
+**Before making any auth-related changes, always check the official Better Auth documentation:**
+
+- 📚 **Main Docs**: https://www.better-auth.com/docs
+- 👥 **Users & Accounts**: https://www.better-auth.com/docs/concepts/users-accounts
+- 🔑 **Authentication Methods**: https://www.better-auth.com/docs/authentication/email-password
+- 🔐 **Session Management**: https://www.better-auth.com/docs/concepts/session-management
+- 🛠️ **Plugins**: https://www.better-auth.com/docs/plugins/overview
+
+**Why?**
+
+- Better Auth provides built-in methods for most auth operations (change password, delete account, etc.)
+- Custom implementations should be avoided - use Better Auth's client/server APIs
+- Saves development time and ensures security best practices
+- Prevents reinventing the wheel with potentially insecure code
+
+---
+
 ## Phase 0: Preparation & Planning ✅
 
 - [x] Analysis of current password system
@@ -120,10 +139,24 @@
   - "Continue as Guest" option (when auth disabled)
 - [x] Create `app/register/page.tsx` (if credentials enabled)
 - [x] Add proper i18n translations (de/en/it)
-- [ ] **UI Design Polish**
-  - [ ] Align login page with app design (gradients, borders, spacing)
-  - [ ] Align register page with app design
-  - [ ] Match sheet/dialog styling patterns from main app
+- [x] **Fix OIDC Registration Check**
+  - [x] Check `ALLOW_USER_REGISTRATION` flag during OIDC login
+  - [x] Block new user creation via OIDC when registration is disabled
+  - [x] Show proper error message ("Registration disabled")
+  - [x] Allow existing users to login via OIDC even when registration disabled
+- [x] **Deduplicate OIDC Provider Environment Variables**
+  - [x] CLIENT*ID is not secret (visible in OAuth flow), deduplicated to `NEXT_PUBLIC*\*`
+  - [x] CLIENT_SECRET remains server-only (never exposed to client)
+  - [x] Removed `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`, `DISCORD_CLIENT_ID` (server-only)
+  - [x] Removed `CUSTOM_OIDC_ENABLED`, `CUSTOM_OIDC_CLIENT_ID`, `CUSTOM_OIDC_NAME` (server-only)
+  - [x] Only `NEXT_PUBLIC_*_CLIENT_ID` needed for both server and client
+  - [x] Updated `.env.example` to reflect simplified config
+  - [x] Updated `lib/auth/env.ts` to use deduplicated variables
+  - [x] Build verification successful
+- [x] **UI Design Polish**
+  - [x] Align login page with app design (gradients, borders, spacing)
+  - [x] Align register page with app design
+  - [x] Match sheet/dialog styling patterns from main app
 
 ### 2.2 User Profile & Settings
 
@@ -132,22 +165,36 @@
   - Change password UI
   - Connect/disconnect OIDC accounts UI
   - Delete account option UI
-- [ ] **Profile Functionality Implementation**
-  - [ ] Create API endpoint for password change (`/api/auth/change-password`)
-  - [ ] Create API endpoint for account deletion (`/api/auth/delete-account`)
-  - [ ] Implement OAuth account linking/unlinking
-  - [ ] Wire up profile page to actual API endpoints
-  - [ ] Add proper error handling and validation
-- [ ] **UI Design Polish**
-  - [ ] Align profile page with app design patterns
-  - [ ] Match card styling with calendar settings
-  - [ ] Use consistent gradients and borders
+- [x] **Profile Functionality Implementation**
+  - [x] Create API endpoint for password change (`/api/auth/change-password`)
+  - [x] Create API endpoint for account deletion (`/api/auth/delete-account`)
+  - [x] Create API endpoint for fetching accounts (`/api/auth/accounts`)
+  - [x] Wire up profile page to actual API endpoints
+  - [x] Add proper error handling and validation
+  - [x] **Fix Connected Accounts Display**
+    - [x] Query user's linked accounts from `account` table
+    - [x] Display connected OAuth providers (Google, GitHub, Discord, Custom OIDC)
+    - [x] Show provider name and account ID
+    - [x] Fix "No connected accounts yet" showing when accounts exist
+- [x] **Centralize Environment Variable Access**
+  - [x] Create single source of truth for env vars (`lib/auth/env.ts`)
+  - [x] Remove scattered `process.env` access in:
+    - `lib/auth/config.ts` (renamed to `lib/auth/index.ts`)
+    - `lib/auth/feature-flags.ts`
+    - `lib/auth/client.ts`
+    - `proxy.ts`
+  - [x] Export typed/validated env config from central file
+  - [x] Update all files to import from centralized config
+- [x] **UI Design Polish**
+  - [x] Align profile page with app design patterns
+  - [x] Match card styling with calendar settings
+  - [x] Use consistent gradients and borders
 - [x] Add user menu dropdown in `AppHeader`
   - Profile link
   - Logout button
   - Show current user
 
-### 2.3 Auth State Management
+### 2.3 Auth State Management ✅
 
 - [x] Create `hooks/useAuth.ts`
   - `user` state
@@ -163,7 +210,7 @@
   - Add `genericOAuthClient()` plugin if using custom OIDC
 - [x] Add session check in root layout via `AuthProvider`
 
-### 2.4 Protected Routes
+### 2.4 Protected Routes ✅
 
 - [x] Create auth proxy (`proxy.ts` - Next.js 16 convention)
 - [x] Protect calendar routes (if auth enabled)
@@ -219,6 +266,56 @@
 - [ ] Remove `PasswordDialog` component
 - [ ] Remove `LockedCalendarView` component
 - [ ] Remove password-related translations
+
+### 3.4 Guest/Anonymous Access
+
+- [ ] Add `ALLOW_GUEST_ACCESS` environment variable
+  - When `true`: Allow viewing calendars without login
+  - When `false`: Force login redirect (current behavior)
+  - Default: `false` (require login when auth enabled)
+- [ ] Add `guestPermission` column to `calendars` table
+  - Values: "none" (default) | "read" | "write"
+  - Determines what guests can do with this calendar
+  - Migration: Add column, default to "none"
+- [ ] Update permission utilities (`lib/auth/permissions.ts`)
+  - Extend `getUserCalendarPermission()` to handle guest users
+  - Return guest permission if no user session
+  - Guest permissions never override user permissions
+- [ ] Update `proxy.ts` middleware
+  - Skip login redirect if `ALLOW_GUEST_ACCESS=true`
+  - Allow unauthenticated users to view app
+  - Set guest flag in request context
+- [ ] Update API route protection
+  - Accept requests without auth session (if guest access enabled)
+  - Apply guest permissions in all routes
+  - Block write operations if guest permission < write
+  - Return only guest-accessible calendars
+- [ ] UI Updates for Guest Mode
+  - Show "Login" button in header for guests
+  - Add banner: "You are viewing as guest. Login for full access."
+  - Disable create/edit actions based on guest permissions
+  - Show lock icons on calendars guests cannot edit
+  - Filter calendar list by guest-accessible calendars
+- [ ] Calendar Settings Sheet
+  - Add "Guest Access" section (owner/admin only)
+  - Radio buttons: "No Access" | "Read Only" | "Read & Write"
+  - Explanation text about guest behavior
+  - Show current guest permission level
+
+**Use Cases**:
+
+- Public calendars (team shifts visible to everyone)
+- Demo mode (showcase app without registration)
+- Shared family calendar (view-only for relatives)
+- Gradual auth adoption (allow browsing before committing)
+
+**Security Considerations**:
+
+- Guest permissions never override user permissions (user = stricter rules)
+- Owner/admin required to change guest settings
+- Rate limiting applies to guest requests
+- No sensitive data exposed to guests (user info, emails, etc.)
+- Requires Phase 3.1 & 3.2 to be completed first
 
 ---
 
@@ -339,9 +436,111 @@
 
 ---
 
-## Phase 7: Testing & Documentation
+## Phase 7: Admin Panel & Super Admin Features
 
-### 7.1 Testing
+### 7.1 Super Admin Concept
+
+- [ ] Add `isSuperAdmin` flag to `user` table (boolean, default: false)
+- [ ] Migration: Mark first created user as super admin (`ORDER BY createdAt LIMIT 1`)
+- [ ] Add helper function `isSuperAdmin(userId)` in `lib/auth/permissions.ts`
+- [ ] Super admin bypasses all permission checks (full access to everything)
+
+### 7.2 Admin Panel - User Management
+
+- [ ] Create `app/admin/page.tsx` (protected route, super admin only)
+- [ ] Create `app/api/admin/users/route.ts`
+  - GET: List all users with details (email, name, createdAt, calendars count)
+  - POST: Create new user (super admin can create users)
+- [ ] Create `app/api/admin/users/[id]/route.ts`
+  - GET: Get user details
+  - PUT: Update user info (name, email, password)
+  - DELETE: Delete user and handle orphaned calendars
+- [ ] Create `app/api/admin/users/[id]/password/route.ts`
+  - PUT: Change user password (super admin can reset any password)
+- [ ] Admin UI Components:
+  - [ ] `components/admin/user-list.tsx` - Table of all users
+  - [ ] `components/admin/user-edit-dialog.tsx` - Edit user details
+  - [ ] `components/admin/user-password-dialog.tsx` - Reset user password
+  - [ ] `components/admin/user-stats.tsx` - User statistics overview
+
+### 7.3 Admin Panel - Calendar Management
+
+- [ ] Create `app/api/admin/calendars/route.ts`
+  - GET: List all calendars with owner info
+  - PUT: Bulk operations (transfer ownership, delete multiple)
+- [ ] Create `app/api/admin/calendars/[id]/route.ts`
+  - GET: Get calendar details with full stats
+  - PUT: Update calendar (rename, change owner, change settings)
+  - DELETE: Delete calendar (force delete even with shares)
+- [ ] Create `app/api/admin/calendars/[id]/transfer/route.ts`
+  - POST: Transfer calendar ownership to another user
+- [ ] Admin UI Components:
+  - [ ] `components/admin/calendar-list.tsx` - Table of all calendars
+  - [ ] `components/admin/calendar-edit-dialog.tsx` - Edit calendar
+  - [ ] `components/admin/calendar-transfer-dialog.tsx` - Transfer ownership
+  - [ ] `components/admin/calendar-stats.tsx` - Calendar statistics
+
+### 7.4 Admin Panel - System Overview
+
+- [ ] Create `app/api/admin/stats/route.ts`
+  - GET: System-wide statistics (users, calendars, shifts, shares)
+- [ ] Create `components/admin/system-stats.tsx`
+  - Total users count
+  - Total calendars count
+  - Total shifts count
+  - Storage usage (database size)
+  - Active sessions count
+  - Recent activity log
+
+### 7.5 Admin Panel - Access Control
+
+- [ ] Add admin-only middleware check in `proxy.ts`
+  - Block `/admin` routes for non-super-admin users
+- [ ] Add "Admin Panel" link in user menu (visible only to super admin)
+- [ ] Create `hooks/useAdminAccess.ts`
+  - `isSuperAdmin` check
+  - Redirect non-admins to homepage
+- [ ] Add audit logging for admin actions
+  - Log user password changes
+  - Log calendar transfers
+  - Log user deletions
+  - Store in new `admin_logs` table
+
+### 7.6 Admin Panel UI/UX
+
+- [ ] Admin panel layout: `app/admin/layout.tsx`
+  - Sidebar navigation (Users, Calendars, Stats, Logs)
+  - Breadcrumbs
+  - Admin badge/indicator
+- [ ] Admin dashboard: `app/admin/page.tsx`
+  - System overview cards
+  - Quick actions
+  - Recent activity
+- [ ] Admin users page: `app/admin/users/page.tsx`
+  - Searchable user list
+  - Filter by registration date
+  - Bulk actions (delete, export)
+- [ ] Admin calendars page: `app/admin/calendars/page.tsx`
+  - Searchable calendar list
+  - Filter by owner
+  - Bulk actions (transfer, delete)
+- [ ] Admin logs page: `app/admin/logs/page.tsx`
+  - Filterable audit log
+  - Export logs functionality
+
+**Security Considerations**:
+
+- Super admin actions bypass normal permissions
+- All admin actions must be logged for audit trail
+- Super admin flag cannot be changed via UI (only database)
+- Rate limiting applies to admin routes
+- Admin panel requires active session (no API key access)
+
+---
+
+## Phase 8: Testing & Documentation
+
+### 8.1 Testing
 
 - [ ] Test auth disabled mode (backwards compatibility)
 - [ ] Test auth enabled mode
@@ -354,7 +553,7 @@
 - [ ] Test concurrent user sessions
 - [ ] Test multiple OIDC providers enabled simultaneously
 
-### 7.2 Documentation
+### 8.2 Documentation
 
 - [ ] Update README.md
   - Auth system overview
@@ -373,7 +572,7 @@
 - [ ] Update Docker setup for auth
 - [ ] Add environment variable examples
 
-### 7.3 Security Review
+### 8.3 Security Review
 
 - [ ] CSRF protection enabled
 - [ ] Session security (httpOnly cookies)
@@ -384,22 +583,22 @@
 
 ---
 
-## Phase 8: Performance & Polish
+## Phase 9: Performance & Polish
 
-### 8.1 Performance Optimization
+### 9.1 Performance Optimization
 
 - [ ] Index `ownerId` column in calendars
 - [ ] Index `(calendarId, userId)` in shares
 - [ ] Optimize permission checks (caching)
 - [ ] Add database query optimization
 
-### 8.2 SSE Updates
+### 9.2 SSE Updates
 
 - [ ] Emit share events via SSE
 - [ ] Real-time calendar share notifications
 - [ ] Update `instrumentation.ts` for multi-user
 
-### 8.3 Edge Cases
+### 9.3 Edge Cases
 
 - [ ] Handle orphaned calendars (no owner)
 - [ ] Handle deleted users (cascade cleanup)
@@ -438,38 +637,53 @@
 
 ## Environment Variables
 
+**Note**: Currently requires duplicated variables (server + NEXT*PUBLIC* for client). Phase 2.1 will evaluate if deduplication is possible.
+
 ```env
 # Auth System
-AUTH_ENABLED=true|false                    # Enable/disable entire auth system
+NEXT_PUBLIC_AUTH_ENABLED=true|false        # Enable/disable entire auth system
 BETTER_AUTH_SECRET=<random-secret>         # Session encryption key (use: npx @better-auth/cli secret)
-BETTER_AUTH_URL=http://localhost:3000      # Base URL for auth
+NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000  # Base URL for auth
+BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000  # Comma-separated (server-side only)
 
-# Built-in Social Providers (optional)
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
+# User Registration Settings
+NEXT_PUBLIC_ALLOW_USER_REGISTRATION=true|false    # Enable/disable new user signups (default: true)
+NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION=false      # Enforce email verification (default: false)
 
-# Generic OAuth Plugin - Microsoft Entra ID (optional)
-MS_ENTRA_CLIENT_ID=
-MS_ENTRA_CLIENT_SECRET=
-MS_ENTRA_TENANT_ID=common                  # or specific tenant GUID
-
-# Generic OAuth Plugin - Custom OIDC Provider (optional)
-CUSTOM_OIDC_ENABLED=true|false
-CUSTOM_OIDC_NAME="Custom SSO"              # Display name for login button
-CUSTOM_OIDC_ISSUER=https://sso.example.com/.well-known/openid-configuration # Discovery URL
-CUSTOM_OIDC_CLIENT_ID=
-CUSTOM_OIDC_CLIENT_SECRET=
-CUSTOM_OIDC_SCOPES=openid profile email    # Space separated
-
-# Session Settings
+# Session Settings (server-side only)
 SESSION_MAX_AGE=604800                     # 7 days (in seconds)
 SESSION_UPDATE_AGE=86400                   # 1 day (in seconds)
 
-# Features
-ALLOW_USER_REGISTRATION=true|false         # Enable/disable new user signups
-REQUIRE_EMAIL_VERIFICATION=false           # Enforce email verification
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=                          # Server-side (required for auth)
+GOOGLE_CLIENT_SECRET=                      # Server-side (required for auth)
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=              # Client-side (required for UI detection)
+
+# GitHub OAuth (optional)
+GITHUB_CLIENT_ID=                          # Server-side (required for auth)
+GITHUB_CLIENT_SECRET=                      # Server-side (required for auth)
+NEXT_PUBLIC_GITHUB_CLIENT_ID=              # Client-side (required for UI detection)
+
+# Discord OAuth (optional)
+DISCORD_CLIENT_ID=                         # Server-side (required for auth)
+DISCORD_CLIENT_SECRET=                     # Server-side (required for auth)
+NEXT_PUBLIC_DISCORD_CLIENT_ID=             # Client-side (required for UI detection)
+
+# Custom OIDC Provider (optional)
+CUSTOM_OIDC_ENABLED=false                  # Server-side (required for auth)
+CUSTOM_OIDC_NAME="Custom SSO"              # Display name for login button
+CUSTOM_OIDC_ISSUER=https://sso.example.com/.well-known/openid-configuration  # Discovery URL
+CUSTOM_OIDC_CLIENT_ID=                     # Server-side (required for auth)
+CUSTOM_OIDC_CLIENT_SECRET=                 # Server-side (required for auth)
+CUSTOM_OIDC_SCOPES=openid profile email    # Space separated
+
+# Client-side (required for UI detection)
+NEXT_PUBLIC_CUSTOM_OIDC_ENABLED=false
+NEXT_PUBLIC_CUSTOM_OIDC_CLIENT_ID=
+NEXT_PUBLIC_CUSTOM_OIDC_NAME="Custom SSO"
+
+# Guest Access Settings (Phase 3.4)
+NEXT_PUBLIC_ALLOW_GUEST_ACCESS=false      # Allow viewing calendars without login (default: false)
 ```
 
 ---
@@ -524,21 +738,3 @@ REQUIRE_EMAIL_VERIFICATION=false           # Enforce email verification
 - **Environment variables** use `BETTER_AUTH_` prefix (not `AUTH_`)
 - **Discovery URL** for custom OIDC should include `/.well-known/openid-configuration`
 - **Experimental joins** optional but recommended for 2-3x performance boost
-
----
-
-## Current Progress: Phase 2 In Progress 🔄
-
-**Completed**:
-
-- ✅ Login/Register pages functional (authentication works)
-- ✅ Auth state management with hooks
-- ✅ Protected routes via middleware
-- ✅ User menu in header
-
-**In Progress**:
-
-- 🔄 Profile page API implementation (password change, account deletion)
-- 🔄 UI design polish for auth pages
-
-**Next Step**: Complete Phase 2, then start Phase 3 - Permission System Implementation

@@ -51,10 +51,25 @@ export function ChangelogDialog({
     setLoading(true);
     try {
       const response = await fetch("/api/releases");
-      if (response.ok) {
-        const data = await response.json();
-        setReleases(data);
+      if (!response.ok) {
+        console.error(
+          "Failed to fetch releases:",
+          response.status,
+          response.statusText
+        );
+        setLoading(false);
+        return;
       }
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Invalid content type:", contentType);
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      setReleases(data);
     } catch (error) {
       console.error("Failed to fetch releases:", error);
     } finally {

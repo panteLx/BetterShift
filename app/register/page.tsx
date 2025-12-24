@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { AuthHeader } from "@/components/auth-header";
+import { AppFooter } from "@/components/app-footer";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { isAuthEnabled, allowUserRegistration } from "@/lib/auth/feature-flags";
 
 /**
@@ -29,6 +32,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const versionInfo = useVersionInfo();
 
   const authEnabled = isAuthEnabled();
   const registrationAllowed = allowUserRegistration();
@@ -82,8 +87,9 @@ export default function RegisterPage() {
         return;
       }
 
+      // Better Auth automatically signs in the user after signup
       toast.success(t("auth.registerSuccess"));
-      router.push("/login");
+      router.push("/"); // Redirect to dashboard (user is already logged in)
     } catch (error) {
       console.error("Registration error:", error);
       toast.error(t("auth.registerError"));
@@ -91,6 +97,11 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Redirect if auth disabled or registration not allowed
   useEffect(() => {
@@ -105,103 +116,114 @@ export default function RegisterPage() {
     return null;
   }
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4">
-      <div className="w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            {t("auth.registerTitle")}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t("auth.registerDescription")}
-          </p>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <AuthHeader />
 
-        {/* Registration Form */}
-        <div className="rounded-lg border border-border/50 bg-card p-8 shadow-lg">
-          <form onSubmit={handleRegister} className="space-y-6">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">{t("auth.name")}</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder={t("auth.namePlaceholder")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isLoading}
-                required
-              />
-            </div>
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4 py-8">
+        <div className="w-full max-w-md space-y-8">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+              {t("auth.registerTitle")}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {t("auth.registerDescription")}
+            </p>
+          </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("auth.email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder={t("auth.emailPlaceholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                required
-              />
-            </div>
+          {/* Registration Form */}
+          <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 p-8 shadow-lg backdrop-blur-sm">
+            <form onSubmit={handleRegister} className="space-y-6">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name">{t("auth.name")}</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder={t("auth.namePlaceholder")}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("auth.password")}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t("auth.passwordPlaceholder")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                required
-                minLength={8}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t("auth.passwordTooShort")}
-              </p>
-            </div>
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder={t("auth.emailPlaceholder")}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
 
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">
-                {t("auth.confirmPassword")}
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder={t("auth.confirmPassword")}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={isLoading}
-                required
-                minLength={8}
-              />
-            </div>
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password">{t("auth.password")}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder={t("auth.passwordPlaceholder")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  minLength={8}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("auth.passwordTooShort")}
+                </p>
+              </div>
 
-            {/* Submit Button */}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? t("common.loading") : t("auth.register")}
-            </Button>
-          </form>
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  {t("auth.confirmPassword")}
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder={t("auth.confirmPassword")}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  minLength={8}
+                />
+              </div>
 
-          {/* Login Link */}
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {t("auth.alreadyHaveAccount")}{" "}
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:underline"
-            >
-              {t("auth.login")}
-            </Link>
-          </p>
+              {/* Submit Button */}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? t("common.loading") : t("auth.register")}
+              </Button>
+            </form>
+
+            {/* Login Link */}
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {t("auth.alreadyHaveAccount")}{" "}
+              <Link
+                href="/login"
+                className="font-medium text-primary hover:underline"
+              >
+                {t("auth.login")}
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
+
+      <AppFooter versionInfo={versionInfo} />
     </div>
   );
 }

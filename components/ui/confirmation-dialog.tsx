@@ -21,6 +21,8 @@ interface ConfirmationDialogProps {
   cancelText?: string;
   confirmText?: string;
   confirmVariant?: "default" | "destructive";
+  confirmDisabled?: boolean;
+  children?: React.ReactNode;
 }
 
 export function ConfirmationDialog({
@@ -32,6 +34,8 @@ export function ConfirmationDialog({
   cancelText,
   confirmText,
   confirmVariant = "default",
+  confirmDisabled = false,
+  children,
 }: ConfirmationDialogProps) {
   const t = useTranslations();
 
@@ -46,12 +50,14 @@ export function ConfirmationDialog({
             {description || t("common.unsavedChangesDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel>
             {cancelText || t("common.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
+            disabled={confirmDisabled}
             className={
               confirmVariant === "destructive"
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
