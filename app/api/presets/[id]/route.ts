@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET single preset
 export async function GET(
@@ -11,8 +13,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get("password");
+    const user = await getSessionUser(request.headers);
 
     const [preset] = await db
       .select()
@@ -23,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: "Preset not found" }, { status: 404 });
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -36,8 +37,13 @@ export async function GET(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check read permission (if auth is enabled)
+    if (user && !(await canViewCalendar(user.id, preset.calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json(preset);
   } catch (error) {
@@ -66,8 +72,9 @@ export async function PATCH(
       isSecondary,
       isAllDay,
       hideFromStats,
-      password,
     } = body;
+
+    const user = await getSessionUser(request.headers);
 
     // Fetch preset to get calendar ID
     const [existingPreset] = await db
@@ -79,7 +86,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Preset not found" }, { status: 404 });
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -92,8 +99,13 @@ export async function PATCH(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, existingPreset.calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const [updatedPreset] = await db
       .update(shiftPresets)
@@ -150,19 +162,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-
-    // Read password from request body
-    let password: string | null = null;
-    const contentType = request.headers.get("content-type");
-
-    if (contentType?.includes("application/json")) {
-      try {
-        const body = await request.json();
-        password = body.password || null;
-      } catch {
-        // If body parsing fails, continue with null password
-      }
-    }
+    const user = await getSessionUser(request.headers);
 
     // Fetch preset to get calendar ID
     const [preset] = await db
@@ -174,7 +174,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Preset not found" }, { status: 404 });
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -187,8 +187,13 @@ export async function DELETE(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, preset.calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     // Delete all shifts that were created from this preset
     await db.delete(shifts).where(eq(shifts.presetId, id));

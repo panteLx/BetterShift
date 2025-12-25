@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET single calendar note
 export async function GET(
@@ -11,8 +13,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get("password");
 
     const result = await db
       .select()
@@ -26,7 +26,7 @@ export async function GET(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -39,8 +39,14 @@ export async function GET(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check permissions
+    const user = await getSessionUser(request.headers);
+    if (user && !(await canViewCalendar(user.id, calendar.id))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json(result[0]);
   } catch (error) {
@@ -60,8 +66,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { note, type, color, recurringPattern, recurringInterval, password } =
-      body;
+    const { note, type, color, recurringPattern, recurringInterval } = body;
 
     if (!note) {
       return NextResponse.json({ error: "Note is required" }, { status: 400 });
@@ -80,7 +85,7 @@ export async function PUT(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -93,8 +98,14 @@ export async function PUT(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check permissions
+    const user = await getSessionUser(request.headers);
+    if (user && !(await canEditCalendar(user.id, calendar.id))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     // Determine the final type value
     const finalType = type !== undefined ? type : existingNote.type;
@@ -161,19 +172,6 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Read password from request body
-    let password: string | null = null;
-    const contentType = request.headers.get("content-type");
-
-    if (contentType?.includes("application/json")) {
-      try {
-        const body = await request.json();
-        password = body.password || null;
-      } catch {
-        // If body parsing fails, continue with null password
-      }
-    }
-
     // Fetch existing note to get calendar ID
     const [existingNote] = await db
       .select()
@@ -187,7 +185,7 @@ export async function DELETE(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -200,8 +198,14 @@ export async function DELETE(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check permissions
+    const user = await getSessionUser(request.headers);
+    if (user && !(await canEditCalendar(user.id, calendar.id))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const result = await db
       .delete(calendarNotes)

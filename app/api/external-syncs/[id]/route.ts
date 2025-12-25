@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { externalSyncs, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 import {
   isValidCalendarUrl,
   type CalendarSyncType,
@@ -15,8 +17,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get("password");
 
     const [externalSync] = await db
       .select()
@@ -31,7 +31,7 @@ export async function GET(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar to verify it exists
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -44,8 +44,14 @@ export async function GET(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check view permissions if user is authenticated
+    const user = await getSessionUser(request.headers);
+    if (user && !canViewCalendar(user.id, externalSync.calendarId)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Read access required." },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json(externalSync);
   } catch (error) {
@@ -89,7 +95,7 @@ export async function PATCH(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar to verify it exists
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -102,8 +108,14 @@ export async function PATCH(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permissions if user is authenticated
+    const user = await getSessionUser(request.headers);
+    if (user && !canEditCalendar(user.id, existingSync.calendarId)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
 
     // Validate calendar URL if provided
     if (calendarUrl !== undefined) {
@@ -213,19 +225,6 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Read password from request body
-    let password: string | null = null;
-    const contentType = request.headers.get("content-type");
-
-    if (contentType?.includes("application/json")) {
-      try {
-        const body = await request.json();
-        password = body.password || null;
-      } catch {
-        // If body parsing fails, continue with null password
-      }
-    }
-
     // Fetch external sync to get calendar ID
     const [existingSync] = await db
       .select()
@@ -239,7 +238,7 @@ export async function DELETE(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar to verify it exists
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -252,8 +251,14 @@ export async function DELETE(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permissions if user is authenticated
+    const user = await getSessionUser(request.headers);
+    if (user && !canEditCalendar(user.id, existingSync.calendarId)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
 
     await db.delete(externalSyncs).where(eq(externalSyncs.id, id));
 

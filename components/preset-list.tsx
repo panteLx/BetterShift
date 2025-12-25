@@ -14,7 +14,7 @@ import {
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
 import { getCachedPassword } from "@/lib/password-cache";
-import { PresetListSkeleton } from "@/components/preset-list-skeleton";
+import { PresetListSkeleton } from "@/components/skeletons/preset-list-skeleton";
 
 interface PresetListProps {
   calendars: CalendarWithCount[];

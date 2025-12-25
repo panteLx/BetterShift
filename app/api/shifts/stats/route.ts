@@ -7,6 +7,8 @@ import {
   calendars,
 } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar } from "@/lib/auth/permissions";
 import { calculateShiftDuration } from "@/lib/date-utils";
 import {
   startOfWeek,
@@ -32,9 +34,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const password = searchParams.get("password");
+    const user = await getSessionUser(request.headers);
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -47,8 +49,13 @@ export async function GET(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check read permission (if auth is enabled)
+    if (user && !(await canViewCalendar(user.id, calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const referenceDate = date ? new Date(date) : new Date();
 

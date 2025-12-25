@@ -3,12 +3,14 @@ import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canEditCalendar } from "@/lib/auth/permissions";
 
 // PATCH reorder presets
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { calendarId, presetOrders, password } = body;
+    const { calendarId, presetOrders } = body;
 
     if (!calendarId || !presetOrders || !Array.isArray(presetOrders)) {
       return NextResponse.json(
@@ -33,7 +35,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Fetch calendar to check password
+    const user = await getSessionUser(request.headers);
+
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -46,8 +50,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     // Verify all preset IDs belong to the specified calendarId
     const presetIds = presetOrders.map(

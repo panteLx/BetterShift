@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { signUp } from "@/lib/auth/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
+import { AuthHeaderSkeleton } from "@/components/skeletons/header-skeleton";
+import { AuthContentSkeleton } from "@/components/skeletons/auth-content-skeleton";
+import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { isAuthEnabled, allowUserRegistration } from "@/lib/auth/feature-flags";
 
@@ -22,11 +26,12 @@ import { isAuthEnabled, allowUserRegistration } from "@/lib/auth/feature-flags";
  * - Name field
  * - Password confirmation
  * - Validation
- * - Redirect to login after success
+ * - Redirect to dashboard after success
  */
 export default function RegisterPage() {
   const t = useTranslations();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,7 +94,7 @@ export default function RegisterPage() {
 
       // Better Auth automatically signs in the user after signup
       toast.success(t("auth.registerSuccess"));
-      router.push("/"); // Redirect to dashboard (user is already logged in)
+      // Session update triggers automatic navigation via AuthProvider
     } catch (error) {
       console.error("Registration error:", error);
       toast.error(t("auth.registerError"));
@@ -102,6 +107,13 @@ export default function RegisterPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Redirect authenticated users to home
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      router.replace("/");
+    }
+  }, [mounted, isAuthenticated, router]);
 
   // Redirect if auth disabled or registration not allowed
   useEffect(() => {
@@ -116,9 +128,15 @@ export default function RegisterPage() {
     return null;
   }
 
-  // Prevent hydration mismatch by not rendering until mounted
+  // Prevent hydration mismatch by showing skeleton until mounted
   if (!mounted) {
-    return null;
+    return (
+      <div className="flex flex-col min-h-screen">
+        <AuthHeaderSkeleton />
+        <AuthContentSkeleton />
+        <AppFooterSkeleton />
+      </div>
+    );
   }
 
   return (

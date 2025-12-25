@@ -1,16 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
+import { AuthHeaderSkeleton } from "@/components/skeletons/header-skeleton";
+import { AuthContentSkeleton } from "@/components/skeletons/auth-content-skeleton";
+import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import {
   isAuthEnabled,
@@ -31,6 +35,8 @@ import {
 export default function LoginPage() {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -69,7 +75,7 @@ export default function LoginPage() {
       }
 
       toast.success(t("auth.loginSuccess"));
-      router.push("/");
+      // Session update triggers automatic navigation via AuthProvider
     } catch (error) {
       console.error("Login error:", error);
       toast.error(t("auth.loginError"));
@@ -84,9 +90,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // Get returnUrl from query params for OAuth callback
+      const returnUrl = searchParams.get("returnUrl") || "/";
       await signIn.social({
         provider,
-        callbackURL: "/",
+        callbackURL: returnUrl,
       });
     } catch (error) {
       console.error(`${provider} login error:`, error);
@@ -99,9 +107,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // Get returnUrl from query params for OAuth callback
+      const returnUrl = searchParams.get("returnUrl") || "/";
       await signIn.oauth2({
         providerId: "custom-oidc",
-        callbackURL: "/",
+        callbackURL: returnUrl,
       });
     } catch (error) {
       console.error("Custom OIDC login error:", error);
@@ -115,6 +125,14 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
+  // Redirect authenticated users to home (or returnUrl)
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      const returnUrl = searchParams.get("returnUrl") || "/";
+      router.replace(returnUrl);
+    }
+  }, [mounted, isAuthenticated, searchParams, router]);
+
   // If auth is disabled, redirect to home
   useEffect(() => {
     if (!authEnabled) {
@@ -126,9 +144,15 @@ export default function LoginPage() {
     return null;
   }
 
-  // Prevent hydration mismatch by not rendering until mounted
+  // Prevent hydration mismatch by showing skeleton until mounted
   if (!mounted) {
-    return null;
+    return (
+      <div className="flex flex-col min-h-screen">
+        <AuthHeaderSkeleton />
+        <AuthContentSkeleton />
+        <AppFooterSkeleton />
+      </div>
+    );
   }
 
   return (

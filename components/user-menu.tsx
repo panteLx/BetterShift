@@ -39,7 +39,7 @@ export function UserMenu() {
     try {
       await signOut();
       toast.success(t("auth.logoutSuccess"));
-      router.push("/login");
+      // Session invalidation triggers automatic navigation via AuthProvider
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error(t("common.error"));

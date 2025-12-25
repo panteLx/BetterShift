@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET single shift
 export async function GET(
@@ -11,8 +13,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get("password");
+    const user = await getSessionUser(request.headers);
 
     const result = await db
       .select({
@@ -42,21 +43,13 @@ export async function GET(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    // Fetch calendar to check password
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, result[0].calendarId));
-
-    if (!calendar) {
+    // Check read permission (if auth is enabled)
+    if (user && !(await canViewCalendar(user.id, result[0].calendarId))) {
       return NextResponse.json(
-        { error: "Calendar not found" },
-        { status: 404 }
+        { error: "Insufficient permissions" },
+        { status: 403 }
       );
     }
-
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
 
     return NextResponse.json(result[0]);
   } catch (error) {
@@ -68,7 +61,7 @@ export async function GET(
   }
 }
 
-// PATCH update shift
+// PATCH update shift (requires write permission)
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -85,8 +78,9 @@ export async function PATCH(
       notes,
       isAllDay,
       isSecondary,
-      password,
     } = body;
+
+    const user = await getSessionUser(request.headers);
 
     // Fetch shift to get calendar ID
     const [existingShift] = await db
@@ -98,7 +92,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -111,8 +105,13 @@ export async function PATCH(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check write permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, existingShift.calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
 
     const updateData: Partial<typeof shifts.$inferInsert> = {};
     if (date) updateData.date = new Date(date);
@@ -148,26 +147,14 @@ export async function PATCH(
   }
 }
 
-// DELETE shift
+// DELETE shift (requires write permission)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    // Read password from request body
-    let password: string | null = null;
-    const contentType = request.headers.get("content-type");
-
-    if (contentType?.includes("application/json")) {
-      try {
-        const body = await request.json();
-        password = body.password || null;
-      } catch {
-        // If body parsing fails, continue with null password
-      }
-    }
+    const user = await getSessionUser(request.headers);
 
     // Fetch shift to get calendar ID
     const [shift] = await db.select().from(shifts).where(eq(shifts.id, id));
@@ -176,21 +163,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    // Fetch calendar to check password
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, shift.calendarId));
-
-    if (!calendar) {
+    // Check write permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, shift.calendarId))) {
       return NextResponse.json(
-        { error: "Calendar not found" },
-        { status: 404 }
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
       );
     }
-
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
 
     await db.delete(shifts).where(eq(shifts.id, id));
 

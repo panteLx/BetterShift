@@ -24,6 +24,8 @@ export async function proxy(request: NextRequest) {
     "/login",
     "/register",
     "/api/auth", // Better Auth API routes
+    "/api/version", // Version info (always public)
+    "/api/releases", // Changelog/releases (always public)
   ];
 
   // Check if the current route is public

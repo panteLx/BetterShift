@@ -11,6 +11,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     string | undefined
   >();
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Capture initialCalendarId on mount to prevent dependency changes
   const initialCalendarIdRef = useRef(initialCalendarId);
@@ -23,6 +24,7 @@ export function useCalendars(initialCalendarId?: string | null) {
       // Ensure data is an array
       const calendarsData = Array.isArray(data) ? data : [];
       setCalendars(calendarsData);
+      setHasLoadedOnce(true);
 
       // Only auto-select on initial load
       setSelectedCalendar((current) => {
@@ -217,6 +219,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     selectedCalendar,
     setSelectedCalendar,
     loading,
+    hasLoadedOnce,
     createCalendar,
     updateCalendar,
     deleteCalendar,

@@ -1,21 +1,27 @@
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { AuthHeader } from "@/components/auth-header";
+import { AppFooter } from "@/components/app-footer";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { Calendar as CalendarIcon, Plus } from "lucide-react";
 
 interface EmptyCalendarStateProps {
   onCreateCalendar: () => void;
+  showUserMenu?: boolean;
 }
 
 export function EmptyCalendarState({
   onCreateCalendar,
+  showUserMenu = false,
 }: EmptyCalendarStateProps) {
   const t = useTranslations();
+  const versionInfo = useVersionInfo();
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-4">
+      <AuthHeader showUserMenu={showUserMenu} />
+      <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
         <motion.div
           className="text-center space-y-6 max-w-md"
           initial={{ opacity: 0, y: 20 }}
@@ -49,11 +55,7 @@ export function EmptyCalendarState({
           </motion.div>
         </motion.div>
       </div>
-      <div className="border-t bg-background">
-        <div className="container max-w-4xl mx-auto p-3 sm:p-4 flex justify-center">
-          <LanguageSwitcher />
-        </div>
-      </div>
+      <AppFooter versionInfo={versionInfo} />
     </div>
   );
 }

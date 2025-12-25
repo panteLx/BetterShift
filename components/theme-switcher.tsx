@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Moon, Sun } from "lucide-react";
@@ -8,10 +9,26 @@ import { Button } from "@/components/ui/button";
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
   const t = useTranslations();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
+
+  // Render placeholder with same dimensions during SSR
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
+        <div className="h-4 w-4" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    );
+  }
 
   return (
     <Button

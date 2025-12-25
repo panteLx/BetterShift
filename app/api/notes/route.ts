@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET calendar notes for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -18,9 +20,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const password = searchParams.get("password");
-
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -33,8 +33,14 @@ export async function GET(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check permissions
+    const user = await getSessionUser(request.headers);
+    if (user && !(await canViewCalendar(user.id, calendar.id))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const query = db
       .select()
@@ -82,7 +88,6 @@ export async function POST(request: Request) {
       color,
       recurringPattern,
       recurringInterval,
-      password,
     } = body;
 
     if (!calendarId || !date || !note) {
@@ -100,7 +105,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -113,8 +118,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check permissions
+    const user = await getSessionUser(request.headers);
+    if (user && !(await canEditCalendar(user.id, calendar.id))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const [calendarNote] = await db
       .insert(calendarNotes)

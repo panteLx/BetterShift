@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { calendars, shifts, externalSyncs } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET shifts for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -18,9 +20,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const password = searchParams.get("password");
+    const user = await getSessionUser(request.headers);
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -33,8 +35,13 @@ export async function GET(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check read permission (if auth is enabled)
+    if (user && !(await canViewCalendar(user.id, calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const query = db
       .select({
@@ -96,7 +103,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST create new shift
+// POST create new shift (requires write permission)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -111,7 +118,6 @@ export async function POST(request: Request) {
       presetId,
       isAllDay,
       isSecondary,
-      password,
     } = body;
 
     if (!calendarId || !date || !title) {
@@ -121,7 +127,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch calendar to check password
+    const user = await getSessionUser(request.headers);
+
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -134,8 +142,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check write permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
 
     const [shift] = await db
       .insert(shifts)

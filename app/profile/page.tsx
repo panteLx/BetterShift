@@ -22,6 +22,7 @@ import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
+import { ProfileContentSkeleton } from "@/components/skeletons/profile-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 
 /**
@@ -74,9 +75,15 @@ export default function ProfilePage() {
     return null;
   }
 
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return null;
+  // Show skeleton during initial load or while loading accounts
+  if (!mounted || isLoading || accountsLoading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <AuthHeader showUserMenu />
+        <ProfileContentSkeleton />
+        <AppFooter versionInfo={versionInfo} />
+      </div>
+    );
   }
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -163,18 +170,6 @@ export default function ProfilePage() {
       toast.error(t("common.error"));
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <AuthHeader showUserMenu />
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">{t("common.loading")}</p>
-        </div>
-        <AppFooter versionInfo={versionInfo} />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col min-h-screen">

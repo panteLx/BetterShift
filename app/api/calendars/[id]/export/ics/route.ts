@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import ICAL from "ical.js";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar } from "@/lib/auth/permissions";
 
 export async function GET(
   request: Request,
@@ -10,8 +12,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const password = searchParams.get("password");
+    const user = await getSessionUser(request.headers);
 
     // Get calendar
     const calendar = await db.query.calendars.findFirst({
@@ -25,8 +26,13 @@ export async function GET(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check read permission (if auth is enabled)
+    if (user && !(await canViewCalendar(user.id, id))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     // Get all shifts for this calendar
     const calendarShifts = await db.query.shifts.findMany({

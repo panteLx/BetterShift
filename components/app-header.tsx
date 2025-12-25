@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import Link from "next/link";
 import { CalendarWithCount } from "@/lib/types";
 import { CalendarSelector } from "@/components/calendar-selector";
 import { PresetSelector } from "@/components/preset-selector";
@@ -89,38 +90,42 @@ export function AppHeader({
           <div className="space-y-3 sm:space-y-4">
             {/* Desktop: Logo + Calendar Selector in one line */}
             <div className="hidden sm:flex items-center justify-between gap-4">
-              {/* Logo Section */}
-              <motion.div
-                className="flex items-center gap-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 flex items-center justify-center shadow-xl shadow-slate-900/50 dark:shadow-slate-950/70 ring-2 ring-slate-700/50 dark:ring-slate-600/50">
-                    <CalendarIcon className="h-6 w-6 text-white" />
+              {/* Logo Section - Clickable to go home */}
+              <Link href="/" className="flex items-center gap-3 group">
+                <motion.div
+                  className="flex items-center gap-3"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="relative shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 flex items-center justify-center shadow-xl shadow-slate-900/50 dark:shadow-slate-950/70 ring-2 ring-slate-700/50 dark:ring-slate-600/50 transition-transform group-hover:scale-105">
+                      <CalendarIcon className="h-6 w-6 text-white" />
+                    </div>
+                    {/* Connection Status Indicator */}
+                    <div
+                      className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background transition-colors ${
+                        isConnected
+                          ? "bg-green-500 animate-pulse"
+                          : "bg-red-500"
+                      }`}
+                      title={
+                        isConnected
+                          ? t("sync.reconnected")
+                          : t("sync.disconnected")
+                      }
+                    ></div>
                   </div>
-                  {/* Connection Status Indicator */}
-                  <div
-                    className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background transition-colors ${
-                      isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
-                    }`}
-                    title={
-                      isConnected
-                        ? t("sync.reconnected")
-                        : t("sync.disconnected")
-                    }
-                  ></div>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text">
-                    {t("app.title")}
-                  </h1>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {t("app.subtitle", { default: "Organize your shifts" })}
-                  </p>
-                </div>
-              </motion.div>
+                  <div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text transition-all group-hover:from-primary group-hover:via-primary group-hover:to-primary/70">
+                      {t("app.title")}
+                    </h1>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {t("app.subtitle", { default: "Organize your shifts" })}
+                    </p>
+                  </div>
+                </motion.div>
+              </Link>
 
               {/* Right Section: Calendar Selector + User Menu */}
               <div className="flex items-center gap-3">
@@ -282,6 +287,16 @@ export function AppHeader({
                   </Button>
                 </motion.div>
               )}
+
+              {/* User Menu - Always visible on mobile */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                className="shrink-0"
+              >
+                <UserMenu />
+              </motion.div>
             </div>
 
             {/* Preset Selector */}

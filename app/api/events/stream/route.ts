@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar } from "@/lib/auth/permissions";
 
 // Disable default body parsing
 export const dynamic = "force-dynamic";
@@ -11,6 +13,15 @@ export async function GET(request: NextRequest) {
   if (!calendarId) {
     return new Response(JSON.stringify({ error: "Calendar ID is required" }), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Check read permission for calendar (if auth is enabled)
+  const user = await getSessionUser(request.headers);
+  if (user && !(await canViewCalendar(user.id, calendarId))) {
+    return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+      status: 403,
       headers: { "Content-Type": "application/json" },
     });
   }

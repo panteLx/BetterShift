@@ -221,9 +221,9 @@
 
 ## Phase 3: Permission System Implementation
 
-### 3.1 Permission Utilities
+### 3.1 Permission Utilities ✅
 
-- [ ] Create `lib/auth/permissions.ts`
+- [x] Create `lib/auth/permissions.ts`
   - `CalendarPermission` type: "owner" | "admin" | "write" | "read"
   - `checkPermission(userId, calendarId, required)`
   - `getUserCalendarPermission(userId, calendarId)`
@@ -231,36 +231,58 @@
   - `canEditCalendar(userId, calendarId)`
   - `canManageCalendar(userId, calendarId)` (admin/owner)
   - `canDeleteCalendar(userId, calendarId)` (owner only)
+- [x] Create `lib/auth/session.ts` helper
+  - `getSessionUser(headers)` - Get current user from session
+  - `isAuthenticated(headers)` - Check if user is authenticated
+  - Backwards compatible: returns null/true when auth disabled
 
-### 3.2 API Route Protection
+### 3.2 API Route Protection ✅
 
-- [ ] Update `app/api/calendars/route.ts`
+- [x] Update `app/api/calendars/route.ts`
   - GET: Return only owned + shared calendars
   - POST: Set ownerId to current user
-- [ ] Update `app/api/calendars/[id]/route.ts`
+- [x] Update `app/api/calendars/[id]/route.ts`
   - GET: Check read permission
   - PUT: Check admin permission (for rename/settings)
   - DELETE: Check owner permission
-- [ ] Update `app/api/shifts/route.ts`
-  - GET: Filter by accessible calendars
+- [x] Update `app/api/shifts/route.ts`
+  - GET: Check read permission
   - POST: Check write permission
-- [ ] Update `app/api/shifts/[id]/route.ts`
+- [x] Update `app/api/shifts/[id]/route.ts`
   - PUT/DELETE: Check write permission
-- [ ] Update `app/api/presets/route.ts`
-  - GET: Filter by accessible calendars
+- [x] Update `app/api/presets/route.ts`
+  - GET: Check read permission
   - POST: Check write permission
-- [ ] Update `app/api/presets/[id]/route.ts`
+- [x] Update `app/api/presets/[id]/route.ts`
   - PUT/DELETE: Check write permission
-- [ ] Update `app/api/notes/route.ts` & `[id]/route.ts`
+- [x] Update `app/api/presets/reorder/route.ts`
+  - Check write permission
+- [x] Update `app/api/notes/route.ts` & `[id]/route.ts`
   - Same permission checks as shifts
-- [ ] Update `app/api/external-syncs/**` routes
+- [x] Update `app/api/external-syncs/**` routes
   - Check write permission for calendar
+- [x] Update `app/api/shifts/stats/route.ts`
+  - Check read permission for statistics
+- [x] Update `app/api/sync-logs/route.ts`
+  - GET: Check read permission
+  - PATCH/DELETE: Check write permission
+- [x] Update `app/api/events/stream/route.ts`
+  - GET: Check read permission (SSE stream)
+- [x] Update `app/api/calendars/[id]/export/ics/route.ts`
+  - GET: Check read permission (ICS export)
+- [x] Update `app/api/calendars/[id]/export/pdf/route.ts`
+  - GET: Check read permission (PDF export)
+- [x] **Security Review**: ✅ All calendar-related routes protected
+- [x] **Auth Routes Review**: ✅ Change password & delete account use session auth
+- [x] **Build Test**: ✅ All changes compile successfully
 
 ### 3.3 Remove Old Password System
 
 - [ ] Delete `lib/password-utils.ts`
 - [ ] Delete `lib/password-cache.ts`
 - [ ] Remove password logic from all API routes
+- [ ] Remove password fields from creation/editing fields
+- [ ] Remove verify password API route
 - [ ] Remove `usePasswordManagement` hook
 - [ ] Remove `usePasswordProtection` hook
 - [ ] Remove `PasswordDialog` component
@@ -268,6 +290,8 @@
 - [ ] Remove password-related translations
 
 ### 3.4 Guest/Anonymous Access
+
+**Note**: This phase covers **global public access**. For **private link sharing**, see Phase 4.5 (Access Tokens).
 
 - [ ] Add `ALLOW_GUEST_ACCESS` environment variable
   - When `true`: Allow viewing calendars without login
@@ -308,6 +332,11 @@
 - Demo mode (showcase app without registration)
 - Shared family calendar (view-only for relatives)
 - Gradual auth adoption (allow browsing before committing)
+
+**Difference from Access Tokens (Phase 4.5)**:
+
+- **Guest Access**: Calendar is public to ALL visitors (like making a Reddit post public)
+- **Access Tokens**: Calendar is private, shared via secure link (like Google Docs share link)
 
 **Security Considerations**:
 
@@ -363,6 +392,154 @@
 - [ ] Update `useCalendars` hook
   - Include `isOwner`, `permission`, `sharedBy` fields
   - Filter out calendars with insufficient permissions
+
+---
+
+## Phase 4.5: Calendar Access Tokens (Easy Share Links)
+
+**Goal**: Enable low-friction calendar sharing via simple links (like old password system, but secure).
+
+### 4.5.1 Database Schema - Access Tokens
+
+- [ ] Create `calendarAccessTokens` table in `lib/db/schema.ts`
+  - `id` (text, primary key, UUID)
+  - `calendarId` (text, references calendars, cascade delete)
+  - `token` (text, unique, indexed) - Random secure token (32+ chars)
+  - `name` (text, nullable) - Optional label (e.g., "Family Link", "Work Team")
+  - `permission` (text: "read" | "write") - Access level for token holder
+  - `expiresAt` (timestamp, nullable) - Optional expiration date
+  - `createdBy` (text, references users) - Creator of token
+  - `createdAt` (timestamp)
+  - `lastUsedAt` (timestamp, nullable) - Track last access
+  - `usageCount` (integer, default 0) - Track how often used
+  - `isActive` (boolean, default true) - Can be disabled without deletion
+- [ ] Add unique index on `token` column
+- [ ] Add index on `(calendarId, isActive)` for quick lookups
+- [ ] Generate migration: `npm run db:generate`
+
+### 4.5.2 Token Middleware & Authentication
+
+- [ ] Create `lib/auth/token-auth.ts`
+  - `validateAccessToken(token: string)` - Check if token is valid & active
+  - `getCalendarByToken(token: string)` - Get calendar + permission
+  - `updateTokenUsage(tokenId: string)` - Update lastUsedAt & usageCount
+  - `storeTokenInSession(token: string, calendarId: string)` - Persist access
+- [ ] Update `proxy.ts` middleware
+  - Check for `?token=xyz` in URL query parameters
+  - Validate token before redirecting to calendar
+  - Store validated token in secure cookie/session
+  - Redirect to clean URL (remove token from URL)
+- [ ] Update `lib/auth/permissions.ts`
+  - Extend `getUserCalendarPermission()` to check session tokens
+  - Token permissions apply alongside user permissions
+  - Tokens grant access even if user not logged in
+
+### 4.5.3 Token Management API
+
+- [ ] Create `app/api/calendars/[id]/tokens/route.ts`
+  - **GET**: List all tokens for calendar (owner/admin only)
+    - Return: token (partial, e.g., "abc...xyz"), name, permission, expiresAt, lastUsedAt, usageCount
+    - Never return full token (security)
+  - **POST**: Create new access token (owner/admin only)
+    - Body: `{ name?, permission, expiresAt? }`
+    - Generate secure random token (crypto.randomBytes)
+    - Return: Full token (only shown once!)
+- [ ] Create `app/api/calendars/[id]/tokens/[tokenId]/route.ts`
+  - **PATCH**: Update token (owner/admin only)
+    - Update: name, permission, expiresAt, isActive
+    - Cannot change token itself (security)
+  - **DELETE**: Delete token (owner/admin only)
+    - Revokes access immediately
+    - Cascade cleanup of related data
+
+### 4.5.4 Token UI Components
+
+- [ ] Create `components/calendar-token-sheet.tsx`
+  - List existing access tokens
+  - Token preview (partial, e.g., "••••••xyz789")
+  - Show metadata: name, permission, created date, last used, usage count
+  - Toggle active/inactive status
+  - Delete token with confirmation
+  - Create new token dialog
+- [ ] Create `components/calendar-token-create-dialog.tsx`
+  - Input: Token name (optional, e.g., "Family Link")
+  - Select: Permission level (read/write)
+  - Date picker: Expiration date (optional)
+  - Generate button → Show full token **once** with copy button
+  - Warning: "Save this token now - it won't be shown again"
+  - Generate shareable link: `${baseUrl}/calendar/${calendarId}?token=${token}`
+- [ ] Create `components/calendar-token-badge.tsx`
+  - Show "Accessed via Share Link" indicator
+  - Display permission level (read-only/editable)
+  - Show token name if available
+- [ ] Add "Share Link" button to calendar settings
+  - Opens token management sheet
+  - Quick action: "Create Share Link" → Generates token → Shows link
+
+### 4.5.5 Token Hooks
+
+- [ ] Create `hooks/useCalendarTokens.ts`
+  - `fetchTokens(calendarId)` - List tokens (owner/admin only)
+  - `createToken(calendarId, name?, permission, expiresAt?)` - Generate new token
+  - `updateToken(tokenId, updates)` - Modify token settings
+  - `deleteToken(tokenId)` - Revoke token
+  - `copyShareLink(token, calendarId)` - Copy full URL to clipboard
+
+### 4.5.6 Token Access Flow
+
+**User Journey:**
+
+1. **Owner generates token:**
+
+   - Click "Share" in calendar settings
+   - Choose "Create Share Link"
+   - Set permission (read/write) & optional expiration
+   - Copy generated link: `https://app.example.com/calendar/abc?token=xyz`
+
+2. **Recipient opens link:**
+
+   - Middleware validates token
+   - Token stored in secure session cookie
+   - Redirect to clean URL: `https://app.example.com/calendar/abc`
+   - User sees calendar with token-granted permissions
+   - Banner: "You're viewing this calendar via share link (read-only)"
+
+3. **Persistent access:**
+
+   - Token stored in session (survives page reloads)
+   - Works across multiple calendars (if multiple tokens)
+   - Persists until: session expires, token revoked, or user clears cookies
+
+4. **Token revocation:**
+   - Owner disables/deletes token
+   - All users with that token lose access immediately
+   - Next request: "Access token invalid or revoked"
+
+### 4.5.7 Security & Best Practices
+
+- [ ] Generate tokens using `crypto.randomBytes(32)` (256-bit security)
+- [ ] Never log full tokens (only log token IDs)
+- [ ] Hash tokens in database (optional, for extra security)
+- [ ] Rate limit token validation endpoint (prevent brute force)
+- [ ] Audit log for token creation/deletion/usage
+- [ ] Show token usage statistics (last used, count)
+- [ ] Expire tokens automatically (cron job or on-access check)
+- [ ] Limit number of active tokens per calendar (e.g., max 10)
+- [ ] Warn owner when token is used for first time
+- [ ] Optional: Require password confirmation to create tokens
+
+### 4.5.8 Token vs Guest vs User Shares Comparison
+
+| Feature         | Guest Access (3.4)  | Access Tokens (4.5)  | User Shares (4.1-4.4) |
+| --------------- | ------------------- | -------------------- | --------------------- |
+| **Use Case**    | Public calendars    | Private link sharing | Team collaboration    |
+| **Setup**       | Set calendar public | Generate share link  | Invite by email       |
+| **Recipient**   | No account needed   | No account needed    | Account required      |
+| **Revocation**  | Disable guest mode  | Delete token         | Remove share          |
+| **Granularity** | Per calendar        | Per link/token       | Per user              |
+| **Audit Trail** | None                | Token usage stats    | User activity log     |
+| **Persistence** | Always accessible   | Until revoked        | Until removed         |
+| **Example**     | Public team shifts  | Share with family    | Work calendar         |
 
 ---
 
@@ -540,23 +717,11 @@
 
 ## Phase 8: Testing & Documentation
 
-### 8.1 Testing
-
-- [ ] Test auth disabled mode (backwards compatibility)
-- [ ] Test auth enabled mode
-- [ ] Test OIDC login flow (Google, GitHub, Discord)
-- [ ] Test custom OIDC provider (with Keycloak/Authentik)
-- [ ] Test username/password registration
-- [ ] Test calendar sharing (all permission levels)
-- [ ] Test permission enforcement in API
-- [ ] Test data migration with sample data
-- [ ] Test concurrent user sessions
-- [ ] Test multiple OIDC providers enabled simultaneously
-
 ### 8.2 Documentation
 
 - [ ] Update README.md
   - Auth system overview
+  - Admin panel features
   - Environment variables
   - OIDC configuration guide
   - Migration instructions
@@ -565,12 +730,7 @@
   - OIDC provider configuration (Google, GitHub, Discord)
   - Custom OIDC provider setup (Keycloak, Authentik, etc.)
   - Self-hosting considerations
-- [ ] Create `docs/CUSTOM_OIDC.md`
-  - Generic OIDC provider configuration
-  - Examples for popular providers (Keycloak, Authentik, Authelia, Zitadel)
-  - Troubleshooting OIDC issues
 - [ ] Update Docker setup for auth
-- [ ] Add environment variable examples
 
 ### 8.3 Security Review
 
@@ -607,34 +767,6 @@
 
 ---
 
-## Rollout Strategy
-
-### Stage 1: Development (Current)
-
-- Complete Phase 1-3
-- Test in local environment
-- No production impact
-
-### Stage 2: Beta (Auth Disabled by Default)
-
-- Deploy with `AUTH_ENABLED=false`
-- Existing users unaffected
-- Optional opt-in for testing
-
-### Stage 3: Migration Window
-
-- Announce auth system availability
-- Provide migration guide
-- Support period for questions
-
-### Stage 4: Full Rollout
-
-- Default `AUTH_ENABLED=true` for new installations
-- Existing installations can enable via env var
-- Backwards compatibility maintained
-
----
-
 ## Environment Variables
 
 **Note**: Currently requires duplicated variables (server + NEXT*PUBLIC* for client). Phase 2.1 will evaluate if deduplication is possible.
@@ -648,7 +780,6 @@ BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000  # Comma-separated (server-sid
 
 # User Registration Settings
 NEXT_PUBLIC_ALLOW_USER_REGISTRATION=true|false    # Enable/disable new user signups (default: true)
-NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION=false      # Enforce email verification (default: false)
 
 # Session Settings (server-side only)
 SESSION_MAX_AGE=604800                     # 7 days (in seconds)

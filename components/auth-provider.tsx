@@ -42,18 +42,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Skip redirect for public routes
-    if (isPublicRoute) {
-      return;
-    }
-
     // Wait for loading to complete
     if (isLoading) {
       return;
     }
 
-    // Redirect to login if not authenticated
-    if (!isAuthenticated) {
+    // Redirect authenticated users from public routes to home
+    if (isPublicRoute && isAuthenticated) {
+      // Check for returnUrl in query params
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnUrl = searchParams.get("returnUrl");
+      router.replace(returnUrl || "/");
+      return;
+    }
+
+    // Redirect unauthenticated users from protected routes to login
+    if (!isPublicRoute && !isAuthenticated) {
       const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname)}`;
       router.push(loginUrl);
     }

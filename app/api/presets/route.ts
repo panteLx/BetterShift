@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET all presets for a calendar
 export async function GET(request: NextRequest) {
@@ -17,9 +19,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const password = searchParams.get("password");
+    const user = await getSessionUser(request.headers);
 
-    // Fetch calendar to check password
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -32,8 +34,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check read permission (if auth is enabled)
+    if (user && !(await canViewCalendar(user.id, calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     const presets = await db
       .select()
@@ -64,7 +71,6 @@ export async function POST(request: NextRequest) {
       isSecondary,
       isAllDay,
       hideFromStats,
-      password,
     } = body;
 
     if (!calendarId || !title) {
@@ -74,7 +80,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch calendar to check password
+    const user = await getSessionUser(request.headers);
+
+    // Fetch calendar
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -87,8 +95,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permission (if auth is enabled)
+    if (user && !(await canEditCalendar(user.id, calendarId))) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     // Get the max order value for this calendar to append new preset at the end
     const existingPresets = await db

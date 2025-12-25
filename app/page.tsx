@@ -29,10 +29,11 @@ import { useDialogStates } from "@/hooks/useDialogStates";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { LockedCalendarView } from "@/components/locked-calendar-view";
-import { CalendarSkeleton } from "@/components/calendar-skeleton";
-import { CalendarContentSkeleton } from "@/components/calendar-content-skeleton";
-import { LockedCalendarSkeleton } from "@/components/locked-calendar-skeleton";
-import { CalendarCompareSkeleton } from "@/components/calendar-compare-skeleton";
+import { CalendarHeaderSkeleton } from "@/components/skeletons/calendar-header-skeleton";
+import { CalendarCompareHeaderSkeleton } from "@/components/skeletons/calendar-compare-header-skeleton";
+import { CalendarContentSkeleton } from "@/components/skeletons/calendar-content-skeleton";
+import { LockedCalendarSkeleton } from "@/components/skeletons/locked-calendar-skeleton";
+import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { CalendarContent } from "@/components/calendar-content";
 import { CalendarCompareSheet } from "@/components/calendar-compare-sheet";
 import { CalendarCompareView } from "@/components/calendar-compare-view";
@@ -62,6 +63,7 @@ function HomeContent() {
     selectedCalendar,
     setSelectedCalendar,
     loading,
+    hasLoadedOnce,
     createCalendar: createCalendarHook,
     deleteCalendar: deleteCalendarHook,
     refetchCalendars,
@@ -885,10 +887,27 @@ function HomeContent() {
     // Show skeleton while loading
     if (compareDataLoading) {
       return (
-        <CalendarCompareSkeleton
-          count={selectedCompareIds.length}
-          hidePresetHeader={viewSettings.hidePresetHeader}
-        />
+        <div className="min-h-screen flex flex-col">
+          <CalendarCompareHeaderSkeleton />
+          <div className="flex-1 w-full px-1 sm:px-4 py-4">
+            <div
+              className={`grid gap-4 ${
+                selectedCompareIds.length === 2
+                  ? "grid-cols-1 lg:grid-cols-2"
+                  : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
+              }`}
+            >
+              {Array.from({ length: selectedCompareIds.length }).map(
+                (_, index) => (
+                  <div key={index} className="space-y-4">
+                    <CalendarContentSkeleton daysCount={35} />
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+          <AppFooterSkeleton />
+        </div>
       );
     }
 
@@ -1195,7 +1214,15 @@ function HomeContent() {
 
   // Loading state
   if (loading) {
-    return <CalendarSkeleton />;
+    return (
+      <div className="min-h-screen flex flex-col">
+        <CalendarHeaderSkeleton />
+        <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
+          <CalendarContentSkeleton />
+        </div>
+        <AppFooterSkeleton />
+      </div>
+    );
   }
 
   // Empty state
@@ -1204,6 +1231,7 @@ function HomeContent() {
       <>
         <EmptyCalendarState
           onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
+          showUserMenu={true}
         />
         <DialogManager
           showCalendarDialog={dialogStates.showCalendarDialog}

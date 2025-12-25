@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
+import { getSessionUser } from "@/lib/auth/session";
+import { canEditCalendar } from "@/lib/auth/permissions";
 import {
   expandRecurringEvents,
   splitMultiDayEvent,
@@ -344,19 +346,6 @@ export async function POST(
   try {
     const { id: syncId } = await params;
 
-    // Read password from request body
-    let password: string | null = null;
-    const contentType = request.headers.get("content-type");
-
-    if (contentType?.includes("application/json")) {
-      try {
-        const body = await request.json();
-        password = body.password || null;
-      } catch {
-        // If body parsing fails, continue with null password
-      }
-    }
-
     // Fetch external sync to get calendar ID
     const [externalSync] = await db
       .select()
@@ -370,7 +359,7 @@ export async function POST(
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar to verify it exists
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -383,8 +372,14 @@ export async function POST(
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permissions if user is authenticated
+    const user = await getSessionUser(request.headers);
+    if (user && !canEditCalendar(user.id, externalSync.calendarId)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
 
     const stats = await syncExternalCalendar(syncId, "manual");
 

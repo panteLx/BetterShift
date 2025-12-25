@@ -3,8 +3,9 @@
 import { motion } from "motion/react";
 import { useTranslations, useLocale } from "next-intl";
 import { useState } from "react";
+import Link from "next/link";
 import { UserMenu } from "@/components/user-menu";
-import { Calendar as CalendarIcon, Bell } from "lucide-react";
+import { Calendar as CalendarIcon, Bell, ExternalLink } from "lucide-react";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 
@@ -30,27 +31,29 @@ export function AuthHeader({ showUserMenu = false }: AuthHeaderProps) {
           <div className="space-y-3 sm:space-y-4">
             {/* Header with Logo and optional User Menu */}
             <div className="flex items-center justify-between gap-4">
-              {/* Logo Section */}
-              <motion.div
-                className="flex items-center gap-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 flex items-center justify-center shadow-xl shadow-slate-900/50 dark:shadow-slate-950/70 ring-2 ring-slate-700/50 dark:ring-slate-600/50">
-                    <CalendarIcon className="h-6 w-6 text-white" />
+              {/* Logo Section - Clickable to go home */}
+              <Link href="/" className="flex items-center gap-3 group">
+                <motion.div
+                  className="flex items-center gap-3"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="relative shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 flex items-center justify-center shadow-xl shadow-slate-900/50 dark:shadow-slate-950/70 ring-2 ring-slate-700/50 dark:ring-slate-600/50 transition-transform group-hover:scale-105">
+                      <CalendarIcon className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text">
-                    {t("app.title")}
-                  </h1>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {t("app.subtitle", { default: "Organize your shifts" })}
-                  </p>
-                </div>
-              </motion.div>
+                  <div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text transition-all group-hover:from-primary group-hover:via-primary group-hover:to-primary/70">
+                      {t("app.title")}
+                    </h1>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {t("app.subtitle", { default: "Organize your shifts" })}
+                    </p>
+                  </div>
+                </motion.div>
+              </Link>
 
               {/* User Menu (optional - shown on profile page) */}
               {showUserMenu && (
@@ -90,6 +93,14 @@ export function AuthHeader({ showUserMenu = false }: AuthHeaderProps) {
                           version: versionInfo.latestVersion || "unknown",
                         })}
                       </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2 text-primary">
+                    <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                      {t("update.viewChangelog")}
+                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                      <ExternalLink className="h-4 w-4 group-hover:rotate-12 transition-transform" />
                     </div>
                   </div>
                 </button>

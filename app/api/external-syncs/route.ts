@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { getSessionUser } from "@/lib/auth/session";
+import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -22,9 +24,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const password = searchParams.get("password");
-
-    // Fetch calendar to check password
+    // Fetch calendar to verify it exists
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -37,8 +37,14 @@ export async function GET(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check view permissions if user is authenticated
+    const user = await getSessionUser(request.headers);
+    if (user && !canViewCalendar(user.id, calendarId)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Read access required." },
+        { status: 403 }
+      );
+    }
 
     const syncs = await db
       .select()
@@ -81,7 +87,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch calendar to check password
+    // Fetch calendar to verify it exists
     const [calendar] = await db
       .select()
       .from(calendars)
@@ -94,8 +100,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // TEMP: Password checks disabled during auth migration (Phase 0-2)
-    // Will be replaced with permission system in Phase 3
+    // Check edit permissions if user is authenticated
+    const user = await getSessionUser(request.headers);
+    if (user && !canEditCalendar(user.id, calendarId)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
 
     let finalCalendarUrl;
     let isOneTimeImport = false;
