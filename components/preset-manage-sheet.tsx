@@ -37,8 +37,10 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { PRESET_COLORS } from "@/lib/constants";
 import { Plus, Trash2, Edit2, Loader2, GripVertical } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useDirtyState } from "@/hooks/useDirtyState";
 import { usePresetManagement } from "@/hooks/usePresetManagement";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface PresetFormData {
   title: string;
@@ -57,6 +59,7 @@ interface PresetManageSheetProps {
   calendarId: string;
   presets: ShiftPreset[];
   onPresetsChange: () => void;
+  readOnly?: boolean;
 }
 
 // Sortable preset item component
@@ -67,6 +70,7 @@ interface SortablePresetItemProps {
   onDelete: (id: string) => void;
   t: (key: string) => string;
   showDragHandle?: boolean;
+  isReadOnly?: boolean;
 }
 
 const SortablePresetItem = memo(function SortablePresetItem({
@@ -76,6 +80,7 @@ const SortablePresetItem = memo(function SortablePresetItem({
   onDelete,
   t,
   showDragHandle = true,
+  isReadOnly = false,
 }: SortablePresetItemProps) {
   const {
     attributes,
@@ -141,28 +146,32 @@ const SortablePresetItem = memo(function SortablePresetItem({
           )}
         </div>
         <div className="flex gap-1 shrink-0">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8"
-            onClick={() => onEdit(preset)}
-            disabled={isDeleting}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            onClick={() => onDelete(preset.id)}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
+          {!isReadOnly && (
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={() => onEdit(preset)}
+                disabled={isDeleting}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => onDelete(preset.id)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -175,8 +184,15 @@ export function PresetManageSheet({
   calendarId,
   presets,
   onPresetsChange,
+  readOnly = false,
 }: PresetManageSheetProps) {
   const t = useTranslations();
+  const [presetToDelete, setPresetToDelete] = useState<string | null>(null);
+
+  const permission = useCalendarPermission(calendarId);
+
+  // Determine if sheet should be in read-only mode
+  const isReadOnly = readOnly || !permission.canEdit;
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPreset, setEditingPreset] = useState<ShiftPreset | null>(null);
@@ -474,6 +490,13 @@ export function PresetManageSheet({
             </SheetDescription>
           </SheetHeader>
 
+          {/* Read-Only Banner */}
+          {isReadOnly && (
+            <div className="px-6 pt-6">
+              <ReadOnlyBanner message={t("guest.cannotEditPresets")} />
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
             {/* Empty state when no presets exist */}
             {presets.length === 0 && !showAddForm && !editingPreset && (
@@ -509,6 +532,7 @@ export function PresetManageSheet({
                             onDelete={handleDeleteClick}
                             t={t}
                             showDragHandle={orderedPrimaryPresets.length > 1}
+                            isReadOnly={isReadOnly}
                           />
                         ))}
                       </div>
@@ -544,6 +568,7 @@ export function PresetManageSheet({
                             onDelete={handleDeleteClick}
                             t={t}
                             showDragHandle={orderedSecondaryPresets.length > 1}
+                            isReadOnly={isReadOnly}
                           />
                         ))}
                       </div>
@@ -562,6 +587,7 @@ export function PresetManageSheet({
                   onDelete={handleDeleteClick}
                   t={t}
                   showDragHandle={false}
+                  isReadOnly={isReadOnly}
                 />
               </div>
             )}
@@ -732,7 +758,7 @@ export function PresetManageSheet({
           </div>
 
           {/* Footer: Always visible Add or Save button */}
-          {!showAddForm && !editingPreset ? (
+          {!showAddForm && !editingPreset && !isReadOnly && (
             <div className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
               <Button
                 onClick={startAdd}
@@ -743,7 +769,8 @@ export function PresetManageSheet({
                 {t("preset.createNew")}
               </Button>
             </div>
-          ) : (
+          )}
+          {!isReadOnly && (showAddForm || editingPreset) && (
             <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
               <div className="flex gap-2.5 w-full">
                 <Button

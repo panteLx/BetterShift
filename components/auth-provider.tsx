@@ -9,9 +9,9 @@ import { useAuth } from "@/hooks/useAuth";
  *
  * Features:
  * - Checks auth status on mount
- * - Redirects to login if not authenticated
+ * - Redirects to login if not authenticated (unless guest access enabled)
  * - Handles loading states
- * - Respects auth feature flag
+ * - Respects auth and guest access feature flags
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,6 +23,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authEnabledFlag =
     typeof window !== "undefined" &&
     process.env.NEXT_PUBLIC_AUTH_ENABLED === "true";
+
+  // Check guest access flag
+  const guestAccessAllowed =
+    typeof window !== "undefined" &&
+    process.env.NEXT_PUBLIC_ALLOW_GUEST_ACCESS === "true";
 
   // Public routes that don't require authentication
   const publicRoutes = ["/login", "/register"];
@@ -47,25 +52,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Redirect authenticated users from public routes to home
-    if (isPublicRoute && isAuthenticated) {
-      // Check for returnUrl in query params
-      const searchParams = new URLSearchParams(window.location.search);
-      const returnUrl = searchParams.get("returnUrl");
-      router.replace(returnUrl || "/");
+    // Don't auto-redirect from login/register pages - let those pages handle their own navigation
+    // This allows users to stay on login after logout when guest access is enabled
+    if (isPublicRoute) {
       return;
     }
 
     // Redirect unauthenticated users from protected routes to login
-    if (!isPublicRoute && !isAuthenticated) {
+    // ONLY if guest access is NOT allowed
+    if (!isPublicRoute && !isAuthenticated && !guestAccessAllowed) {
       const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname)}`;
-      router.push(loginUrl);
+      router.replace(loginUrl);
     }
   }, [
     mounted,
     isAuthenticated,
     isLoading,
     authEnabledFlag,
+    guestAccessAllowed,
     isPublicRoute,
     pathname,
     router,
@@ -88,8 +92,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Don't render protected content if not authenticated
-  if (authEnabledFlag && !isPublicRoute && !isAuthenticated && !isLoading) {
+  // Don't render protected content if not authenticated (unless guest access allowed)
+  if (
+    authEnabledFlag &&
+    !isPublicRoute &&
+    !isAuthenticated &&
+    !isLoading &&
+    !guestAccessAllowed
+  ) {
     return null;
   }
 

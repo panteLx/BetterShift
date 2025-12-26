@@ -11,7 +11,14 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Bell, Copy, Settings } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Bell, Copy, Settings, Lock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
@@ -37,9 +44,20 @@ export function CalendarSelector({
   variant = "desktop",
 }: CalendarSelectorProps) {
   const t = useTranslations();
+  const { isGuest } = useAuth();
 
-  const selectedCalendar = calendars.find((c) => c.id === selectedId);
-  const canCompare = calendars.length >= 2;
+  // Filter calendars: guests only see calendars with read or write permission
+  const visibleCalendars = isGuest
+    ? calendars.filter(
+        (c) => c.guestPermission === "read" || c.guestPermission === "write"
+      )
+    : calendars;
+
+  const selectedCalendar = visibleCalendars.find((c) => c.id === selectedId);
+  const canCompare = visibleCalendars.length >= 2;
+
+  // Check if selected calendar is read-only for guest
+  const isReadOnly = isGuest && selectedCalendar?.guestPermission === "read";
 
   // Desktop: Compact icon-based layout
   if (variant === "desktop") {
@@ -47,34 +65,68 @@ export function CalendarSelector({
       <div className="flex gap-2 items-center">
         <Select value={selectedId} onValueChange={onSelect}>
           <SelectTrigger className="flex-1 h-9 sm:h-10 text-sm">
-            <SelectValue placeholder={t("calendar.title")} />
+            {selectedCalendar ? (
+              <div className="flex items-center gap-2 flex-1">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: selectedCalendar.color }}
+                />
+                <span className="truncate">{selectedCalendar.name}</span>
+                {isReadOnly && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("guest.readOnlyAccess")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            ) : (
+              <SelectValue placeholder={t("calendar.title")} />
+            )}
           </SelectTrigger>
           <SelectContent>
-            {calendars.map((calendar) => (
-              <SelectItem key={calendar.id} value={calendar.id}>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: calendar.color }}
-                  />
-                  {calendar.name}
+            {visibleCalendars.map((calendar) => {
+              const isCalendarReadOnly =
+                isGuest && calendar.guestPermission === "read";
+
+              return (
+                <SelectItem key={calendar.id} value={calendar.id}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: calendar.color }}
+                    />
+                    <span className="flex-1">{calendar.name}</span>
+                    {isCalendarReadOnly && (
+                      <Lock className="h-3 w-3 text-muted-foreground ml-2" />
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })}
+            {!isGuest && (
+              <>
+                <Separator className="my-1" />
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateNew();
+                  }}
+                  className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("calendar.create")}
                 </div>
-              </SelectItem>
-            ))}
-            <Separator className="my-1" />
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                onCreateNew();
-              }}
-              className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {t("calendar.create")}
-            </div>
+              </>
+            )}
           </SelectContent>
         </Select>
-        {onSettings && selectedId && (
+        {onSettings && selectedId && !isGuest && (
           <Button
             onClick={onSettings}
             size="icon"
@@ -130,38 +182,63 @@ export function CalendarSelector({
       {/* Calendar Dropdown - Full Width */}
       <Select value={selectedId} onValueChange={onSelect}>
         <SelectTrigger className="w-full h-10 text-sm">
-          <SelectValue placeholder={t("calendar.title")} />
+          {selectedCalendar ? (
+            <div className="flex items-center gap-2 flex-1">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: selectedCalendar.color }}
+              />
+              <span className="truncate">{selectedCalendar.name}</span>
+              {isReadOnly && (
+                <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
+              )}
+            </div>
+          ) : (
+            <SelectValue placeholder={t("calendar.title")} />
+          )}
         </SelectTrigger>
         <SelectContent>
-          {calendars.map((calendar) => (
-            <SelectItem key={calendar.id} value={calendar.id}>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: calendar.color }}
-                />
-                {calendar.name}
+          {visibleCalendars.map((calendar) => {
+            const isCalendarReadOnly =
+              isGuest && calendar.guestPermission === "read";
+
+            return (
+              <SelectItem key={calendar.id} value={calendar.id}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: calendar.color }}
+                  />
+                  <span className="flex-1">{calendar.name}</span>
+                  {isCalendarReadOnly && (
+                    <Lock className="h-3 w-3 text-muted-foreground ml-2" />
+                  )}
+                </div>
+              </SelectItem>
+            );
+          })}
+          {!isGuest && (
+            <>
+              <Separator className="my-1" />
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateNew();
+                }}
+                className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t("calendar.create")}
               </div>
-            </SelectItem>
-          ))}
-          <Separator className="my-1" />
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateNew();
-            }}
-            className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t("calendar.create")}
-          </div>
+            </>
+          )}
         </SelectContent>
       </Select>
 
       {/* Action Buttons - Even distribution */}
       {selectedId && (
         <div className="grid grid-cols-3 gap-2">
-          {onSettings && (
+          {onSettings && !isGuest && (
             <Button
               onClick={onSettings}
               size="sm"

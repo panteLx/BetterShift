@@ -50,8 +50,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Check edit permission (if auth is enabled)
-    if (user && !(await canEditCalendar(user.id, calendarId))) {
+    // Check edit permission (works for both authenticated users and guests)
+    const hasAccess = await canEditCalendar(user?.id, calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

@@ -37,8 +37,9 @@ export async function GET(
       );
     }
 
-    // Check read permission (if auth is enabled)
-    if (user && !(await canViewCalendar(user.id, preset.calendarId))) {
+    // Check read permission (works for both authenticated users and guests)
+    const hasAccess = await canViewCalendar(user?.id, preset.calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -99,8 +100,12 @@ export async function PATCH(
       );
     }
 
-    // Check edit permission (if auth is enabled)
-    if (user && !(await canEditCalendar(user.id, existingPreset.calendarId))) {
+    // Check edit permission (works for both authenticated users and guests)
+    const hasAccess = await canEditCalendar(
+      user?.id,
+      existingPreset.calendarId
+    );
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -187,8 +192,9 @@ export async function DELETE(
       );
     }
 
-    // Check edit permission (if auth is enabled)
-    if (user && !(await canEditCalendar(user.id, preset.calendarId))) {
+    // Check edit permission (works for both authenticated users and guests)
+    const hasAccess = await canEditCalendar(user?.id, preset.calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

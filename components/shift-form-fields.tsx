@@ -18,6 +18,7 @@ interface ShiftFormFieldsProps {
   isEditing: boolean;
   onBlur?: () => void;
   showSaved?: boolean;
+  readOnly?: boolean;
 }
 
 export function ShiftFormFields({
@@ -29,6 +30,7 @@ export function ShiftFormFields({
   onPresetNameChange,
   isEditing,
   onBlur,
+  readOnly = false,
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
 
@@ -50,6 +52,7 @@ export function ShiftFormFields({
             onFormDataChange({ ...formData, date: e.target.value })
           }
           onBlur={onBlur}
+          disabled={readOnly}
           className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
         />
       </div>
@@ -62,6 +65,7 @@ export function ShiftFormFields({
             onFormDataChange({ ...formData, isAllDay: !!checked });
             setTimeout(() => onBlur?.(), 10);
           }}
+          disabled={readOnly}
         />
         <Label htmlFor="allDay" className="text-sm font-medium cursor-pointer">
           {t("shift.allDayShift")}
@@ -88,6 +92,7 @@ export function ShiftFormFields({
                 onFormDataChange({ ...formData, startTime: e.target.value })
               }
               onBlur={onBlur}
+              disabled={readOnly}
               className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
             />
           </div>
@@ -103,6 +108,7 @@ export function ShiftFormFields({
                 onFormDataChange({ ...formData, endTime: e.target.value })
               }
               onBlur={onBlur}
+              disabled={readOnly}
               className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
             />
           </div>
@@ -125,8 +131,9 @@ export function ShiftFormFields({
             onFormDataChange({ ...formData, title: e.target.value })
           }
           onBlur={onBlur}
+          disabled={readOnly}
           className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
-          autoFocus
+          autoFocus={!readOnly}
         />
       </div>
 
@@ -146,6 +153,7 @@ export function ShiftFormFields({
             onFormDataChange({ ...formData, notes: e.target.value })
           }
           onBlur={onBlur}
+          disabled={readOnly}
           rows={3}
           className="border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 resize-none"
         />
@@ -156,10 +164,11 @@ export function ShiftFormFields({
         onChange={(color) => onFormDataChange({ ...formData, color })}
         label={t("form.colorLabel")}
         presetColors={PRESET_COLORS}
+        disabled={readOnly}
       />
 
       {/* Auto-Save as Preset */}
-      {!isEditing && (
+      {!isEditing && !readOnly && (
         <div className="space-y-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
           <div className="flex items-center space-x-2">
             <Checkbox

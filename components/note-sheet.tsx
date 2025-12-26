@@ -16,6 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { CalendarNote } from "@/lib/db/schema";
 import { format } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
@@ -36,6 +38,8 @@ interface NoteSheetProps {
   onDelete?: () => void;
   selectedDate?: Date;
   note?: CalendarNote;
+  calendarId?: string;
+  readOnly?: boolean;
 }
 
 export function NoteSheet({
@@ -45,10 +49,13 @@ export function NoteSheet({
   onDelete,
   selectedDate,
   note,
+  calendarId,
+  readOnly = false,
 }: NoteSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
+  const permission = useCalendarPermission(calendarId);
   const [noteText, setNoteText] = useState("");
   const [type, setType] = useState<"note" | "event">("note");
   const [color, setColor] = useState<string>("#3b82f6");
@@ -56,6 +63,9 @@ export function NoteSheet({
   const [recurringInterval, setRecurringInterval] = useState<number>(1);
   const [recurringUnit, setRecurringUnit] = useState<string>("months");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Determine if sheet should be in read-only mode
+  const isReadOnly = readOnly || !permission.canEdit;
   const initialStateRef = useRef<{
     text: string;
     type: "note" | "event";
@@ -184,7 +194,7 @@ export function NoteSheet({
   const customFooter = note ? (
     // Edit mode: Delete button on left, Cancel/Save on right
     <div className="flex gap-2.5 w-full">
-      {onDelete && (
+      {onDelete && !isReadOnly && (
         <Button
           type="button"
           variant="destructive"
@@ -205,14 +215,16 @@ export function NoteSheet({
       >
         {t("common.cancel")}
       </Button>
-      <Button
-        type="button"
-        onClick={handleSave}
-        disabled={isSaving || !noteText.trim() || !hasChanges()}
-        className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-      >
-        {isSaving ? t("common.saving") : t("common.save")}
-      </Button>
+      {!isReadOnly && (
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !noteText.trim() || !hasChanges()}
+          className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
+        >
+          {isSaving ? t("common.saving") : t("common.save")}
+        </Button>
+      )}
     </div>
   ) : (
     // Create mode: Full-width buttons
@@ -226,14 +238,16 @@ export function NoteSheet({
       >
         {t("common.cancel")}
       </Button>
-      <Button
-        type="button"
-        onClick={handleSave}
-        disabled={isSaving || !noteText.trim()}
-        className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-      >
-        {isSaving ? t("common.saving") : t("common.save")}
-      </Button>
+      {!isReadOnly && (
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !noteText.trim()}
+          className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
+        >
+          {isSaving ? t("common.saving") : t("common.save")}
+        </Button>
+      )}
     </div>
   );
 
@@ -257,6 +271,9 @@ export function NoteSheet({
       maxWidth="md"
     >
       <div className="space-y-6">
+        {/* Read-Only Banner */}
+        {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEditNotes")} />}
+
         {/* Recurring Event Warning */}
         {note &&
           type === "event" &&
@@ -277,15 +294,24 @@ export function NoteSheet({
             value={type}
             onValueChange={(value) => setType(value as "note" | "event")}
             className="flex gap-4"
+            disabled={isReadOnly}
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="note" id="type-note" />
+              <RadioGroupItem
+                value="note"
+                id="type-note"
+                disabled={isReadOnly}
+              />
               <Label htmlFor="type-note" className="cursor-pointer font-normal">
                 {t("note.typeNote")}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="event" id="type-event" />
+              <RadioGroupItem
+                value="event"
+                id="type-event"
+                disabled={isReadOnly}
+              />
               <Label
                 htmlFor="type-event"
                 className="cursor-pointer font-normal"
@@ -305,6 +331,7 @@ export function NoteSheet({
               onChange={setColor}
               label={t("note.eventColor")}
               presetColors={PRESET_COLORS}
+              disabled={isReadOnly}
             />
 
             {/* Recurring Pattern */}
@@ -315,6 +342,7 @@ export function NoteSheet({
               <Select
                 value={recurringPattern}
                 onValueChange={setRecurringPattern}
+                disabled={isReadOnly}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -349,10 +377,12 @@ export function NoteSheet({
                       setRecurringInterval(parseInt(e.target.value) || 1)
                     }
                     className="w-20"
+                    disabled={isReadOnly}
                   />
                   <Select
                     value={recurringUnit}
                     onValueChange={setRecurringUnit}
+                    disabled={isReadOnly}
                   >
                     <SelectTrigger className="flex-1">
                       <SelectValue />
@@ -383,6 +413,7 @@ export function NoteSheet({
                 : t("note.placeholder")
             }
             className="min-h-[200px] resize-none focus-visible:ring-primary/30 border-border/50"
+            disabled={isReadOnly}
           />
         </div>
       </div>

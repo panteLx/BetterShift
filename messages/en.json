@@ -349,7 +349,6 @@
     "name": "Name",
     "namePlaceholder": "Your name",
     "continueWith": "Continue with {provider}",
-    "continueAsGuest": "Continue as Guest",
     "alreadyHaveAccount": "Already have an account?",
     "noAccountYet": "Don't have an account yet?",
     "changePassword": "Change Password",
@@ -363,6 +362,7 @@
     "accountDisconnected": "{provider} disconnected",
     "loginSuccess": "Signed in successfully",
     "loginError": "Sign in failed",
+    "continueAsGuest": "Continue as Guest",
     "registerSuccess": "Account created successfully",
     "registerError": "Registration failed",
     "logoutSuccess": "Signed out successfully",
@@ -386,5 +386,24 @@
       "discord": "Discord",
       "customOidc": "SSO"
     }
+  },
+  "guest": {
+    "viewingAsGuest": "You are viewing as guest",
+    "bannerMessage": "You are viewing this calendar as a guest. Sign in for full access.",
+    "loginForFullAccess": "Sign in for full access",
+    "readOnlyAccess": "Read-only access",
+    "readOnlyView": "Read-only view",
+    "cannotEdit": "You cannot edit in guest mode",
+    "cannotEditShifts": "You cannot edit shifts as a guest",
+    "cannotEditPresets": "You cannot edit presets as a guest",
+    "cannotEditNotes": "You cannot edit notes as a guest",
+    "guestPermission": "Guest Access",
+    "guestPermissionDescription": "Control what visitors can do without signing in",
+    "guestPermissionNone": "No Access",
+    "guestPermissionRead": "Read Only",
+    "guestPermissionWrite": "Read & Write",
+    "guestPermissionNoneDesc": "Guests cannot view this calendar",
+    "guestPermissionReadDesc": "Guests can view shifts and notes",
+    "guestPermissionWriteDesc": "Guests can create and edit shifts"
   }
 }

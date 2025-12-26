@@ -19,6 +19,7 @@ import { useVersionInfo } from "@/hooks/useVersionInfo";
 import {
   isAuthEnabled,
   allowUserRegistration,
+  allowGuestAccess,
   getEnabledProviders,
 } from "@/lib/auth/feature-flags";
 
@@ -41,10 +42,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const versionInfo = useVersionInfo();
 
   const authEnabled = isAuthEnabled();
   const registrationAllowed = allowUserRegistration();
+  const guestAccessAllowed = allowGuestAccess();
 
   // Get available OAuth providers
   const enabledProviders = getEnabledProviders();
@@ -75,7 +78,8 @@ export default function LoginPage() {
       }
 
       toast.success(t("auth.loginSuccess"));
-      // Session update triggers automatic navigation via AuthProvider
+      // Mark that user just logged in to trigger navigation
+      setJustLoggedIn(true);
     } catch (error) {
       console.error("Login error:", error);
       toast.error(t("auth.loginError"));
@@ -125,18 +129,24 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  // Redirect authenticated users to home (or returnUrl)
+  // Redirect authenticated users ONLY if:
+  // 1. They just logged in, OR
+  // 2. They have a returnUrl (came from a protected page)
+  // This prevents auto-redirect after logout when guest access is enabled
   useEffect(() => {
     if (mounted && isAuthenticated) {
-      const returnUrl = searchParams.get("returnUrl") || "/";
-      router.replace(returnUrl);
+      const returnUrl = searchParams.get("returnUrl");
+      if (justLoggedIn || returnUrl) {
+        router.replace(returnUrl || "/");
+        setJustLoggedIn(false);
+      }
     }
-  }, [mounted, isAuthenticated, searchParams, router]);
+  }, [mounted, isAuthenticated, justLoggedIn, searchParams, router]);
 
   // If auth is disabled, redirect to home
   useEffect(() => {
     if (!authEnabled) {
-      router.push("/");
+      router.replace("/");
     }
   }, [authEnabled, router]);
 
@@ -277,6 +287,34 @@ export default function LoginPage() {
                     </Button>
                   )}
                 </div>
+              </>
+            )}
+
+            {/* Continue as Guest */}
+            {guestAccessAllowed && (
+              <>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      {t("common.or")}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  className="w-full border-2 border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                  onClick={() => {
+                    const returnUrl = searchParams.get("returnUrl") || "/";
+                    // Use replace instead of push to avoid login redirect loop
+                    router.replace(returnUrl);
+                  }}
+                  disabled={isLoading}
+                >
+                  {t("auth.continueAsGuest")}
+                </Button>
               </>
             )}
 

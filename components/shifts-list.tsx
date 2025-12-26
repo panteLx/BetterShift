@@ -6,22 +6,29 @@ import { getDateLocale } from "@/lib/locales";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftCard } from "@/components/shift-card";
 import { ChevronUp, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface ShiftsListProps {
   shifts: ShiftWithCalendar[];
   currentDate: Date;
   onDeleteShift?: (id: string) => void;
+  calendarId?: string; // Optional: if provided, uses this for permission check instead of first shift's calendarId
 }
 
 export function ShiftsList({
   shifts,
   currentDate,
   onDeleteShift,
+  calendarId: propCalendarId,
 }: ShiftsListProps) {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
   const [showShiftsSection, setShowShiftsSection] = useState(false);
+
+  // Get calendar ID from props or first shift
+  const calendarId = propCalendarId || shifts[0]?.calendarId;
+  const { canEdit } = useCalendarPermission(calendarId);
 
   const shiftsInMonth = shifts.filter((shift) => {
     if (!shift.date) return false;
@@ -156,7 +163,7 @@ export function ShiftsList({
                           <ShiftCard
                             key={shift.id}
                             shift={shift}
-                            onDelete={onDeleteShift}
+                            onDelete={canEdit ? onDeleteShift : undefined}
                           />
                         ))}
                       </div>

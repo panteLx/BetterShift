@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f8f9d6a1-5183-4029-9439-c199f969843e",
+  "id": "0fb7cd65-0bf7-4bd2-8e1f-c97a23af8ddc",
   "prevId": "2c15a455-784b-48ee-b191-1feef86ebaed",
   "tables": {
     "account": {
@@ -366,6 +366,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "guest_permission": {
+          "name": "guest_permission",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'none'"
         },
         "created_at": {
           "name": "created_at",

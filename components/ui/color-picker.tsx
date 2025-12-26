@@ -19,6 +19,7 @@ interface ColorPickerProps {
   onChange: (color: string) => void;
   label?: string;
   presetColors?: { name: string; value: string }[];
+  disabled?: boolean;
 }
 
 export function ColorPicker({
@@ -26,6 +27,7 @@ export function ColorPicker({
   onChange,
   label = "Color",
   presetColors = [],
+  disabled = false,
 }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const t = useTranslations();
@@ -44,12 +46,13 @@ export function ColorPicker({
           <button
             key={preset.value}
             type="button"
-            onClick={() => onChange(preset.value)}
+            onClick={() => !disabled && onChange(preset.value)}
+            disabled={disabled}
             className={`w-10 h-10 rounded-lg border-2 transition-all ${
               color === preset.value
                 ? "border-primary scale-110 shadow-lg"
                 : "border-border/30 hover:border-border/60 hover:scale-105"
-            }`}
+            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
             style={{
               backgroundColor: preset.value,
               boxShadow:
@@ -62,11 +65,12 @@ export function ColorPicker({
         ))}
 
         {/* Custom Color Picker Button */}
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={disabled ? () => {} : setOpen}>
           <DialogTrigger asChild>
             <Button
               type="button"
               variant="outline"
+              disabled={disabled}
               className="h-10 px-3 gap-2 border-2 border-dashed border-border/50 hover:border-primary/50 relative transition-all"
               title={t("color.custom", { default: "Custom color" })}
             >

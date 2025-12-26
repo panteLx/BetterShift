@@ -143,6 +143,10 @@ export function DialogManager(props: DialogManagerProps) {
               props.calendars.find((c) => c.id === props.selectedCalendar)
                 ?.color || "#3b82f6"
             }
+            calendarGuestPermission={
+              props.calendars.find((c) => c.id === props.selectedCalendar)
+                ?.guestPermission || "none"
+            }
             onSuccess={props.onCalendarSettingsSuccess}
             onDelete={props.onDeleteCalendar}
             onExternalSync={props.onExternalSyncFromSettings}
@@ -236,6 +240,7 @@ export function DialogManager(props: DialogManagerProps) {
           onEditNote={props.onEditNoteFromList}
           onDeleteNote={props.onDeleteNoteFromList}
           onAddNew={props.onAddNewNote}
+          calendarId={props.selectedCalendar || undefined}
         />
       )}
       <NoteSheet
@@ -245,6 +250,7 @@ export function DialogManager(props: DialogManagerProps) {
         onDelete={props.onNoteDelete}
         selectedDate={props.selectedNoteDate}
         note={props.selectedNote}
+        calendarId={props.selectedCalendar || undefined}
       />
     </>
   );

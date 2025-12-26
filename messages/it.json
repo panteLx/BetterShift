@@ -386,5 +386,24 @@
       "discord": "Discord",
       "customOidc": "SSO"
     }
+  },
+  "guest": {
+    "viewingAsGuest": "Stai visualizzando come ospite",
+    "bannerMessage": "Stai visualizzando questo calendario come ospite. Accedi per l'accesso completo.",
+    "loginForFullAccess": "Accedi per l'accesso completo",
+    "readOnlyAccess": "Accesso di sola lettura",
+    "readOnlyView": "Vista di sola lettura",
+    "cannotEdit": "Non puoi modificare in modalità ospite",
+    "cannotEditShifts": "Non puoi modificare i turni come ospite",
+    "cannotEditPresets": "Non puoi modificare i preset come ospite",
+    "cannotEditNotes": "Non puoi modificare le note come ospite",
+    "guestPermission": "Accesso Ospite",
+    "guestPermissionDescription": "Controlla cosa possono fare i visitatori senza accedere",
+    "guestPermissionNone": "Nessun Accesso",
+    "guestPermissionRead": "Solo Lettura",
+    "guestPermissionWrite": "Lettura & Scrittura",
+    "guestPermissionNoneDesc": "Gli ospiti non possono vedere questo calendario",
+    "guestPermissionReadDesc": "Gli ospiti possono vedere turni e note",
+    "guestPermissionWriteDesc": "Gli ospiti possono creare e modificare turni"
   }
 }

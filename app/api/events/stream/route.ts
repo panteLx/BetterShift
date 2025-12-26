@@ -17,9 +17,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Check read permission for calendar (if auth is enabled)
+  // Check read permission for calendar (works for both authenticated users and guests)
   const user = await getSessionUser(request.headers);
-  if (user && !(await canViewCalendar(user.id, calendarId))) {
+  const hasAccess = await canViewCalendar(user?.id, calendarId);
+  if (!hasAccess) {
     return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },

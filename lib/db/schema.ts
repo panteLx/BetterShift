@@ -101,6 +101,11 @@ export const calendars = sqliteTable(
     ownerId: text("owner_id").references(() => user.id, {
       onDelete: "set null",
     }),
+    guestPermission: text("guest_permission", {
+      enum: ["none", "read", "write"],
+    })
+      .notNull()
+      .default("none"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),

@@ -30,8 +30,9 @@ export async function GET(
       );
     }
 
-    // Check read permission (if auth is enabled)
-    if (user && !(await canViewCalendar(user.id, id))) {
+    // Check read permission (works for both authenticated users and guests)
+    const hasAccess = await canViewCalendar(user?.id, id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -63,7 +64,7 @@ export async function PATCH(
     const { id } = await params;
     const user = await getSessionUser(request.headers);
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, guestPermission } = body;
 
     // Fetch current calendar
     const [existingCalendar] = await db
@@ -78,8 +79,9 @@ export async function PATCH(
       );
     }
 
-    // Check admin permission (if auth is enabled)
-    if (user && !(await canManageCalendar(user.id, id))) {
+    // Check admin permission (works for both authenticated users and guests)
+    const hasAccess = await canManageCalendar(user?.id, id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Admin access required." },
         { status: 403 }
@@ -89,6 +91,12 @@ export async function PATCH(
     const updateData: Partial<typeof calendars.$inferInsert> = {};
     if (name) updateData.name = name;
     if (color) updateData.color = color;
+    if (guestPermission !== undefined) {
+      // Validate guest permission value
+      if (["none", "read", "write"].includes(guestPermission)) {
+        updateData.guestPermission = guestPermission;
+      }
+    }
 
     const [calendar] = await db
       .update(calendars)
@@ -128,8 +136,9 @@ export async function DELETE(
       );
     }
 
-    // Check owner permission (if auth is enabled)
-    if (user && !(await canDeleteCalendar(user.id, id))) {
+    // Check owner permission (works for both authenticated users and guests)
+    const hasAccess = await canDeleteCalendar(user?.id, id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Owner access required." },
         { status: 403 }

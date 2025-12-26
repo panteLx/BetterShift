@@ -11,6 +11,7 @@ import { X, Link, Smartphone } from "lucide-react";
 import { motion } from "motion/react";
 import { Locale } from "date-fns";
 import { toast } from "sonner";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface CalendarCompareViewProps {
   calendars: CalendarWithCount[];
@@ -76,6 +77,24 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
   const selectedCalendars = props.calendars.filter((cal) =>
     props.selectedIds.includes(cal.id)
   );
+
+  // Pre-calculate permissions for all selected calendars
+  // We need to call hooks unconditionally, so we always get permissions for all selected calendars
+  const permission0 = useCalendarPermission(selectedCalendars[0]?.id);
+  const permission1 = useCalendarPermission(selectedCalendars[1]?.id);
+  const permission2 = useCalendarPermission(selectedCalendars[2]?.id);
+
+  // Map permissions by calendar ID
+  const permissionsMap = new Map<
+    string,
+    ReturnType<typeof useCalendarPermission>
+  >();
+  if (selectedCalendars[0])
+    permissionsMap.set(selectedCalendars[0].id, permission0);
+  if (selectedCalendars[1])
+    permissionsMap.set(selectedCalendars[1].id, permission1);
+  if (selectedCalendars[2])
+    permissionsMap.set(selectedCalendars[2].id, permission2);
 
   // Find which calendar owns the selected preset
   const selectedPresetCalendarId = props.selectedPresetId
@@ -178,6 +197,9 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
             const presetsLoading =
               props.presetsLoadingMap?.get(calendar.id) || false;
 
+            // Get pre-calculated permission for this calendar
+            const permission = permissionsMap.get(calendar.id)!;
+
             // Check if this calendar is disabled (preset from different calendar selected)
             const isDisabled =
               selectedPresetCalendarId !== null &&
@@ -269,19 +291,19 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                         : (date) => props.onDayClick(calendar.id, date)
                     }
                     onDayRightClick={
-                      props.onDayRightClick
+                      props.onDayRightClick && permission.canEdit
                         ? (e, date) =>
                             props.onDayRightClick!(calendar.id, e, date)
                         : undefined
                     }
                     onNoteIconClick={
-                      props.onNoteIconClick
+                      props.onNoteIconClick && permission.canEdit
                         ? (e, date) =>
                             props.onNoteIconClick!(calendar.id, e, date)
                         : undefined
                     }
                     onLongPress={
-                      props.onLongPress
+                      props.onLongPress && permission.canEdit
                         ? (date) => props.onLongPress!(calendar.id, date)
                         : undefined
                     }
@@ -292,7 +314,7 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                       props.onShowSyncedShifts(calendar.id, date, syncedShifts)
                     }
                     onDeleteShift={
-                      props.onDeleteShift
+                      props.onDeleteShift && permission.canEdit
                         ? (id) => props.onDeleteShift!(calendar.id, id)
                         : undefined
                     }

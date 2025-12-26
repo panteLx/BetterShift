@@ -318,38 +318,117 @@
 
 **Note**: This phase covers **global public access**. For **private link sharing**, see Phase 4.5 (Access Tokens).
 
-- [ ] Add `ALLOW_GUEST_ACCESS` environment variable
+- [x] Add `ALLOW_GUEST_ACCESS` environment variable
   - When `true`: Allow viewing calendars without login
   - When `false`: Force login redirect (current behavior)
   - Default: `false` (require login when auth enabled)
-- [ ] Add `guestPermission` column to `calendars` table
+- [x] Add `guestPermission` column to `calendars` table
   - Values: "none" (default) | "read" | "write"
   - Determines what guests can do with this calendar
-  - Migration: Add column, default to "none"
-- [ ] Update permission utilities (`lib/auth/permissions.ts`)
+  - Migration: Add column, default to "none" (0014)
+- [x] Update permission utilities (`lib/auth/permissions.ts`)
   - Extend `getUserCalendarPermission()` to handle guest users
   - Return guest permission if no user session
   - Guest permissions never override user permissions
-- [ ] Update `proxy.ts` middleware
+- [x] Update `proxy.ts` middleware
   - Skip login redirect if `ALLOW_GUEST_ACCESS=true`
   - Allow unauthenticated users to view app
-  - Set guest flag in request context
-- [ ] Update API route protection
+- [x] Update API route protection
   - Accept requests without auth session (if guest access enabled)
   - Apply guest permissions in all routes
   - Block write operations if guest permission < write
-  - Return only guest-accessible calendars
-- [ ] UI Updates for Guest Mode
-  - Show "Login" button in header for guests
-  - Add banner: "You are viewing as guest. Login for full access."
-  - Disable create/edit actions based on guest permissions
-  - Show lock icons on calendars guests cannot edit
-  - Filter calendar list by guest-accessible calendars
-- [ ] Calendar Settings Sheet
-  - Add "Guest Access" section (owner/admin only)
-  - Radio buttons: "No Access" | "Read Only" | "Read & Write"
-  - Explanation text about guest behavior
-  - Show current guest permission level
+  - Return only guest-accessible calendars (Option 1: Security first)
+  - Fixed 6 bugs in external-syncs routes (missing `await` on permission checks)
+- [x] **UI Updates for Guest Mode (Complete)**
+  - [x] **Core Components Implemented:**
+    - `useAuth` Hook: Added `isGuest` flag for client-side guest detection
+    - `GuestBanner` Component: Full banner + compact variant with login button
+    - `ReadOnlyBanner` Component: Reusable banner for read-only sheets/dialogs
+    - `useCalendarPermission` Hook: Client-side permission checking helper
+  - [x] **Translations:** Added for all 3 languages (en, de, it)
+  - [x] **Guest Banner Display:**
+    - Integrated in `calendar-content.tsx` (shown above calendar grid)
+    - Two variants: default (full) and compact
+    - Shows "Sign in for full access" button with link to `/login`
+  - [x] **Calendar Settings:**
+    - Guest Permission section added (owner/admin only)
+    - Radio buttons: "No Access" | "Read Only" | "Read & Write"
+    - Explanatory descriptions for each option
+    - Icons: AlertTriangle (none), Eye (read), Edit (write)
+    - Only visible when `ALLOW_GUEST_ACCESS=true`
+  - [x] **Read-only Mode:**
+    - [x] `shift-sheet.tsx`: Read-only support with banner
+    - [x] `shift-form-fields.tsx`: All inputs disabled when `readOnly=true`
+    - [x] `color-picker.tsx`: Added `disabled` prop support
+    - [x] `note-sheet.tsx`: Complete with ReadOnlyBanner, all inputs disabled, save/delete buttons hidden
+    - [x] `preset-manage-sheet.tsx`: Complete with ReadOnlyBanner, edit/delete/add buttons hidden
+    - [x] `notes-list-dialog.tsx`: Complete with ReadOnlyBanner, edit/delete/add buttons hidden
+    - [x] `shifts-overview-dialog.tsx`: Read-only by nature (no changes needed)
+    - [x] `calendar-compare-sheet.tsx`: Read-only by nature (no changes needed)
+  - [x] **Calendar Selector Enhancements:**
+    - [x] Lock icons for read-only calendars in dropdown
+    - [x] Tooltips showing "Read-only access" on selected calendar
+    - [x] Visual indicators in both desktop and mobile variants
+    - [x] Created `components/ui/tooltip.tsx` (Radix UI tooltip component)
+  - [x] **App Header:**
+    - [x] Show "Login" button for guests (replaces UserMenu)
+    - [x] Implemented in both desktop and mobile layouts
+  - [x] **Login Page:**
+    - [x] "Continue as Guest" button (when `ALLOW_GUEST_ACCESS=true`)
+    - [x] Properly handles returnUrl after guest browsing
+  - [x] **Special Cases:**
+    - [x] `export-dialog.tsx`: Works for read-only (no changes needed)
+    - [x] `view-settings-sheet.tsx`: Works normally (local UI only)
+- [x] Calendar Settings Sheet
+  - [x] Add "Guest Access" section (owner/admin only)
+  - [x] Radio buttons: "No Access" | "Read Only" | "Read & Write"
+  - [x] Explanation text about guest behavior
+
+**Status**: ✅ **COMPLETED** - All backend and UI features implemented and tested
+
+**Components Completed (8/8):**
+
+1. ✅ shift-sheet.tsx - Read-only mode with banner
+2. ✅ shift-form-fields.tsx - All inputs disabled
+3. ✅ color-picker.tsx - Disabled prop support
+4. ✅ note-sheet.tsx - Full read-only implementation
+5. ✅ preset-manage-sheet.tsx - Full read-only implementation
+6. ✅ notes-list-dialog.tsx - Full read-only implementation
+7. ✅ shifts-overview-dialog.tsx - Read-only by design
+8. ✅ calendar-compare-sheet.tsx - Read-only by design
+
+**Implementation Complete:**
+
+- ✅ Guest detection (useAuth with isGuest flag)
+- ✅ Permission checking (useCalendarPermission hook - **enhanced to accept both calendar object and calendarId string**)
+- ✅ Reusable components (GuestBanner, ReadOnlyBanner)
+- ✅ Translations (en, de, it - 18 new translation keys)
+- ✅ API route protection (all routes respect guest permissions)
+- ✅ Calendar settings UI (guest permission controls)
+- ✅ Read-only mode (all 8 components use permission-based logic instead of isGuest)
+- ✅ Calendar selector (lock icons + tooltips)
+- ✅ App header (guest login button)
+- ✅ Login page (Continue as Guest button)
+- ✅ Build verification (TypeScript compilation successful)
+- ✅ **Consistency Fix (26. Dez 2025):** All UI components now respect `guestPermission` setting correctly
+  - Previously: Components treated ALL guests as read-only (ignoring guestPermission)
+  - Now: Components use `useCalendarPermission` hook to check actual permission level
+  - Result: Guests with `write` permission can now edit shifts, presets, and notes as intended
+
+**Testing Checklist:**
+
+1. ✅ Set `NEXT_PUBLIC_ALLOW_GUEST_ACCESS=true` in `.env`
+2. ✅ Verify guest banner appears
+3. ✅ Test read-only mode in all sheets/dialogs
+4. ✅ Check lock icons in calendar selector
+5. ✅ Verify "Login" button shows in header for guests
+6. ✅ Test "Continue as Guest" button on login page
+7. ✅ Verify no redirect to login when guest access enabled
+
+**Bug Fixes:**
+
+- ✅ Fixed `allowGuestAccess()` requiring auth to be disabled (should work with auth enabled)
+- ✅ Fixed "Continue as Guest" button causing redirect loop (use `router.replace` instead of `router.push`)
 
 **Use Cases**:
 
@@ -370,6 +449,241 @@
 - Rate limiting applies to guest requests
 - No sensitive data exposed to guests (user info, emails, etc.)
 - Requires Phase 3.1 & 3.2 to be completed first
+
+### 3.5 User Calendar Subscriptions (Guest Calendar Discovery)
+
+**Priority**: Medium
+
+**Goal**: Allow authenticated users to selectively subscribe to public guest calendars (opt-in model).
+
+**Problem**: When auth is enabled, authenticated users currently only see:
+
+- Their own calendars (owner)
+- Explicitly shared calendars (calendarShares)
+
+But NOT calendars with `guestPermission != "none"` (public calendars).
+
+**Solution**: Subscription system where users can discover and subscribe to public calendars.
+
+#### 3.5.1 Database Schema - User Calendar Subscriptions
+
+- [ ] Create `userCalendarSubscriptions` table in `lib/db/schema.ts`
+  ```typescript
+  export const userCalendarSubscriptions = sqliteTable(
+    "user_calendar_subscriptions",
+    {
+      id: text("id")
+        .primaryKey()
+        .$defaultFn(() => createId()),
+      userId: text("user_id")
+        .notNull()
+        .references(() => user.id, { onDelete: "cascade" }),
+      calendarId: text("calendar_id")
+        .notNull()
+        .references(() => calendars.id, { onDelete: "cascade" }),
+      createdAt: integer("created_at", { mode: "timestamp" })
+        .notNull()
+        .default(sql`CURRENT_TIMESTAMP`),
+    },
+    (table) => ({
+      // Unique constraint: user can only subscribe once per calendar
+      uniqueUserCalendar: unique().on(table.userId, table.calendarId),
+      // Indexes for fast lookups
+      userIdIdx: index("user_calendar_subscriptions_userId_idx").on(
+        table.userId
+      ),
+      calendarIdIdx: index("user_calendar_subscriptions_calendarId_idx").on(
+        table.calendarId
+      ),
+    })
+  );
+  ```
+- [ ] Add relations to schema
+
+  ```typescript
+  // In userRelations
+  calendarSubscriptions: many(userCalendarSubscriptions),
+
+  // In calendarsRelations
+  subscriptions: many(userCalendarSubscriptions),
+
+  // New relation
+  export const userCalendarSubscriptionsRelations = relations(userCalendarSubscriptions, ({ one }) => ({
+    user: one(user, { fields: [userCalendarSubscriptions.userId], references: [user.id] }),
+    calendar: one(calendars, { fields: [userCalendarSubscriptions.calendarId], references: [calendars.id] }),
+  }));
+  ```
+
+- [ ] Generate migration: `npm run db:generate`
+- [ ] Apply migration: `npm run db:migrate`
+
+#### 3.5.2 Permission Logic Update
+
+- [ ] Update `lib/auth/permissions.ts` - `getUserAccessibleCalendars()`
+
+  ```typescript
+  // Current logic:
+  // 1. Owned calendars (ownerId = userId)
+  // 2. Explicitly shared calendars (calendarShares)
+
+  // Add:
+  // 3. Subscribed public calendars (userCalendarSubscriptions + guestPermission != "none")
+
+  // Important: Owner's own calendars should NEVER appear in subscription list
+  // They are always visible by default (cannot be hidden)
+  ```
+
+- [ ] Implement permission hierarchy:
+  - **Owner permission** (ownerId): Always visible, cannot be unsubscribed
+  - **Share permission** (calendarShares): Can be subscribed/unsubscribed
+  - **Guest permission** (guestPermission): Can be subscribed/unsubscribed
+- [ ] Return subscription status with accessible calendars:
+  ```typescript
+  Array<{
+    id: string;
+    permission: CalendarPermission;
+    source: "owner" | "share" | "subscription";
+    canUnsubscribe: boolean; // false for owner, true for share/subscription
+  }>;
+  ```
+
+#### 3.5.3 Subscription API
+
+- [ ] Create `app/api/calendars/subscriptions/route.ts`
+  - **GET**: List all available public calendars for discovery
+    - Returns calendars with `guestPermission != "none"`
+    - Excludes user's owned calendars
+    - Includes subscription status (subscribed: true/false)
+    - Requires authentication
+  - **POST**: Subscribe to a calendar
+    - Body: `{ calendarId: string }`
+    - Creates entry in `userCalendarSubscriptions`
+    - Validates calendar has `guestPermission != "none"`
+    - Prevents subscribing to own calendars (return error)
+    - Returns success or error
+- [ ] Create `app/api/calendars/subscriptions/[calendarId]/route.ts`
+  - **DELETE**: Unsubscribe from a calendar
+    - Validates user is not owner (cannot unsubscribe from own calendar)
+    - Removes entry from `userCalendarSubscriptions`
+    - Returns success
+
+#### 3.5.4 Discovery UI Components
+
+- [ ] Create `components/calendar-discovery-dialog.tsx`
+
+  - Title: "Browse Public Calendars" / "Discover Calendars"
+  - List of all public calendars (guestPermission != "none")
+  - For each calendar:
+    - Calendar name + color indicator
+    - Permission badge (Read-only / Read & Write)
+    - Owner name (if available)
+    - Subscribe/Unsubscribe button
+    - Disabled if user is owner (show "You own this calendar")
+  - Search/filter functionality
+  - Empty state: "No public calendars available"
+  - Loading states
+
+- [ ] Add "Browse Calendars" button trigger
+  - **Placement**: In User Menu dropdown (`components/user-menu.tsx`)
+    ```tsx
+    <DropdownMenuItem onClick={onBrowseCalendars}>
+      <Users className="h-4 w-4 mr-2" />
+      {t("calendar.mySubscriptions")}
+    </DropdownMenuItem>
+    ```
+  - Position: Between "Profile" and "Logout" items
+  - Icon: `Users` (represents public/community calendars)
+  - Only visible for authenticated users (not guests)
+
+#### 3.5.5 Subscription Hooks
+
+- [ ] Create `hooks/useCalendarSubscriptions.ts`
+
+  ```typescript
+  export function useCalendarSubscriptions() {
+    const [publicCalendars, setPublicCalendars] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchPublicCalendars = async () => {
+      // GET /api/calendars/subscriptions
+    };
+
+    const subscribe = async (calendarId: string) => {
+      // POST /api/calendars/subscriptions
+      // Refresh calendar list after success
+    };
+
+    const unsubscribe = async (calendarId: string) => {
+      // DELETE /api/calendars/subscriptions/[calendarId]
+      // Refresh calendar list after success
+    };
+
+    return {
+      publicCalendars,
+      loading,
+      subscribe,
+      unsubscribe,
+      refresh: fetchPublicCalendars,
+    };
+  }
+  ```
+
+- [ ] Update `hooks/useCalendars.ts`
+  - Fetch should include subscribed calendars automatically (via updated API)
+  - No changes needed if API is updated correctly
+
+#### 3.5.6 UI/UX Enhancements
+
+- [ ] Calendar Selector updates
+
+  - Add visual indicator for subscribed calendars (optional)
+  - Show subscription count: "3 subscribed calendars" (optional tooltip)
+
+- [ ] Calendar Settings Sheet
+
+  - Show subscription info if calendar is subscribed (not owned/shared)
+  - "Unsubscribe from this calendar" button (only for subscribed calendars)
+
+- [ ] Translations
+  - Add translation keys:
+    - `calendar.mySubscriptions` - "My Calendar Subscriptions" (User Menu item)
+    - `calendar.browsePublic` - "Browse Public Calendars" (Dialog title)
+    - `calendar.subscribe` - "Subscribe"
+    - `calendar.unsubscribe` - "Unsubscribe"
+    - `calendar.subscribed` - "Subscribed"
+    - `calendar.youOwnThis` - "You own this calendar"
+    - `calendar.noPublicCalendars` - "No public calendars available"
+    - `calendar.publicCalendarsList` - "Public Calendars"
+    - `calendar.subscriptionSuccess` - "Successfully subscribed to {name}"
+    - `calendar.unsubscriptionSuccess` - "Unsubscribed from {name}"
+    - `calendar.cannotSubscribeOwn` - "You cannot subscribe to your own calendar"
+
+#### 3.5.7 Guest Behavior (Non-Authenticated Users)
+
+**Important**: Guests (non-authenticated users) are NOT affected by this feature.
+
+- Guests continue to see ALL calendars with `guestPermission != "none"` automatically
+- No subscription system for guests (cannot persist preferences without account)
+- Current behavior in Phase 3.4 remains unchanged for guests
+
+#### 3.5.8 Migration & Backwards Compatibility
+
+- [ ] Existing calendars: No automatic subscriptions created
+- [ ] Users will see owned + explicitly shared calendars by default (current behavior)
+- [ ] Public calendars appear in discovery dialog (opt-in)
+- [ ] No breaking changes to existing functionality
+
+#### 3.5.9 Testing Checklist
+
+- [ ] Create calendar with `guestPermission: "read"` as User A
+- [ ] Login as User B → verify calendar NOT visible in calendar list
+- [ ] Open "Browse Calendars" dialog → verify calendar appears
+- [ ] Subscribe to calendar → verify it appears in calendar list
+- [ ] Verify User A (owner) cannot unsubscribe from own calendar
+- [ ] Unsubscribe as User B → verify calendar disappears from list
+- [ ] Verify calendar still appears in browse dialog after unsubscribe
+- [ ] Test with multiple users and multiple public calendars
+- [ ] Verify guests still see all public calendars (unchanged)
 
 ---
 
@@ -826,6 +1140,57 @@
   - Use "single-user mode" behavior
 - [ ] Add migration guide to README
 
+### 7.4 Runtime Auth Toggle Handling
+
+**Scenario**: User creates calendars with `AUTH_ENABLED=false` (ownerId=null), then enables auth later.
+
+**Priority**: Medium (Important for self-hosted instances)
+
+**Goal**: Automatically handle orphaned calendars when auth is enabled at runtime.
+
+- [ ] **Admin Panel Detection & Management** (Main Solution)
+
+  - [ ] When admin logs in first time after enabling auth:
+    - Detect orphaned calendars (ownerId=null)
+    - Show warning banner: "X calendars need owner assignment"
+    - Link to orphaned calendar management page
+  - [ ] Admin panel shows list of orphaned calendars (Phase 9.3)
+    - Manual assignment to users
+    - Bulk assignment to admin user
+    - Delete option for unwanted calendars
+  - [ ] See Phase 9.3 for detailed implementation
+
+- [ ] **API Protection for Orphaned Calendars**
+
+  - [ ] Update calendar API routes to handle orphaned calendars:
+    - If `AUTH_ENABLED=true` AND `ownerId=null`:
+      - GET: Allow read-only access (backwards compatibility)
+      - PUT/DELETE: Require admin permission
+      - POST shifts/presets: Block with clear error message
+    - Return warning header: `X-Calendar-Orphaned: true`
+  - [ ] Show UI warning on orphaned calendars:
+    - "This calendar has no owner. Contact admin to assign ownership."
+    - Disable edit actions until owner assigned
+
+- [ ] **Documentation**
+  - [ ] Add to README.md:
+    - Section: "Enabling Auth on Existing Instance"
+    - Steps: 1) Enable AUTH_ENABLED, 2) Create admin user, 3) Assign orphaned calendars
+    - Warning: Orphaned calendars are read-only until assigned
+  - [ ] Add to `.env.example`:
+    - Comment: "Note: Calendars created before enabling auth will need owner assignment"
+  - [ ] Create migration guide: `docs/MIGRATION_AUTH_TOGGLE.md`
+    - Detailed step-by-step process
+    - Screenshots of admin panel
+    - Troubleshooting section
+
+**Implementation Notes**:
+
+- No automatic assignment at startup (avoid surprises)
+- Admin has full control over assignment process
+- Backwards compatibility: orphaned calendars remain readable
+- Admin panel provides clear overview and bulk actions
+
 ---
 
 ## Phase 8: UI/UX Enhancements
@@ -954,6 +1319,46 @@
   - DELETE: Delete calendar (force delete even with shares)
 - [ ] Create `app/api/admin/calendars/[id]/transfer/route.ts`
   - POST: Transfer calendar ownership to another user
+- [ ] **Orphaned Calendar Management (Phase 7.4 Implementation)**
+  - [ ] Create `app/api/admin/calendars/orphaned/route.ts`
+    - GET: List all orphaned calendars (ownerId=null)
+    - PUT: Bulk assign orphaned calendars to specific user
+    - DELETE: Bulk delete orphaned calendars
+  - [ ] Create `app/api/admin/calendars/orphaned/[id]/assign/route.ts`
+    - POST: Assign single orphaned calendar to user
+    - Body: `{ userId: string }` or `{ assignToSelf: true }`
+  - [ ] Create `components/admin/orphaned-calendar-banner.tsx`
+    - Show warning banner on admin dashboard when orphaned calendars exist
+    - Text: "⚠️ X calendars have no owner and need assignment"
+    - Button: "Manage Orphaned Calendars"
+    - Only show when orphaned calendars exist
+  - [ ] Create `components/admin/orphaned-calendar-list.tsx`
+    - Dedicated page/sheet for orphaned calendar management
+    - Table columns:
+      - Calendar name
+      - Created date
+      - Shift count
+      - Last activity date
+      - Actions: Assign to user / Delete
+    - Bulk actions:
+      - "Assign All to Me" button
+      - "Assign All to User" with user selector
+      - "Delete All" with confirmation
+    - Search/filter orphaned calendars
+  - [ ] Create `components/admin/assign-calendar-dialog.tsx`
+    - User search/select dropdown
+    - "Assign to myself" shortcut button
+    - Show calendar preview before assignment
+    - Confirmation: "Assign [Calendar] to [User]?"
+  - [ ] Update `app/admin/page.tsx` (admin dashboard)
+    - Show orphaned calendar count in stats widget
+    - Display `OrphanedCalendarBanner` at top if orphaned exist
+    - Add "Orphaned Calendars" quick link
+  - [ ] Create `app/admin/calendars/orphaned/page.tsx`
+    - Dedicated page for orphaned calendar management
+    - Full-screen table with all orphaned calendars
+    - Bulk selection and actions
+    - Export orphaned calendar list as CSV
 - [ ] Admin UI Components:
   - [ ] `components/admin/calendar-list.tsx` - Table of all calendars
   - [ ] `components/admin/calendar-edit-dialog.tsx` - Edit calendar
@@ -1100,9 +1505,11 @@
 
 - [ ] **Orphaned Calendars**
   - [ ] Handle calendars with `ownerId = null` (after user deletion)
-  - [ ] Migration script assigns to admin (Phase 7)
+  - [ ] Migration script assigns to admin (Phase 7.1 - one-time migration)
+  - [ ] Runtime auth toggle handling (Phase 7.4 - ongoing management)
+  - [ ] Admin panel shows orphaned calendars (Phase 9.3 - detailed implementation)
   - [ ] Prevent creation of calendars without owner (when auth enabled)
-  - [ ] Admin panel shows orphaned calendars (Phase 9)
+  - [ ] Note: See Phase 7.4 for AUTH_ENABLED toggle scenario
 - [ ] **Deleted Users**
   - [ ] Verify cascade cleanup of:
     - Sessions

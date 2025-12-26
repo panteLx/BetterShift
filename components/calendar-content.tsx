@@ -5,9 +5,11 @@ import { CalendarGrid } from "@/components/calendar-grid";
 import { ShiftStats } from "@/components/shift-stats";
 import { ShiftsList } from "@/components/shifts-list";
 import { MonthNavigation } from "@/components/month-navigation";
+import { GuestBanner } from "@/components/guest-banner";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { Locale } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CalendarContentProps {
   calendarDays: Date[];
@@ -41,6 +43,7 @@ interface CalendarContentProps {
 
 export function CalendarContent(props: CalendarContentProps) {
   const t = useTranslations();
+  const { isGuest } = useAuth();
 
   return (
     <>
@@ -49,6 +52,13 @@ export function CalendarContent(props: CalendarContentProps) {
         onDateChange={props.onDateChange}
         locale={props.locale}
       />
+
+      {/* Guest Banner - shown above calendar grid */}
+      {isGuest && (
+        <div className="mb-4 px-2 sm:px-0">
+          <GuestBanner />
+        </div>
+      )}
 
       <CalendarGrid
         calendarDays={props.calendarDays}
@@ -115,6 +125,7 @@ export function CalendarContent(props: CalendarContentProps) {
           shifts={props.shifts}
           currentDate={props.currentDate}
           onDeleteShift={props.onDeleteShift}
+          calendarId={props.selectedCalendar || undefined}
         />
       </div>
     </>

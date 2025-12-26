@@ -372,9 +372,10 @@ export async function POST(
       );
     }
 
-    // Check edit permissions if user is authenticated
+    // Check edit permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    if (user && !canEditCalendar(user.id, externalSync.calendarId)) {
+    const hasAccess = await canEditCalendar(user?.id, externalSync.calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
         { status: 403 }

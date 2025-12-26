@@ -37,9 +37,10 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check view permissions if user is authenticated
+    // Check view permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    if (user && !canViewCalendar(user.id, calendarId)) {
+    const hasAccess = await canViewCalendar(user?.id, calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Read access required." },
         { status: 403 }
@@ -100,9 +101,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check edit permissions if user is authenticated
+    // Check edit permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    if (user && !canEditCalendar(user.id, calendarId)) {
+    const hasAccess = await canEditCalendar(user?.id, calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
         { status: 403 }

@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { AUTH_ENABLED } from "@/lib/auth/env";
+import { isAuthEnabled, allowGuestAccess } from "@/lib/auth/feature-flags";
 
 /**
  * Proxy for authentication and route protection (Next.js 16)
  *
  * Features:
  * - Protects routes when auth is enabled
- * - Redirects unauthenticated users to login
+ * - Redirects unauthenticated users to login (unless guest access enabled)
  * - Allows public routes (login, register, API)
  * - Stores return URL for post-login redirect
+ * - Supports guest access for viewing calendars
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // If auth is disabled, allow all routes
-  if (!AUTH_ENABLED) {
+  if (!isAuthEnabled()) {
     return NextResponse.next();
   }
 
@@ -41,8 +42,14 @@ export async function proxy(request: NextRequest) {
   // Check for session cookie (Better Auth uses "better-auth.session_token")
   const sessionToken = request.cookies.get("better-auth.session_token");
 
-  // If no session token, redirect to login with return URL
+  // If no session token, check guest access
   if (!sessionToken) {
+    // If guest access is enabled, allow viewing without login
+    if (allowGuestAccess()) {
+      return NextResponse.next();
+    }
+
+    // Otherwise, redirect to login with return URL
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("returnUrl", pathname);
     return NextResponse.redirect(loginUrl);

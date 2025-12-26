@@ -26,8 +26,9 @@ export async function GET(
       );
     }
 
-    // Check read permission (if auth is enabled)
-    if (user && !(await canViewCalendar(user.id, id))) {
+    // Check read permission (works for both authenticated users and guests)
+    const hasAccess = await canViewCalendar(user?.id, id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

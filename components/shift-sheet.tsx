@@ -6,7 +6,9 @@ import { BaseSheet } from "@/components/ui/base-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormFields } from "@/components/shift-form-fields";
 import { PresetSelect } from "@/components/preset-select";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useShiftForm } from "@/hooks/useShiftForm";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { formatDateToLocal } from "@/lib/date-utils";
 
 interface ShiftSheetProps {
@@ -17,6 +19,7 @@ interface ShiftSheetProps {
   shift?: ShiftWithCalendar;
   onPresetsChange?: () => void;
   calendarId?: string;
+  readOnly?: boolean; // Explicitly set read-only mode
 }
 
 export interface ShiftFormData {
@@ -38,10 +41,15 @@ export function ShiftSheet({
   shift,
   onPresetsChange,
   calendarId,
+  readOnly = false,
 }: ShiftSheetProps) {
   const t = useTranslations();
+  const permission = useCalendarPermission(calendarId);
   const [isSaving, setIsSaving] = useState(false);
   const initialFormDataRef = useRef<string | null>(null);
+
+  // Determine if sheet should be in read-only mode
+  const isReadOnly = readOnly || !permission.canEdit;
 
   const {
     formData,
@@ -151,17 +159,20 @@ export function ShiftSheet({
       description={
         shift ? t("shift.editDescription") : t("shift.createDescription")
       }
-      showSaveButton
+      showSaveButton={!isReadOnly}
       showCancelButton
       onSave={handleSave}
       isSaving={isSaving}
       saveDisabled={!formData.title.trim() || (shift && !hasChanges())}
-      hasUnsavedChanges={hasChanges()}
+      hasUnsavedChanges={!isReadOnly && hasChanges()}
       maxWidth="md"
     >
       <div className="space-y-5">
+        {/* Read-only banner */}
+        {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEditShifts")} />}
+
         {/* Preset Selection */}
-        {!shift && (
+        {!shift && !isReadOnly && (
           <PresetSelect presets={presets} onPresetSelect={handlePresetSelect} />
         )}
 
@@ -173,6 +184,7 @@ export function ShiftSheet({
           presetName={presetName}
           onPresetNameChange={setPresetName}
           isEditing={!!shift}
+          readOnly={isReadOnly}
         />
       </div>
     </BaseSheet>

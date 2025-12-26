@@ -386,5 +386,24 @@
       "discord": "Discord",
       "customOidc": "SSO"
     }
+  },
+  "guest": {
+    "viewingAsGuest": "Du betrachtest als Gast",
+    "bannerMessage": "Du betrachtest diesen Kalender als Gast. Melde dich an für vollen Zugriff.",
+    "loginForFullAccess": "Anmelden für vollen Zugriff",
+    "readOnlyAccess": "Nur-Lese-Zugriff",
+    "readOnlyView": "Nur-Lese-Ansicht",
+    "cannotEdit": "Du kannst im Gast-Modus nicht bearbeiten",
+    "cannotEditShifts": "Du kannst Schichten als Gast nicht bearbeiten",
+    "cannotEditPresets": "Du kannst Vorlagen als Gast nicht bearbeiten",
+    "cannotEditNotes": "Du kannst Notizen als Gast nicht bearbeiten",
+    "guestPermission": "Gastzugriff",
+    "guestPermissionDescription": "Kontrolliere, was Besucher ohne Anmeldung tun können",
+    "guestPermissionNone": "Kein Zugriff",
+    "guestPermissionRead": "Nur Lesen",
+    "guestPermissionWrite": "Lesen & Schreiben",
+    "guestPermissionNoneDesc": "Gäste können diesen Kalender nicht sehen",
+    "guestPermissionReadDesc": "Gäste können Schichten und Notizen sehen",
+    "guestPermissionWriteDesc": "Gäste können Schichten erstellen und bearbeiten"
   }
 }

@@ -33,9 +33,10 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check permissions
+    // Check permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    if (user && !(await canViewCalendar(user.id, calendar.id))) {
+    const hasAccess = await canViewCalendar(user?.id, calendar.id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -118,9 +119,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check permissions
+    // Check permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    if (user && !(await canEditCalendar(user.id, calendar.id))) {
+    const hasAccess = await canEditCalendar(user?.id, calendar.id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

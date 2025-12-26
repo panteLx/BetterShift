@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { calendars, calendarShares } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 
 /**
  * Calendar permission levels
@@ -12,24 +13,49 @@ import { eq, and } from "drizzle-orm";
 export type CalendarPermission = "owner" | "admin" | "write" | "read";
 
 /**
+ * Guest permission levels (subset of CalendarPermission)
+ * - none: No guest access
+ * - read: Guests can view calendar data
+ * - write: Guests can create/edit/delete shifts, presets, notes
+ */
+export type GuestPermission = "none" | "read" | "write";
+
+/**
  * Get user's permission level for a specific calendar
  * Returns null if user has no access to the calendar
+ *
+ * For guest users (userId = null), returns guest permission if:
+ * - Auth is enabled
+ * - Guest access is enabled
+ * - Calendar has guestPermission != "none"
  */
 export async function getUserCalendarPermission(
   userId: string | null | undefined,
   calendarId: string
 ): Promise<CalendarPermission | null> {
-  // No user = no permission
-  if (!userId) {
-    return null;
+  // If auth is disabled, grant full owner access (backwards compatibility)
+  if (!isAuthEnabled()) {
+    const calendar = await db.query.calendars.findFirst({
+      where: eq(calendars.id, calendarId),
+    });
+    return calendar ? "owner" : null;
   }
 
-  // Check if user is the owner
+  // Fetch calendar first (needed for both authenticated and guest users)
   const calendar = await db.query.calendars.findFirst({
     where: eq(calendars.id, calendarId),
   });
 
   if (!calendar) {
+    return null;
+  }
+
+  // If no user ID, check guest permissions
+  if (!userId) {
+    // Guest access only works when explicitly enabled
+    if (allowGuestAccess() && calendar.guestPermission !== "none") {
+      return calendar.guestPermission as CalendarPermission;
+    }
     return null;
   }
 
@@ -116,14 +142,38 @@ export async function canDeleteCalendar(
 }
 
 /**
- * Get all calendar IDs accessible to a user
+ * Get all calendar IDs accessible to a user (or guest)
  * Returns array of calendar IDs with their permission levels
+ *
+ * For guest users (userId = null), returns calendars with guestPermission != "none"
+ * if guest access is enabled.
  */
 export async function getUserAccessibleCalendars(
   userId: string | null | undefined
 ): Promise<Array<{ id: string; permission: CalendarPermission }>> {
+  // If auth is disabled, return all calendars with owner permission (backwards compatibility)
+  if (!isAuthEnabled()) {
+    const allCalendars = await db.query.calendars.findMany();
+    return allCalendars.map((cal) => ({
+      id: cal.id,
+      permission: "owner" as const,
+    }));
+  }
+
+  // Guest access: return calendars with guest permissions
   if (!userId) {
-    return [];
+    if (!allowGuestAccess()) {
+      return [];
+    }
+
+    const guestAccessibleCalendars = await db.query.calendars.findMany({
+      where: (calendars, { ne }) => ne(calendars.guestPermission, "none"),
+    });
+
+    return guestAccessibleCalendars.map((cal) => ({
+      id: cal.id,
+      permission: cal.guestPermission as CalendarPermission,
+    }));
   }
 
   const results: Array<{ id: string; permission: CalendarPermission }> = [];

@@ -43,8 +43,9 @@ export async function GET(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    // Check read permission (if auth is enabled)
-    if (user && !(await canViewCalendar(user.id, result[0].calendarId))) {
+    // Check read permission (works for both authenticated users and guests)
+    const hasAccess = await canViewCalendar(user?.id, result[0].calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -105,8 +106,9 @@ export async function PATCH(
       );
     }
 
-    // Check write permission (if auth is enabled)
-    if (user && !(await canEditCalendar(user.id, existingShift.calendarId))) {
+    // Check write permission (works for both authenticated users and guests)
+    const hasAccess = await canEditCalendar(user?.id, existingShift.calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
         { status: 403 }
@@ -163,8 +165,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    // Check write permission (if auth is enabled)
-    if (user && !(await canEditCalendar(user.id, shift.calendarId))) {
+    // Check write permission (works for both authenticated users and guests)
+    const hasAccess = await canEditCalendar(user?.id, shift.calendarId);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
         { status: 403 }

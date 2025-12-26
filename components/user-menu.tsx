@@ -37,9 +37,15 @@ export function UserMenu() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      toast.success(t("auth.logoutSuccess"));
-      // Session invalidation triggers automatic navigation via AuthProvider
+      await signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success(t("auth.logoutSuccess"));
+            // Redirect to login after session is fully cleared
+            router.replace("/login");
+          },
+        },
+      });
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error(t("common.error"));
@@ -59,8 +65,12 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 sm:h-8 sm:w-8 rounded-full"
+        >
+          <Avatar className="h-10 w-10 sm:h-8 sm:w-8">
             <AvatarImage src={user.image || undefined} alt={user.name || ""} />
             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
               {user.name ? (
@@ -82,7 +92,7 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/profile")}>
+        <DropdownMenuItem onClick={() => router.replace("/profile")}>
           <User className="mr-2 h-4 w-4" />
           {t("auth.profile")}
         </DropdownMenuItem>

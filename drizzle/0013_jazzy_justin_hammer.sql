@@ -65,6 +65,7 @@ CREATE TABLE `verification` (
 );
 --> statement-breakpoint
 ALTER TABLE `calendars` ADD `owner_id` text REFERENCES user(id);--> statement-breakpoint
+ALTER TABLE `calendars` ADD `guest_permission` text DEFAULT 'none' NOT NULL;--> statement-breakpoint
 CREATE INDEX `calendars_ownerId_idx` ON `calendars` (`owner_id`);--> statement-breakpoint
 ALTER TABLE `calendars` DROP COLUMN `password_hash`;--> statement-breakpoint
 ALTER TABLE `calendars` DROP COLUMN `is_locked`;

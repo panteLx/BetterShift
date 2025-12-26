@@ -118,9 +118,9 @@ export default function RegisterPage() {
   // Redirect if auth disabled or registration not allowed
   useEffect(() => {
     if (!authEnabled) {
-      router.push("/");
+      router.replace("/");
     } else if (!registrationAllowed) {
-      router.push("/login");
+      router.replace("/login");
     }
   }, [authEnabled, registrationAllowed, router]);
 

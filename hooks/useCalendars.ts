@@ -92,6 +92,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     updates: {
       name?: string;
       color?: string;
+      guestPermission?: "none" | "read" | "write";
     }
   ) => {
     try {

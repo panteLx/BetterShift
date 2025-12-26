@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Plus, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface NotesListDialogProps {
   open: boolean;
@@ -23,6 +25,8 @@ interface NotesListDialogProps {
   onEditNote: (note: CalendarNote) => void;
   onDeleteNote: (noteId: string) => void;
   onAddNew: () => void;
+  calendarId?: string;
+  readOnly?: boolean;
 }
 
 export function NotesListDialog({
@@ -33,10 +37,16 @@ export function NotesListDialog({
   onEditNote,
   onDeleteNote,
   onAddNew,
+  calendarId,
+  readOnly = false,
 }: NotesListDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
+  const permission = useCalendarPermission(calendarId);
+
+  // Determine if dialog should be in read-only mode
+  const isReadOnly = readOnly || !permission.canEdit;
 
   const formattedDate = format(date, "EEEE, dd. MMMM yyyy", {
     locale: dateLocale,
@@ -77,6 +87,13 @@ export function NotesListDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Read-Only Banner */}
+        {isReadOnly && (
+          <div className="px-6 pt-6">
+            <ReadOnlyBanner message={t("guest.cannotEditNotes")} />
+          </div>
+        )}
+
         <div className="space-y-6 overflow-y-auto flex-1 p-6">
           {/* Events Section */}
           {events.length > 0 && (
@@ -116,24 +133,26 @@ export function NotesListDialog({
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-1.5 shrink-0 ml-auto">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEditNote(event)}
-                          className="h-8 w-8 hover:bg-background/50"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDeleteNote(event.id)}
-                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {!isReadOnly && (
+                        <div className="flex gap-1.5 shrink-0 ml-auto">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEditNote(event)}
+                            className="h-8 w-8 hover:bg-background/50"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDeleteNote(event.id)}
+                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -159,24 +178,26 @@ export function NotesListDialog({
                           {note.note}
                         </p>
                       </div>
-                      <div className="flex gap-1.5 shrink-0 ml-auto">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEditNote(note)}
-                          className="h-8 w-8"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDeleteNote(note.id)}
-                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {!isReadOnly && (
+                        <div className="flex gap-1.5 shrink-0 ml-auto">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEditNote(note)}
+                            className="h-8 w-8"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDeleteNote(note.id)}
+                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -202,16 +223,18 @@ export function NotesListDialog({
           >
             {t("common.cancel")}
           </Button>
-          <Button
-            onClick={() => {
-              onOpenChange(false);
-              onAddNew();
-            }}
-            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t("common.add")}
-          </Button>
+          {!isReadOnly && (
+            <Button
+              onClick={() => {
+                onOpenChange(false);
+                onAddNew();
+              }}
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t("common.add")}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

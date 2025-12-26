@@ -6,6 +6,7 @@ export interface CalendarWithCount {
   name: string;
   color: string;
   ownerId?: string | null;
+  guestPermission?: "none" | "read" | "write";
   createdAt: Date | null;
   updatedAt: Date | null;
   _count?: number;

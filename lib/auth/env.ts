@@ -29,6 +29,13 @@ export const ALLOW_USER_REGISTRATION =
   process.env.NEXT_PUBLIC_ALLOW_USER_REGISTRATION !== "false"; // Default: true
 
 // =============================================================================
+// Guest Access Settings
+// =============================================================================
+
+export const ALLOW_GUEST_ACCESS =
+  process.env.NEXT_PUBLIC_ALLOW_GUEST_ACCESS === "true"; // Default: false
+
+// =============================================================================
 // Session Settings
 // =============================================================================
 

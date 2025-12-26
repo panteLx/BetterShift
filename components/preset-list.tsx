@@ -14,6 +14,7 @@ import {
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
 import { PresetListSkeleton } from "@/components/skeletons/preset-list-skeleton";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface PresetListProps {
   calendars: CalendarWithCount[];
@@ -44,10 +45,14 @@ export function PresetList({
   hideManageButton = false,
 }: PresetListProps) {
   const t = useTranslations();
+  const permission = useCalendarPermission(calendarId);
   const [showSecondary, setShowSecondary] = React.useState(false);
 
   const primaryPresets = presets.filter((p) => !p.isSecondary);
   const secondaryPresets = presets.filter((p) => p.isSecondary);
+
+  // Check if current calendar is read-only
+  const isReadOnly = !permission.canEdit;
 
   // Show loading state while fetching
   if (loading) {
@@ -98,6 +103,7 @@ export function PresetList({
                   selectedPresetId === preset.id ? undefined : preset.id
                 )
               }
+              isReadOnly={isReadOnly}
             />
           ))}
         </div>
@@ -134,6 +140,7 @@ export function PresetList({
                     )
                   }
                   compact
+                  isReadOnly={isReadOnly}
                 />
               ))}
             </div>
@@ -196,6 +203,7 @@ interface PresetButtonProps {
   isSelected: boolean;
   onSelect: () => void;
   compact?: boolean;
+  isReadOnly?: boolean;
 }
 
 function PresetButton({
@@ -203,6 +211,7 @@ function PresetButton({
   isSelected,
   onSelect,
   compact,
+  isReadOnly = false,
 }: PresetButtonProps) {
   const t = useTranslations();
 
@@ -211,7 +220,8 @@ function PresetButton({
       <Button
         variant={isSelected ? "default" : "outline"}
         size="sm"
-        onClick={onSelect}
+        onClick={isReadOnly ? undefined : onSelect}
+        disabled={isReadOnly}
         className="relative text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
         style={{
           backgroundColor: isSelected ? preset.color : undefined,
@@ -247,7 +257,8 @@ function PresetButton({
       <Button
         variant={isSelected ? "default" : "outline"}
         size="sm"
-        onClick={onSelect}
+        onClick={isReadOnly ? undefined : onSelect}
+        disabled={isReadOnly}
         className="relative text-[11px] sm:text-sm px-2 sm:px-4 h-8 sm:h-10 rounded-full font-semibold transition-all"
         style={{
           backgroundColor: isSelected ? preset.color : undefined,

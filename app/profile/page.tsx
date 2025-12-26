@@ -65,9 +65,9 @@ export default function ProfilePage() {
   // Redirect if auth disabled or not logged in
   useEffect(() => {
     if (!authEnabled) {
-      router.push("/");
+      router.replace("/");
     } else if (!isLoading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
   }, [authEnabled, isLoading, user, router]);
 
@@ -146,7 +146,7 @@ export default function ProfilePage() {
       setShowDeleteDialog(false);
       setDeletePassword("");
       await signOut();
-      router.push("/");
+      router.replace("/");
     } catch (error) {
       console.error("Account deletion error:", error);
       toast.error(t("common.error"));
@@ -161,7 +161,7 @@ export default function ProfilePage() {
         fetchOptions: {
           onSuccess: () => {
             toast.success(t("auth.logoutSuccess"));
-            router.push("/login");
+            router.replace("/login");
           },
         },
       });
