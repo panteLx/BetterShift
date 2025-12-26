@@ -7,6 +7,23 @@
 
 ---
 
+## Table of Contents
+
+1. [Phase 0: Preparation & Planning](#phase-0-preparation--planning-)
+2. [Phase 1: Better Auth Installation & Basic Setup](#phase-1-better-auth-installation--basic-setup)
+3. [Phase 2: Auth UI & User Experience](#phase-2-auth-ui--user-experience)
+4. [Phase 3: Permission System Implementation](#phase-3-permission-system-implementation)
+5. [Phase 4: Security & Infrastructure](#phase-4-security--infrastructure)
+6. [Phase 5: Calendar Sharing Features](#phase-5-calendar-sharing-features)
+7. [Phase 6: Calendar Access Tokens](#phase-6-calendar-access-tokens)
+8. [Phase 7: Data Migration](#phase-7-data-migration)
+9. [Phase 8: UI/UX Enhancements](#phase-8-uiux-enhancements)
+10. [Phase 9: Admin Panel & Super Admin](#phase-9-admin-panel--super-admin)
+11. [Phase 10: Testing & Documentation](#phase-10-testing--documentation)
+12. [Phase 11: Performance & Polish](#phase-11-performance--polish)
+
+---
+
 ## ⚠️ Important: Better Auth Documentation First
 
 **Before making any auth-related changes, always check the official Better Auth documentation:**
@@ -348,9 +365,210 @@
 
 ---
 
-## Phase 4: Calendar Sharing Features
+## Phase 4: Security & Infrastructure
 
-### 4.1 Sharing API
+**Priority**: Critical (Before Production)
+
+**Goal**: Implement security hardening, audit logging, session management, and background service protection.
+
+### 4.1 Rate Limiting & Security Hardening
+
+**Priority**: Critical (Before Production)
+
+**Goal**: Protect API endpoints from brute-force attacks and abuse using in-memory rate limiting.
+
+- [ ] Create `lib/rate-limiter.ts`
+  - Implement LRU cache-based rate limiter (no external dependencies)
+  - Configurable limits per endpoint
+  - Track requests by IP address or user ID
+  - Return rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`)
+- [ ] Rate Limiting Configuration
+  - Auth endpoints: 5 requests per minute (login/register)
+  - Password change: 3 requests per hour
+  - Token validation (Phase 6): 10 requests per minute
+  - Account deletion: 1 request per hour
+  - SSE connections: 1 per user (prevent multiple streams)
+- [ ] Integrate Rate Limiter
+  - [ ] Update `app/api/auth/[...all]/route.ts` - Apply to POST requests
+  - [ ] Update `app/api/auth/change-password/route.ts` - Strict limit
+  - [ ] Update `app/api/auth/delete-account/route.ts` - Strict limit
+  - [ ] Update `app/api/events/stream/route.ts` - Connection limit
+  - [ ] Add rate limiting middleware to `proxy.ts` (optional, for global limits)
+- [ ] Error Handling
+  - Return `429 Too Many Requests` with retry-after header
+  - Show user-friendly toast message on client
+  - Log rate limit violations for monitoring
+- [ ] Testing
+  - Test brute-force protection on login
+  - Verify rate limits reset correctly
+  - Test concurrent requests handling
+
+**Implementation Notes**:
+
+- Use Map with TTL for in-memory storage
+- No Redis/external database required
+- Rate limits reset on server restart (acceptable for self-hosted)
+- Consider sliding window algorithm for accuracy
+
+### 4.2 Audit Logging System
+
+**Priority**: Medium (Minimal Scope)
+
+**Goal**: Track critical security events (failed logins, admin actions) for compliance and troubleshooting.
+
+- [ ] Database Schema - Audit Logs
+  - [ ] Create `auditLogs` table in `lib/db/schema.ts`
+    - `id` (text, primary key, UUID)
+    - `userId` (text, nullable, references users, SET NULL on delete)
+    - `action` (text, not null) - Action type (e.g., "login.failed", "admin.user.delete")
+    - `resourceType` (text, nullable) - "user", "calendar", "share", etc.
+    - `resourceId` (text, nullable) - ID of affected resource
+    - `metadata` (text, nullable) - JSON string with additional context
+    - `ipAddress` (text, nullable)
+    - `userAgent` (text, nullable)
+    - `timestamp` (timestamp, not null, default: current timestamp)
+  - [ ] Add indexes on `(userId, timestamp)` and `(action, timestamp)`
+  - [ ] Generate migration: `npm run db:generate`
+- [ ] Audit Logging Helper
+  - [ ] Create `lib/audit-log.ts`
+    - `logAuditEvent(action, userId?, resourceType?, resourceId?, metadata?, request?)` function
+    - Extract IP address and user agent from request
+    - Store event in database (fire-and-forget, don't block request)
+- [ ] Events to Log (Minimal Scope)
+  - [ ] **Failed login attempts** - Track in `app/api/auth/[...all]/route.ts`
+    - Action: `"login.failed"`
+    - Metadata: `{ email: "user@example.com", reason: "invalid_password" }`
+  - [ ] **Admin actions** (Phase 9)
+    - User deletion: `"admin.user.delete"`
+    - Calendar transfer: `"admin.calendar.transfer"`
+    - Password reset: `"admin.user.password_reset"`
+- [ ] Admin Panel UI (Phase 9)
+  - [ ] Create `app/admin/logs/page.tsx` - View audit logs
+  - [ ] Filters: action type, user, date range
+  - [ ] Pagination for large datasets
+  - [ ] Export logs as CSV
+- [ ] Retention Policy (Optional)
+  - [ ] Auto-delete logs older than 90 days (configurable)
+  - [ ] Background job or on-access cleanup
+
+**Note**: Email-Verification will be deliberately **not** enforced - the `emailVerified` field exists but is not used.
+
+### 4.3 Session Management UI
+
+**Priority**: Medium (Low Priority, Full Features)
+
+**Goal**: Give users visibility and control over their active sessions.
+
+- [ ] Database Query Helper
+  - [ ] Create `lib/auth/sessions.ts`
+    - `getUserSessions(userId)` - Fetch all active sessions for user
+    - `revokeSession(sessionId)` - Invalidate specific session
+    - `revokeAllSessions(userId, exceptCurrent?)` - Logout from all devices
+    - Parse user agent for device/browser info
+- [ ] Profile Page - Sessions Tab
+  - [ ] Update `app/profile/page.tsx`
+    - Add "Active Sessions" section
+    - Show table/list of sessions:
+      - Device/Browser (parsed from user agent)
+      - IP Address (with geolocation if available)
+      - Last Activity timestamp
+      - "Current Session" badge
+      - "Revoke" button per session
+    - Add "Logout from All Devices" button
+    - Show loading states during revocation
+- [ ] Session Revocation API
+  - [ ] Create `app/api/auth/sessions/route.ts`
+    - GET: List user's active sessions
+    - DELETE: Revoke all sessions (except current, optional)
+  - [ ] Create `app/api/auth/sessions/[id]/route.ts`
+    - DELETE: Revoke specific session
+- [ ] Auto-Logout on Password Change
+  - [ ] Update `app/api/auth/change-password/route.ts`
+    - After successful password change, invalidate all sessions
+    - Keep current session active (user stays logged in)
+    - Show toast: "Password changed. All other sessions logged out."
+- [ ] Security Alerts (Optional)
+  - [ ] New login notification
+    - Show toast on next visit: "New login from [Device] at [Time]"
+    - Store in session metadata or separate table
+    - "Was this you?" with "Yes" / "Secure my account" buttons
+  - [ ] Suspicious activity detection (future)
+    - Login from unusual location
+    - Multiple failed login attempts
+    - Session from different country
+
+**Implementation Notes**:
+
+- Use Better Auth's session table (`session` table already exists)
+- `ipAddress` and `userAgent` fields already available in schema
+- Parse user agent with `ua-parser-js` or similar library
+- Consider IP geolocation API (optional, e.g., `ipapi.co`)
+
+### 4.4 CSRF Protection & Security Review
+
+**Priority**: Critical (Before Production)
+
+**Goal**: Verify and implement CSRF protection across all state-changing endpoints.
+
+- [ ] **CSRF Protection Verification**
+  - [ ] Check if Better Auth automatically uses CSRF tokens
+  - [ ] Test with Postman/curl: Try cross-origin state-changing requests
+  - [ ] Verify `SameSite=Strict` or `SameSite=Lax` on session cookies
+  - [ ] Test POST/PUT/DELETE endpoints without proper origin
+  - [ ] Document findings in `docs/AUTH_SETUP.md`
+  - [ ] If not enabled: Implement CSRF middleware in `proxy.ts`
+- [ ] **Session Security**
+  - [ ] Verify `httpOnly` flag on session cookies
+  - [ ] Verify `secure` flag in production (HTTPS only)
+  - [ ] Check session expiration and renewal logic
+  - [ ] Test session fixation protection
+- [ ] **Rate Limiting Verification** (Phase 4.1)
+  - [ ] Verify all auth endpoints are rate-limited
+  - [ ] Test brute-force protection on login
+  - [ ] Monitor rate limit violations in production
+- [ ] **SQL Injection Prevention**
+  - [ ] Confirm all queries use Drizzle ORM (no raw SQL)
+  - [ ] Review dynamic query construction
+  - [ ] Test with SQL injection payloads
+- [ ] **XSS Protection**
+  - [ ] Verify React escapes user input by default
+  - [ ] Check for dangerouslySetInnerHTML usage
+  - [ ] Review markdown rendering (if any)
+- [ ] **Input Validation**
+  - [ ] All API endpoints validate input types
+  - [ ] Email format validation
+  - [ ] Password complexity requirements documented
+  - [ ] Calendar name sanitization
+
+### 4.5 Background Service Security
+
+**Priority**: High
+
+**Goal**: Ensure background sync service respects calendar ownership and permissions.
+
+- [ ] **Orphaned Calendar Detection**
+  - [ ] Update `lib/auto-sync-service.ts`
+    - Check if calendar has owner before syncing
+    - Skip sync for orphaned calendars (`ownerId = null`)
+    - Log warning: "Sync skipped for calendar [id] - no owner"
+- [ ] **Sync Failure Handling**
+  - [ ] If owner deleted during sync: abort gracefully
+  - [ ] If external sync deleted: clean up from sync queue
+  - [ ] Retry logic for transient failures
+- [ ] **Audit Logging** (Phase 4.2)
+  - [ ] Log sync failures to audit log
+  - [ ] Action: `"sync.failed"`
+  - [ ] Metadata: `{ calendarId, reason: "no_owner" }`
+- [ ] **Orphaned Sync Cleanup**
+  - [ ] Mark external syncs as inactive when calendar loses owner
+  - [ ] Reactivate if new owner assigned
+  - [ ] Periodic cleanup job for orphaned syncs
+
+---
+
+## Phase 5: Calendar Sharing Features
+
+### 5.1 Sharing API
 
 - [ ] Create `app/api/calendars/[id]/shares/route.ts`
   - GET: List all shares for calendar (admin/owner only)
@@ -359,7 +577,7 @@
   - PUT: Update share permission (admin/owner only)
   - DELETE: Remove share (admin/owner or self)
 
-### 4.2 User Search/Invite
+### 5.2 User Search/Invite
 
 - [ ] Create `app/api/users/search/route.ts`
   - Search users by email/name
@@ -368,7 +586,7 @@
   - Send invite link for new users
   - Auto-share calendar on registration
 
-### 4.3 Sharing UI Components
+### 5.3 Sharing UI Components
 
 - [ ] Create `components/calendar-share-sheet.tsx`
   - List current shares
@@ -382,7 +600,7 @@
   - Show your permission level
   - Show owner name
 
-### 4.4 Sharing Hooks
+### 5.4 Sharing Hooks
 
 - [ ] Create `hooks/useCalendarShares.ts`
   - `fetchShares(calendarId)`
@@ -395,11 +613,11 @@
 
 ---
 
-## Phase 4.5: Calendar Access Tokens (Easy Share Links)
+## Phase 6: Calendar Access Tokens (Easy Share Links)
 
 **Goal**: Enable low-friction calendar sharing via simple links (like old password system, but secure).
 
-### 4.5.1 Database Schema - Access Tokens
+### 6.1 Database Schema - Access Tokens
 
 - [ ] Create `calendarAccessTokens` table in `lib/db/schema.ts`
   - `id` (text, primary key, UUID)
@@ -417,7 +635,7 @@
 - [ ] Add index on `(calendarId, isActive)` for quick lookups
 - [ ] Generate migration: `npm run db:generate`
 
-### 4.5.2 Token Middleware & Authentication
+### 6.2 Token Middleware & Authentication
 
 - [ ] Create `lib/auth/token-auth.ts`
   - `validateAccessToken(token: string)` - Check if token is valid & active
@@ -434,7 +652,7 @@
   - Token permissions apply alongside user permissions
   - Tokens grant access even if user not logged in
 
-### 4.5.3 Token Management API
+### 6.3 Token Management API
 
 - [ ] Create `app/api/calendars/[id]/tokens/route.ts`
   - **GET**: List all tokens for calendar (owner/admin only)
@@ -452,7 +670,7 @@
     - Revokes access immediately
     - Cascade cleanup of related data
 
-### 4.5.4 Token UI Components
+### 6.4 Token UI Components
 
 - [ ] Create `components/calendar-token-sheet.tsx`
   - List existing access tokens
@@ -476,7 +694,7 @@
   - Opens token management sheet
   - Quick action: "Create Share Link" → Generates token → Shows link
 
-### 4.5.5 Token Hooks
+### 6.5 Token Hooks
 
 - [ ] Create `hooks/useCalendarTokens.ts`
   - `fetchTokens(calendarId)` - List tokens (owner/admin only)
@@ -485,7 +703,7 @@
   - `deleteToken(tokenId)` - Revoke token
   - `copyShareLink(token, calendarId)` - Copy full URL to clipboard
 
-### 4.5.6 Token Access Flow
+### 6.6 Token Access Flow
 
 **User Journey:**
 
@@ -515,37 +733,56 @@
    - All users with that token lose access immediately
    - Next request: "Access token invalid or revoked"
 
-### 4.5.7 Security & Best Practices
+### 6.7 Security & Best Practices
 
-- [ ] Generate tokens using `crypto.randomBytes(32)` (256-bit security)
-- [ ] Never log full tokens (only log token IDs)
-- [ ] Hash tokens in database (optional, for extra security)
-- [ ] Rate limit token validation endpoint (prevent brute force)
-- [ ] Audit log for token creation/deletion/usage
-- [ ] Show token usage statistics (last used, count)
-- [ ] Expire tokens automatically (cron job or on-access check)
-- [ ] Limit number of active tokens per calendar (e.g., max 10)
-- [ ] Warn owner when token is used for first time
-- [ ] Optional: Require password confirmation to create tokens
+**Critical Security Requirements**:
 
-### 4.5.8 Token vs Guest vs User Shares Comparison
+- [ ] **Token Generation**
+  - [ ] Use `crypto.randomBytes(32)` for 256-bit security
+  - [ ] Encode as URL-safe base64 or hex string
+  - [ ] Verify randomness with test suite
+- [ ] **Token Storage**
+  - [ ] Store tokens hashed in database (SHA-256 or bcrypt)
+  - [ ] Never log full tokens - only token IDs
+  - [ ] Mask tokens in UI (show only last 6 characters)
+  - [ ] Return full token only once on creation
+- [ ] **Rate Limiting** (Phase 4.1)
+  - [ ] Token validation endpoint: 10 requests per minute per IP
+  - [ ] Token creation endpoint: 5 tokens per hour per user
+  - [ ] Return `429 Too Many Requests` on limit exceeded
+- [ ] **Audit Logging** (Phase 4.2)
+  - [ ] Log token creation (action: `"token.create"`, metadata: `{ calendarId, permission }`)
+  - [ ] Log token usage (action: `"token.use"`, metadata: `{ tokenId, calendarId }`)
+  - [ ] Log token deletion (action: `"token.delete"`, metadata: `{ tokenId }`)
+  - [ ] Track first-time token usage for owner notification
+- [ ] **Token Lifecycle**
+  - [ ] Show token usage statistics (last used, count)
+  - [ ] Expire tokens automatically (cron job or on-access check)
+  - [ ] Limit active tokens per calendar (e.g., max 10)
+  - [ ] Warn owner when token is used for first time
+- [ ] **Additional Security**
+  - [ ] Optional: Require password confirmation to create tokens
+  - [ ] Optional: IP whitelist for token access
+  - [ ] Optional: Single-use tokens for extra sensitive calendars
 
-| Feature         | Guest Access (3.4)  | Access Tokens (4.5)  | User Shares (4.1-4.4) |
-| --------------- | ------------------- | -------------------- | --------------------- |
-| **Use Case**    | Public calendars    | Private link sharing | Team collaboration    |
-| **Setup**       | Set calendar public | Generate share link  | Invite by email       |
-| **Recipient**   | No account needed   | No account needed    | Account required      |
-| **Revocation**  | Disable guest mode  | Delete token         | Remove share          |
-| **Granularity** | Per calendar        | Per link/token       | Per user              |
-| **Audit Trail** | None                | Token usage stats    | User activity log     |
-| **Persistence** | Always accessible   | Until revoked        | Until removed         |
-| **Example**     | Public team shifts  | Share with family    | Work calendar         |
+### 6.8 Token vs Guest vs User Shares Comparison
+
+| Feature         | Guest Access (3.4)  | Access Tokens (6)    | User Shares (5)    |
+| --------------- | ------------------- | -------------------- | ------------------ |
+| **Use Case**    | Public calendars    | Private link sharing | Team collaboration |
+| **Setup**       | Set calendar public | Generate share link  | Invite by email    |
+| **Recipient**   | No account needed   | No account needed    | Account required   |
+| **Revocation**  | Disable guest mode  | Delete token         | Remove share       |
+| **Granularity** | Per calendar        | Per link/token       | Per user           |
+| **Audit Trail** | None                | Token usage stats    | User activity log  |
+| **Persistence** | Always accessible   | Until revoked        | Until removed      |
+| **Example**     | Public team shifts  | Share with family    | Work calendar      |
 
 ---
 
-## Phase 5: Data Migration
+## Phase 7: Data Migration
 
-### 5.1 Migration Script
+### 7.1 Migration Script
 
 - [ ] Create `lib/migrate-to-auth.ts` script
 - [ ] Generate default admin user for existing data
@@ -554,7 +791,7 @@
 - [ ] Assign all existing calendars to admin user
 - [ ] Mark all calendars as owned (no shares initially)
 
-### 5.2 Migration Execution
+### 7.2 Migration Execution
 
 - [ ] Backup database before migration
 - [ ] Generate Drizzle migration files
@@ -572,7 +809,7 @@
 - [ ] Verify all calendars have owners
 - [ ] Test auth system with test user
 
-### 5.3 Backwards Compatibility
+### 7.3 Backwards Compatibility
 
 - [ ] If `AUTH_ENABLED=false`:
   - Skip authentication checks
@@ -583,29 +820,87 @@
 
 ---
 
-## Phase 6: UI/UX Enhancements
+## Phase 8: UI/UX Enhancements
 
-### 6.1 Calendar List Updates
+### 8.1 Permission UI Indicators & Calendar List Updates
 
-- [ ] Show ownership indicator in `CalendarSelector`
-- [ ] Show permission badge (if shared)
-- [ ] Group calendars: "My Calendars" vs "Shared with me"
-- [ ] Disable delete/rename for non-owners
+**Priority**: Important (Before Production, Low Priority Currently)
 
-### 6.2 Permission-Based UI
+**Goal**: Show users their permission level and disable actions they cannot perform.
+
+- [ ] **Calendar Selector Enhancements**
+  - [ ] Update `components/calendar-selector.tsx`
+    - Show permission badge next to calendar name:
+      - "Owner" (blue badge)
+      - "Shared - Admin" (green badge)
+      - "Shared - Edit" (yellow badge)
+      - "Shared - Read-only" (gray badge)
+    - Add owner name tooltip: "Owned by [Name]" for shared calendars
+    - Disable/hide buttons based on permissions:
+      - Settings button: Only admin/owner
+      - Delete: Hidden for non-owners
+      - External Sync: Only write permission or higher
+    - Group calendars in dropdown:
+      - Section 1: "My Calendars"
+      - Section 2: "Shared with me"
+- [ ] **Client-Side Permission Hook**
+  - [ ] Create `hooks/useCalendarPermission.ts`
+    - `useCalendarPermission(calendarId)` → returns permission level
+    - Fetch permission from server on mount
+    - Cache result in React state
+    - Provide helper functions:
+      - `canView()`, `canEdit()`, `canManage()`, `canDelete()`
+- [ ] **Button Visibility Control**
+  - [ ] Update `components/calendar-settings-sheet.tsx`
+    - Disable "Delete Calendar" button if not owner
+    - Show "You don't have permission" message
+    - Hide password/lock settings if not admin
+  - [ ] Update `components/shift-sheet.tsx`
+    - Set form to read-only mode if permission < write
+    - Disable save/delete buttons
+    - Show banner: "Read-only access - You cannot edit shifts"
+  - [ ] Update `components/preset-manage-sheet.tsx`
+    - Disable preset editing if permission < write
+    - Hide "Add Preset" button
+    - Show read-only indicator
+  - [ ] Update `components/note-sheet.tsx`
+    - Same read-only logic as shifts
+    - Disable form inputs if permission < write
+- [ ] **Read-Only Banners**
+  - [ ] Create `components/read-only-banner.tsx`
+    - Reusable component for permission warnings
+    - Shows: "You have [permission] access to this calendar"
+    - Icon and color based on permission level
+  - [ ] Add to main calendar view (above grid)
+  - [ ] Add to sheets/dialogs where relevant
+- [ ] **Permission Badges Component**
+  - [ ] Create `components/ui/permission-badge.tsx`
+    - Reusable badge component
+    - Props: `permission`, `ownerId`, `ownerName`
+    - Variants: owner, admin, write, read
+    - Tooltip with detailed explanation
+- [ ] **Tooltips & Help Text**
+  - [ ] Add permission explanations to UI
+    - "Admin: Can manage settings and shares"
+    - "Edit: Can create and edit shifts"
+    - "Read-only: Can view calendar only"
+  - [ ] Add to calendar selector dropdown
+  - [ ] Add to share dialog (Phase 5.3)
+
+### 8.2 Permission-Based UI Actions
 
 - [ ] Hide "Delete" button if not owner
 - [ ] Disable "Settings" button if not admin
 - [ ] Show read-only banner on shared calendars
 - [ ] Disable shift editing if permission < write
 
-### 6.3 Notifications & Feedback
+### 8.3 Notifications & Feedback
 
 - [ ] Show toast when calendar is shared with you
 - [ ] Notify owner when someone accepts share
 - [ ] Email notifications (optional)
 
-### 6.4 Mobile Optimization
+### 8.4 Mobile Optimization
 
 - [ ] Responsive share dialog
 - [ ] Touch-friendly permission selector
@@ -613,16 +908,16 @@
 
 ---
 
-## Phase 7: Admin Panel & Super Admin Features
+## Phase 9: Admin Panel & Super Admin Features
 
-### 7.1 Super Admin Concept
+### 9.1 Super Admin Concept
 
 - [ ] Add `isSuperAdmin` flag to `user` table (boolean, default: false)
 - [ ] Migration: Mark first created user as super admin (`ORDER BY createdAt LIMIT 1`)
 - [ ] Add helper function `isSuperAdmin(userId)` in `lib/auth/permissions.ts`
 - [ ] Super admin bypasses all permission checks (full access to everything)
 
-### 7.2 Admin Panel - User Management
+### 9.2 Admin Panel - User Management
 
 - [ ] Create `app/admin/page.tsx` (protected route, super admin only)
 - [ ] Create `app/api/admin/users/route.ts`
@@ -640,7 +935,7 @@
   - [ ] `components/admin/user-password-dialog.tsx` - Reset user password
   - [ ] `components/admin/user-stats.tsx` - User statistics overview
 
-### 7.3 Admin Panel - Calendar Management
+### 9.3 Admin Panel - Calendar Management
 
 - [ ] Create `app/api/admin/calendars/route.ts`
   - GET: List all calendars with owner info
@@ -657,7 +952,7 @@
   - [ ] `components/admin/calendar-transfer-dialog.tsx` - Transfer ownership
   - [ ] `components/admin/calendar-stats.tsx` - Calendar statistics
 
-### 7.4 Admin Panel - System Overview
+### 9.4 Admin Panel - System Overview
 
 - [ ] Create `app/api/admin/stats/route.ts`
   - GET: System-wide statistics (users, calendars, shifts, shares)
@@ -669,7 +964,7 @@
   - Active sessions count
   - Recent activity log
 
-### 7.5 Admin Panel - Access Control
+### 9.5 Admin Panel - Access Control
 
 - [ ] Add admin-only middleware check in `proxy.ts`
   - Block `/admin` routes for non-super-admin users
@@ -683,7 +978,7 @@
   - Log user deletions
   - Store in new `admin_logs` table
 
-### 7.6 Admin Panel UI/UX
+### 9.6 Admin Panel UI/UX
 
 - [ ] Admin panel layout: `app/admin/layout.tsx`
   - Sidebar navigation (Users, Calendars, Stats, Logs)
@@ -715,9 +1010,9 @@
 
 ---
 
-## Phase 8: Testing & Documentation
+## Phase 10: Testing & Documentation
 
-### 8.2 Documentation
+### 10.1 Documentation
 
 - [ ] Update README.md
   - Auth system overview
@@ -732,38 +1027,90 @@
   - Self-hosting considerations
 - [ ] Update Docker setup for auth
 
-### 8.3 Security Review
+### 10.2 Integration Testing
 
-- [ ] CSRF protection enabled
-- [ ] Session security (httpOnly cookies)
-- [ ] Rate limiting on auth endpoints
-- [ ] SQL injection prevention (Drizzle ORM)
-- [ ] XSS protection
-- [ ] Input validation on all endpoints
+- [ ] Test complete auth flow (register, login, logout)
+- [ ] Test permission system with multiple users
+- [ ] Test calendar sharing workflows
+- [ ] Test access token functionality
+- [ ] Test data migration script
+- [ ] Test backwards compatibility (AUTH_ENABLED=false)
+- [ ] Performance testing with realistic data
+- [ ] Cross-browser compatibility testing
 
 ---
 
-## Phase 9: Performance & Polish
+## Phase 11: Performance & Polish
 
-### 9.1 Performance Optimization
+### 11.1 Performance Optimization & Permission Caching
 
-- [ ] Index `ownerId` column in calendars
-- [ ] Index `(calendarId, userId)` in shares
-- [ ] Optimize permission checks (caching)
-- [ ] Add database query optimization
+**Priority**: Medium (Post-MVP)
 
-### 9.2 SSE Updates
+- [ ] **Database Indexes**
+  - [ ] Index `ownerId` column in calendars
+  - [ ] Index `(calendarId, userId)` in shares
+  - [ ] Verify indexes with `EXPLAIN QUERY PLAN` (SQLite)
+- [ ] **Permission Caching**
+  - [ ] Update `lib/auth/permissions.ts`
+    - Add in-memory Map-based cache
+    - Cache key: `${userId}:${calendarId}`
+    - Cache value: `{ permission: string, expires: timestamp }`
+    - TTL: 60 seconds (configurable)
+  - [ ] Create `getCachedPermission(userId, calendarId)` function
+    - Check cache first, return if valid
+    - On cache miss: query DB, store in cache
+    - Return cached permission
+  - [ ] Cache Invalidation Strategy
+    - Manual invalidation on permission changes:
+      - Calendar ownership transfer
+      - Share creation/update/deletion
+      - Calendar deletion
+    - Emit SSE event: `permission.changed` with `{ userId, calendarId }`
+    - Clients refetch permissions on event
+  - [ ] Add cache statistics (optional)
+    - Track hit rate, miss rate
+    - Log to console in development
+    - Expose as admin metric (Phase 7)
+- [ ] **Performance Benchmarking**
+  - [ ] Measure permission check latency before caching
+  - [ ] Measure after caching implementation
+  - [ ] Target: < 5ms average permission check
+  - [ ] Document results in `docs/PERFORMANCE.md`
+- [ ] **Query Optimization**
+  - [ ] Review slow queries with SQLite profiling
+  - [ ] Optimize calendar list query (with permissions)
+  - [ ] Batch permission checks where possible
+  - [ ] Consider prepared statements for hot paths
+
+### 11.2 SSE Updates
 
 - [ ] Emit share events via SSE
 - [ ] Real-time calendar share notifications
 - [ ] Update `instrumentation.ts` for multi-user
 
-### 9.3 Edge Cases
+### 11.3 Edge Cases
 
-- [ ] Handle orphaned calendars (no owner)
-- [ ] Handle deleted users (cascade cleanup)
-- [ ] Handle calendar transfer (change owner)
-- [ ] Handle permission conflicts
+- [ ] **Orphaned Calendars**
+  - [ ] Handle calendars with `ownerId = null` (after user deletion)
+  - [ ] Migration script assigns to admin (Phase 7)
+  - [ ] Prevent creation of calendars without owner (when auth enabled)
+  - [ ] Admin panel shows orphaned calendars (Phase 9)
+- [ ] **Deleted Users**
+  - [ ] Verify cascade cleanup of:
+    - Sessions
+    - Calendar shares
+    - Audit logs (set userId to null)
+  - [ ] Handle calendar ownership: `SET NULL` (becomes orphaned)
+  - [ ] Test deletion flow end-to-end
+- [ ] **Calendar Transfer**
+  - [ ] Handle owner change (future feature)
+  - [ ] Update all related shares
+  - [ ] Notify old and new owner
+  - [ ] Transfer external sync ownership
+- [ ] **Permission Conflicts**
+  - [ ] User has multiple shares for same calendar (shouldn't happen)
+  - [ ] Resolution: Take highest permission level
+  - [ ] Add unique constraint to prevent duplicates (already done in 1.4)
 
 ---
 
