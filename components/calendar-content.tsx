@@ -29,7 +29,6 @@ interface CalendarContentProps {
   highlightColor?: string;
   selectedCalendar: string | null;
   statsRefreshTrigger: number;
-  shouldHideUIElements: boolean;
   locale?: Locale;
   onDayClick: (date: Date) => void;
   onDayRightClick?: (e: React.MouseEvent, date: Date) => void;
@@ -76,36 +75,34 @@ export function CalendarContent(props: CalendarContentProps) {
         onShowSyncedShifts={props.onShowSyncedShifts}
       />
 
-      {!props.shouldHideUIElements && (
-        <motion.div
-          className="px-2 sm:px-0 mb-4"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <StickyNote className="h-4 w-4 text-orange-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
-                  {t("note.hintMobile", {
-                    default:
-                      "Long press on a day to open notes. The note icon shows existing notes.",
-                  })}
-                </p>
-                <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
-                  {t("note.hintDesktop", {
-                    default:
-                      "Right-click on a day to open notes. The note icon shows existing notes.",
-                  })}
-                </p>
-              </div>
+      <motion.div
+        className="px-2 sm:px-0 mb-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-3 sm:p-3.5 backdrop-blur-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <StickyNote className="h-4 w-4 text-orange-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs sm:hidden text-foreground/80 leading-relaxed">
+                {t("note.hintMobile", {
+                  default:
+                    "Long press on a day to open notes. The note icon shows existing notes.",
+                })}
+              </p>
+              <p className="hidden sm:block text-sm text-foreground/80 leading-relaxed">
+                {t("note.hintDesktop", {
+                  default:
+                    "Right-click on a day to open notes. The note icon shows existing notes.",
+                })}
+              </p>
             </div>
           </div>
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
 
       <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
         <ShiftStats
@@ -117,9 +114,7 @@ export function CalendarContent(props: CalendarContentProps) {
         <ShiftsList
           shifts={props.shifts}
           currentDate={props.currentDate}
-          onDeleteShift={
-            props.shouldHideUIElements ? undefined : props.onDeleteShift
-          }
+          onDeleteShift={props.onDeleteShift}
         />
       </div>
     </>

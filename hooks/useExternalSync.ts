@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { ExternalSync, SyncLog } from "@/lib/db/schema";
-import { getCachedPassword } from "@/lib/password-cache";
 
 export function useExternalSync(selectedCalendar: string | null) {
   const [externalSyncs, setExternalSyncs] = useState<ExternalSync[]>([]);
@@ -15,11 +14,7 @@ export function useExternalSync(selectedCalendar: string | null) {
     }
 
     try {
-      const password = getCachedPassword(selectedCalendar);
       const params = new URLSearchParams({ calendarId: selectedCalendar });
-      if (password) {
-        params.append("password", password);
-      }
 
       const response = await fetch(`/api/external-syncs?${params}`);
       if (response.ok) {
@@ -38,14 +33,10 @@ export function useExternalSync(selectedCalendar: string | null) {
     }
 
     try {
-      const password = getCachedPassword(selectedCalendar);
       const params = new URLSearchParams({
         calendarId: selectedCalendar,
         limit: "50",
       });
-      if (password) {
-        params.append("password", password);
-      }
 
       const response = await fetch(`/api/sync-logs?${params}`);
       if (response.ok) {

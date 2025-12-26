@@ -13,7 +13,6 @@ import {
 
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
-import { getCachedPassword } from "@/lib/password-cache";
 import { PresetListSkeleton } from "@/components/skeletons/preset-list-skeleton";
 
 interface PresetListProps {
@@ -25,7 +24,6 @@ interface PresetListProps {
   onCreateNew?: () => void;
   onManageClick?: () => void;
   onViewSettingsClick?: () => void;
-  onUnlock?: () => void;
   loading?: boolean;
   hidePresetHeader?: boolean;
   onHidePresetHeaderChange?: (hide: boolean) => void;
@@ -40,7 +38,6 @@ export function PresetList({
   onSelectPreset,
   onManageClick,
   onViewSettingsClick,
-  onUnlock,
   loading = false,
   hidePresetHeader = false,
   onHidePresetHeaderChange,
@@ -52,71 +49,9 @@ export function PresetList({
   const primaryPresets = presets.filter((p) => !p.isSecondary);
   const secondaryPresets = presets.filter((p) => p.isSecondary);
 
-  // Hide preset buttons if calendar requires password AND no valid password is cached
-  const selectedCalendar = calendars.find((c) => c.id === calendarId);
-  const requiresPassword = !!selectedCalendar?.passwordHash;
-  const hasPassword = calendarId ? !!getCachedPassword(calendarId) : false;
-  const isLocked = selectedCalendar?.isLocked === true;
-  const shouldHidePresetButtons = requiresPassword && !hasPassword;
-  const shouldShowUnlockHint = shouldHidePresetButtons && !isLocked;
-
   // Show loading state while fetching
   if (loading) {
     return <PresetListSkeleton hidePresetHeader={hidePresetHeader} />;
-  }
-
-  // Show unlock hint if calendar requires password and no password is cached (but not locked)
-  if (shouldShowUnlockHint) {
-    return (
-      <div className="border-2 border-dashed border-primary/30 rounded-lg p-4 sm:p-6 text-center space-y-3">
-        <div className="flex items-center justify-center gap-2 text-primary">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <p className="text-sm font-semibold">
-            {t("password.unlockRequired")}
-          </p>
-        </div>
-        <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-          {t("password.unlockRequiredDescription")}
-        </p>
-        {onUnlock && (
-          <Button onClick={onUnlock} size="sm" className="gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-            </svg>
-            <span className="text-xs sm:text-sm">
-              {t("password.unlockCalendar")}
-            </span>
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  // Hide everything if calendar requires password but no password is cached (regardless of unlock hint)
-  if (shouldHidePresetButtons) {
-    return null;
   }
 
   if (presets.length === 0) {

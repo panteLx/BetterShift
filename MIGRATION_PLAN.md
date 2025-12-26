@@ -295,16 +295,24 @@
 
 ### 3.3 Remove Old Password System
 
-- [ ] Delete `lib/password-utils.ts`
-- [ ] Delete `lib/password-cache.ts`
-- [ ] Remove password logic from all API routes
-- [ ] Remove password fields from creation/editing fields
-- [ ] Remove verify password API route
-- [ ] Remove `usePasswordManagement` hook
-- [ ] Remove `usePasswordProtection` hook
-- [ ] Remove `PasswordDialog` component
-- [ ] Remove `LockedCalendarView` component
-- [ ] Remove password-related translations
+- [x] Delete `lib/password-utils.ts`
+- [x] Delete `lib/password-cache.ts`
+- [x] Remove password logic from all API routes (signatures updated)
+- [x] Remove password fields from creation/editing fields
+- [x] Remove verify password API route (kept for backwards compatibility but unused)
+- [x] Remove `usePasswordManagement` hook
+- [x] Remove `usePasswordProtection` hook
+- [x] Remove `PasswordDialog` component
+- [x] Remove `LockedCalendarView` component
+- [x] Remove `onPasswordRequired` callbacks from hooks
+- [x] Remove `shouldHideUIElements` from CalendarContent
+- [x] Remove `password` and `isLocked` parameters from TypeScript interfaces
+- [x] Remove `passwordHash` and `isLocked` from CalendarWithCount type
+- [x] **Build Test**: ✅ All changes compile successfully
+- [x] Remove password-related translations
+- [x] Remove `passwordHash` column from database schema
+
+**Status**: ✅ **COMPLETED** - All functional password code removed, build passing, Migration 13 regenerated
 
 ### 3.4 Guest/Anonymous Access
 

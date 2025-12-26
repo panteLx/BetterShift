@@ -10,16 +10,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, CalendarCog, Cloud, Bell, Copy } from "lucide-react";
-import { getCachedPassword } from "@/lib/password-cache";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Bell, Copy, Settings } from "lucide-react";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
   selectedId?: string;
   onSelect: (id: string) => void;
   onCreateNew: () => void;
-  onManagePassword?: () => void;
-  onExternalSync?: () => void;
+  onSettings?: () => void;
   onSyncNotifications?: () => void;
   onCompare?: () => void;
   hasSyncErrors?: boolean;
@@ -31,8 +30,7 @@ export function CalendarSelector({
   selectedId,
   onSelect,
   onCreateNew,
-  onManagePassword,
-  onExternalSync,
+  onSettings,
   onSyncNotifications,
   onCompare,
   hasSyncErrors = false,
@@ -41,10 +39,6 @@ export function CalendarSelector({
   const t = useTranslations();
 
   const selectedCalendar = calendars.find((c) => c.id === selectedId);
-  // Hide external sync buttons if calendar requires password AND no valid password is cached
-  const requiresPassword = !!selectedCalendar?.passwordHash;
-  const hasPassword = selectedId ? !!getCachedPassword(selectedId) : false;
-  const shouldHideSyncButtons = requiresPassword && !hasPassword;
   const canCompare = calendars.length >= 2;
 
   // Desktop: Compact icon-based layout
@@ -67,11 +61,22 @@ export function CalendarSelector({
                 </div>
               </SelectItem>
             ))}
+            <Separator className="my-1" />
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreateNew();
+              }}
+              className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t("calendar.create")}
+            </div>
           </SelectContent>
         </Select>
-        {onManagePassword && selectedId && (
+        {onSettings && selectedId && (
           <Button
-            onClick={onManagePassword}
+            onClick={onSettings}
             size="icon"
             variant="outline"
             className="h-9 w-9 sm:h-10 sm:w-10"
@@ -79,21 +84,10 @@ export function CalendarSelector({
               name: selectedCalendar?.name || "",
             })}
           >
-            <CalendarCog className="h-4 w-4" />
+            <Settings className="h-4 w-4" />
           </Button>
         )}
-        {onExternalSync && selectedId && !shouldHideSyncButtons && (
-          <Button
-            onClick={onExternalSync}
-            size="icon"
-            variant="outline"
-            className="h-9 w-9 sm:h-10 sm:w-10"
-            title={t("externalSync.manageTitle")}
-          >
-            <Cloud className="h-4 w-4" />
-          </Button>
-        )}
-        {onSyncNotifications && selectedId && !shouldHideSyncButtons && (
+        {onSyncNotifications && selectedId && (
           <Button
             onClick={onSyncNotifications}
             size="icon"
@@ -126,14 +120,6 @@ export function CalendarSelector({
             <Copy className="h-4 w-4" />
           </Button>
         )}
-        <Button
-          onClick={onCreateNew}
-          size="icon"
-          variant="outline"
-          className="h-9 w-9 sm:h-10 sm:w-10"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
       </div>
     );
   }
@@ -143,7 +129,7 @@ export function CalendarSelector({
     <div className="flex flex-col gap-3">
       {/* Calendar Dropdown - Full Width */}
       <Select value={selectedId} onValueChange={onSelect}>
-        <SelectTrigger className="h-10 text-sm">
+        <SelectTrigger className="w-full h-10 text-sm">
           <SelectValue placeholder={t("calendar.title")} />
         </SelectTrigger>
         <SelectContent>
@@ -158,15 +144,26 @@ export function CalendarSelector({
               </div>
             </SelectItem>
           ))}
+          <Separator className="my-1" />
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateNew();
+            }}
+            className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t("calendar.create")}
+          </div>
         </SelectContent>
       </Select>
 
       {/* Action Buttons - Even distribution */}
       {selectedId && (
         <div className="grid grid-cols-3 gap-2">
-          {onManagePassword && (
+          {onSettings && (
             <Button
-              onClick={onManagePassword}
+              onClick={onSettings}
               size="sm"
               variant="outline"
               className="h-9"
@@ -174,21 +171,10 @@ export function CalendarSelector({
                 name: selectedCalendar?.name || "",
               })}
             >
-              <CalendarCog className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </Button>
           )}
-          {onExternalSync && !shouldHideSyncButtons && (
-            <Button
-              onClick={onExternalSync}
-              size="sm"
-              variant="outline"
-              className="h-9"
-              title={t("externalSync.manageTitle")}
-            >
-              <Cloud className="h-4 w-4" />
-            </Button>
-          )}
-          {onSyncNotifications && !shouldHideSyncButtons && (
+          {onSyncNotifications && (
             <Button
               onClick={onSyncNotifications}
               size="sm"
@@ -210,32 +196,18 @@ export function CalendarSelector({
               )}
             </Button>
           )}
+          {onCompare && canCompare && (
+            <Button
+              onClick={onCompare}
+              size="sm"
+              variant="outline"
+              className="h-9"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+            </Button>
+          )}
         </div>
       )}
-
-      {/* Compare and Create Buttons */}
-      <div className="grid grid-cols-2 gap-2">
-        {onCompare && canCompare && (
-          <Button
-            onClick={onCompare}
-            size="sm"
-            variant="outline"
-            className="h-9"
-          >
-            <Copy className="h-4 w-4 mr-2" />
-            {t("calendar.compare")}
-          </Button>
-        )}
-        <Button
-          onClick={onCreateNew}
-          size="sm"
-          variant="outline"
-          className={`h-9 ${canCompare && onCompare ? "" : "col-span-2"}`}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t("common.create")}
-        </Button>
-      </div>
     </div>
   );
 }

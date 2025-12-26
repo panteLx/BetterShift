@@ -43,9 +43,6 @@
     }
   },
   "validation": {
-    "passwordMatch": "Passwords do not match",
-    "passwordIncorrect": "Incorrect password",
-    "passwordRequired": "Password required",
     "fileRequired": "Please select a file",
     "fileTooLarge": "File is too large. Maximum size is {maxSize}.",
     "urlRequired": "Please enter a URL",
@@ -58,8 +55,6 @@
     "colorLabel": "Color",
     "notesLabel": "Notes (optional)",
     "notesPlaceholder": "Additional information...",
-    "passwordLabel": "Password",
-    "passwordPlaceholder": "Enter password",
     "urlLabel": "URL",
     "urlPlaceholder": "https://..."
   },
@@ -77,13 +72,7 @@
     "deleteCalendar": "Delete Calendar",
     "deleteWarning": "All shifts, presets and notes will also be deleted.",
     "settings": "Calendar Settings for \"{name}\"",
-    "settingsDescription": "Customize name, color and password protection",
-    "passwordProtected": "Calendar is password protected",
-    "passwordRequiredToEdit": "Please enter your current password to change settings.",
-    "currentPasswordRequired": "Required to save changes",
-    "lockCalendar": "Lock calendar completely",
-    "lockCalendarHint": "Locks calendar completely - password required to view and manage",
-    "lockRequiresPassword": "Locking the calendar requires a password",
+    "settingsDescription": "Customize name and color",
     "compare": "Compare Calendars",
     "compareMode": "Comparison Mode",
     "exitCompare": "Exit Comparison",
@@ -101,23 +90,7 @@
     "customTitle": "Custom Color",
     "customDescription": "Choose a custom color using the color picker"
   },
-  "password": {
-    "optional": "Password Protection (optional)",
-    "management": "Password Management",
-    "currentPassword": "Current Password",
-    "currentPasswordPlaceholder": "Enter current password",
-    "newPassword": "New Password",
-    "newPasswordPlaceholder": "Enter new password",
-    "confirmPassword": "Confirm Password",
-    "confirmPasswordPlaceholder": "Confirm password",
-    "removePassword": "Remove Password",
-    "enter": "Enter Password for \"{name}\"",
-    "enterCalendarPassword": "Enter calendar password",
-    "currentlyLocked": "This calendar is currently locked.",
-    "unlockRequired": "Calendar is password protected",
-    "unlockRequiredDescription": "This calendar is password protected. Please unlock the calendar to manage presets and create shifts.",
-    "unlockCalendar": "Unlock Calendar"
-  },
+
   "note": {
     "create": "Create {item}",
     "edit": "Edit {item}",

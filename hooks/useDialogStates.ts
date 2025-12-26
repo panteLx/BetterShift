@@ -5,7 +5,6 @@ import { CalendarNote } from "@/lib/db/schema";
 export function useDialogStates() {
   const [showCalendarDialog, setShowCalendarDialog] = useState(false);
   const [showShiftDialog, setShowShiftDialog] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showCalendarSettingsDialog, setShowCalendarSettingsDialog] =
     useState(false);
   const [showMobileCalendarDialog, setShowMobileCalendarDialog] =
@@ -32,8 +31,6 @@ export function useDialogStates() {
     setShowCalendarDialog,
     showShiftDialog,
     setShowShiftDialog,
-    showPasswordDialog,
-    setShowPasswordDialog,
     showCalendarSettingsDialog,
     setShowCalendarSettingsDialog,
     showMobileCalendarDialog,

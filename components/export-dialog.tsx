@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import { Download, FileText, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { getCachedPassword } from "@/lib/password-cache";
 
 interface ExportDialogProps {
   open: boolean;
@@ -101,16 +100,9 @@ export function ExportDialog({
     setLoading(true);
 
     try {
-      // Get cached password if calendar is protected
-      const password = getCachedPassword(calendarId);
-
       // Build URL
       let url = `/api/calendars/${calendarId}/export/${exportFormat}`;
       const params = new URLSearchParams();
-
-      if (password) {
-        params.append("password", password);
-      }
 
       if (exportFormat === "pdf") {
         // Add locale for proper date formatting and translations

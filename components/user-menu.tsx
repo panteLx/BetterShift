@@ -59,8 +59,8 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-          <Avatar className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+          <Avatar className="h-10 w-10">
             <AvatarImage src={user.image || undefined} alt={user.name || ""} />
             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
               {user.name ? (

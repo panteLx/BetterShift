@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCachedPassword } from "@/lib/password-cache";
 
 export interface ShiftStatsData {
   period: string;
@@ -43,19 +42,15 @@ export function useShiftStats({
       }
 
       try {
-        const password = getCachedPassword(calendarId);
         const params = new URLSearchParams({
           calendarId,
           period,
           date: currentDate.toISOString(),
         });
-        if (password) {
-          params.append("password", password);
-        }
 
         const response = await fetch(`/api/shifts/stats?${params}`);
         if (!response.ok) {
-          return; // Calendar is locked and no valid password
+          return;
         }
         const data = await response.json();
         setStats(data);

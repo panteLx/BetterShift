@@ -6,10 +6,6 @@ import { ShiftFormData } from "@/components/shift-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
-import {
-  getCachedPassword,
-  verifyAndCachePassword,
-} from "@/lib/password-cache";
 
 interface UseShiftActionsProps {
   selectedCalendar: string | null;
@@ -17,14 +13,9 @@ interface UseShiftActionsProps {
   setShifts: (shifts: ShiftWithCalendar[]) => void;
   presets: ShiftPreset[];
   createShift: (data: ShiftFormData) => Promise<ShiftWithCalendar | null>;
-  updateShift: (
-    id: string,
-    data: ShiftFormData,
-    onPasswordRequired: () => void
-  ) => Promise<boolean>;
-  deleteShift: (id: string, onPasswordRequired: () => void) => Promise<boolean>;
+  updateShift: (id: string, data: ShiftFormData) => Promise<boolean>;
+  deleteShift: (id: string) => Promise<boolean>;
   onStatsRefresh: () => void;
-  onPasswordRequired: (action: () => Promise<void>) => void;
 }
 
 export function useShiftActions({
@@ -36,7 +27,6 @@ export function useShiftActions({
   updateShift,
   deleteShift,
   onStatsRefresh,
-  onPasswordRequired,
 }: UseShiftActionsProps) {
   const t = useTranslations();
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
@@ -63,30 +53,22 @@ export function useShiftActions({
 
   const handleUpdateShift = useCallback(
     async (id: string, formData: ShiftFormData) => {
-      const success = await updateShift(id, formData, () => {
-        onPasswordRequired(async () => {
-          await updateShift(id, formData, () => {});
-        });
-      });
+      const success = await updateShift(id, formData);
       if (success) {
         onStatsRefresh();
       }
     },
-    [updateShift, onStatsRefresh, onPasswordRequired]
+    [updateShift, onStatsRefresh]
   );
 
   const handleDeleteShift = useCallback(
     async (id: string) => {
-      const success = await deleteShift(id, () => {
-        onPasswordRequired(async () => {
-          await deleteShift(id, () => {});
-        });
-      });
+      const success = await deleteShift(id);
       if (success) {
         onStatsRefresh();
       }
     },
-    [deleteShift, onStatsRefresh, onPasswordRequired]
+    [deleteShift, onStatsRefresh]
   );
 
   const handleAddShift = useCallback(
@@ -104,29 +86,6 @@ export function useShiftActions({
       setTogglingDates((prev) => new Set(prev).add(dateKey));
 
       try {
-        const password = selectedCalendar
-          ? getCachedPassword(selectedCalendar)
-          : null;
-
-        if (selectedCalendar) {
-          const result = await verifyAndCachePassword(
-            selectedCalendar,
-            password
-          );
-
-          if (result.protected && !result.valid) {
-            onPasswordRequired(() =>
-              handleAddShift(targetDate, selectedPresetId)
-            );
-            setTogglingDates((prev) => {
-              const next = new Set(prev);
-              next.delete(dateKey);
-              return next;
-            });
-            return;
-          }
-        }
-
         const existingShift = shifts.find(
           (shift) =>
             shift.date &&
@@ -147,7 +106,7 @@ export function useShiftActions({
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ password }),
+              body: JSON.stringify({}),
             });
 
             if (!response.ok) {
@@ -201,7 +160,6 @@ export function useShiftActions({
       presets,
       createShift,
       onStatsRefresh,
-      onPasswordRequired,
       t,
     ]
   );

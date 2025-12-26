@@ -43,9 +43,6 @@
     }
   },
   "validation": {
-    "passwordMatch": "Le password non corrispondono",
-    "passwordIncorrect": "Password errata",
-    "passwordRequired": "Password obbligatoria",
     "fileRequired": "Seleziona un file",
     "fileTooLarge": "Il file è troppo grande. La dimensione massima è {maxSize}.",
     "urlRequired": "Inserisci un URL",
@@ -58,8 +55,6 @@
     "colorLabel": "Colore",
     "notesLabel": "Note (opzionale)",
     "notesPlaceholder": "Informazioni aggiuntive...",
-    "passwordLabel": "Password",
-    "passwordPlaceholder": "Inserisci password",
     "urlLabel": "URL",
     "urlPlaceholder": "https://..."
   },
@@ -77,13 +72,7 @@
     "deleteCalendar": "Elimina Calendario",
     "deleteWarning": "Anche tutti i turni, i preset e le note verranno eliminati.",
     "settings": "Impostazioni Calendario per \"{name}\"",
-    "settingsDescription": "Personalizza nome, colore e protezione password",
-    "passwordProtected": "Il calendario è protetto da password",
-    "passwordRequiredToEdit": "Inserisci la tua password attuale per modificare le impostazioni.",
-    "currentPasswordRequired": "Richiesto per salvare le modifiche",
-    "lockCalendar": "Blocca calendario completamente",
-    "lockCalendarHint": "Blocca il calendario completamente - è necessaria la password per visualizzare e gestire",
-    "lockRequiresPassword": "Il blocco del calendario richiede una password",
+    "settingsDescription": "Personalizza nome e colore",
     "compare": "Confronta Calendari",
     "compareMode": "Modalità Confronto",
     "exitCompare": "Esci dal Confronto",
@@ -101,23 +90,7 @@
     "customTitle": "Colore Personalizzato",
     "customDescription": "Scegli un colore personalizzato usando il selettore di colori"
   },
-  "password": {
-    "optional": "Protezione Password (opzionale)",
-    "management": "Gestione Password",
-    "currentPassword": "Password Attuale",
-    "currentPasswordPlaceholder": "Inserisci la password attuale",
-    "newPassword": "Nuova Password",
-    "newPasswordPlaceholder": "Inserisci la nuova password",
-    "confirmPassword": "Conferma Password",
-    "confirmPasswordPlaceholder": "Conferma password",
-    "removePassword": "Rimuovi Password",
-    "enter": "Inserisci Password per \"{name}\"",
-    "enterCalendarPassword": "Inserisci la password del calendario",
-    "currentlyLocked": "Questo calendario è attualmente bloccato.",
-    "unlockRequired": "Il calendario è protetto da password",
-    "unlockRequiredDescription": "Questo calendario è protetto da password. Sblocca il calendario per gestire i preset e creare turni.",
-    "unlockCalendar": "Sblocca Calendario"
-  },
+
   "note": {
     "create": "Crea {item}",
     "edit": "Modifica {item}",

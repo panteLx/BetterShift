@@ -3,7 +3,6 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { getCachedPassword } from "@/lib/password-cache";
 
 export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
@@ -18,15 +17,10 @@ export function useShifts(calendarId: string | undefined) {
         setLoading(true);
       }
       try {
-        const password = getCachedPassword(calendarId);
         const params = new URLSearchParams({ calendarId });
-        if (password) {
-          params.append("password", password);
-        }
 
         const response = await fetch(`/api/shifts?${params}`);
         if (!response.ok) {
-          // Calendar is locked and no valid password - return empty array
           setShifts([]);
           return;
         }
@@ -65,15 +59,12 @@ export function useShifts(calendarId: string | undefined) {
     setShifts((prev) => [...prev, optimisticShift]);
 
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch("/api/shifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           calendarId: calendarId,
-          password,
         }),
       });
 
@@ -102,24 +93,13 @@ export function useShifts(calendarId: string | undefined) {
     }
   };
 
-  const updateShift = async (
-    id: string,
-    formData: ShiftFormData,
-    onPasswordRequired?: () => void
-  ) => {
+  const updateShift = async (id: string, formData: ShiftFormData) => {
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/shifts/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, password }),
+        body: JSON.stringify({ ...formData }),
       });
-
-      if (response.status === 401) {
-        onPasswordRequired?.();
-        return false;
-      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -142,22 +122,15 @@ export function useShifts(calendarId: string | undefined) {
     }
   };
 
-  const deleteShift = async (id: string, onPasswordRequired?: () => void) => {
+  const deleteShift = async (id: string) => {
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/shifts/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({}),
       });
-
-      if (response.status === 401) {
-        onPasswordRequired?.();
-        return false;
-      }
 
       if (!response.ok) {
         const errorText = await response.text();

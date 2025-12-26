@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PRESET_COLORS } from "@/lib/constants";
-import { getCachedPassword } from "@/lib/password-cache";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -100,11 +99,7 @@ export function ExternalSyncManageSheet({
         setIsLoading(true);
       }
       try {
-        const password = getCachedPassword(calendarId);
         const params = new URLSearchParams({ calendarId });
-        if (password) {
-          params.append("password", password);
-        }
 
         const response = await fetch(`/api/external-syncs?${params}`);
         if (response.ok) {
@@ -113,9 +108,6 @@ export function ExternalSyncManageSheet({
 
           // Fetch last sync logs to check for errors
           const logsParams = new URLSearchParams({ calendarId, limit: "50" });
-          if (password) {
-            logsParams.append("password", password);
-          }
 
           const logsResponse = await fetch(`/api/sync-logs?${logsParams}`);
           if (logsResponse.ok) {
@@ -242,8 +234,6 @@ export function ExternalSyncManageSheet({
         icsContent = await icsFile.text();
       }
 
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch("/api/external-syncs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -257,7 +247,6 @@ export function ExternalSyncManageSheet({
           icsContent,
           isHidden: formIsHidden,
           hideFromStats: formHideFromStats,
-          password,
         }),
       });
 
@@ -300,12 +289,10 @@ export function ExternalSyncManageSheet({
   const handleSync = async (syncId: string) => {
     setIsSyncing(syncId);
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/external-syncs/${syncId}/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({}),
       });
 
       const data = await response.json();
@@ -344,12 +331,10 @@ export function ExternalSyncManageSheet({
 
     setIsDeleting(deleteTargetId);
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/external-syncs/${deleteTargetId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({}),
       });
 
       if (response.ok) {
@@ -422,14 +407,11 @@ export function ExternalSyncManageSheet({
     }
 
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/external-syncs/${syncId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           [field]: !currentValue,
-          password,
         }),
       });
 
@@ -532,8 +514,6 @@ export function ExternalSyncManageSheet({
 
     setIsSavingEdit(true);
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -545,7 +525,6 @@ export function ExternalSyncManageSheet({
           color: formColor,
           displayMode: formDisplayMode,
           autoSyncInterval: formAutoSyncInterval,
-          password,
         }),
       });
 

@@ -5,7 +5,6 @@ interface UseNoteActionsProps {
   createNote: (
     text: string,
     date: Date,
-    onPasswordRequired: () => void,
     type?: "note" | "event",
     color?: string,
     recurringPattern?: string,
@@ -14,21 +13,18 @@ interface UseNoteActionsProps {
   updateNote: (
     id: string,
     text: string,
-    onPasswordRequired: () => void,
     type?: "note" | "event",
     color?: string,
     recurringPattern?: string,
     recurringInterval?: number
   ) => Promise<boolean>;
-  deleteNote: (id: string, onPasswordRequired: () => void) => Promise<boolean>;
-  onPasswordRequired: (action: () => Promise<void>) => void;
+  deleteNote: (id: string) => Promise<boolean>;
 }
 
 export function useNoteActions({
   createNote,
   updateNote,
   deleteNote,
-  onPasswordRequired,
 }: UseNoteActionsProps) {
   const [selectedNote, setSelectedNote] = useState<CalendarNote | undefined>();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -42,37 +38,10 @@ export function useNoteActions({
       recurringPattern?: string,
       recurringInterval?: number
     ) => {
-      const handlePasswordRequired = () => {
-        onPasswordRequired(async () => {
-          if (selectedNote) {
-            await updateNote(
-              selectedNote.id,
-              noteText,
-              handlePasswordRequired,
-              type,
-              color,
-              recurringPattern,
-              recurringInterval
-            );
-          } else if (selectedDate) {
-            await createNote(
-              noteText,
-              selectedDate,
-              handlePasswordRequired,
-              type,
-              color,
-              recurringPattern,
-              recurringInterval
-            );
-          }
-        });
-      };
-
       if (selectedNote) {
         await updateNote(
           selectedNote.id,
           noteText,
-          handlePasswordRequired,
           type,
           color,
           recurringPattern,
@@ -82,7 +51,6 @@ export function useNoteActions({
         await createNote(
           noteText,
           selectedDate,
-          handlePasswordRequired,
           type,
           color,
           recurringPattern,
@@ -90,32 +58,17 @@ export function useNoteActions({
         );
       }
     },
-    [selectedNote, selectedDate, createNote, updateNote, onPasswordRequired]
+    [selectedNote, selectedDate, createNote, updateNote]
   );
 
   const handleNoteDelete = useCallback(async () => {
     if (!selectedNote) return;
 
-    const handlePasswordRequired = () => {
-      onPasswordRequired(async () => {
-        if (selectedNote) {
-          const success = await deleteNote(
-            selectedNote.id,
-            handlePasswordRequired
-          );
-          if (success) {
-            setShowNoteDialog(false);
-            setSelectedNote(undefined);
-          }
-        }
-      });
-    };
-
-    const success = await deleteNote(selectedNote.id, handlePasswordRequired);
+    const success = await deleteNote(selectedNote.id);
     if (success) {
       setShowNoteDialog(false);
     }
-  }, [selectedNote, deleteNote, onPasswordRequired]);
+  }, [selectedNote, deleteNote]);
 
   const openNoteDialog = useCallback((date: Date, note?: CalendarNote) => {
     setSelectedDate(date);

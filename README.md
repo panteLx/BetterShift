@@ -17,7 +17,7 @@
 
 > **Note**
 >
-> BetterShift is a modern shift management application designed to simplify variable work schedules. Manage unlimited calendars with one-click shift toggles, reusable presets, and real-time synchronization across devices. Features include external calendar integration (Google, Outlook, iCal), password-protected calendars, ICS/PDF export, live statistics, calendar comparison and multi-language support. Built with Next.js 16 and SQLite for fast, self-hosted deployment.
+> BetterShift is a modern shift management application designed to simplify variable work schedules. Manage unlimited calendars with one-click shift toggles, reusable presets, and real-time synchronization across devices. Features include external calendar integration (Google, Outlook, iCal), ICS/PDF export, live statistics, calendar comparison and multi-language support. Built with Next.js 16 and SQLite for fast, self-hosted deployment.
 
 ## 🔗 Quick Links
 
@@ -48,11 +48,6 @@
 - **Visual Organization** — Color-code calendars and shifts for instant recognition
 - **Auto-Save Templates** — Automatically save shift configurations for future use
 - **Export Options** — Download as ICS or PDF with flexible time range filters
-
-### 🔒 Security & Privacy
-
-- **Password Protection** — SHA-256 encrypted calendar passwords
-- **Per-Calendar Access** — Different security levels for each calendar
 
 ### 📊 Analytics & Live Updates
 

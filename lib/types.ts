@@ -1,18 +1,11 @@
 // Re-export types from Drizzle schema
-export type {
-  Calendar,
-  Shift,
-  ExternalSync,
-  CalendarWithLegacyPassword,
-} from "./db/schema";
+export type { Calendar, Shift, ExternalSync } from "./db/schema";
 
 export interface CalendarWithCount {
   id: string;
   name: string;
   color: string;
   ownerId?: string | null;
-  passwordHash?: string | null; // Temporary - remove in Phase 3
-  isLocked?: boolean; // Temporary - remove in Phase 3
   createdAt: Date | null;
   updatedAt: Date | null;
   _count?: number;

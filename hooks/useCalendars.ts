@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { removeCachedPassword, setCachedPassword } from "@/lib/password-cache";
 
 export function useCalendars(initialCalendarId?: string | null) {
   const t = useTranslations();
@@ -56,12 +55,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     }
   }, []);
 
-  const createCalendar = async (
-    name: string,
-    color: string,
-    password?: string,
-    isLocked?: boolean
-  ) => {
+  const createCalendar = async (name: string, color: string) => {
     try {
       const response = await fetch("/api/calendars", {
         method: "POST",
@@ -69,8 +63,6 @@ export function useCalendars(initialCalendarId?: string | null) {
         body: JSON.stringify({
           name,
           color,
-          password,
-          isLocked: isLocked || false,
         }),
       });
 
@@ -88,11 +80,6 @@ export function useCalendars(initialCalendarId?: string | null) {
       setCalendars((prev) => [...prev, newCalendar]);
       setSelectedCalendar(newCalendar.id);
 
-      // Cache the password if one was provided
-      if (password) {
-        setCachedPassword(newCalendar.id, password);
-      }
-
       toast.success(t("common.created", { item: t("calendar.title") }));
     } catch (error) {
       console.error("Failed to create calendar:", error);
@@ -105,9 +92,6 @@ export function useCalendars(initialCalendarId?: string | null) {
     updates: {
       name?: string;
       color?: string;
-      currentPassword?: string;
-      isLocked: boolean;
-      password?: string | null;
     }
   ) => {
     try {
@@ -116,11 +100,6 @@ export function useCalendars(initialCalendarId?: string | null) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-
-      if (response.status === 401) {
-        toast.error(t("validation.passwordIncorrect"));
-        return { success: false, error: "unauthorized" as const };
-      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -138,15 +117,6 @@ export function useCalendars(initialCalendarId?: string | null) {
         prev.map((cal) => (cal.id === calendarId ? updatedCalendar : cal))
       );
 
-      // Handle password caching
-      if (updates.password === null) {
-        removeCachedPassword(calendarId);
-      } else if (updates.password) {
-        setCachedPassword(calendarId, updates.password);
-      } else if (updates.currentPassword) {
-        setCachedPassword(calendarId, updates.currentPassword);
-      }
-
       toast.success(t("common.updated", { item: t("calendar.title") }));
       return { success: true };
     } catch (error) {
@@ -160,20 +130,14 @@ export function useCalendars(initialCalendarId?: string | null) {
     }
   };
 
-  const deleteCalendar = async (calendarId: string, password?: string) => {
+  const deleteCalendar = async (calendarId: string) => {
     try {
       const response = await fetch(`/api/calendars/${calendarId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ password }),
       });
-
-      if (response.status === 401) {
-        toast.error(t("validation.passwordIncorrect"));
-        return false;
-      }
 
       if (response.ok) {
         setCalendars((prev) => {
@@ -189,7 +153,6 @@ export function useCalendars(initialCalendarId?: string | null) {
 
           return remainingCalendars;
         });
-        removeCachedPassword(calendarId);
 
         toast.success(t("common.deleted", { item: t("calendar.title") }));
         return true;

@@ -152,8 +152,6 @@ This document provides comprehensive context and guidelines for GitHub Copilot w
   date-utils.ts         # Date formatting and manipulation
   event-utils.ts        # Event and note utilities
   export-utils.ts       # ICS/PDF export logic
-  password-utils.ts     # ⚠️ DEPRECATED - Will be removed (legacy calendar passwords)
-  password-cache.ts     # ⚠️ DEPRECATED - Will be removed (legacy password caching)
   auto-sync-service.ts  # Background sync scheduling
   ical-parser.ts        # iCalendar parsing
   proxy.ts              # Proxy configuration
@@ -689,7 +687,6 @@ await db.transaction(async (tx) => {
 - ❌ Don't commit [`.env`](.env) file
 - ❌ Don't expose secrets to client (use server-only imports)
 - ❌ Don't trust user input - validate on server
-- ❌ Don't use old password-utils or password-cache (deprecated, will be removed)
 - ✅ Do validate all inputs
 - ✅ Do use environment variables for secrets
 - ✅ Do check permissions before operations (via Better Auth)

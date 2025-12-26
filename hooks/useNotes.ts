@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { CalendarNote } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
-import { getCachedPassword } from "@/lib/password-cache";
 
 export function useNotes(calendarId: string | undefined) {
   const t = useTranslations();
@@ -13,11 +12,7 @@ export function useNotes(calendarId: string | undefined) {
     if (!calendarId) return;
 
     try {
-      const password = getCachedPassword(calendarId);
       const params = new URLSearchParams({ calendarId });
-      if (password) {
-        params.append("password", password);
-      }
 
       const response = await fetch(`/api/notes?${params}`);
       if (!response.ok) {
@@ -43,7 +38,6 @@ export function useNotes(calendarId: string | undefined) {
   const createNote = async (
     noteText: string,
     date: Date,
-    onPasswordRequired?: () => void,
     type?: "note" | "event",
     color?: string,
     recurringPattern?: string,
@@ -52,8 +46,6 @@ export function useNotes(calendarId: string | undefined) {
     if (!calendarId) return false;
 
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,14 +57,8 @@ export function useNotes(calendarId: string | undefined) {
           color: color,
           recurringPattern: recurringPattern,
           recurringInterval: recurringInterval,
-          password,
         }),
       });
-
-      if (response.status === 401) {
-        onPasswordRequired?.();
-        return false;
-      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -100,15 +86,12 @@ export function useNotes(calendarId: string | undefined) {
   const updateNote = async (
     noteId: string,
     noteText: string,
-    onPasswordRequired?: () => void,
     type?: "note" | "event",
     color?: string,
     recurringPattern?: string,
     recurringInterval?: number
   ) => {
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -118,14 +101,8 @@ export function useNotes(calendarId: string | undefined) {
           color: color,
           recurringPattern: recurringPattern,
           recurringInterval: recurringInterval,
-          password,
         }),
       });
-
-      if (response.status === 401) {
-        onPasswordRequired?.();
-        return false;
-      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -150,25 +127,15 @@ export function useNotes(calendarId: string | undefined) {
     }
   };
 
-  const deleteNote = async (
-    noteId: string,
-    onPasswordRequired?: () => void
-  ) => {
+  const deleteNote = async (noteId: string) => {
     try {
-      const password = getCachedPassword(calendarId);
-
       const response = await fetch(`/api/notes/${noteId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({}),
       });
-
-      if (response.status === 401) {
-        onPasswordRequired?.();
-        return false;
-      }
 
       if (!response.ok) {
         const errorText = await response.text();

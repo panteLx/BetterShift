@@ -7,6 +7,7 @@ import { CalendarSelector } from "@/components/calendar-selector";
 import { PresetSelector } from "@/components/preset-selector";
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -36,14 +37,12 @@ interface AppHeaderProps {
   onSelectCalendar: (id: string) => void;
   onSelectPreset: (id: string | undefined) => void;
   onCreateCalendar: () => void;
-  onManagePassword: () => void;
-  onExternalSync: () => void;
+  onSettings: () => void;
   onSyncNotifications: () => void;
   onCompare?: () => void;
   onPresetsChange: () => void;
   onShiftsChange: () => void;
   onStatsRefresh: () => void;
-  onPasswordRequired: (action: () => Promise<void>) => void;
   onManualShiftCreation: () => void;
   onMobileCalendarDialogChange: (open: boolean) => void;
   onViewSettingsClick: () => void;
@@ -63,14 +62,12 @@ export function AppHeader({
   onSelectCalendar,
   onSelectPreset,
   onCreateCalendar,
-  onManagePassword,
-  onExternalSync,
+  onSettings,
   onSyncNotifications,
   onCompare,
   onPresetsChange,
   onShiftsChange,
   onStatsRefresh,
-  onPasswordRequired,
   onManualShiftCreation,
   onMobileCalendarDialogChange,
   onViewSettingsClick,
@@ -127,15 +124,15 @@ export function AppHeader({
                 </motion.div>
               </Link>
 
-              {/* Right Section: Calendar Selector + User Menu */}
-              <div className="flex items-center gap-3">
+              {/* Right Section: Unified Container */}
+              <motion.div
+                className="flex items-center gap-2 bg-muted/30 rounded-xl p-2 border border-border/50"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
                 {/* Calendar Selector - Desktop */}
-                <motion.div
-                  className="flex items-center gap-3 min-w-0 flex-1 max-w-md bg-muted/30 rounded-xl p-2 border border-border/50"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                >
+                <div className="flex items-center gap-2 min-w-0 flex-1 max-w-md">
                   <div
                     className="w-1 h-8 bg-gradient-to-b rounded-full transition-colors duration-300"
                     style={{
@@ -156,24 +153,20 @@ export function AppHeader({
                       selectedId={selectedCalendar}
                       onSelect={onSelectCalendar}
                       onCreateNew={onCreateCalendar}
-                      onManagePassword={onManagePassword}
-                      onExternalSync={onExternalSync}
+                      onSettings={onSettings}
                       onSyncNotifications={onSyncNotifications}
                       onCompare={onCompare}
                       hasSyncErrors={hasSyncErrors}
                     />
                   </div>
-                </motion.div>
+                </div>
+
+                {/* Divider */}
+                <Separator orientation="vertical" className="h-8" />
 
                 {/* User Menu */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.15 }}
-                >
-                  <UserMenu />
-                </motion.div>
-              </div>
+                <UserMenu />
+              </motion.div>
             </div>
 
             {/* Update Notification Banner - Desktop & Mobile */}
@@ -216,29 +209,42 @@ export function AppHeader({
               </motion.div>
             )}
 
-            {/* Mobile: Logo Icon + Calendar Card + Add Button */}
+            {/* Mobile: Add Button + Calendar Card + User Menu (Logo hidden) */}
             <div className="sm:hidden flex items-center gap-2">
-              {/* Logo Icon Only */}
-              <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30 ring-2 ring-primary/20">
-                  <CalendarIcon className="h-5 w-5 text-primary-foreground" />
-                </div>
-                {/* Connection Status Indicator */}
+              {/* Mobile Add Shift Button - Left */}
+              {selectedCalendar && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="shrink-0"
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onManualShiftCreation}
+                    className="h-10 w-10 rounded-full bg-black dark:bg-white backdrop-blur-sm border border-border/50 hover:bg-accent transition-all shadow-sm"
+                  >
+                    <Plus className="h-5 w-5 dark:text-black text-white" />
+                  </Button>
+                </motion.div>
+              )}
+
+              {/* Calendar Selection Card with Connection Indicator */}
+              <button
+                onClick={() => onMobileCalendarDialogChange(true)}
+                className="flex-1 bg-muted/30 backdrop-blur-sm border border-border/50 rounded-xl p-3 flex items-center justify-between gap-2 hover:bg-accent/50 transition-all active:scale-[0.98] shadow-sm relative"
+              >
+                {/* Connection Status Indicator - Top Right of Card */}
                 <div
-                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background transition-colors ${
+                  className={`absolute top-2 right-2 w-2 h-2 rounded-full transition-colors ${
                     isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
                   }`}
                   title={
                     isConnected ? t("sync.reconnected") : t("sync.disconnected")
                   }
                 ></div>
-              </div>
 
-              {/* Calendar Selection Card */}
-              <button
-                onClick={() => onMobileCalendarDialogChange(true)}
-                className="flex-1 bg-muted/30 backdrop-blur-sm border border-border/50 rounded-xl p-3 flex items-center justify-between gap-2 hover:bg-accent/50 transition-all active:scale-[0.98] shadow-sm"
-              >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div
                     className="w-1 h-9 bg-gradient-to-b rounded-full transition-colors duration-300"
@@ -271,24 +277,7 @@ export function AppHeader({
                 </div>
               </button>
 
-              {/* Mobile Add Shift Button */}
-              {selectedCalendar && (
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                >
-                  <Button
-                    size="icon"
-                    onClick={onManualShiftCreation}
-                    className="h-10 w-10 rounded-xl shadow-lg shadow-primary/30 shrink-0"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </motion.div>
-              )}
-
-              {/* User Menu - Always visible on mobile */}
+              {/* User Menu - Right */}
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -311,7 +300,6 @@ export function AppHeader({
                   onShiftsChange={onShiftsChange}
                   onStatsRefresh={onStatsRefresh}
                   calendarId={selectedCalendar}
-                  onPasswordRequired={onPasswordRequired}
                   onViewSettingsClick={onViewSettingsClick}
                   loading={presetsLoading}
                   hidePresetHeader={hidePresetHeader}
@@ -352,13 +340,9 @@ export function AppHeader({
                 onMobileCalendarDialogChange(false);
                 onCreateCalendar();
               }}
-              onManagePassword={() => {
+              onSettings={() => {
                 onMobileCalendarDialogChange(false);
-                onManagePassword();
-              }}
-              onExternalSync={() => {
-                onMobileCalendarDialogChange(false);
-                onExternalSync();
+                onSettings();
               }}
               onSyncNotifications={() => {
                 onMobileCalendarDialogChange(false);

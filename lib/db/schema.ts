@@ -278,11 +278,6 @@ export const syncLogs = sqliteTable("sync_logs", {
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
 
-// Temporary backwards compatibility type (remove in Phase 3)
-export type CalendarWithLegacyPassword = Calendar & {
-  passwordHash?: string | null;
-  isLocked?: boolean;
-};
 export type ExternalSync = typeof externalSyncs.$inferSelect;
 export type NewExternalSync = typeof externalSyncs.$inferInsert;
 export type Shift = typeof shifts.$inferSelect;
