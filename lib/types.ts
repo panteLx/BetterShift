@@ -10,6 +10,10 @@ export interface CalendarWithCount {
   createdAt: Date | null;
   updatedAt: Date | null;
   _count?: number;
+  // Permission metadata (only for authenticated users)
+  sharePermission?: "owner" | "admin" | "write" | "read";
+  isSubscribed?: boolean;
+  subscriptionSource?: "guest" | "shared";
 }
 
 export interface ShiftWithCalendar {

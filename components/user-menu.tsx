@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,8 +15,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Settings } from "lucide-react";
+import { User, LogOut, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
+import { CalendarDiscoveryDialog } from "@/components/calendar-discovery-dialog";
 
 /**
  * User menu dropdown for authenticated users
@@ -30,6 +32,7 @@ export function UserMenu() {
   const t = useTranslations();
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [discoveryOpen, setDiscoveryOpen] = useState(false);
 
   if (isLoading || !isAuthenticated || !user) {
     return null;
@@ -96,6 +99,10 @@ export function UserMenu() {
           <User className="mr-2 h-4 w-4" />
           {t("auth.profile")}
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setDiscoveryOpen(true)}>
+          <Users className="mr-2 h-4 w-4" />
+          {t("calendar.browseCalendars")}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleSignOut}
@@ -105,6 +112,11 @@ export function UserMenu() {
           {t("auth.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      <CalendarDiscoveryDialog
+        open={discoveryOpen}
+        onOpenChange={setDiscoveryOpen}
+      />
     </DropdownMenu>
   );
 }

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendars, shifts } from "@/lib/db/schema";
-import { sql, eq, or } from "drizzle-orm";
+import {
+  calendars,
+  shifts,
+  calendarShares,
+  userCalendarSubscriptions,
+} from "@/lib/db/schema";
+import { sql, eq, or, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
@@ -11,13 +16,16 @@ export async function GET(request: Request) {
   try {
     const user = await getSessionUser(request.headers);
 
-    // Get accessible calendar IDs (handles auth-disabled, guest, and authenticated users)
+    // Get accessible calendar IDs with permissions
     const accessible = await getUserAccessibleCalendars(user?.id);
     const accessibleIds = accessible.map((a) => a.id);
 
     if (accessibleIds.length === 0) {
       return NextResponse.json([]);
     }
+
+    // Create a permission map for quick lookup
+    const permissionMap = new Map(accessible.map((a) => [a.id, a]));
 
     // Fetch calendars with counts
     const userCalendars = await db
@@ -38,7 +46,48 @@ export async function GET(request: Request) {
       .where(or(...accessibleIds.map((id) => eq(calendars.id, id))))
       .orderBy(calendars.createdAt);
 
-    return NextResponse.json(userCalendars);
+    // If user is authenticated, fetch additional metadata
+    let subscriptions: Map<string, { status: string; source: string }> =
+      new Map();
+    let shares: Map<string, string> = new Map();
+
+    if (user) {
+      // Get subscriptions
+      const userSubs = await db.query.userCalendarSubscriptions.findMany({
+        where: and(
+          eq(sql`${userCalendarSubscriptions.userId}`, user.id),
+          eq(sql`${userCalendarSubscriptions.status}`, "subscribed")
+        ),
+      });
+      subscriptions = new Map(
+        userSubs.map((s) => [
+          s.calendarId,
+          { status: s.status, source: s.source },
+        ])
+      );
+
+      // Get shares
+      const userShares = await db.query.calendarShares.findMany({
+        where: eq(sql`${calendarShares.userId}`, user.id),
+      });
+      shares = new Map(userShares.map((s) => [s.calendarId, s.permission]));
+    }
+
+    // Enrich calendars with permission metadata
+    const enrichedCalendars = userCalendars.map((cal) => {
+      const isOwner = user && cal.ownerId === user.id;
+      const share = shares.get(cal.id);
+      const subscription = subscriptions.get(cal.id);
+
+      return {
+        ...cal,
+        sharePermission: share || undefined,
+        isSubscribed: !!subscription,
+        subscriptionSource: subscription?.source || undefined,
+      };
+    });
+
+    return NextResponse.json(enrichedCalendars);
   } catch (error) {
     console.error("Failed to fetch calendars:", error);
     return NextResponse.json(

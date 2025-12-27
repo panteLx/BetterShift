@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCalendars } from "@/hooks/useCalendars";
 import { CalendarWithCount } from "@/lib/types";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
+import type { CalendarPermission } from "@/lib/auth/permissions";
 
 /**
  * Hook to check calendar permissions client-side
@@ -83,16 +84,49 @@ export function useCalendarPermission(
         };
       }
 
-      // User has calendar share permissions (would be checked via API in real app)
-      // For now, assume authenticated users can edit their accessible calendars
-      // TODO: Check calendarShares table once implemented
+      // Check if user has explicit share permission
+      const sharePermission = (calendar as any).sharePermission;
+      if (sharePermission) {
+        const isOwner = sharePermission === "owner";
+        const isAdmin = sharePermission === "admin";
+        const isWrite = sharePermission === "write";
+        const isRead = sharePermission === "read";
+
+        return {
+          level: sharePermission,
+          canView: true,
+          canEdit: isOwner || isAdmin || isWrite,
+          canManage: isOwner || isAdmin,
+          canDelete: isOwner,
+          isReadOnly: isRead,
+          isOwner: isOwner,
+        };
+      }
+
+      // Check if calendar is public (guest permission) and user is subscribed
+      // In this case, user gets the guest permission level
+      const isSubscribed = (calendar as any).isSubscribed;
+      if (isSubscribed && calendar.guestPermission !== "none") {
+        const guestPerm = calendar.guestPermission as CalendarPermission;
+        return {
+          level: guestPerm,
+          canView: true,
+          canEdit: guestPerm === "write",
+          canManage: false,
+          canDelete: false,
+          isReadOnly: guestPerm === "read",
+          isOwner: false,
+        };
+      }
+
+      // User has no access to this calendar
       return {
-        level: "write" as const,
-        canView: true,
-        canEdit: true,
+        level: "none" as const,
+        canView: false,
+        canEdit: false,
         canManage: false,
         canDelete: false,
-        isReadOnly: false,
+        isReadOnly: true,
         isOwner: false,
       };
     }

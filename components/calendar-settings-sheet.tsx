@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { useCalendars } from "@/hooks/useCalendars";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { PRESET_COLORS } from "@/lib/constants";
 import {
   AlertTriangle,
@@ -64,6 +65,7 @@ export function CalendarSettingsSheet({
 }: CalendarSettingsSheetProps) {
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
+  const { isOwner } = useCalendarPermission(calendarId);
   const guestAccessEnabled = allowGuestAccess();
 
   // Use props directly as initial state, controlled by key prop on component

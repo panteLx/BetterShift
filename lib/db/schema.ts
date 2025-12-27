@@ -133,7 +133,7 @@ export const calendarShares = sqliteTable(
       .default("read"),
     sharedBy: text("shared_by")
       .notNull()
-      .references(() => user.id),
+      .references(() => user.id, { onDelete: "cascade" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -141,6 +141,39 @@ export const calendarShares = sqliteTable(
   (table) => [
     index("calendar_shares_calendarId_idx").on(table.calendarId),
     index("calendar_shares_userId_idx").on(table.userId),
+  ]
+);
+
+export const userCalendarSubscriptions = sqliteTable(
+  "user_calendar_subscriptions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    calendarId: text("calendar_id")
+      .notNull()
+      .references(() => calendars.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["subscribed", "dismissed"] })
+      .notNull()
+      .default("subscribed"),
+    source: text("source", { enum: ["guest", "shared"] })
+      .notNull()
+      .default("guest"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("user_calendar_subscriptions_userId_idx").on(table.userId),
+    index("user_calendar_subscriptions_calendarId_idx").on(table.calendarId),
+    index("user_calendar_subscriptions_status_idx").on(table.status),
   ]
 );
 
@@ -301,6 +334,10 @@ export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type CalendarShare = typeof calendarShares.$inferSelect;
 export type NewCalendarShare = typeof calendarShares.$inferInsert;
+export type UserCalendarSubscription =
+  typeof userCalendarSubscriptions.$inferSelect;
+export type NewUserCalendarSubscription =
+  typeof userCalendarSubscriptions.$inferInsert;
 
 // =====================================================
 // Drizzle Relations (for experimental joins)
@@ -311,6 +348,7 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   ownedCalendars: many(calendars),
   calendarShares: many(calendarShares),
+  calendarSubscriptions: many(userCalendarSubscriptions),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -333,6 +371,7 @@ export const calendarsRelations = relations(calendars, ({ one, many }) => ({
     references: [user.id],
   }),
   shares: many(calendarShares),
+  subscriptions: many(userCalendarSubscriptions),
   shifts: many(shifts),
   presets: many(shiftPresets),
   notes: many(calendarNotes),
@@ -354,3 +393,17 @@ export const calendarSharesRelations = relations(calendarShares, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const userCalendarSubscriptionsRelations = relations(
+  userCalendarSubscriptions,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [userCalendarSubscriptions.userId],
+      references: [user.id],
+    }),
+    calendar: one(calendars, {
+      fields: [userCalendarSubscriptions.calendarId],
+      references: [calendars.id],
+    }),
+  })
+);

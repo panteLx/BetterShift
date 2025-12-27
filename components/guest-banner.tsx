@@ -29,7 +29,7 @@ export function GuestBanner({ variant = "default" }: GuestBannerProps) {
         <Button asChild size="sm" variant="outline" className="shrink-0">
           <Link href="/login">
             <LogIn className="h-3.5 w-3.5 mr-1.5" />
-            {t("auth.signIn")}
+            {t("auth.login")}
           </Link>
         </Button>
       </motion.div>

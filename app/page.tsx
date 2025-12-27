@@ -26,7 +26,9 @@ import { useNoteActions } from "@/hooks/useNoteActions";
 import { useExternalSync } from "@/hooks/useExternalSync";
 import { useDialogStates } from "@/hooks/useDialogStates";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
+import { useAuth } from "@/hooks/useAuth";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
+import { GuestEmptyState } from "@/components/guest-empty-state";
 import { CalendarHeaderSkeleton } from "@/components/skeletons/calendar-header-skeleton";
 import { CalendarCompareHeaderSkeleton } from "@/components/skeletons/calendar-compare-header-skeleton";
 import { CalendarContentSkeleton } from "@/components/skeletons/calendar-content-skeleton";
@@ -49,6 +51,9 @@ function HomeContent() {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
   const t = useTranslations();
+
+  // Auth hook
+  const { isGuest } = useAuth();
 
   // Data hooks
   const {
@@ -273,6 +278,7 @@ function HomeContent() {
     onShiftUpdate: refetchShifts,
     onPresetUpdate: refetchPresets,
     onNoteUpdate: refetchNotes,
+    onCalendarUpdate: refetchCalendars,
     onStatsRefresh: () => setStatsRefreshTrigger((prev) => prev + 1),
     onSyncLogUpdate: () => {
       fetchSyncErrorStatus();
@@ -1021,6 +1027,12 @@ function HomeContent() {
 
   // Empty state
   if (calendars.length === 0) {
+    // If user is guest, show guest empty state (no create calendar option)
+    if (isGuest) {
+      return <GuestEmptyState />;
+    }
+
+    // Otherwise, show normal empty state with create calendar option
     return (
       <>
         <EmptyCalendarState

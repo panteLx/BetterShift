@@ -454,20 +454,32 @@
 
 **Priority**: Medium
 
-**Goal**: Allow authenticated users to selectively subscribe to public guest calendars (opt-in model).
+**Goal**: Allow authenticated users to selectively subscribe to public guest calendars (opt-in model) with dismiss/re-subscribe functionality.
 
 **Problem**: When auth is enabled, authenticated users currently only see:
 
 - Their own calendars (owner)
-- Explicitly shared calendars (calendarShares)
+- Explicitly shared calendars (calendarShares - auto-visible)
 
-But NOT calendars with `guestPermission != "none"` (public calendars).
+But NOT calendars with `guestPermission != "none"` (public calendars) unless explicitly subscribed.
 
-**Solution**: Subscription system where users can discover and subscribe to public calendars.
+**Solution**: Subscription + Dismissal system where users can:
 
-#### 3.5.1 Database Schema - User Calendar Subscriptions
+- Discover and subscribe to public calendars
+- Dismiss shared calendars (hide them from view)
+- Re-subscribe to dismissed calendars
+- No duplicate subscriptions (one calendar = one visibility state)
 
-- [ ] Create `userCalendarSubscriptions` table in `lib/db/schema.ts`
+**Key Behaviors**:
+
+- **Owned calendars** (ownerId): Always visible, CANNOT be dismissed
+- **Shared calendars** (calendarShares): Auto-visible, CAN be dismissed, can be re-subscribed
+- **Public calendars** (guestPermission): Hidden by default, CAN be subscribed
+- **Permission hierarchy**: Share permissions > Guest permissions (no double subscription)
+
+#### 3.5.1 Database Schema - Subscriptions & Dismissals
+
+- [x] Create `userCalendarSubscriptions` table in `lib/db/schema.ts`
   ```typescript
   export const userCalendarSubscriptions = sqliteTable(
     "user_calendar_subscriptions",
@@ -498,192 +510,281 @@ But NOT calendars with `guestPermission != "none"` (public calendars).
     })
   );
   ```
-- [ ] Add relations to schema
+- [x] Create `userCalendarDismissals` table in `lib/db/schema.ts`
+  ```typescript
+  export const userCalendarDismissals = sqliteTable(
+    "user_calendar_dismissals",
+    {
+      id: text("id")
+        .primaryKey()
+        .$defaultFn(() => createId()),
+      userId: text("user_id")
+        .notNull()
+        .references(() => user.id, { onDelete: "cascade" }),
+      calendarId: text("calendar_id")
+        .notNull()
+        .references(() => calendars.id, { onDelete: "cascade" }),
+      createdAt: integer("created_at", { mode: "timestamp" })
+        .notNull()
+        .default(sql`CURRENT_TIMESTAMP`),
+    },
+    (table) => ({
+      // Unique constraint: user can only dismiss once per calendar
+      uniqueUserCalendar: unique().on(table.userId, table.calendarId),
+      // Indexes for fast lookups
+      userIdIdx: index("user_calendar_dismissals_userId_idx").on(table.userId),
+      calendarIdIdx: index("user_calendar_dismissals_calendarId_idx").on(
+        table.calendarId
+      ),
+    })
+  );
+  ```
+- [x] Add relations to schema
 
   ```typescript
   // In userRelations
   calendarSubscriptions: many(userCalendarSubscriptions),
+  calendarDismissals: many(userCalendarDismissals),
 
   // In calendarsRelations
   subscriptions: many(userCalendarSubscriptions),
+  dismissals: many(userCalendarDismissals),
 
-  // New relation
+  // New relations
   export const userCalendarSubscriptionsRelations = relations(userCalendarSubscriptions, ({ one }) => ({
     user: one(user, { fields: [userCalendarSubscriptions.userId], references: [user.id] }),
     calendar: one(calendars, { fields: [userCalendarSubscriptions.calendarId], references: [calendars.id] }),
   }));
+
+  export const userCalendarDismissalsRelations = relations(userCalendarDismissals, ({ one }) => ({
+    user: one(user, { fields: [userCalendarDismissals.userId], references: [user.id] }),
+    calendar: one(calendars, { fields: [userCalendarDismissals.calendarId], references: [calendars.id] }),
+  }));
   ```
 
-- [ ] Generate migration: `npm run db:generate`
-- [ ] Apply migration: `npm run db:migrate`
+- [x] Generate migration: `npm run db:generate`
+  - [x] Apply migration: `npm run db:migrate`
 
 #### 3.5.2 Permission Logic Update
 
-- [ ] Update `lib/auth/permissions.ts` - `getUserAccessibleCalendars()`
+- [x] Update `lib/auth/permissions.ts` - `getUserAccessibleCalendars()`
 
   ```typescript
-  // Current logic:
-  // 1. Owned calendars (ownerId = userId)
-  // 2. Explicitly shared calendars (calendarShares)
-
-  // Add:
+  // Visibility Logic:
+  // 1. Owned calendars (ownerId = userId) - Always visible, cannot be dismissed
+  // 2. Explicitly shared calendars (calendarShares) - Auto-visible, can be dismissed
   // 3. Subscribed public calendars (userCalendarSubscriptions + guestPermission != "none")
 
-  // Important: Owner's own calendars should NEVER appear in subscription list
-  // They are always visible by default (cannot be hidden)
+  // Filter out dismissed calendars (userCalendarDismissals)
+  // Owned calendars ignore dismissals (always shown)
+
+  // Permission Priority (for same calendar):
+  // - Share permission > Guest permission (use best available, no duplicates)
   ```
 
-- [ ] Implement permission hierarchy:
-  - **Owner permission** (ownerId): Always visible, cannot be unsubscribed
-  - **Share permission** (calendarShares): Can be subscribed/unsubscribed
-  - **Guest permission** (guestPermission): Can be subscribed/unsubscribed
-- [ ] Return subscription status with accessible calendars:
+- [x] Implement permission hierarchy:
+  - **Owner permission** (ownerId): Always visible, CANNOT be dismissed, full control
+  - **Share permission** (calendarShares): Auto-visible, CAN be dismissed, permission as defined in share
+  - **Guest permission** (guestPermission): Hidden by default, can be subscribed, permission as defined in calendar
+- [x] Return calendar visibility metadata:
+
   ```typescript
   Array<{
     id: string;
-    permission: CalendarPermission;
-    source: "owner" | "share" | "subscription";
-    canUnsubscribe: boolean; // false for owner, true for share/subscription
+    permission: CalendarPermission; // Best available permission
+    source: "owner" | "share" | "subscription"; // Primary source
+    canDismiss: boolean; // false for owner, true for share/subscription
+    isDismissed: boolean; // Current dismissal state
   }>;
   ```
 
-#### 3.5.3 Subscription API
+- [x] Create helper functions:
 
-- [ ] Create `app/api/calendars/subscriptions/route.ts`
+  ```typescript
+  // Check if calendar is dismissed by user
+  async function isCalendarDismissed(
+    userId: string,
+    calendarId: string
+  ): Promise<boolean>;
+
+  // Dismiss a calendar (not allowed for owned calendars)
+  async function dismissCalendar(
+    userId: string,
+    calendarId: string
+  ): Promise<void>;
+
+  // Re-subscribe (remove dismissal) - works for both shares and subscriptions
+  async function undismissCalendar(
+    userId: string,
+    calendarId: string
+  ): Promise<void>;
+  ```
+
+#### 3.5.3 Subscription & Dismissal API
+
+- [x] Create `app/api/calendars/subscriptions/route.ts`
   - **GET**: List all available public calendars for discovery
     - Returns calendars with `guestPermission != "none"`
-    - Excludes user's owned calendars
-    - Includes subscription status (subscribed: true/false)
+    - Excludes user's owned calendars (ownerId = userId)
+    - Excludes calendars user already has access to (via calendarShares OR userCalendarSubscriptions AND NOT dismissed)
+    - Includes subscription/dismissal status for each calendar
+    - Shows dismissed shared calendars (so they can be re-subscribed)
     - Requires authentication
   - **POST**: Subscribe to a calendar
     - Body: `{ calendarId: string }`
-    - Creates entry in `userCalendarSubscriptions`
-    - Validates calendar has `guestPermission != "none"`
+    - Two scenarios:
+      1. New public calendar subscription: Creates entry in `userCalendarSubscriptions`
+      2. Re-subscribing dismissed calendar: Removes entry from `userCalendarDismissals`
+    - Validates calendar has `guestPermission != "none"` OR user has `calendarShares` entry
     - Prevents subscribing to own calendars (return error)
     - Returns success or error
-- [ ] Create `app/api/calendars/subscriptions/[calendarId]/route.ts`
-  - **DELETE**: Unsubscribe from a calendar
-    - Validates user is not owner (cannot unsubscribe from own calendar)
-    - Removes entry from `userCalendarSubscriptions`
+- [x] Create `app/api/calendars/subscriptions/[calendarId]/route.ts`
+  - **DELETE**: Dismiss/Unsubscribe from a calendar
+    - Two scenarios:
+      1. Shared calendar: Creates entry in `userCalendarDismissals` (hide but keep share)
+      2. Subscribed public calendar: Removes from `userCalendarSubscriptions`
+    - Validates user is not owner (cannot dismiss own calendars)
     - Returns success
+- [x] Update `app/api/calendars/route.ts` (GET)
+  - Apply dismissal filter to returned calendars
+  - Use updated `getUserAccessibleCalendars()` logic
 
 #### 3.5.4 Discovery UI Components
 
-- [ ] Create `components/calendar-discovery-dialog.tsx`
+- [x] Create `components/calendar-discovery-dialog.tsx`
 
-  - Title: "Browse Public Calendars" / "Discover Calendars"
-  - List of all public calendars (guestPermission != "none")
+  - Title: "Browse Calendars" / "Calendar Discovery"
+  - Two tabs/sections:
+    1. **"Public Calendars"** - Calendars with guestPermission (not owned, not already visible)
+    2. **"Dismissed Calendars"** - Shared/subscribed calendars user has hidden
   - For each calendar:
     - Calendar name + color indicator
     - Permission badge (Read-only / Read & Write)
     - Owner name (if available)
-    - Subscribe/Unsubscribe button
-    - Disabled if user is owner (show "You own this calendar")
+    - Source badge ("Public" / "Shared with you")
+    - Subscribe/Re-subscribe button
+    - Show "You own this calendar" for owned calendars (shouldn't appear but defensive)
   - Search/filter functionality
-  - Empty state: "No public calendars available"
+  - Empty states:
+    - "No public calendars available" (Public tab)
+    - "No dismissed calendars" (Dismissed tab)
   - Loading states
 
-- [ ] Add "Browse Calendars" button trigger
+- [x] Add "Browse Calendars" button trigger
   - **Placement**: In User Menu dropdown (`components/user-menu.tsx`)
     ```tsx
     <DropdownMenuItem onClick={onBrowseCalendars}>
       <Users className="h-4 w-4 mr-2" />
-      {t("calendar.mySubscriptions")}
+      {t("calendar.browseCalendars")}
     </DropdownMenuItem>
     ```
   - Position: Between "Profile" and "Logout" items
   - Icon: `Users` (represents public/community calendars)
   - Only visible for authenticated users (not guests)
 
-#### 3.5.5 Subscription Hooks
+#### 3.5.5 Subscription & Dismissal Hooks
 
-- [ ] Create `hooks/useCalendarSubscriptions.ts`
+- [x] Create `hooks/useCalendarSubscriptions.ts`
 
   ```typescript
   export function useCalendarSubscriptions() {
-    const [publicCalendars, setPublicCalendars] = useState([]);
+    const [availableCalendars, setAvailableCalendars] = useState([]);
+    const [dismissedCalendars, setDismissedCalendars] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchPublicCalendars = async () => {
+    const fetchCalendars = async () => {
       // GET /api/calendars/subscriptions
+      // Returns { public: [], dismissed: [] }
     };
 
     const subscribe = async (calendarId: string) => {
       // POST /api/calendars/subscriptions
+      // Handles both new subscriptions and re-subscribing dismissed calendars
       // Refresh calendar list after success
     };
 
-    const unsubscribe = async (calendarId: string) => {
+    const dismiss = async (calendarId: string) => {
       // DELETE /api/calendars/subscriptions/[calendarId]
+      // Handles both dismissing shares and unsubscribing from public calendars
       // Refresh calendar list after success
     };
 
     return {
-      publicCalendars,
+      availableCalendars, // Public calendars not yet subscribed
+      dismissedCalendars, // Shared/subscribed calendars user has hidden
       loading,
       subscribe,
-      unsubscribe,
-      refresh: fetchPublicCalendars,
+      dismiss,
+      refresh: fetchCalendars,
     };
   }
   ```
 
-- [ ] Update `hooks/useCalendars.ts`
-  - Fetch should include subscribed calendars automatically (via updated API)
-  - No changes needed if API is updated correctly
+- [x] Update `hooks/useCalendars.ts`
+  - Fetch should automatically exclude dismissed calendars (via updated API)
+  - No additional client-side filtering needed if API is correct
 
 #### 3.5.6 UI/UX Enhancements
 
-- [ ] Calendar Selector updates
+- [x] Calendar Selector updates
 
-  - Add visual indicator for subscribed calendars (optional)
-  - Show subscription count: "3 subscribed calendars" (optional tooltip)
+  - Add context menu option "Dismiss calendar" for shared/subscribed calendars
+  - Show visual indicator for subscribed public calendars (optional icon/badge)
+  - Disabled "Dismiss" option for owned calendars
 
-- [ ] Calendar Settings Sheet
+- [x] Calendar Settings Sheet
 
-  - Show subscription info if calendar is subscribed (not owned/shared)
-  - "Unsubscribe from this calendar" button (only for subscribed calendars)
+  - Show calendar source: "You own this" / "Shared with you" / "Public subscription"
+  - For shared calendars: Add "Dismiss this calendar" button
+  - For subscribed calendars: Add "Unsubscribe from this calendar" button
+  - Owned calendars: No dismiss option
 
-- [ ] Translations
-  - Add translation keys:
-    - `calendar.mySubscriptions` - "My Calendar Subscriptions" (User Menu item)
-    - `calendar.browsePublic` - "Browse Public Calendars" (Dialog title)
+- [x] Translations
+  - Add translation keys (en, de, it):
+    - `calendar.browseCalendars` - "Browse Calendars" (User Menu + Dialog title)
+    - `calendar.publicCalendars` - "Public Calendars" (Tab label)
+    - `calendar.dismissedCalendars` - "Dismissed Calendars" (Tab label)
     - `calendar.subscribe` - "Subscribe"
-    - `calendar.unsubscribe` - "Unsubscribe"
+    - `calendar.resubscribe` - "Re-subscribe"
+    - `calendar.dismiss` - "Dismiss"
     - `calendar.subscribed` - "Subscribed"
     - `calendar.youOwnThis` - "You own this calendar"
     - `calendar.noPublicCalendars` - "No public calendars available"
-    - `calendar.publicCalendarsList` - "Public Calendars"
+    - `calendar.noDismissedCalendars` - "No dismissed calendars"
     - `calendar.subscriptionSuccess` - "Successfully subscribed to {name}"
-    - `calendar.unsubscriptionSuccess` - "Unsubscribed from {name}"
-    - `calendar.cannotSubscribeOwn` - "You cannot subscribe to your own calendar"
+    - `calendar.dismissSuccess` - "Calendar dismissed"
+    - `calendar.resubscribeSuccess` - "Calendar restored"
+    - `calendar.cannotDismissOwn` - "You cannot dismiss your own calendar"
+    - `calendar.sharedWithYou` - "Shared with you"
+    - `calendar.publicSubscription` - "Public subscription"
+    - `calendar.dismissCalendar` - "Dismiss this calendar"
+    - `calendar.unsubscribeCalendar` - "Unsubscribe from this calendar"
 
 #### 3.5.7 Guest Behavior (Non-Authenticated Users)
 
 **Important**: Guests (non-authenticated users) are NOT affected by this feature.
 
 - Guests continue to see ALL calendars with `guestPermission != "none"` automatically
-- No subscription system for guests (cannot persist preferences without account)
+- No subscription or dismissal system for guests (cannot persist preferences without account)
 - Current behavior in Phase 3.4 remains unchanged for guests
 
 #### 3.5.8 Migration & Backwards Compatibility
 
-- [ ] Existing calendars: No automatic subscriptions created
-- [ ] Users will see owned + explicitly shared calendars by default (current behavior)
-- [ ] Public calendars appear in discovery dialog (opt-in)
-- [ ] No breaking changes to existing functionality
+- [x] Existing calendars: No automatic subscriptions or dismissals created
+- [x] Users will see owned + explicitly shared calendars by default (current behavior)
+- [x] Public calendars hidden by default (require manual subscription via discovery dialog)
+- [x] No breaking changes to existing functionality
 
-#### 3.5.9 Testing Checklist
+### 3.6 Fixes & Polish
 
-- [ ] Create calendar with `guestPermission: "read"` as User A
-- [ ] Login as User B → verify calendar NOT visible in calendar list
-- [ ] Open "Browse Calendars" dialog → verify calendar appears
-- [ ] Subscribe to calendar → verify it appears in calendar list
-- [ ] Verify User A (owner) cannot unsubscribe from own calendar
-- [ ] Unsubscribe as User B → verify calendar disappears from list
-- [ ] Verify calendar still appears in browse dialog after unsubscribe
-- [ ] Test with multiple users and multiple public calendars
-- [ ] Verify guests still see all public calendars (unchanged)
+- [x] Fix calendar selector not live updating after calendar subscription/dismissal
+  - **Root Cause**: SSE events are filtered by `calendarId` in stream, so subscription/dismissal events for other calendars were not received
+  - **Solution**: Dispatch custom `calendar-list-change` events directly from `useCalendarSubscriptions` hook after successful subscribe/dismiss actions
+  - **Changes**:
+    - `useCalendarSubscriptions.ts`: Dispatch `window.dispatchEvent(new CustomEvent('calendar-list-change'))` after subscribe/dismiss
+    - `useCalendars.ts`: Listen to `calendar-list-change` events and trigger `fetchCalendars()` on receive
+    - Removed redundant SSE event listener in `useCalendarSubscriptions` (not needed since we dispatch custom events)
+  - **Result**: Calendar selector now updates immediately when user subscribes/dismisses calendars from discovery dialog
 
 ---
 
@@ -714,6 +815,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars).
   - [ ] Update `app/api/auth/[...all]/route.ts` - Apply to POST requests
   - [ ] Update `app/api/auth/change-password/route.ts` - Strict limit
   - [ ] Update `app/api/auth/delete-account/route.ts` - Strict limit
+  - [ ] Update `app/api/auth/upload-avatar/route.ts` - Strict limit
   - [ ] Update `app/api/events/stream/route.ts` - Connection limit
   - [ ] Add rate limiting middleware to `proxy.ts` (optional, for global limits)
 - [ ] Error Handling
@@ -1278,6 +1380,209 @@ But NOT calendars with `guestPermission != "none"` (public calendars).
 - [ ] Responsive share dialog
 - [ ] Touch-friendly permission selector
 - [ ] Mobile user search
+
+### 8.5 Loading States & Skeleton Optimization
+
+**Priority**: Medium (Polish & User Experience)
+
+**Goal**: Implement consistent, non-intrusive loading feedback across the app to prevent UI flicker and improve perceived performance.
+
+**Current Problems:**
+
+1. **Skeleton Flicker**: Skeletons appear for very short durations (0.5s or less), causing visual noise
+2. **Double Loading Feedback**: Some components (e.g., `calendar-grid.tsx`) show skeleton → then loading spinner
+3. **Router-Induced Re-renders**: Navigation chain `/ → /?id=XXX` triggers multiple skeleton renders
+4. **Inconsistent Patterns**: Different components use different loading strategies
+
+**Affected Components:**
+
+- `app/page.tsx` - Main calendar page (initial load)
+- `app/profile/page.tsx` - Profile page
+- `components/preset-list.tsx` - Preset selector
+- `components/calendar-grid.tsx` - Calendar grid with shifts
+- All components except header/footer
+
+#### 8.5.1 Implement Delayed Skeleton Pattern
+
+**Strategy**: Use a **Delayed Skeleton Pattern with Minimum Display Time** to prevent flicker while maintaining loading feedback.
+
+- [ ] **Create `useDelayedLoading` Hook**
+
+  - [ ] Create `hooks/useDelayedLoading.ts`
+    ```typescript
+    /**
+     * Hook to delay skeleton display and enforce minimum display time
+     *
+     * @param isLoading - Actual loading state from data hook
+     * @param delayMs - Delay before showing skeleton (default: 200ms)
+     * @param minDisplayMs - Minimum time to show skeleton once visible (default: 400ms)
+     * @returns shouldShowSkeleton - Boolean indicating if skeleton should render
+     *
+     * Behavior:
+     * - If loading completes < delayMs: No skeleton shown
+     * - If loading completes > delayMs: Skeleton shown for at least minDisplayMs
+     * - Prevents rapid flicker for fast loads
+     * - Ensures smooth transitions for slow loads
+     */
+    ```
+  - [ ] Parameters:
+    - `delayMs`: 200-300ms (don't show skeleton for very fast loads)
+    - `minDisplayMs`: 400ms (if skeleton shown, display long enough to read)
+  - [ ] Return: `shouldShowSkeleton` boolean
+  - [ ] Internal logic: Track timestamps, use `useEffect` + `setTimeout`
+
+- [ ] **Create Loading Configuration**
+
+  - [ ] Create `lib/loading-config.ts`
+
+    ```typescript
+    export const LOADING_THRESHOLDS = {
+      // Don't show skeleton for loads < 200ms (instant feel)
+      DELAY_THRESHOLD: 200,
+
+      // Show skeleton for minimum 400ms (smooth transition)
+      MIN_DISPLAY_TIME: 400,
+
+      // Component-specific overrides
+      PROFILE_PAGE: { DELAY: 300, MIN_DISPLAY: 500 },
+      CALENDAR_GRID: { DELAY: 150, MIN_DISPLAY: 400 },
+      PRESET_LIST: { DELAY: 250, MIN_DISPLAY: 300 },
+    } as const;
+    ```
+
+#### 8.5.2 Update Components to Use Delayed Loading
+
+- [ ] **Update `app/page.tsx`**
+  - [ ] Replace `loading` with `useDelayedLoading(loading)`
+  - [ ] Remove redundant loading checks
+  - [ ] Ensure only ONE skeleton per section (no skeleton + spinner combos)
+- [ ] **Update `app/profile/page.tsx`**
+  - [ ] Use `useDelayedLoading(isLoading || accountsLoading)`
+  - [ ] Remove skeleton if data loads < delay threshold
+- [ ] **Update `components/preset-list.tsx`**
+  - [ ] Replace `if (loading) return <PresetListSkeleton />` pattern
+  - [ ] Use `useDelayedLoading(loading)` hook
+- [ ] **Update `components/calendar-content.tsx`**
+
+  - [ ] Remove duplicate loading spinners if skeleton already shown
+  - [ ] Ensure calendar-grid.tsx doesn't show skeleton + spinner
+
+- [ ] **Update All Other Components with Skeletons**
+  - [ ] Search for all `*Skeleton` component usages
+  - [ ] Apply delayed loading pattern consistently
+  - [ ] Document exceptions (e.g., footer/header never show skeletons)
+
+#### 8.5.3 Optimistic UI for User Actions
+
+**Goal**: Implement instant feedback for user interactions (no loading states).
+
+- [ ] **Already Implemented** (verify consistency):
+
+  - ✅ Shift creation - Optimistic update with temp ID
+  - ✅ Shift deletion - Immediate removal from UI
+  - ✅ Preset selection - Instant state change
+  - ✅ Calendar switching - Immediate UI update
+
+- [ ] **Verify No Regressions**:
+  - [ ] Test shift creation shows immediately
+  - [ ] Test calendar switching feels instant
+  - [ ] Test preset selection has no delay
+  - [ ] No loading spinners on button clicks (use disabled state instead)
+
+#### 8.5.4 Router Navigation Optimization
+
+**Goal**: Prevent double-skeleton from router redirect chain.
+
+- [ ] **Investigate Router Behavior**
+
+  - [ ] Check why `/ → /?id=XXX` causes double render
+  - [ ] Consider using `router.replace` instead of `router.push` for initial redirect
+  - [ ] Test if pre-populating `?id` in URL prevents re-render
+
+- [ ] **Potential Solutions**:
+  - [ ] Option A: Pre-load calendar ID before first render (SSR/server component)
+  - [ ] Option B: Use `useTransition` to defer skeleton until after router settle
+  - [ ] Option C: Cache calendar selection in localStorage/cookie
+  - [ ] Test each approach and implement best solution
+
+#### 8.5.5 Loading Feedback Patterns (Style Guide)
+
+**Goal**: Standardize when to use which loading pattern across the app.
+
+- [ ] **Create Loading Pattern Documentation** (in code comments or README)
+
+  ```markdown
+  ## Loading Feedback Patterns
+
+  ### 1. Delayed Skeletons (Initial Page Load)
+
+  - **Use for**: Page-level data fetching, large component trees
+  - **Examples**: Calendar page, Profile page, Compare view
+  - **Pattern**: `useDelayedLoading()` hook with skeleton components
+
+  ### 2. Optimistic UI (User Actions)
+
+  - **Use for**: Create/Update/Delete operations triggered by user
+  - **Examples**: Shift creation, Preset selection, Note editing
+  - **Pattern**: Update UI immediately, revert on error
+
+  ### 3. Inline Spinners (Button Actions)
+
+  - **Use for**: Long-running server operations in forms
+  - **Examples**: "Save" button, "Export" button, "Sync" button
+  - **Pattern**: Button disabled + spinner icon + "Saving..." text
+
+  ### 4. No Loading Feedback (Instant Actions)
+
+  - **Use for**: Pure client-side state changes
+  - **Examples**: Theme toggle, Language switch, View settings
+  - **Pattern**: Immediate state change, no loading indicator
+
+  ### 5. Progress Indicators (Long Operations)
+
+  - **Use for**: Multi-step processes, file uploads, sync operations
+  - **Examples**: Calendar export (PDF), External sync, Bulk operations
+  - **Pattern**: Progress bar or percentage with cancel option
+  ```
+
+- [ ] **Apply Patterns Consistently**:
+  - [ ] Audit all loading states in codebase
+  - [ ] Categorize by pattern type
+  - [ ] Refactor to use correct pattern
+  - [ ] Remove any skeleton + spinner combos
+
+#### 8.5.6 Testing & Validation
+
+- [ ] **Test Slow Network Conditions**
+
+  - [ ] Enable Chrome DevTools network throttling (Slow 3G)
+  - [ ] Verify skeletons appear after delay threshold
+  - [ ] Verify skeletons stay visible for minimum time
+  - [ ] Confirm smooth transition to real content
+
+- [ ] **Test Fast Network Conditions**
+
+  - [ ] Disable throttling (fast connection)
+  - [ ] Verify NO skeleton flicker for instant loads
+  - [ ] Confirm page feels responsive and fast
+
+- [ ] **Test Edge Cases**
+
+  - [ ] Rapid route switching (click calendar A → B → C quickly)
+  - [ ] Browser back/forward navigation
+  - [ ] Refresh during loading
+  - [ ] Offline → online transition
+
+- [ ] **Performance Metrics**
+  - [ ] Measure time to first meaningful paint
+  - [ ] Track skeleton display frequency (should be rare for fast users)
+  - [ ] Monitor user feedback on loading experience
+
+**Implementation Priority**: Medium (after auth migration stable, before production)
+
+**Estimated Effort**: 2-3 days
+
+**Dependencies**: None (can implement independently)
 
 ---
 

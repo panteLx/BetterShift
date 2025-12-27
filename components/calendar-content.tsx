@@ -53,11 +53,16 @@ export function CalendarContent(props: CalendarContentProps) {
         locale={props.locale}
       />
 
-      {/* Guest Banner - shown above calendar grid */}
+      {/* Guest Banner - compact on mobile, default on desktop */}
       {isGuest && (
-        <div className="mb-4 px-2 sm:px-0">
-          <GuestBanner />
-        </div>
+        <>
+          <div className="mb-4 px-2 sm:hidden">
+            <GuestBanner variant="compact" />
+          </div>
+          <div className="hidden sm:block mb-4">
+            <GuestBanner variant="default" />
+          </div>
+        </>
       )}
 
       <CalendarGrid

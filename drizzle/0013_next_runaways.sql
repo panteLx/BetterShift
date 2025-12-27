@@ -25,7 +25,7 @@ CREATE TABLE `calendar_shares` (
 	`created_at` integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	FOREIGN KEY (`calendar_id`) REFERENCES `calendars`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`shared_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`shared_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE INDEX `calendar_shares_calendarId_idx` ON `calendar_shares` (`calendar_id`);--> statement-breakpoint
@@ -55,6 +55,21 @@ CREATE TABLE `user` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
+CREATE TABLE `user_calendar_subscriptions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`calendar_id` text NOT NULL,
+	`status` text DEFAULT 'subscribed' NOT NULL,
+	`source` text DEFAULT 'guest' NOT NULL,
+	`created_at` integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`updated_at` integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`calendar_id`) REFERENCES `calendars`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `user_calendar_subscriptions_userId_idx` ON `user_calendar_subscriptions` (`user_id`);--> statement-breakpoint
+CREATE INDEX `user_calendar_subscriptions_calendarId_idx` ON `user_calendar_subscriptions` (`calendar_id`);--> statement-breakpoint
+CREATE INDEX `user_calendar_subscriptions_status_idx` ON `user_calendar_subscriptions` (`status`);--> statement-breakpoint
 CREATE TABLE `verification` (
 	`id` text PRIMARY KEY NOT NULL,
 	`identifier` text NOT NULL,

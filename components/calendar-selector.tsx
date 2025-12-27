@@ -44,7 +44,7 @@ export function CalendarSelector({
   variant = "desktop",
 }: CalendarSelectorProps) {
   const t = useTranslations();
-  const { isGuest } = useAuth();
+  const { isGuest, user } = useAuth();
 
   // Filter calendars: guests only see calendars with read or write permission
   const visibleCalendars = isGuest
@@ -56,8 +56,16 @@ export function CalendarSelector({
   const selectedCalendar = visibleCalendars.find((c) => c.id === selectedId);
   const canCompare = visibleCalendars.length >= 2;
 
-  // Check if selected calendar is read-only for guest
-  const isReadOnly = isGuest && selectedCalendar?.guestPermission === "read";
+  // Check if selected calendar is read-only
+  const isReadOnly =
+    (isGuest && selectedCalendar?.guestPermission === "read") ||
+    (!isGuest && selectedCalendar?.sharePermission === "read") ||
+    (!isGuest &&
+      selectedCalendar?.isSubscribed &&
+      selectedCalendar?.guestPermission === "read");
+
+  // Check if user is owner (can access settings)
+  const isOwner = user && selectedCalendar?.ownerId === user.id;
 
   // Desktop: Compact icon-based layout
   if (variant === "desktop") {
@@ -92,7 +100,11 @@ export function CalendarSelector({
           <SelectContent>
             {visibleCalendars.map((calendar) => {
               const isCalendarReadOnly =
-                isGuest && calendar.guestPermission === "read";
+                (isGuest && calendar.guestPermission === "read") ||
+                (!isGuest && calendar.sharePermission === "read") ||
+                (!isGuest &&
+                  calendar.isSubscribed &&
+                  calendar.guestPermission === "read");
 
               return (
                 <SelectItem key={calendar.id} value={calendar.id}>
@@ -126,7 +138,7 @@ export function CalendarSelector({
             )}
           </SelectContent>
         </Select>
-        {onSettings && selectedId && !isGuest && (
+        {onSettings && selectedId && isOwner && (
           <Button
             onClick={onSettings}
             size="icon"
@@ -238,7 +250,7 @@ export function CalendarSelector({
       {/* Action Buttons - Even distribution */}
       {selectedId && (
         <div className="grid grid-cols-3 gap-2">
-          {onSettings && !isGuest && (
+          {onSettings && isOwner && (
             <Button
               onClick={onSettings}
               size="sm"

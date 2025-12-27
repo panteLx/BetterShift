@@ -90,7 +90,7 @@ export function NotesListDialog({
         {/* Read-Only Banner */}
         {isReadOnly && (
           <div className="px-6 pt-6">
-            <ReadOnlyBanner message={t("guest.cannotEditNotes")} />
+            <ReadOnlyBanner message={t("guest.cannotEdit")} />
           </div>
         )}
 

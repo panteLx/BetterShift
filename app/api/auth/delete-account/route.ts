@@ -6,8 +6,10 @@ import {
   account as accountTable,
   session as sessionTable,
   calendars as calendarsTable,
+  calendarShares as calendarSharesTable,
+  userCalendarSubscriptions as userCalendarSubscriptionsTable,
 } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
 
 /**
@@ -16,11 +18,13 @@ import { verifyPassword } from "better-auth/crypto";
  * DELETE /api/auth/delete-account
  * Body: { password?: string } (required if user has password-based login)
  *
- * Deletes user account and all associated data:
- * - User record
- * - All sessions
- * - All linked accounts (OAuth, credential)
- * - All owned calendars (cascade deletes shifts, presets, notes)
+ * Deletes user account and all associated data in the correct order:
+ * 1. Calendar shares (where user is participant or sharer)
+ * 2. Calendar subscriptions
+ * 3. Owned calendars (cascade deletes shifts, presets, notes, external syncs)
+ * 4. Sessions
+ * 5. Linked accounts (OAuth, credential)
+ * 6. User record
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -69,16 +73,33 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // Delete user's calendars (cascade will delete shifts, presets, notes)
+    // Delete in the correct order to avoid foreign key constraint violations
+
+    // 1. Delete calendar shares where user is sharer OR shared with
+    await db
+      .delete(calendarSharesTable)
+      .where(
+        or(
+          eq(calendarSharesTable.userId, userId),
+          eq(calendarSharesTable.sharedBy, userId)
+        )
+      );
+
+    // 2. Delete user's calendar subscriptions
+    await db
+      .delete(userCalendarSubscriptionsTable)
+      .where(eq(userCalendarSubscriptionsTable.userId, userId));
+
+    // 3. Delete user's calendars (cascade will delete shifts, presets, notes, external syncs)
     await db.delete(calendarsTable).where(eq(calendarsTable.ownerId, userId));
 
-    // Delete user's sessions
+    // 4. Delete user's sessions
     await db.delete(sessionTable).where(eq(sessionTable.userId, userId));
 
-    // Delete user's accounts (OAuth + credential)
+    // 5. Delete user's accounts (OAuth + credential)
     await db.delete(accountTable).where(eq(accountTable.userId, userId));
 
-    // Delete user record
+    // 6. Delete user record
     await db.delete(userTable).where(eq(userTable.id, userId));
 
     return NextResponse.json({

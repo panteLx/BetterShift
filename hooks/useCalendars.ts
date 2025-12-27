@@ -178,6 +178,43 @@ export function useCalendars(initialCalendarId?: string | null) {
     fetchCalendars();
   }, [fetchCalendars]);
 
+  // Listen for calendar subscription changes (SSE events + custom events)
+  useEffect(() => {
+    const handleCalendarChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, action } = customEvent.detail || {};
+
+      // Refetch calendars when subscriptions change
+      if (type === "calendar" && (action === "update" || action === "delete")) {
+        fetchCalendars();
+      }
+    };
+
+    const handleCalendarListChange = () => {
+      // Triggered by calendar subscription/dismissal actions
+      fetchCalendars();
+    };
+
+    // Listen to SSE calendar-change events
+    window.addEventListener("calendar-change" as any, handleCalendarChange);
+    // Listen to direct calendar list changes (subscriptions/dismissals)
+    window.addEventListener(
+      "calendar-list-change" as any,
+      handleCalendarListChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "calendar-change" as any,
+        handleCalendarChange
+      );
+      window.removeEventListener(
+        "calendar-list-change" as any,
+        handleCalendarListChange
+      );
+    };
+  }, [fetchCalendars]);
+
   return {
     calendars,
     selectedCalendar,

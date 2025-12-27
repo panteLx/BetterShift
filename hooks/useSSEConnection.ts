@@ -9,6 +9,7 @@ interface SSEConnectionOptions {
   onNoteUpdate: () => void;
   onStatsRefresh: () => void;
   onSyncLogUpdate?: () => void;
+  onCalendarUpdate?: () => void;
   isConnected: boolean;
   setIsConnected: (connected: boolean) => void;
 }
@@ -20,6 +21,7 @@ export function useSSEConnection({
   onNoteUpdate,
   onStatsRefresh,
   onSyncLogUpdate,
+  onCalendarUpdate,
   setIsConnected,
 }: SSEConnectionOptions) {
   const t = useTranslations();
@@ -42,6 +44,7 @@ export function useSSEConnection({
   const noteUpdateRef = useRef(onNoteUpdate);
   const statsRefreshRef = useRef(onStatsRefresh);
   const syncLogUpdateRef = useRef(onSyncLogUpdate);
+  const calendarUpdateRef = useRef(onCalendarUpdate);
   const setIsConnectedRef = useRef(setIsConnected);
   const tRef = useRef(t);
 
@@ -52,6 +55,7 @@ export function useSSEConnection({
     noteUpdateRef.current = onNoteUpdate;
     statsRefreshRef.current = onStatsRefresh;
     syncLogUpdateRef.current = onSyncLogUpdate;
+    calendarUpdateRef.current = onCalendarUpdate;
     setIsConnectedRef.current = setIsConnected;
     tRef.current = t;
   }, [
@@ -60,6 +64,7 @@ export function useSSEConnection({
     onNoteUpdate,
     onStatsRefresh,
     onSyncLogUpdate,
+    onCalendarUpdate,
     setIsConnected,
     t,
   ]);
@@ -78,6 +83,7 @@ export function useSSEConnection({
           presetUpdateRef.current();
           noteUpdateRef.current();
           statsRefreshRef.current();
+          calendarUpdateRef.current?.();
           lastSyncTimeRef.current = now;
           disconnectTimeRef.current = null;
           setTimeout(() => toast.dismiss(), 1000);
@@ -170,6 +176,8 @@ export function useSSEConnection({
           presetUpdateRef.current();
         } else if (data.type === "note") {
           noteUpdateRef.current();
+        } else if (data.type === "calendar") {
+          calendarUpdateRef.current?.();
         } else if (data.type === "sync-log") {
           syncLogUpdateRef.current?.();
         }

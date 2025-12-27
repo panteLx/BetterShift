@@ -23,7 +23,7 @@ import { isAuthEnabled, allowGuestAccess } from "@/lib/auth/feature-flags";
  * return <div>Welcome {user.name}</div>;
  */
 export function useAuth() {
-  const { data: session, isPending, error } = useSession();
+  const { data: session, isPending, error, refetch } = useSession();
 
   const authEnabled = isAuthEnabled();
   const guestAccessAllowed = allowGuestAccess();
@@ -39,5 +39,6 @@ export function useAuth() {
     isGuest: isGuest,
     isLoading: isPending,
     error: error,
+    refetch: refetch,
   };
 }

@@ -272,7 +272,7 @@ export function NoteSheet({
     >
       <div className="space-y-6">
         {/* Read-Only Banner */}
-        {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEditNotes")} />}
+        {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
         {/* Recurring Event Warning */}
         {note &&

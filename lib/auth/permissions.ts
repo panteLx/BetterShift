@@ -1,6 +1,10 @@
 import { db } from "@/lib/db";
-import { calendars, calendarShares } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  calendars,
+  calendarShares,
+  userCalendarSubscriptions,
+} from "@/lib/db/schema";
+import { eq, and, or, inArray } from "drizzle-orm";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 
 /**
@@ -72,11 +76,25 @@ export async function getUserCalendarPermission(
     ),
   });
 
-  if (!share) {
-    return null;
+  if (share) {
+    return share.permission as CalendarPermission;
   }
 
-  return share.permission as CalendarPermission;
+  // Check if user is subscribed to this public calendar
+  const subscription = await db.query.userCalendarSubscriptions.findFirst({
+    where: and(
+      eq(userCalendarSubscriptions.calendarId, calendarId),
+      eq(userCalendarSubscriptions.userId, userId),
+      eq(userCalendarSubscriptions.status, "subscribed")
+    ),
+  });
+
+  // If subscribed and calendar is public, return guest permission
+  if (subscription && calendar.guestPermission !== "none") {
+    return calendar.guestPermission as CalendarPermission;
+  }
+
+  return null;
 }
 
 /**
@@ -178,7 +196,7 @@ export async function getUserAccessibleCalendars(
 
   const results: Array<{ id: string; permission: CalendarPermission }> = [];
 
-  // Get owned calendars
+  // Get owned calendars (ALWAYS visible, cannot be dismissed)
   const ownedCalendars = await db.query.calendars.findMany({
     where: eq(calendars.ownerId, userId),
   });
@@ -190,7 +208,18 @@ export async function getUserAccessibleCalendars(
     }))
   );
 
-  // Get shared calendars
+  // Get all subscriptions for this user
+  const subscriptions = await db.query.userCalendarSubscriptions.findMany({
+    where: and(
+      eq(userCalendarSubscriptions.userId, userId),
+      eq(userCalendarSubscriptions.status, "subscribed")
+    ),
+    with: {
+      calendar: true,
+    },
+  });
+
+  // Get shared calendars (not owned by user)
   const sharedCalendars = await db.query.calendarShares.findMany({
     where: eq(calendarShares.userId, userId),
     with: {
@@ -198,12 +227,183 @@ export async function getUserAccessibleCalendars(
     },
   });
 
-  results.push(
-    ...sharedCalendars.map((share) => ({
-      id: share.calendarId,
-      permission: share.permission as CalendarPermission,
-    }))
-  );
+  // Track which calendars are shared to prevent duplicates
+  const sharedIds = new Set(sharedCalendars.map((s) => s.calendarId));
+  const existingIds = new Set(results.map((r) => r.id));
+
+  // Add shared calendars (share permission takes precedence over guest permission)
+  for (const share of sharedCalendars) {
+    if (existingIds.has(share.calendarId)) continue; // Skip if owned
+
+    // Check if user has dismissed this shared calendar
+    const dismissedShare = subscriptions.find(
+      (sub) =>
+        sub.calendarId === share.calendarId &&
+        sub.status === "dismissed" &&
+        sub.source === "shared"
+    );
+
+    if (!dismissedShare) {
+      results.push({
+        id: share.calendarId,
+        permission: share.permission as CalendarPermission,
+      });
+      existingIds.add(share.calendarId);
+    }
+  }
+
+  // Add guest-subscribed calendars (only if not already included via shares)
+  for (const sub of subscriptions) {
+    if (existingIds.has(sub.calendarId)) continue;
+    if (sub.calendar.guestPermission === "none") continue;
+    if (sub.source !== "guest") continue;
+
+    results.push({
+      id: sub.calendarId,
+      permission: sub.calendar.guestPermission as CalendarPermission,
+    });
+  }
 
   return results;
+}
+
+/**
+ * Check if a calendar is dismissed by the user
+ */
+export async function isCalendarDismissed(
+  userId: string,
+  calendarId: string
+): Promise<boolean> {
+  const subscription = await db.query.userCalendarSubscriptions.findFirst({
+    where: and(
+      eq(userCalendarSubscriptions.userId, userId),
+      eq(userCalendarSubscriptions.calendarId, calendarId),
+      eq(userCalendarSubscriptions.status, "dismissed")
+    ),
+  });
+
+  return !!subscription;
+}
+
+/**
+ * Dismiss/Unsubscribe from a calendar (hide it from view)
+ * - Throws error if user tries to dismiss their own calendar
+ * - For shared calendars: creates/updates subscription with status="dismissed", source="shared"
+ * - For guest-subscribed calendars: updates subscription to status="dismissed"
+ */
+export async function dismissCalendar(
+  userId: string,
+  calendarId: string
+): Promise<void> {
+  // Check if user owns the calendar
+  const calendar = await db.query.calendars.findFirst({
+    where: eq(calendars.id, calendarId),
+  });
+
+  if (!calendar) {
+    throw new Error("Calendar not found");
+  }
+
+  if (calendar.ownerId === userId) {
+    throw new Error("Cannot dismiss your own calendar");
+  }
+
+  // Check if it's a shared calendar
+  const share = await db.query.calendarShares.findFirst({
+    where: and(
+      eq(calendarShares.calendarId, calendarId),
+      eq(calendarShares.userId, userId)
+    ),
+  });
+
+  // Check if subscription already exists
+  const existingSub = await db.query.userCalendarSubscriptions.findFirst({
+    where: and(
+      eq(userCalendarSubscriptions.userId, userId),
+      eq(userCalendarSubscriptions.calendarId, calendarId)
+    ),
+  });
+
+  if (existingSub) {
+    // Update existing subscription to dismissed
+    await db
+      .update(userCalendarSubscriptions)
+      .set({
+        status: "dismissed",
+        source: share ? "shared" : "guest",
+        updatedAt: new Date(),
+      })
+      .where(eq(userCalendarSubscriptions.id, existingSub.id));
+  } else {
+    // Create new dismissal entry
+    await db.insert(userCalendarSubscriptions).values({
+      userId,
+      calendarId,
+      status: "dismissed",
+      source: share ? "shared" : "guest",
+    });
+  }
+}
+
+/**
+ * Re-subscribe to a dismissed calendar
+ * - For shared calendars: updates status to "subscribed"
+ * - For public calendars: updates/creates subscription with status="subscribed", source="guest"
+ */
+export async function undismissCalendar(
+  userId: string,
+  calendarId: string
+): Promise<void> {
+  const calendar = await db.query.calendars.findFirst({
+    where: eq(calendars.id, calendarId),
+  });
+
+  if (!calendar) {
+    throw new Error("Calendar not found");
+  }
+
+  if (calendar.ownerId === userId) {
+    throw new Error("Cannot subscribe to your own calendar");
+  }
+
+  // Check if it's a shared calendar
+  const share = await db.query.calendarShares.findFirst({
+    where: and(
+      eq(calendarShares.calendarId, calendarId),
+      eq(calendarShares.userId, userId)
+    ),
+  });
+
+  // For guest calendars, verify it's public
+  if (!share && calendar.guestPermission === "none") {
+    throw new Error("Calendar is not public");
+  }
+
+  // Check if subscription exists
+  const existingSub = await db.query.userCalendarSubscriptions.findFirst({
+    where: and(
+      eq(userCalendarSubscriptions.userId, userId),
+      eq(userCalendarSubscriptions.calendarId, calendarId)
+    ),
+  });
+
+  if (existingSub) {
+    // Update to subscribed
+    await db
+      .update(userCalendarSubscriptions)
+      .set({
+        status: "subscribed",
+        source: share ? "shared" : "guest",
+        updatedAt: new Date(),
+      })
+      .where(eq(userCalendarSubscriptions.id, existingSub.id));
+  } else {
+    // Create new subscription
+    await db.insert(userCalendarSubscriptions).values({
+      userId,
+      calendarId,
+      status: "subscribed",
+      source: share ? "shared" : "guest",
+    });
+  }
 }

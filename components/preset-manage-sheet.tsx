@@ -493,7 +493,7 @@ export function PresetManageSheet({
           {/* Read-Only Banner */}
           {isReadOnly && (
             <div className="px-6 pt-6">
-              <ReadOnlyBanner message={t("guest.cannotEditPresets")} />
+              <ReadOnlyBanner message={t("guest.cannotEdit")} />
             </div>
           )}
 

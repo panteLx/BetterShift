@@ -169,7 +169,7 @@ export function ShiftSheet({
     >
       <div className="space-y-5">
         {/* Read-only banner */}
-        {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEditShifts")} />}
+        {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
         {/* Preset Selection */}
         {!shift && !isReadOnly && (

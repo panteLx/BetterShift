@@ -1,0 +1,194 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import {
+  calendars,
+  calendarShares,
+  userCalendarSubscriptions,
+} from "@/lib/db/schema";
+import { getSessionUser } from "@/lib/auth/session";
+import { eq, and, or, ne, isNull } from "drizzle-orm";
+import { undismissCalendar } from "@/lib/auth/permissions";
+import { eventEmitter } from "@/lib/event-emitter";
+
+/**
+ * GET /api/calendars/subscriptions
+ * List all available calendars for discovery
+ * Returns two lists:
+ * - available: Calendars user can browse (public calendars, showing subscription status)
+ * - dismissed: Calendars user has dismissed (both shared and guest-subscribed)
+ */
+export async function GET(request: NextRequest) {
+  const user = await getSessionUser(request.headers);
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    // Get all public calendars (guestPermission != "none", not owned by user)
+    const allPublicCalendars = await db.query.calendars.findMany({
+      where: and(
+        ne(calendars.guestPermission, "none"),
+        or(isNull(calendars.ownerId), ne(calendars.ownerId, user.id))
+      ),
+      with: {
+        owner: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Get all user's subscriptions (both subscribed and dismissed)
+    const userSubscriptions = await db.query.userCalendarSubscriptions.findMany(
+      {
+        where: eq(userCalendarSubscriptions.userId, user.id),
+      }
+    );
+
+    const subscribedIds = new Set(
+      userSubscriptions
+        .filter((sub) => sub.status === "subscribed")
+        .map((sub) => sub.calendarId)
+    );
+
+    const dismissedSubs = userSubscriptions.filter(
+      (sub) => sub.status === "dismissed"
+    );
+
+    // Get user's explicit shares (not dismissed)
+    const userShares = await db.query.calendarShares.findMany({
+      where: eq(calendarShares.userId, user.id),
+      with: {
+        calendar: {
+          with: {
+            owner: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const sharedIds = new Set(userShares.map((share) => share.calendarId));
+
+    // Build available calendars list (all public calendars with subscription status)
+    const availableCalendars = allPublicCalendars
+      .filter((cal) => !sharedIds.has(cal.id)) // Exclude calendars explicitly shared
+      .map((cal) => ({
+        id: cal.id,
+        name: cal.name,
+        color: cal.color,
+        guestPermission: cal.guestPermission,
+        owner: cal.owner
+          ? {
+              id: cal.owner.id,
+              name: cal.owner.name,
+            }
+          : null,
+        isSubscribed: subscribedIds.has(cal.id),
+        source: "guest" as const,
+      }));
+
+    // Build dismissed calendars list (both shared and guest-subscribed)
+    const dismissedCalendars = await Promise.all(
+      dismissedSubs.map(async (sub) => {
+        const calendar = await db.query.calendars.findFirst({
+          where: eq(calendars.id, sub.calendarId),
+          with: {
+            owner: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        if (!calendar) return null;
+
+        // Check if it's also a shared calendar
+        const share = userShares.find((s) => s.calendarId === sub.calendarId);
+
+        return {
+          id: calendar.id,
+          name: calendar.name,
+          color: calendar.color,
+          permission: share ? share.permission : calendar.guestPermission,
+          owner: calendar.owner
+            ? {
+                id: calendar.owner.id,
+                name: calendar.owner.name,
+              }
+            : null,
+          source: sub.source,
+        };
+      })
+    );
+
+    // Filter out nulls
+    const validDismissedCalendars = dismissedCalendars.filter(
+      (cal): cal is NonNullable<typeof cal> => cal !== null
+    );
+
+    return NextResponse.json({
+      available: availableCalendars,
+      dismissed: validDismissedCalendars,
+    });
+  } catch (error) {
+    console.error("Error fetching subscription calendars:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch calendars" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/calendars/subscriptions
+ * Subscribe to a calendar or re-subscribe to a dismissed calendar
+ * Body: { calendarId: string }
+ */
+export async function POST(request: NextRequest) {
+  const user = await getSessionUser(request.headers);
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { calendarId } = body;
+
+    if (!calendarId) {
+      return NextResponse.json(
+        { error: "Calendar ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Use the helper function to handle both scenarios
+    await undismissCalendar(user.id, calendarId);
+
+    // Emit SSE event to trigger calendar list refresh
+    eventEmitter.emit("calendar-change", {
+      type: "calendar",
+      action: "update",
+      calendarId,
+      data: { subscribed: true },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error("Error subscribing to calendar:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to subscribe";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}

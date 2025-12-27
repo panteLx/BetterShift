@@ -96,6 +96,7 @@ export const auth = betterAuth({
     // Disable sign-up if configured
     changeEmail: {
       enabled: true,
+      updateEmailWithoutVerification: true,
     },
     deleteUser: {
       enabled: true,

@@ -38,7 +38,7 @@ import { useVersionInfo } from "@/hooks/useVersionInfo";
 export default function ProfilePage() {
   const t = useTranslations();
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refetch } = useAuth();
   const { accounts, isLoading: accountsLoading } = useConnectedAccounts();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -49,6 +49,14 @@ export default function ProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const versionInfo = useVersionInfo();
+
+  // Profile editing state
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const authEnabled = isAuthEnabled();
 
@@ -61,6 +69,15 @@ export default function ProfilePage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Initialize edit fields when user loads
+  useEffect(() => {
+    if (user) {
+      setEditName(user.name || "");
+      setEditEmail(user.email || "");
+      setAvatarPreview(user.image || "");
+    }
+  }, [user]);
 
   // Redirect if auth disabled or not logged in
   useEffect(() => {
@@ -85,6 +102,107 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("auth.invalidImageType"));
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t("auth.imageTooLarge"));
+      return;
+    }
+
+    setAvatarFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editName.trim()) {
+      toast.error(t("auth.nameRequired"));
+      return;
+    }
+
+    if (!editEmail.trim()) {
+      toast.error(t("auth.emailRequired"));
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+
+    try {
+      // Upload avatar first if changed
+      let imageUrl = user?.image;
+      if (avatarFile) {
+        setIsUploadingAvatar(true);
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+
+        const uploadResponse = await fetch("/api/auth/upload-avatar", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          toast.error(t("auth.avatarUploadFailed"));
+          return;
+        }
+
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
+        setIsUploadingAvatar(false);
+      }
+
+      // Update name and image
+      const { error: updateError } = await authClient.updateUser({
+        name: editName,
+        image: imageUrl,
+      });
+
+      if (updateError) {
+        toast.error(updateError.message || t("common.error"));
+        return;
+      }
+
+      // Update email if changed (without verification)
+      if (editEmail !== user?.email) {
+        const { error: emailError } = await authClient.changeEmail({
+          newEmail: editEmail,
+        });
+
+        if (emailError) {
+          toast.error(emailError.message || t("common.error"));
+          return;
+        }
+      }
+
+      toast.success(t("auth.profileUpdated"));
+      setAvatarFile(null);
+
+      // Reload user data without page refresh
+      await refetch();
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast.error(t("common.error"));
+    } finally {
+      setIsUpdatingProfile(false);
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,18 +251,29 @@ export default function ProfilePage() {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      const { data, error } = await authClient.deleteUser(
-        hasPasswordAuth ? { password: deletePassword } : {}
-      );
+      // Use our custom delete endpoint to properly handle foreign key constraints
+      const response = await fetch("/api/auth/delete-account", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: hasPasswordAuth
+          ? JSON.stringify({ password: deletePassword })
+          : undefined,
+      });
 
-      if (error) {
-        toast.error(error.message || t("common.error"));
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || t("common.error"));
         return;
       }
 
       toast.success(t("auth.accountDeleted"));
       setShowDeleteDialog(false);
       setDeletePassword("");
+
+      // Sign out and redirect
       await signOut();
       router.replace("/");
     } catch (error) {
@@ -195,20 +324,111 @@ export default function ProfilePage() {
                   {t("auth.profile")}
                 </CardTitle>
                 <CardDescription>
-                  Your basic account information
+                  {t("auth.profileBasicInfoDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>{t("auth.name")}</Label>
-                  <p className="mt-1 text-sm">{user?.name || "—"}</p>
-                </div>
-                <div>
-                  <Label>{t("auth.email")}</Label>
-                  <p className="mt-1 text-sm">{user?.email || "—"}</p>
+                <div className="flex items-center gap-4">
+                  {user?.image && (
+                    <img
+                      src={user.image}
+                      alt={user.name || "User"}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <div className="mb-3">
+                      <Label>{t("auth.name")}</Label>
+                      <p className="mt-1 text-sm">{user?.name || "—"}</p>
+                    </div>
+                    <div>
+                      <Label>{t("auth.email")}</Label>
+                      <p className="mt-1 text-sm">{user?.email || "—"}</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Edit Profile - Only for email/password users */}
+            {hasPasswordAuth && (
+              <Card className="border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    {t("auth.editProfile")}
+                  </CardTitle>
+                  <CardDescription>
+                    {t("auth.editProfileDescription")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    {/* Avatar Upload */}
+                    <div className="space-y-2">
+                      <Label htmlFor="avatar">{t("auth.profilePicture")}</Label>
+                      <div className="flex items-center gap-4">
+                        {avatarPreview && (
+                          <img
+                            src={avatarPreview}
+                            alt="Avatar preview"
+                            className="w-20 h-20 rounded-full object-cover border-2 border-border"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <Input
+                            id="avatar"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarChange}
+                            disabled={isUpdatingProfile || isUploadingAvatar}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t("auth.avatarHint")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="editName">{t("auth.name")}</Label>
+                      <Input
+                        id="editName"
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        disabled={isUpdatingProfile || isUploadingAvatar}
+                        required
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-2">
+                      <Label htmlFor="editEmail">{t("auth.email")}</Label>
+                      <Input
+                        id="editEmail"
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        disabled={isUpdatingProfile || isUploadingAvatar}
+                        required
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isUpdatingProfile || isUploadingAvatar}
+                    >
+                      {isUploadingAvatar
+                        ? t("auth.uploadingImage")
+                        : isUpdatingProfile
+                        ? t("common.saving")
+                        : t("common.save")}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Change Password - Only for email/password users */}
             {hasPasswordAuth && (
@@ -218,7 +438,7 @@ export default function ProfilePage() {
                     {t("auth.changePassword")}
                   </CardTitle>
                   <CardDescription>
-                    Update your password to keep your account secure
+                    {t("auth.changePasswordDescription")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -281,7 +501,7 @@ export default function ProfilePage() {
                   {t("auth.connectedAccounts")}
                 </CardTitle>
                 <CardDescription>
-                  Manage your connected OAuth providers
+                  {t("auth.connectedAccountsDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -291,7 +511,7 @@ export default function ProfilePage() {
                   </p>
                 ) : accounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No connected accounts yet
+                    {t("auth.noConnectedAccounts")}
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -303,7 +523,7 @@ export default function ProfilePage() {
                         <div>
                           <p className="font-medium capitalize">
                             {account.provider === "credential"
-                              ? "Email/Password"
+                              ? t("auth.emailPasswordAuth")
                               : account.provider}
                           </p>
                           <p className="text-sm text-muted-foreground">
@@ -323,10 +543,10 @@ export default function ProfilePage() {
             <Card className="border-destructive/30 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="bg-gradient-to-r from-destructive to-destructive/70 bg-clip-text text-transparent">
-                  Danger Zone
+                  {t("auth.dangerZone")}
                 </CardTitle>
                 <CardDescription>
-                  Irreversible actions that affect your account
+                  {t("auth.dangerZoneDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -334,7 +554,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="font-medium">{t("auth.logout")}</p>
                     <p className="text-sm text-muted-foreground">
-                      Sign out from your current session
+                      {t("auth.logoutDescription")}
                     </p>
                   </div>
                   <Button variant="outline" onClick={handleSignOut}>
@@ -348,7 +568,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="font-medium">{t("auth.deleteAccount")}</p>
                     <p className="text-sm text-muted-foreground">
-                      Permanently delete your account and all data
+                      {t("auth.deleteAccountDescription")}
                     </p>
                   </div>
                   <Button

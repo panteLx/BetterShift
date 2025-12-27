@@ -8,7 +8,6 @@ export { AuthContentSkeleton } from "./auth-content-skeleton";
 export { CalendarHeaderSkeleton } from "./calendar-header-skeleton";
 export { CalendarCompareHeaderSkeleton } from "./calendar-compare-header-skeleton";
 export { CalendarContentSkeleton } from "./calendar-content-skeleton";
-export { LockedCalendarSkeleton } from "./locked-calendar-skeleton";
 export { PresetListSkeleton } from "./preset-list-skeleton";
 export { ShiftStatsSkeleton } from "./shift-stats-skeleton";
 export { ProfileContentSkeleton } from "./profile-skeleton";
