@@ -5,6 +5,7 @@ import { ALLOW_USER_REGISTRATION } from "@/lib/auth/env";
 import { db } from "@/lib/db";
 import { user as userTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { rateLimit } from "@/lib/rate-limiter";
 
 /**
  * Better Auth API route handler with registration checks
@@ -23,10 +24,22 @@ export const POST = async (req: NextRequest) => {
   const url = new URL(req.url);
   const pathname = url.pathname;
 
-  // Check if this is an OAuth callback (sign-in attempt)
-  // Better Auth OAuth callbacks are handled at /api/auth/callback/*
+  // Rate limiting for auth endpoints
+  // Apply different limits for login vs registration
   const isOAuthCallback =
     pathname.includes("/callback/") || pathname.endsWith("/sign-in/social");
+  const isRegister =
+    pathname.endsWith("/sign-up/email") || pathname.includes("/register");
+
+  if (!isOAuthCallback) {
+    // Stricter rate limit for registration (3 per 10 min) vs login (5 per 1 min)
+    const rateLimitType = isRegister ? "register" : "auth";
+    const rateLimitResponse = rateLimit(req, null, rateLimitType);
+    if (rateLimitResponse) return rateLimitResponse;
+  }
+
+  // Check if this is an OAuth callback (sign-in attempt)
+  // Better Auth OAuth callbacks are handled at /api/auth/callback/*
 
   // If OAuth callback and registration is disabled, check if user exists
   if (isOAuthCallback && !ALLOW_USER_REGISTRATION) {

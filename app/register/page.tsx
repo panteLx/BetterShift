@@ -17,6 +17,10 @@ import { AuthContentSkeleton } from "@/components/skeletons/auth-content-skeleto
 import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { isAuthEnabled, allowUserRegistration } from "@/lib/auth/feature-flags";
+import {
+  isRateLimitError,
+  handleRateLimitError,
+} from "@/lib/rate-limit-client";
 
 /**
  * Registration page for new users
@@ -82,6 +86,29 @@ export default function RegisterPage() {
       });
 
       if (result.error) {
+        // Check if the error indicates rate limiting
+        if (result.error.status === 429) {
+          // Make a test request to get proper rate limit headers
+          try {
+            const testResponse = await fetch("/api/auth/sign-up/email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password, name }),
+            });
+
+            if (isRateLimitError(testResponse)) {
+              await handleRateLimitError(testResponse, t);
+              return;
+            }
+          } catch (e) {
+            // If test request fails, show generic rate limit message
+            toast.error(t("rateLimit.title"), {
+              description: t("rateLimit.fallback"),
+            });
+            return;
+          }
+        }
+
         console.error("Registration error:", result.error);
         const errorMessage = result.error.message || "";
         if (errorMessage.includes("email")) {

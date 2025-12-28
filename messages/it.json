@@ -445,5 +445,16 @@
     "guestPermissionNoneDesc": "Gli ospiti non possono visualizzare questo calendario",
     "guestPermissionReadDesc": "Gli ospiti possono visualizzare ma non modificare il calendario",
     "guestPermissionWriteDesc": "Gli ospiti possono visualizzare e modificare il calendario"
+  },
+  "rateLimit": {
+    "title": "Troppe richieste",
+    "message": "Riprova tra {time}.",
+    "fallback": "Attendi un momento prima di riprovare.",
+    "second": "secondo",
+    "seconds": "secondi",
+    "minute": "minuto",
+    "minutes": "minuti",
+    "hour": "ora",
+    "hours": "ore"
   }
 }

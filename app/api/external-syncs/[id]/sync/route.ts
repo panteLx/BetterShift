@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
@@ -12,6 +12,7 @@ import {
   needsUpdate,
 } from "@/lib/external-calendar-utils";
 import { eventEmitter } from "@/lib/event-emitter";
+import { rateLimit } from "@/lib/rate-limiter";
 
 /**
  * Core sync logic extracted for reuse by both API route and auto-sync service
@@ -340,13 +341,13 @@ export async function syncExternalCalendar(
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: syncId } = await params;
 
-    // Fetch external sync to get calendar ID
+    // Fetch external sync to get calendar ID for rate limiting and permission checks
     const [externalSync] = await db
       .select()
       .from(externalSyncs)
@@ -358,6 +359,15 @@ export async function POST(
         { status: 404 }
       );
     }
+
+    // Rate limiting: 5 syncs per 5 minutes PER CALENDAR
+    // Use calendarId as identifier to prevent spamming one calendar
+    const rateLimitResponse = rateLimit(
+      request,
+      externalSync.calendarId,
+      "external-sync"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     // Fetch calendar to verify it exists
     const [calendar] = await db

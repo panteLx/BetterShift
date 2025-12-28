@@ -445,5 +445,16 @@
     "guestPermissionNoneDesc": "Gäste können diesen Kalender nicht sehen",
     "guestPermissionReadDesc": "Gäste können Kalender sehen aber nichts bearbeiten",
     "guestPermissionWriteDesc": "Gäste können Kalender sehen und bearbeiten"
+  },
+  "rateLimit": {
+    "title": "Zu viele Anfragen",
+    "message": "Bitte versuche es in {time} erneut.",
+    "fallback": "Bitte warte einen Moment, bevor du es erneut versuchst.",
+    "second": "Sekunde",
+    "seconds": "Sekunden",
+    "minute": "Minute",
+    "minutes": "Minuten",
+    "hour": "Stunde",
+    "hours": "Stunden"
   }
 }

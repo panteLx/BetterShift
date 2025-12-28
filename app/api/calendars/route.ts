@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   calendars,
@@ -10,6 +10,7 @@ import { sql, eq, or, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
+import { rateLimit } from "@/lib/rate-limiter";
 
 // GET all calendars (only those accessible to the user)
 export async function GET(request: Request) {
@@ -98,9 +99,13 @@ export async function GET(request: Request) {
 }
 
 // POST create new calendar (sets current user as owner)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser(request.headers);
+
+    // Rate limiting: 10 calendars per hour
+    const rateLimitResponse = rateLimit(request, user?.id, "calendar-create");
+    if (rateLimitResponse) return rateLimitResponse;
 
     // If auth is enabled, require authentication to create calendars
     if (isAuthEnabled() && !user) {

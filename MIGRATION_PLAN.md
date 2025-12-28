@@ -794,45 +794,64 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 **Goal**: Implement security hardening, audit logging, session management, and background service protection.
 
-### 4.1 Rate Limiting & Security Hardening
+### 4.1 Rate Limiting & Security Hardening ✅
 
 **Priority**: Critical (Before Production)
 
 **Goal**: Protect API endpoints from brute-force attacks and abuse using in-memory rate limiting.
 
-- [ ] Create `lib/rate-limiter.ts`
+**Status**: COMPLETED (28. Dezember 2025)
+
+- [x] Create `lib/rate-limiter.ts`
   - Implement LRU cache-based rate limiter (no external dependencies)
   - Configurable limits per endpoint
   - Track requests by IP address or user ID
   - Return rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`)
-- [ ] Rate Limiting Configuration
-  - Auth endpoints: 5 requests per minute (login/register)
+- [x] Rate Limiting Configuration
+  - Auth endpoints: 5 requests per 60 seconds (login)
+  - Register: 3 requests per 10 minutes (stricter to prevent spam)
   - Password change: 3 requests per hour
-  - Token validation (Phase 6): 10 requests per minute
   - Account deletion: 1 request per hour
-  - SSE connections: 1 per user (prevent multiple streams)
-- [ ] Integrate Rate Limiter
-  - [ ] Update `app/api/auth/[...all]/route.ts` - Apply to POST requests
-  - [ ] Update `app/api/auth/change-password/route.ts` - Strict limit
-  - [ ] Update `app/api/auth/delete-account/route.ts` - Strict limit
-  - [ ] Update `app/api/auth/upload-avatar/route.ts` - Strict limit
-  - [ ] Update `app/api/events/stream/route.ts` - Connection limit
-  - [ ] Add rate limiting middleware to `proxy.ts` (optional, for global limits)
-- [ ] Error Handling
+  - Avatar upload: 5 requests per 5 minutes
+  - SSE connections: 3 per user per 10 seconds (allow page reloads)
+  - Calendar creation: 10 requests per hour
+  - External sync: 5 requests per 5 minutes (per calendar)
+  - PDF export: 10 requests per 10 minutes
+- [x] Integrate Rate Limiter
+  - [x] Update `app/api/auth/[...all]/route.ts` - Apply to POST requests, distinguish register vs login
+  - [x] Update `app/api/auth/change-password/route.ts` - Strict limit
+  - [x] Update `app/api/auth/delete-account/route.ts` - Strict limit
+  - [x] Update `app/api/auth/upload-avatar/route.ts` - Strict limit
+  - [x] Update `app/api/events/stream/route.ts` - Connection limit
+  - [x] Update `app/api/calendars/route.ts` - POST endpoint (calendar creation)
+  - [x] Update `app/api/external-syncs/[id]/sync/route.ts` - Sync endpoint (per calendar)
+  - [x] Update `app/api/calendars/[id]/export/pdf/route.ts` - PDF export endpoint
+- [x] Error Handling
   - Return `429 Too Many Requests` with retry-after header
-  - Show user-friendly toast message on client
+  - Show user-friendly toast message on client with formatted retry time
   - Log rate limit violations for monitoring
-- [ ] Testing
-  - Test brute-force protection on login
-  - Verify rate limits reset correctly
-  - Test concurrent requests handling
+  - Client utilities: `isRateLimitError()`, `handleRateLimitError()` in `lib/rate-limit-client.ts`
+- [x] UI Error Handling
+  - [x] Login page (`app/login/page.tsx`)
+  - [x] Register page (`app/register/page.tsx`)
+  - [x] Profile page password/delete/avatar (`app/profile/page.tsx`)
+  - [x] Calendar creation (`hooks/useCalendars.ts`)
+  - [x] External sync (`components/external-sync-manage-sheet.tsx`)
+  - [x] PDF export (`components/export-dialog.tsx`)
+- [x] Remove unused default rate limit
+  - Removed from `lib/rate-limiter.ts` config
+  - Removed from `.env.example`
+  - Removed from all switch cases
 
 **Implementation Notes**:
 
 - Use Map with TTL for in-memory storage
 - No Redis/external database required
 - Rate limits reset on server restart (acceptable for self-hosted)
-- Consider sliding window algorithm for accuracy
+- Fixed window algorithm for simplicity
+- External sync rate limit per calendar (allows multiple calendars to sync independently)
+- Better Auth client wraps 429 errors - requires checking `result.error.status === 429`
+- All user-facing errors show retry time in user-friendly format (minutes/hours, not seconds)
 
 ### 4.2 Audit Logging System
 

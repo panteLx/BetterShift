@@ -1,22 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { jsPDF } from "jspdf";
 import { getSessionUser } from "@/lib/auth/session";
 import { canViewCalendar } from "@/lib/auth/permissions";
+import { rateLimit } from "@/lib/rate-limiter";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const user = await getSessionUser(request.headers);
+
+    // Rate limiting: 10 PDF exports per 10 minutes
+    const rateLimitResponse = rateLimit(request, user?.id, "export-pdf");
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month"); // Format: YYYY-MM
     const year = searchParams.get("year"); // Format: YYYY
     const locale = searchParams.get("locale") || "en"; // Default to English
-    const user = await getSessionUser(request.headers);
 
     // Get calendar
     const calendar = await db.query.calendars.findFirst({

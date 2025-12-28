@@ -445,5 +445,16 @@
     "guestPermissionNoneDesc": "Guests cannot view this calendar",
     "guestPermissionReadDesc": "Guests can view but not edit calendar",
     "guestPermissionWriteDesc": "Guests can view and edit calendar"
+  },
+  "rateLimit": {
+    "title": "Too Many Requests",
+    "message": "Please try again in {time}.",
+    "fallback": "Please wait a moment before trying again.",
+    "second": "second",
+    "seconds": "seconds",
+    "minute": "minute",
+    "minutes": "minutes",
+    "hour": "hour",
+    "hours": "hours"
   }
 }

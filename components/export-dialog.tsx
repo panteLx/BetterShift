@@ -18,6 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  isRateLimitError,
+  handleRateLimitError,
+} from "@/lib/rate-limit-client";
 import { Download, FileText, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
@@ -121,6 +125,12 @@ export function ExportDialog({
 
       // Fetch the file
       const response = await fetch(url);
+
+      if (isRateLimitError(response)) {
+        await handleRateLimitError(response, t);
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         if (response.status === 401) {

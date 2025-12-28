@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { eq, or } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
+import { rateLimit } from "@/lib/rate-limiter";
 
 /**
  * Delete user account endpoint
@@ -36,6 +37,10 @@ export async function DELETE(req: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limiting check
+    const rateLimitResponse = rateLimit(req, session.user.id, "account-delete");
+    if (rateLimitResponse) return rateLimitResponse;
 
     const userId = session.user.id;
 

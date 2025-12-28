@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/session";
 import { canViewCalendar } from "@/lib/auth/permissions";
+import { rateLimit } from "@/lib/rate-limiter";
 
 // Disable default body parsing
 export const dynamic = "force-dynamic";
@@ -26,6 +27,10 @@ export async function GET(request: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  // Rate limiting check for SSE connections (1 per user per minute)
+  const rateLimitResponse = rateLimit(request, user?.id, "sse");
+  if (rateLimitResponse) return rateLimitResponse;
 
   // Create a readable stream for SSE
   const encoder = new TextEncoder();

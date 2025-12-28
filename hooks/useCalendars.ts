@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { CalendarWithCount } from "@/lib/types";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import {
+  isRateLimitError,
+  handleRateLimitError,
+} from "@/lib/rate-limit-client";
 
 export function useCalendars(initialCalendarId?: string | null) {
   const t = useTranslations();
@@ -65,6 +69,11 @@ export function useCalendars(initialCalendarId?: string | null) {
           color,
         }),
       });
+
+      if (isRateLimitError(response)) {
+        await handleRateLimitError(response, t);
+        return;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();

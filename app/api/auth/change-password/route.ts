@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { account as accountTable } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { rateLimit } from "@/lib/rate-limiter";
 
 /**
  * Change user password endpoint
@@ -21,6 +22,14 @@ export async function POST(req: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limiting check
+    const rateLimitResponse = rateLimit(
+      req,
+      session.user.id,
+      "password-change"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     const body = await req.json();
     const { currentPassword, newPassword } = body;

@@ -33,6 +33,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  isRateLimitError,
+  handleRateLimitError,
+} from "@/lib/rate-limit-client";
 import { PRESET_COLORS } from "@/lib/constants";
 import {
   isValidCalendarUrl,
@@ -294,6 +298,11 @@ export function ExternalSyncManageSheet({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
+
+      if (isRateLimitError(response)) {
+        await handleRateLimitError(response, t);
+        return;
+      }
 
       const data = await response.json();
 

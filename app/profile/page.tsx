@@ -24,6 +24,10 @@ import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
 import { ProfileContentSkeleton } from "@/components/skeletons/profile-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
+import {
+  isRateLimitError,
+  handleRateLimitError,
+} from "@/lib/rate-limit-client";
 
 /**
  * User profile page
@@ -157,6 +161,12 @@ export default function ProfilePage() {
           body: formData,
         });
 
+        // Check for rate limit error
+        if (isRateLimitError(uploadResponse)) {
+          await handleRateLimitError(uploadResponse, t);
+          return;
+        }
+
         if (!uploadResponse.ok) {
           toast.error(t("auth.avatarUploadFailed"));
           return;
@@ -167,25 +177,45 @@ export default function ProfilePage() {
         setIsUploadingAvatar(false);
       }
 
-      // Update name and image
-      const { error: updateError } = await authClient.updateUser({
-        name: editName,
-        image: imageUrl,
+      // Update name and image via Better Auth API
+      const updateResponse = await fetch("/api/auth/update-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName,
+          image: imageUrl,
+        }),
       });
 
-      if (updateError) {
-        toast.error(updateError.message || t("common.error"));
+      if (isRateLimitError(updateResponse)) {
+        await handleRateLimitError(updateResponse, t);
+        return;
+      }
+
+      if (!updateResponse.ok) {
+        const updateData = await updateResponse.json();
+        toast.error(updateData.error || t("common.error"));
         return;
       }
 
       // Update email if changed (without verification)
       if (editEmail !== user?.email) {
-        const { error: emailError } = await authClient.changeEmail({
-          newEmail: editEmail,
+        const emailResponse = await fetch("/api/auth/change-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            newEmail: editEmail,
+          }),
         });
 
-        if (emailError) {
-          toast.error(emailError.message || t("common.error"));
+        if (isRateLimitError(emailResponse)) {
+          await handleRateLimitError(emailResponse, t);
+          return;
+        }
+
+        if (!emailResponse.ok) {
+          const emailData = await emailResponse.json();
+          toast.error(emailData.error || t("common.error"));
           return;
         }
       }
@@ -225,14 +255,26 @@ export default function ProfilePage() {
     setIsChangingPassword(true);
 
     try {
-      const { data, error } = await authClient.changePassword({
-        newPassword,
-        currentPassword,
-        revokeOtherSessions: false,
+      // Check for rate limiting first
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newPassword,
+          currentPassword,
+          revokeOtherSessions: false,
+        }),
       });
 
-      if (error) {
-        toast.error(error.message || t("common.error"));
+      if (isRateLimitError(response)) {
+        await handleRateLimitError(response, t);
+        return;
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || t("common.error"));
         return;
       }
 
@@ -261,6 +303,12 @@ export default function ProfilePage() {
           ? JSON.stringify({ password: deletePassword })
           : undefined,
       });
+
+      // Check for rate limit error
+      if (isRateLimitError(response)) {
+        await handleRateLimitError(response, t);
+        return;
+      }
 
       const data = await response.json();
 

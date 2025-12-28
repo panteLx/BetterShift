@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { getSessionUser } from "@/lib/auth/session";
+import { rateLimit } from "@/lib/rate-limiter";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "avatars");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limiting check
+    const rateLimitResponse = rateLimit(request, user.id, "upload-avatar");
+    if (rateLimitResponse) return rateLimitResponse;
 
     const formData = await request.formData();
     const file = formData.get("file") as File;

@@ -22,6 +22,10 @@ import {
   allowGuestAccess,
   getEnabledProviders,
 } from "@/lib/auth/feature-flags";
+import {
+  isRateLimitError,
+  handleRateLimitError,
+} from "@/lib/rate-limit-client";
 
 /**
  * Login page with email/password and OIDC providers
@@ -73,6 +77,30 @@ export default function LoginPage() {
       });
 
       if (result.error) {
+        // Check if the error indicates rate limiting (Better Auth wraps 429 errors)
+        // The error might contain the fetch response status
+        if (result.error.status === 429) {
+          // Make a test request to get proper rate limit headers for user-friendly message
+          try {
+            const testResponse = await fetch("/api/auth/sign-in/email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password }),
+            });
+
+            if (isRateLimitError(testResponse)) {
+              await handleRateLimitError(testResponse, t);
+              return;
+            }
+          } catch (e) {
+            // If test request fails, show generic rate limit message
+            toast.error(t("rateLimit.title"), {
+              description: t("rateLimit.fallback"),
+            });
+            return;
+          }
+        }
+
         toast.error(t("auth.loginError"));
         return;
       }
