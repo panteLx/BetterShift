@@ -22,6 +22,9 @@ import {
 } from "@/lib/auth/env";
 
 export const auth = betterAuth({
+  // Base URL for reverse proxy compatibility (e.g., Cloudflare Tunnels)
+  baseURL: BETTER_AUTH_TRUSTED_ORIGINS[0] || process.env.BETTER_AUTH_URL,
+
   database: drizzleAdapter(db, {
     provider: "sqlite",
     schema: {
@@ -94,6 +97,8 @@ export const auth = betterAuth({
   advanced: {
     // Enable experimental joins for better performance
     useSecureCookies: process.env.NODE_ENV === "production",
+    // Trust proxy headers for reverse proxy setups (e.g., Cloudflare Tunnels)
+    trustProxy: true,
   },
 
   // User registration settings
