@@ -1295,58 +1295,407 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ## Phase 5: Calendar Sharing Features
 
+**Design Note**: This phase introduces a unified share management interface with tab-based navigation. Guest permissions (from Phase 3.4) will be **moved** from `calendar-settings-sheet.tsx` into the new `calendar-share-management-sheet.tsx` for better UX cohesion.
+
+**Status**: ✅ **COMPLETED** (29. Dezember 2025)
+
 ### 5.1 Sharing API
 
 **Audit Logging**: Integrate these events into the sharing API endpoints:
 
-- [ ] **Calendar shared** - `app/api/calendars/[id]/shares/route.ts` POST
+- [x] **Calendar shared** - `app/api/calendars/[id]/shares/route.ts` POST
   - Action: `"calendar.shared"`
   - Metadata: `{ calendarName, sharedWith, permission }`
-- [ ] **Calendar share removed** - `app/api/calendars/[id]/shares/[shareId]/route.ts` DELETE
+- [x] **Calendar share removed** - `app/api/calendars/[id]/shares/[shareId]/route.ts` DELETE
   - Action: `"calendar.share.removed"`
   - Metadata: `{ calendarName, removedUser, removedBy: 'owner' | 'admin' | 'self' }`
-- [ ] **Calendar permission changed** - `app/api/calendars/[id]/shares/[shareId]/route.ts` PUT
+- [x] **Calendar permission changed** - `app/api/calendars/[id]/shares/[shareId]/route.ts` PUT
 
   - Action: `"calendar.permission.changed"`
   - Metadata: `{ calendarName, user, oldPermission, newPermission }`
 
-- [ ] Create `app/api/calendars/[id]/shares/route.ts`
+- [x] Create `app/api/calendars/[id]/shares/route.ts`
   - GET: List all shares for calendar (admin/owner only)
   - POST: Share calendar with user (admin/owner only) + log `"calendar.shared"` event
-- [ ] Create `app/api/calendars/[id]/shares/[shareId]/route.ts`
+- [x] Create `app/api/calendars/[id]/shares/[shareId]/route.ts`
   - PUT: Update share permission (admin/owner only) + log `"calendar.permission.changed"` event
   - DELETE: Remove share (admin/owner or self) + log `"calendar.share.removed"` event
 
 ### 5.2 User Search/Invite
 
-- [ ] Create `app/api/users/search/route.ts`
+- [x] Create `app/api/users/search/route.ts`
   - Search users by email/name
   - Exclude already shared users
 
 ### 5.3 Sharing UI Components
 
-- [ ] Create `components/calendar-share-sheet.tsx`
-  - List current shares
-  - User search/select
-  - Permission dropdown (admin/write/read)
-  - Add/remove shares
-  - Show who shared the calendar
-- [ ] Add "Share" button to calendar settings
-- [ ] Create `components/shared-calendar-badge.tsx`
-  - Show if calendar is shared with you
-  - Show your permission level
-  - Show owner name
+**Design**: Unified tab-based share management with future-proof structure
+
+- [x] Create `components/calendar-share-management-sheet.tsx` (Main Container)
+
+  - **Tab System**: Uses shadcn/ui Tabs component
+  - **Tab 1: "User Shares"** (`calendar-share-list.tsx`)
+    - List current user shares (table/card layout)
+    - User search/select component (autocomplete)
+    - Permission dropdown (admin/write/read)
+    - Add/remove shares
+    - Show who shared the calendar
+    - Show share creation date
+  - **Tab 2: "Guest Access"** (moved from calendar-settings-sheet)
+    - Guest permission selector (none/read/write)
+    - Info text explaining guest behavior
+    - Only visible when `isAuthEnabled && allowGuest`
+  - **Tab 3: "Access Links"** (Phase 6 - prepared but disabled)
+    - Token list (empty state for now)
+    - Placeholder: "Available in Phase 6"
+    - Tab disabled until Phase 6 implementation
+  - Consistent header with gradient background (match app design)
+  - Footer with "Close" button
+
+- [x] Create `components/calendar-share-list.tsx` (User Shares Tab Content)
+
+  - Data table with columns: User, Permission, Shared By, Date, Actions
+  - Row actions: Edit permission, Remove share
+  - "Add User" button → Opens user search dialog
+  - Empty state: "No users have access yet"
+  - Loading skeleton during fetch
+
+- [x] Create `components/calendar-share-user-search.tsx` (Add User Dialog)
+
+  - Search input with debounce
+  - User results list (avatar, name, email)
+  - Permission selector (before adding)
+  - "Add" button
+  - Exclude already shared users from results
+
+- [x] Update `components/calendar-settings-sheet.tsx`
+
+  - **Remove**: Guest permission selector (moved to share management)
+  - **Add**: "Manage Sharing" button (replaces guest permission section)
+    - Button with Users icon
+    - Only visible for owner/admin permission
+    - Opens `calendar-share-management-sheet`
+  - Keep: Name, Color, External Sync, Export, Delete sections
+
+- [x] Add translations (en, de, it)
+  - `share.manageSharing` - "Manage Sharing"
+  - `share.userShares` - "User Shares" (tab)
+  - `share.guestAccess` - "Guest Access" (tab)
+  - `share.accessLinks` - "Access Links" (tab - Phase 6)
+  - `share.addUser` - "Add User"
+  - `share.noShares` - "No users have access yet"
+  - `share.sharedBy` - "Shared by {name}"
+  - `share.sharedOn` - "Shared on {date}"
+  - ✅ 57 translation keys added
 
 ### 5.4 Sharing Hooks
 
-- [ ] Create `hooks/useCalendarShares.ts`
+- [x] Create `hooks/useCalendarShares.ts`
   - `fetchShares(calendarId)`
   - `addShare(calendarId, userId, permission)`
   - `updateShare(shareId, permission)`
   - `removeShare(shareId)`
-- [ ] Update `useCalendars` hook
-  - Include `isOwner`, `permission`, `sharedBy` fields
-  - Filter out calendars with insufficient permissions
+  - `searchUsers(query)`
+- [x] Update `useCalendars` hook
+  - Include `sharePermission`, `isSubscribed`, `subscriptionSource` fields (via API)
+  - Permissions handled via `useCalendarPermission` hook
+  - Share metadata available in calendar objects from API
+
+**Status**: ✅ **COMPLETED** (29. Dezember 2025)
+
+**Completed**:
+
+- ✅ All API routes with audit logging
+- ✅ User search with share exclusion
+- ✅ Tab-based share management sheet with sticky close button
+- ✅ User shares list with permission management
+- ✅ User search dialog with debounce
+- ✅ Guest permissions moved to share sheet
+- ✅ Self-removal support ("Leave Calendar")
+- ✅ Admin permission restrictions (only owner can grant/modify admin shares)
+- ✅ Shared calendar indicator in calendar selector ("geteilt" badge)
+- ✅ Share metadata included in calendar objects (sharePermission, isSubscribed, subscriptionSource)
+- ✅ Translations (en, de, it) - 57 keys
+
+**Implementation Notes**:
+
+- Share metadata (sharePermission, isOwner) is enriched in GET `/api/calendars` endpoint
+- Permission checks use `useCalendarPermission` hook (client-side) and `checkPermission` (server-side)
+- Admin permissions can only be granted/modified by calendar owner (not by other admins)
+- Share management sheet has sticky footer with close button for better UX
+
+---
+
+## Phase 5.5: UX Polish & Consistency (Share Features)
+
+**Goal**: Improve user experience and consistency across share-related features.
+
+**Status**: ✅ **COMPLETED** (29. Dezember 2025)
+
+### 5.5.1 Table Component Consistency
+
+**Issue**: Activity Log (`app/profile/activity/page.tsx`) uses custom HTML table instead of shadcn/ui Table component, while Calendar Share List uses the proper component.
+
+**Tasks**:
+
+- [x] Refactor Activity Log table to use shadcn/ui components
+  - [x] Replace custom `<table>` with `<Table>` from `@/components/ui/table`
+  - [x] Use `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`
+  - [x] Maintain expandable row functionality
+  - [x] Keep all existing sorting/filtering logic
+  - [x] Preserve responsive design (mobile layout)
+
+**Benefits**:
+
+- Consistent styling across the application
+- Better accessibility (ARIA attributes from Radix UI)
+- Easier maintenance with shared component
+- Automatic theme support
+
+### 5.5.2 Calendar Discovery Dialog Enhancement
+
+**Issue**: Calendar Discovery Dialog is confusing when handling subscriptions and dismissed calendars. Current flow:
+
+1. Guest calendars appear as "unsubscribed" initially
+2. After subscribing then unsubscribing → shown as "hidden"
+3. No clear distinction between user-shared and guest-accessible calendars
+
+**New Design**: **Three-Tab Layout** for better organization
+
+**Tab 1: "Shared with You"** (User Shares)
+
+- Shows calendars directly shared with the current user via `calendarShares`
+- Source: User shares (explicit permission from another user)
+- Badge: "Shared with you" with UserPlus icon
+- Permission badge: Read-only (Eye) or Edit (Edit icon)
+- Toggle: Subscribe/Unsubscribe switch
+- Empty state: "No calendars shared with you yet"
+
+**Tab 2: "Public Calendars"** (Guest Accessible)
+
+- Shows calendars with `guestPermission != "none"`
+- Source: Guest access (owner enabled public access)
+- Badge: "Public" with Globe icon
+- Permission badge: Read-only (Eye) or Edit (Edit icon)
+- Toggle: Subscribe/Unsubscribe switch
+- Empty state: "No public calendars available"
+
+**Tab 3: "Hidden"** (Dismissed Calendars)
+
+- Shows all dismissed calendars (both user-shared and public)
+- Source: Previously subscribed but dismissed
+- Badge: "Hidden" with EyeOff icon
+- Show original source (Shared/Public) as secondary indicator
+- Action: "Show Again" button (instead of toggle)
+- Empty state: "No hidden calendars"
+- Visual: Reduced opacity to indicate inactive state
+
+**Tasks**:
+
+- [x] ~~Update `components/calendar-discovery-dialog.tsx`~~ → **Converted to Sheet** (`calendar-discovery-sheet.tsx`)
+  - [x] Add Tabs component from shadcn/ui
+  - [x] Create three tab sections: "Shared", "Public", "Hidden"
+  - [x] Separate calendars by source:
+    - `source: "shared"` → Tab 1
+    - `source: "guest"` → Tab 2 (renamed from "public")
+    - dismissed → Tab 3 (both sources)
+  - [x] Update badge styling per tab
+  - [x] Change "Hidden" tab action from toggle to "Show Again" button
+  - [x] Add empty states for each tab
+  - [x] Improve responsive layout (mobile-friendly tabs)
+  - [x] **Bonus**: Converted to Sheet for better vertical space and consistency
+- [x] Update `hooks/useCalendarSubscriptions.ts`
+  - [x] Add `source` field to `AvailableCalendar` type
+  - [x] Distinguish between `"shared"` and `"guest"` sources
+  - [x] Filter calendars by source for each tab
+  - [x] Maintain dismissed calendars across both sources
+  - [x] **Fix**: Live updates - dismissed items now properly move between arrays
+- [x] Update `app/api/calendars/subscriptions/route.ts`
+  - [x] Return `source` field in available calendars:
+    - `"shared"` if calendar has user share entry
+    - `"guest"` if calendar has guestPermission != "none"
+  - [x] Include source in dismissed calendars response
+- [x] Add translations (en, de, it)
+  - [x] `calendar.sharedTab` - "Shared with You"
+  - [x] `calendar.publicTab` - "Public Calendars"
+  - [x] `calendar.hiddenTab` - "Hidden"
+  - [x] `calendar.noSharedCalendars` - "No calendars shared with you yet"
+  - [x] `calendar.noPublicCalendars` - "No public calendars available"
+  - [x] `calendar.noHiddenCalendars` - "No hidden calendars"
+  - [x] `calendar.showAgain` - "Show Again"
+  - [x] `calendar.publicBadge` - "Public"
+
+**Benefits**:
+
+- Clear visual separation between user-shared and public calendars
+- Easier to find specific calendar types
+- Less confusion about subscription states
+- Consistent "Show Again" action for hidden calendars
+- Better onboarding for new users
+
+### 5.5.3 Activity Log for Share Operations
+
+**Issue**: Share operations (add user, remove user, change permission, change guest access) are not logged in the Activity Log.
+
+**New Audit Events**:
+
+1. **User Share Added**
+   - Event: `calendar_user_share_added`
+   - Type: `calendar`
+   - Severity: `info`
+   - Message: "Shared calendar '{calendarName}' with {targetUserName} ({targetUserEmail}) as {permission}"
+   - Metadata:
+     ```json
+     {
+       "calendarId": "uuid",
+       "calendarName": "Work Schedule",
+       "targetUserId": "uuid",
+       "targetUserName": "John Doe",
+       "targetUserEmail": "john@example.com",
+       "permission": "write",
+       "actorId": "uuid",
+       "actorName": "Jane Smith"
+     }
+     ```
+2. **User Share Removed**
+   - Event: `calendar_user_share_removed`
+   - Type: `calendar`
+   - Severity: `info`
+   - Message: "Removed {targetUserName}'s access to calendar '{calendarName}'"
+   - Metadata:
+     ```json
+     {
+       "calendarId": "uuid",
+       "calendarName": "Work Schedule",
+       "targetUserId": "uuid",
+       "targetUserName": "John Doe",
+       "targetUserEmail": "john@example.com",
+       "removedBy": "owner | admin | self",
+       "actorId": "uuid",
+       "actorName": "Jane Smith"
+     }
+     ```
+3. **User Share Permission Changed**
+   - Event: `calendar_user_share_permission_changed`
+   - Type: `calendar`
+   - Severity: `info`
+   - Message: "Changed {targetUserName}'s permission on '{calendarName}' from {oldPermission} to {newPermission}"
+   - Metadata:
+     ```json
+     {
+       "calendarId": "uuid",
+       "calendarName": "Work Schedule",
+       "targetUserId": "uuid",
+       "targetUserName": "John Doe",
+       "oldPermission": "read",
+       "newPermission": "write",
+       "actorId": "uuid",
+       "actorName": "Jane Smith"
+     }
+     ```
+4. **Guest Permission Changed**
+   - Event: `calendar_guest_permission_changed`
+   - Type: `calendar`
+   - Severity: `info`
+   - Message: "Changed guest access for '{calendarName}' from {oldPermission} to {newPermission}"
+   - Metadata:
+     ```json
+     {
+       "calendarId": "uuid",
+       "calendarName": "Work Schedule",
+       "oldPermission": "none",
+       "newPermission": "read",
+       "actorId": "uuid",
+       "actorName": "Jane Smith"
+     }
+     ```
+
+**Tasks**:
+
+- [x] Update `lib/db/schema.ts` - `auditLogs` table
+  - [x] Verify action column supports new event types
+  - [x] Ensure metadata column can store actor/target user info
+- [x] Update `app/api/calendars/[id]/shares/route.ts`
+  - [x] **POST** (Add User Share): Emit `calendar_user_share_added` event
+    - Include targetUser info (id, name, email)
+    - Include permission level
+    - Include actor info (current user)
+  - [x] **GET**: No changes (read-only)
+- [x] Update `app/api/calendars/[id]/shares/[shareId]/route.ts`
+  - [x] **PATCH** (Update Permission): Emit `calendar_user_share_permission_changed`
+    - Include oldPermission and newPermission
+    - Include targetUser info
+    - Include actor info
+  - [x] **DELETE** (Remove Share): Emit `calendar_user_share_removed`
+    - Include targetUser info
+    - Include removedBy context (owner/admin/self)
+    - Include actor info
+- [x] Update `app/api/calendars/[id]/route.ts`
+  - [x] **PATCH** (Update Calendar): Check if `guestPermission` changed
+    - If changed: Emit `calendar_guest_permission_changed`
+    - Include oldPermission and newPermission
+    - Include actor info
+- [x] Update Activity Log UI (`app/profile/activity/page.tsx`)
+  - [x] Add translations for new event types
+  - [x] Format share events with actor → target relationship
+  - [x] Show permission changes clearly (old → new)
+  - [x] Add icons for share events (UserPlus, UserMinus, Shield)
+- [x] Add translations (en, de, it)
+  - [x] `activityLog.calendar_user_share_added`
+  - [x] `activityLog.calendar_user_share_removed`
+  - [x] `activityLog.calendar_user_share_permission_changed`
+  - [x] `activityLog.calendar_guest_permission_changed`
+
+**Benefits**:
+
+- Full audit trail of all share operations
+- Accountability for permission changes
+- Helps debug access issues ("Who removed my access?")
+- Security monitoring (detect unauthorized share changes)
+
+### 5.5.4 Calendar Creation Simplification
+
+**Decision**: **Remove Guest Permission selector from calendar creation** - All share features should be in Share Management Sheet.
+
+**Changes**:
+
+- [x] Update `components/calendar-sheet.tsx`
+  - [x] Remove `GuestPermissionSelector` component
+  - [x] Remove `guestPermission` state
+  - [x] Remove `guestPermission` parameter from `onSubmit` callback
+  - [x] Update `onSubmit` signature to only accept `(name, color)`
+  - [x] Remove `isAuthEnabled` and `allowGuest` checks for guest section
+  - [x] Simplify `hasChanges()` to only check name and color
+- [x] Update parent components calling `CalendarSheet`
+  - [x] `app/page.tsx`: Update `handleCreateCalendar` callback
+    - Remove `guestPermission` parameter
+    - Default to `guestPermission: "none"` in API call
+  - [x] Any other components using `CalendarSheet`
+- [x] Update `app/api/calendars/route.ts` (POST)
+  - [x] Remove `guestPermission` from request body (or ignore if provided)
+  - [x] Always set `guestPermission: "none"` for new calendars
+  - [x] Update TypeScript types if needed
+- [x] Update `hooks/useCalendars.ts`
+  - [x] Update `createCalendar` function signature
+  - [x] Remove `guestPermission` parameter
+  - [x] Default to `"none"` in API payload
+
+**Rationale**:
+
+- **Consistency**: All share features (user shares + guest access) in ONE place (Share Management Sheet)
+- **Simpler UX**: Creation flow focuses on essentials (name + color only)
+- **Security**: Prevents accidental creation of publicly accessible calendars
+- **Clarity**: Guest access is clearly a "sharing" feature, not a "creation" option
+- **Industry Standard**: Matches Google Calendar, Outlook, etc. (create private, share later)
+- **Better Discoverability**: Users know where to find ALL share options
+
+**User Flow After Changes**:
+
+1. User clicks "Create Calendar"
+2. Enters name and color → Save
+3. Calendar created with `guestPermission: "none"` (private by default)
+4. To enable guest access: Open Share Management Sheet → "Guest Access" tab
+5. To share with users: Open Share Management Sheet → "User Shares" tab
 
 ---
 
@@ -1407,27 +1756,34 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
     - Revokes access immediately
     - Cascade cleanup of related data
 
-### 6.4 Token UI Components
+### 6.4 Token UI Components (Integrate with Share Management Sheet)
 
-- [ ] Create `components/calendar-token-sheet.tsx`
-  - List existing access tokens
+- [ ] Create `components/calendar-token-list.tsx` (Access Links Tab Content)
+  - **Replaces placeholder from Phase 5** (Tab 3 in share management sheet)
+  - Data table with columns: Name, Token Preview, Permission, Created, Expires, Last Used, Usage Count, Status, Actions
   - Token preview (partial, e.g., "••••••xyz789")
-  - Show metadata: name, permission, created date, last used, usage count
-  - Toggle active/inactive status
-  - Delete token with confirmation
-  - Create new token dialog
+  - Row actions: Copy link, Edit, Enable/Disable toggle, Revoke
+  - "Create Link" button → Opens token create dialog
+  - Empty state: "No access links yet" with "Create Link" CTA
+  - Loading skeleton during fetch
 - [ ] Create `components/calendar-token-create-dialog.tsx`
   - Input: Token name (optional, e.g., "Family Link")
   - Select: Permission level (read/write)
-  - Date picker: Expiration date (optional)
+  - Date picker: Expiration date (optional, with presets: 1 day, 7 days, 30 days, never)
   - Generate button → Show full token **once** with copy button
   - Warning: "Save this token now - it won't be shown again"
   - Generate shareable link: `${baseUrl}/calendar/${calendarId}?token=${token}`
-- [ ] Create `components/calendar-token-badge.tsx`
-  - Show "Accessed via Share Link" indicator
-  - Display permission level (read-only/editable)
-  - Show token name if available
-- [ ] Add "Share Link" button to calendar settings
+  - Success state: Show generated link with one-click copy
+- [ ] Create `components/calendar-token-badge.tsx` (Calendar Display)
+  - Show "Accessed via Share Link" indicator in calendar header
+  - Show permission level (read/write badge)
+  - Show token name if available (tooltip)
+  - Icon: Link icon for token-based access
+- [ ] Update `components/calendar-share-management-sheet.tsx`
+  - **Enable Tab 3** ("Access Links")
+  - Load `calendar-token-list.tsx` component
+  - Update translations to show proper tab label
+  - Add token count badge to tab label (e.g., "Access Links (3)")
   - Opens token management sheet
   - Quick action: "Create Share Link" → Generates token → Shows link
 

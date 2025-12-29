@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
@@ -384,160 +392,154 @@ export default function ActivityLogPage() {
             </div>
           ) : (
             <div className="border border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm rounded-lg overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50 border-b">
-                    <tr>
-                      <th className="w-8 p-2 sm:p-3"></th>
-                      <th
-                        className="text-left p-2 sm:p-3 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => handleSort("timestamp")}
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="w-8"></TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/80 transition-colors"
+                      onClick={() => handleSort("timestamp")}
+                    >
+                      <div className="flex items-center gap-2">
+                        {t("activityLog.time")}
+                        {sortColumn === "timestamp" &&
+                          (sortDirection === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/80 transition-colors"
+                      onClick={() => handleSort("type")}
+                    >
+                      <div className="flex items-center gap-2">
+                        {t("activityLog.eventType")}
+                        {sortColumn === "type" &&
+                          (sortDirection === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </div>
+                    </TableHead>
+                    <TableHead>{t("activityLog.action")}</TableHead>
+                    <TableHead>{t("activityLog.resource")}</TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-muted/80 transition-colors"
+                      onClick={() => handleSort("severity")}
+                    >
+                      <div className="flex items-center gap-2">
+                        {t("activityLog.severity")}
+                        {sortColumn === "severity" &&
+                          (sortDirection === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedLogs.map((log) => (
+                    <React.Fragment key={log.id}>
+                      <TableRow
+                        className="cursor-pointer"
+                        onClick={() => toggleRow(log.id)}
                       >
-                        <div className="flex items-center gap-2">
-                          {t("activityLog.time")}
-                          {sortColumn === "timestamp" &&
-                            (sortDirection === "asc" ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            ))}
-                        </div>
-                      </th>
-                      <th
-                        className="text-left p-2 sm:p-3 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => handleSort("type")}
-                      >
-                        <div className="flex items-center gap-2">
-                          {t("activityLog.eventType")}
-                          {sortColumn === "type" &&
-                            (sortDirection === "asc" ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            ))}
-                        </div>
-                      </th>
-                      <th className="text-left p-2 sm:p-3">
-                        {t("activityLog.action")}
-                      </th>
-                      <th className="text-left p-2 sm:p-3">
-                        {t("activityLog.resource")}
-                      </th>
-                      <th
-                        className="text-left p-2 sm:p-3 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => handleSort("severity")}
-                      >
-                        <div className="flex items-center gap-2">
-                          {t("activityLog.severity")}
-                          {sortColumn === "severity" &&
-                            (sortDirection === "asc" ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            ))}
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedLogs.map((log) => (
-                      <React.Fragment key={log.id}>
-                        <tr
-                          className="border-b hover:bg-muted/30 transition-colors cursor-pointer"
-                          onClick={() => toggleRow(log.id)}
-                        >
-                          <td className="p-2 sm:p-3 text-center">
-                            {expandedRows.has(log.id) ? (
-                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </td>
-                          <td className="p-2 sm:p-3 text-sm">
-                            {log.timestamp &&
-                            log.timestamp instanceof Date &&
-                            !isNaN(log.timestamp.getTime()) ? (
-                              <>
-                                {format(log.timestamp, "MMM dd, yyyy", {
+                        <TableCell className="text-center">
+                          {expandedRows.has(log.id) ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {log.timestamp &&
+                          log.timestamp instanceof Date &&
+                          !isNaN(log.timestamp.getTime()) ? (
+                            <>
+                              {format(log.timestamp, "MMM dd, yyyy", {
+                                locale: dateLocale,
+                              })}
+                              <br />
+                              <span className="text-xs text-muted-foreground">
+                                {format(log.timestamp, "HH:mm:ss", {
                                   locale: dateLocale,
                                 })}
-                                <br />
-                                <span className="text-xs text-muted-foreground">
-                                  {format(log.timestamp, "HH:mm:ss", {
-                                    locale: dateLocale,
-                                  })}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Invalid date
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("text-xs", getTypeColor(log.type))}
+                          >
+                            {t(`activityLog.${log.type}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm font-mono text-xs">
+                          {log.action}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {log.resourceType ? (
+                            <span>
+                              {log.resourceType}
+                              {log.resourceId && (
+                                <span className="text-xs block truncate max-w-[150px]">
+                                  {log.resourceId}
                                 </span>
-                              </>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                Invalid date
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2 sm:p-3">
-                            <Badge
-                              variant="outline"
-                              className={cn("text-xs", getTypeColor(log.type))}
-                            >
-                              {t(`activityLog.${log.type}`)}
-                            </Badge>
-                          </td>
-                          <td className="p-2 sm:p-3 text-sm font-mono text-xs">
-                            {log.action}
-                          </td>
-                          <td className="p-2 sm:p-3 text-sm text-muted-foreground">
-                            {log.resourceType ? (
-                              <span>
-                                {log.resourceType}
-                                {log.resourceId && (
-                                  <span className="text-xs block truncate max-w-[150px]">
-                                    {log.resourceId}
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                          <td className="p-2 sm:p-3">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-xs",
-                                getSeverityColor(log.severity)
                               )}
-                            >
-                              {t(`activityLog.${log.severity}`)}
-                            </Badge>
-                          </td>
-                        </tr>
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs",
+                              getSeverityColor(log.severity)
+                            )}
+                          >
+                            {t(`activityLog.${log.severity}`)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
 
-                        {/* Expanded Row - Metadata */}
-                        {expandedRows.has(log.id) && (
-                          <tr className="bg-muted/20">
-                            <td colSpan={6} className="p-4">
-                              <div className="space-y-2">
-                                <div className="text-sm font-semibold">
-                                  {t("activityLog.details")}:
-                                </div>
-                                {log.metadata ? (
-                                  <pre className="text-xs bg-background p-3 rounded border whitespace-pre-wrap break-words overflow-auto max-w-full">
-                                    {JSON.stringify(log.metadata, null, 2)}
-                                  </pre>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    {t("activityLog.noMetadata")}
-                                  </p>
-                                )}
+                      {/* Expanded Row - Metadata */}
+                      {expandedRows.has(log.id) && (
+                        <TableRow className="bg-muted/20">
+                          <TableCell colSpan={6} className="p-4">
+                            <div className="space-y-2">
+                              <div className="text-sm font-semibold">
+                                {t("activityLog.details")}:
                               </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              {log.metadata ? (
+                                <pre className="text-xs bg-background p-3 rounded border whitespace-pre-wrap break-words overflow-auto max-w-full">
+                                  {JSON.stringify(log.metadata, null, 2)}
+                                </pre>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  {t("activityLog.noMetadata")}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
 
               {/* Pagination */}
               <div className="flex items-center justify-between p-4 border-t bg-muted/20">

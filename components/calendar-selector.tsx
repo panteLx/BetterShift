@@ -26,9 +26,11 @@ import {
   User,
   Users,
   Globe,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
@@ -84,23 +86,31 @@ export function CalendarSelector({
     !isAuthEnabled || isGuest ? visibleCalendars : [];
 
   // Check if selected calendar is read-only
+  // Share permission takes precedence over guest permission
   const isReadOnly =
     (isGuest && selectedCalendar?.guestPermission === "read") ||
     (!isGuest && selectedCalendar?.sharePermission === "read") ||
     (!isGuest &&
       selectedCalendar?.isSubscribed &&
-      selectedCalendar?.guestPermission === "read");
+      selectedCalendar?.guestPermission === "read" &&
+      !selectedCalendar?.sharePermission); // Only if no share permission exists
 
-  // Check if user is owner (can access settings)
-  // When auth is disabled, everyone has owner permissions
-  const isOwner = isAuthEnabled
-    ? user && selectedCalendar?.ownerId === user.id
-    : true;
+  // Check if user can manage settings (owner or admin)
+  const { canManage } = useCalendarPermission(selectedCalendar);
 
   // Helper function to render calendar icon
   const getCalendarIcon = (calendar: CalendarWithCount) => {
     if (!isAuthEnabled || !user) {
       return <Globe className="h-3.5 w-3.5 text-muted-foreground/60" />;
+    }
+    // Check for admin/owner permission
+    if (
+      calendar.sharePermission === "admin" ||
+      calendar.sharePermission === "owner"
+    ) {
+      return (
+        <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500" />
+      );
     }
     if (calendar.ownerId === user.id) {
       return <User className="h-3.5 w-3.5 text-muted-foreground/60" />;
@@ -110,17 +120,27 @@ export function CalendarSelector({
 
   // Helper function to render calendar item
   const renderCalendarItem = (calendar: CalendarWithCount) => {
+    // Check for admin/owner first
+    const isAdmin =
+      calendar.sharePermission === "admin" ||
+      calendar.sharePermission === "owner";
+
+    // Check if calendar is read-only
+    // Share permission takes precedence over guest permission
     const isCalendarReadOnly =
       (isGuest && calendar.guestPermission === "read") ||
       (!isGuest && calendar.sharePermission === "read") ||
       (!isGuest &&
         calendar.isSubscribed &&
-        calendar.guestPermission === "read");
+        calendar.guestPermission === "read" &&
+        !calendar.sharePermission); // Only if no share permission exists
 
     return (
       <SelectItem key={calendar.id} value={calendar.id}>
         <div className="flex items-center gap-2.5 w-full">
-          {isCalendarReadOnly ? (
+          {isAdmin ? (
+            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+          ) : isCalendarReadOnly ? (
             <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
           ) : (
             getCalendarIcon(calendar)
@@ -143,7 +163,19 @@ export function CalendarSelector({
           <SelectTrigger className="flex-1 h-9 sm:h-10 text-sm">
             {selectedCalendar ? (
               <div className="flex items-center gap-2 flex-1">
-                {isReadOnly ? (
+                {selectedCalendar.sharePermission === "admin" ||
+                selectedCalendar.sharePermission === "owner" ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("share.permissionAdmin")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : isReadOnly ? (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -216,7 +248,7 @@ export function CalendarSelector({
             )}
           </SelectContent>
         </Select>
-        {onSettings && selectedId && isOwner && (
+        {onSettings && selectedId && canManage && (
           <Button
             onClick={onSettings}
             size="icon"
@@ -274,7 +306,10 @@ export function CalendarSelector({
         <SelectTrigger className="w-full h-10 text-sm">
           {selectedCalendar ? (
             <div className="flex items-center gap-2 flex-1">
-              {isReadOnly ? (
+              {selectedCalendar.sharePermission === "admin" ||
+              selectedCalendar.sharePermission === "owner" ? (
+                <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+              ) : isReadOnly ? (
                 <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
               ) : (
                 getCalendarIcon(selectedCalendar)
@@ -342,7 +377,7 @@ export function CalendarSelector({
       {/* Action Buttons - Even distribution */}
       {selectedId && (
         <div className="grid grid-cols-3 gap-2">
-          {onSettings && isOwner && (
+          {onSettings && canManage && (
             <Button
               onClick={onSettings}
               size="sm"

@@ -59,11 +59,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     }
   }, []);
 
-  const createCalendar = async (
-    name: string,
-    color: string,
-    guestPermission: "none" | "read" | "write" = "none"
-  ) => {
+  const createCalendar = async (name: string, color: string) => {
     try {
       const response = await fetch("/api/calendars", {
         method: "POST",
@@ -71,7 +67,7 @@ export function useCalendars(initialCalendarId?: string | null) {
         body: JSON.stringify({
           name,
           color,
-          guestPermission,
+          guestPermission: "none", // Always default to "none" on creation
         }),
       });
 

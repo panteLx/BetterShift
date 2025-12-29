@@ -89,7 +89,8 @@ export async function getUserCalendarPermission(
     ),
   });
 
-  // If subscribed and calendar is public, return guest permission
+  // If subscribed and calendar has public access (guestPermission != "none"), return that permission
+  // Authenticated users can always access public calendars, regardless of allowGuestAccess setting
   if (subscription && calendar.guestPermission !== "none") {
     return calendar.guestPermission as CalendarPermission;
   }
@@ -208,12 +209,9 @@ export async function getUserAccessibleCalendars(
     }))
   );
 
-  // Get all subscriptions for this user
+  // Get all subscriptions for this user (including dismissed)
   const subscriptions = await db.query.userCalendarSubscriptions.findMany({
-    where: and(
-      eq(userCalendarSubscriptions.userId, userId),
-      eq(userCalendarSubscriptions.status, "subscribed")
-    ),
+    where: eq(userCalendarSubscriptions.userId, userId),
     with: {
       calendar: true,
     },
@@ -235,14 +233,11 @@ export async function getUserAccessibleCalendars(
     if (existingIds.has(share.calendarId)) continue; // Skip if owned
 
     // Check if user has dismissed this shared calendar
-    const dismissedShare = subscriptions.find(
-      (sub) =>
-        sub.calendarId === share.calendarId &&
-        sub.status === "dismissed" &&
-        sub.source === "shared"
+    const isDismissed = subscriptions.find(
+      (sub) => sub.calendarId === share.calendarId && sub.status === "dismissed"
     );
 
-    if (!dismissedShare) {
+    if (!isDismissed) {
       results.push({
         id: share.calendarId,
         permission: share.permission as CalendarPermission,
@@ -251,11 +246,12 @@ export async function getUserAccessibleCalendars(
     }
   }
 
-  // Add guest-subscribed calendars (only if not already included via shares)
+  // Add guest-subscribed calendars (only if not already included via shares and not dismissed)
   for (const sub of subscriptions) {
     if (existingIds.has(sub.calendarId)) continue;
     if (sub.calendar.guestPermission === "none") continue;
     if (sub.source !== "guest") continue;
+    if (sub.status === "dismissed") continue; // Skip dismissed guest subscriptions
 
     results.push({
       id: sub.calendarId,

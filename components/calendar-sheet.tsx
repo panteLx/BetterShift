@@ -6,18 +6,12 @@ import { BaseSheet } from "@/components/ui/base-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ColorPicker } from "@/components/ui/color-picker";
-import { GuestPermissionSelector } from "@/components/guest-permission-selector";
-import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { PRESET_COLORS } from "@/lib/constants";
 
 interface CalendarSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (
-    name: string,
-    color: string,
-    guestPermission: "none" | "read" | "write"
-  ) => void | Promise<void>;
+  onSubmit: (name: string, color: string) => void | Promise<void>;
 }
 
 export function CalendarSheet({
@@ -26,28 +20,18 @@ export function CalendarSheet({
   onSubmit,
 }: CalendarSheetProps) {
   const t = useTranslations();
-  const { isAuthEnabled, allowGuest } = useAuthFeatures();
   const initialColor = PRESET_COLORS[0].value;
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(initialColor);
-  const [guestPermission, setGuestPermission] = useState<
-    "none" | "read" | "write"
-  >("none");
   const [isSaving, setIsSaving] = useState(false);
 
   const hasChanges = () => {
-    // Only count guestPermission if it differs from default
-    return (
-      name.trim() !== "" ||
-      selectedColor !== initialColor ||
-      guestPermission !== "none"
-    );
+    return name.trim() !== "" || selectedColor !== initialColor;
   };
 
   const resetForm = () => {
     setName("");
     setSelectedColor(initialColor);
-    setGuestPermission("none");
   };
 
   const handleSave = async () => {
@@ -55,7 +39,7 @@ export function CalendarSheet({
 
     setIsSaving(true);
     try {
-      await onSubmit(name.trim(), selectedColor, guestPermission);
+      await onSubmit(name.trim(), selectedColor);
 
       // Reset form on success
       resetForm();
@@ -107,15 +91,6 @@ export function CalendarSheet({
           label={t("form.colorLabel")}
           presetColors={PRESET_COLORS}
         />
-
-        {/* Guest Access Section - Only show if auth and guest access are enabled */}
-        {isAuthEnabled && allowGuest && (
-          <GuestPermissionSelector
-            value={guestPermission}
-            onChange={setGuestPermission}
-            idPrefix="calendar-create"
-          />
-        )}
       </div>
     </BaseSheet>
   );

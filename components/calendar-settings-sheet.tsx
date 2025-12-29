@@ -15,11 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ColorPicker } from "@/components/ui/color-picker";
-import { GuestPermissionSelector } from "@/components/guest-permission-selector";
+import { CalendarShareManagementSheet } from "@/components/calendar-share-management-sheet";
 import { useCalendars } from "@/hooks/useCalendars";
-import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { PRESET_COLORS } from "@/lib/constants";
-import { AlertTriangle, Trash2, Download, Cloud } from "lucide-react";
+import { AlertTriangle, Trash2, Download, Cloud, Users } from "lucide-react";
 import { ExportDialog } from "@/components/export-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useDirtyState } from "@/hooks/useDirtyState";
@@ -39,7 +39,6 @@ interface CalendarSettingsSheetProps {
 interface FormState {
   name: string;
   selectedColor: string;
-  guestPermission: "none" | "read" | "write";
 }
 
 export function CalendarSettingsSheet({
@@ -55,17 +54,15 @@ export function CalendarSettingsSheet({
 }: CalendarSettingsSheetProps) {
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
-  const { isAuthEnabled, allowGuest } = useAuthFeatures();
+  const { canShare, canManage, canDelete } = useCalendarPermission(calendarId);
 
   // Use props directly as initial state, controlled by key prop on component
   const [name, setName] = useState(calendarName);
   const [selectedColor, setSelectedColor] = useState(calendarColor);
-  const [guestPermission, setGuestPermission] = useState<
-    "none" | "read" | "write"
-  >(calendarGuestPermission);
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showShareManagement, setShowShareManagement] = useState(false);
   const initialFormStateRef = useRef<FormState | null>(null);
 
   // Initialize form state reference when opening
@@ -74,7 +71,6 @@ export function CalendarSettingsSheet({
       initialFormStateRef.current = {
         name: calendarName,
         selectedColor: calendarColor,
-        guestPermission: calendarGuestPermission,
       };
     }
     if (!open) {
@@ -88,7 +84,6 @@ export function CalendarSettingsSheet({
     const current: FormState = {
       name,
       selectedColor,
-      guestPermission,
     };
 
     // Check basic fields
@@ -114,10 +109,6 @@ export function CalendarSettingsSheet({
     const updates = {
       name: name !== calendarName ? name : undefined,
       color: selectedColor !== calendarColor ? selectedColor : undefined,
-      guestPermission:
-        guestPermission !== calendarGuestPermission
-          ? guestPermission
-          : undefined,
     };
 
     const result = await updateCalendar(calendarId, updates);
@@ -134,6 +125,11 @@ export function CalendarSettingsSheet({
     onDelete();
     onOpenChange(false);
   };
+
+  // Only owner/admin can access settings
+  if (!canManage) {
+    return null;
+  }
 
   return (
     <>
@@ -212,74 +208,82 @@ export function CalendarSettingsSheet({
               </Button>
             </div>
 
-            {/* Guest Access Section - Only show if auth and guest access are enabled */}
-            {isAuthEnabled && allowGuest && (
-              <GuestPermissionSelector
-                value={guestPermission}
-                onChange={setGuestPermission}
-                idPrefix="calendar-settings"
-              />
+            {/* Manage Sharing Section */}
+            {canShare && (
+              <div className="pt-4 mt-4 border-t border-border/50">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowShareManagement(true)}
+                  className="w-full h-11 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {t("share.manageSharing")}
+                </Button>
+              </div>
             )}
 
             {/* Delete Section */}
-            <div className="pt-4 mt-4 border-t border-border/50">
-              <div className="space-y-3">
-                {!showDeleteConfirm ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full h-11 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {t("calendar.deleteCalendar")}
-                  </Button>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-3"
-                  >
-                    <div className="p-3 bg-destructive/5 rounded-lg border border-destructive/20">
-                      <div className="flex items-start gap-2.5 text-destructive mb-2">
-                        <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-semibold">
-                            {t("common.deleteConfirm", {
-                              item: t("calendar.title"),
-                              name: calendarName,
-                            })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {t("calendar.deleteWarning")}
-                          </p>
+            {canDelete && (
+              <div className="pt-4 mt-4 border-t border-border/50">
+                <div className="space-y-3">
+                  {!showDeleteConfirm ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="w-full h-11 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {t("calendar.deleteCalendar")}
+                    </Button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3"
+                    >
+                      <div className="p-3 bg-destructive/5 rounded-lg border border-destructive/20">
+                        <div className="flex items-start gap-2.5 text-destructive mb-2">
+                          <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 space-y-1">
+                            <p className="text-sm font-semibold">
+                              {t("common.deleteConfirm", {
+                                item: t("calendar.title"),
+                                name: calendarName,
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t("calendar.deleteWarning")}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowDeleteConfirm(false)}
-                        className="flex-1 h-11"
-                      >
-                        {t("common.cancel")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={handleDelete}
-                        className="flex-1 h-11 shadow-lg shadow-destructive/25"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        {t("common.delete")}
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowDeleteConfirm(false)}
+                          className="flex-1 h-11"
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          onClick={handleDelete}
+                          className="flex-1 h-11 shadow-lg shadow-destructive/25"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {t("common.delete")}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
@@ -317,6 +321,15 @@ export function CalendarSettingsSheet({
         open={showConfirmDialog}
         onOpenChange={setShowConfirmDialog}
         onConfirm={handleConfirmClose}
+      />
+
+      <CalendarShareManagementSheet
+        open={showShareManagement}
+        onOpenChange={setShowShareManagement}
+        calendarId={calendarId}
+        calendarName={calendarName}
+        calendarGuestPermission={calendarGuestPermission}
+        canManageShares={canShare}
       />
     </>
   );

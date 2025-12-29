@@ -52,6 +52,7 @@ export function useCalendarPermission(
         canEdit: false,
         canManage: false,
         canDelete: false,
+        canShare: false,
         isReadOnly: true,
         isOwner: false,
       };
@@ -65,6 +66,7 @@ export function useCalendarPermission(
         canEdit: true,
         canManage: true,
         canDelete: true,
+        canShare: true,
         isReadOnly: false,
         isOwner: true,
       };
@@ -80,6 +82,7 @@ export function useCalendarPermission(
           canEdit: true,
           canManage: true,
           canDelete: true,
+          canShare: true,
           isReadOnly: false,
           isOwner: true,
         };
@@ -100,6 +103,7 @@ export function useCalendarPermission(
           canEdit: isOwner || isAdmin || isWrite,
           canManage: isOwner || isAdmin,
           canDelete: isOwner,
+          canShare: isOwner || isAdmin,
           isReadOnly: isRead,
           isOwner: isOwner,
         };
@@ -117,6 +121,7 @@ export function useCalendarPermission(
           canEdit: guestPerm === "write",
           canManage: false,
           canDelete: false,
+          canShare: false,
           isReadOnly: guestPerm === "read",
           isOwner: false,
         };
@@ -129,6 +134,7 @@ export function useCalendarPermission(
         canEdit: false,
         canManage: false,
         canDelete: false,
+        canShare: false,
         isReadOnly: true,
         isOwner: false,
       };
@@ -145,6 +151,7 @@ export function useCalendarPermission(
           canEdit: true,
           canManage: false,
           canDelete: false,
+          canShare: false,
           isReadOnly: false,
           isOwner: false,
         };
@@ -157,6 +164,7 @@ export function useCalendarPermission(
           canEdit: false,
           canManage: false,
           canDelete: false,
+          canShare: false,
           isReadOnly: true,
           isOwner: false,
         };
@@ -169,6 +177,7 @@ export function useCalendarPermission(
         canEdit: false,
         canManage: false,
         canDelete: false,
+        canShare: false,
         isReadOnly: true,
         isOwner: false,
       };
@@ -181,6 +190,7 @@ export function useCalendarPermission(
       canEdit: false,
       canManage: false,
       canDelete: false,
+      canShare: false,
       isReadOnly: true,
       isOwner: false,
     };

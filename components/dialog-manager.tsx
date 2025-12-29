@@ -14,11 +14,7 @@ interface DialogManagerProps {
   // Calendar Dialog
   showCalendarDialog: boolean;
   onCalendarDialogChange: (open: boolean) => void;
-  onCreateCalendar: (
-    name: string,
-    color: string,
-    guestPermission: "none" | "read" | "write"
-  ) => Promise<void>;
+  onCreateCalendar: (name: string, color: string) => Promise<void>;
 
   // Shift Dialog
   showShiftDialog: boolean;

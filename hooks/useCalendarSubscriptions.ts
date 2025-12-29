@@ -11,6 +11,7 @@ export type AvailableCalendar = {
   name: string;
   color: string;
   guestPermission: string;
+  permission?: string; // For shared calendars: actual share permission (owner/admin/write/read)
   owner: {
     id: string;
     name: string;
@@ -83,15 +84,39 @@ export function useCalendarSubscriptions() {
    */
   const subscribe = useCallback(
     async (calendarId: string, calendarName: string) => {
-      // Optimistic update
-      setAvailableCalendars((prev) =>
-        prev.map((cal) =>
-          cal.id === calendarId ? { ...cal, isSubscribed: true } : cal
-        )
+      // Find calendar in either list
+      const dismissedCal = dismissedCalendars.find(
+        (cal) => cal.id === calendarId
       );
-      setDismissedCalendars((prev) =>
-        prev.filter((cal) => cal.id !== calendarId)
+      const availableCal = availableCalendars.find(
+        (cal) => cal.id === calendarId
       );
+
+      // Optimistic update: Remove from dismissed and add/update in available
+      if (dismissedCal) {
+        setDismissedCalendars((prev) =>
+          prev.filter((cal) => cal.id !== calendarId)
+        );
+        setAvailableCalendars((prev) => [
+          ...prev,
+          {
+            id: dismissedCal.id,
+            name: dismissedCal.name,
+            color: dismissedCal.color,
+            guestPermission: dismissedCal.permission,
+            permission: dismissedCal.permission, // Preserve original permission
+            owner: dismissedCal.owner,
+            source: dismissedCal.source,
+            isSubscribed: true,
+          },
+        ]);
+      } else if (availableCal) {
+        setAvailableCalendars((prev) =>
+          prev.map((cal) =>
+            cal.id === calendarId ? { ...cal, isSubscribed: true } : cal
+          )
+        );
+      }
 
       try {
         const response = await fetch("/api/calendars/subscriptions", {
@@ -129,7 +154,7 @@ export function useCalendarSubscriptions() {
         return false;
       }
     },
-    [t, fetchCalendars]
+    [t, fetchCalendars, dismissedCalendars, availableCalendars]
   );
 
   /**
@@ -140,27 +165,24 @@ export function useCalendarSubscriptions() {
       // Find calendar in available list
       const calendar = availableCalendars.find((cal) => cal.id === calendarId);
 
-      // Optimistic update
+      if (!calendar) return false;
+
+      // Optimistic update: Remove from available and add to dismissed
       setAvailableCalendars((prev) =>
-        prev.map((cal) =>
-          cal.id === calendarId ? { ...cal, isSubscribed: false } : cal
-        )
+        prev.filter((cal) => cal.id !== calendarId)
       );
 
-      // If it was subscribed, move to dismissed list
-      if (calendar?.isSubscribed) {
-        setDismissedCalendars((prev) => [
-          ...prev,
-          {
-            id: calendar.id,
-            name: calendar.name,
-            color: calendar.color,
-            permission: calendar.guestPermission,
-            owner: calendar.owner,
-            source: calendar.source,
-          },
-        ]);
-      }
+      setDismissedCalendars((prev) => [
+        ...prev,
+        {
+          id: calendar.id,
+          name: calendar.name,
+          color: calendar.color,
+          permission: calendar.permission || calendar.guestPermission, // Use share permission if available, fallback to guest
+          owner: calendar.owner,
+          source: calendar.source,
+        },
+      ]);
 
       try {
         const response = await fetch(

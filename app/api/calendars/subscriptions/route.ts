@@ -76,11 +76,21 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const sharedIds = new Set(userShares.map((share) => share.calendarId));
+    const dismissedIds = new Set(dismissedSubs.map((sub) => sub.calendarId));
 
-    // Build available calendars list (all public calendars with subscription status)
-    const availableCalendars = allPublicCalendars
-      .filter((cal) => !sharedIds.has(cal.id)) // Exclude calendars explicitly shared
+    // Filter out dismissed shares from userShares before building sharedIds
+    const activeShares = userShares.filter(
+      (share) => !dismissedIds.has(share.calendarId)
+    );
+    const sharedIds = new Set(activeShares.map((share) => share.calendarId));
+
+    // Build available calendars list (public calendars, excluding ones with active shares or dismissed)
+    const publicCalendars = allPublicCalendars
+      .filter(
+        (cal) =>
+          !sharedIds.has(cal.id) && // Exclude if user has active share
+          !dismissedIds.has(cal.id) // Exclude if user has dismissed this calendar
+      )
       .map((cal) => ({
         id: cal.id,
         name: cal.name,
@@ -95,6 +105,25 @@ export async function GET(request: NextRequest) {
         isSubscribed: subscribedIds.has(cal.id),
         source: "guest" as const,
       }));
+
+    // Add shared calendars to available list (already filtered for dismissed in activeShares)
+    const sharedCalendars = activeShares.map((share) => ({
+      id: share.calendar.id,
+      name: share.calendar.name,
+      color: share.calendar.color,
+      permission: share.permission, // User's share permission level
+      guestPermission: share.calendar.guestPermission, // Calendar's guest permission (for reference)
+      owner: share.calendar.owner
+        ? {
+            id: share.calendar.owner.id,
+            name: share.calendar.owner.name,
+          }
+        : null,
+      isSubscribed: subscribedIds.has(share.calendarId),
+      source: "shared" as const,
+    }));
+
+    const availableCalendars = [...publicCalendars, ...sharedCalendars];
 
     // Build dismissed calendars list (both shared and guest-subscribed)
     const dismissedCalendars = await Promise.all(

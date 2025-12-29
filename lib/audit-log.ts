@@ -89,6 +89,12 @@ export interface CalendarPermissionChangedMetadata {
   newPermission: string;
 }
 
+export interface CalendarGuestPermissionChangedMetadata {
+  calendarName: string;
+  oldPermission: "none" | "read" | "write";
+  newPermission: "none" | "read" | "write";
+}
+
 export interface SyncCreatedMetadata {
   calendarName: string;
   syncUrl: string;

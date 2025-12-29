@@ -17,6 +17,7 @@ import {
   logUserAction,
   type CalendarUpdatedMetadata,
   type CalendarDeletedMetadata,
+  type CalendarGuestPermissionChangedMetadata,
 } from "@/lib/audit-log";
 
 // GET single calendar
@@ -100,6 +101,8 @@ export async function PATCH(
 
     const updateData: Partial<typeof calendars.$inferInsert> = {};
     const changes: string[] = [];
+    let guestPermissionChanged = false;
+    let oldGuestPermission: string | undefined;
 
     if (name && name !== existingCalendar.name) {
       updateData.name = name;
@@ -117,6 +120,8 @@ export async function PATCH(
       if (["none", "read", "write"].includes(guestPermission)) {
         updateData.guestPermission = guestPermission;
         changes.push("guestPermission");
+        guestPermissionChanged = true;
+        oldGuestPermission = existingCalendar.guestPermission;
       }
     }
 
@@ -139,6 +144,28 @@ export async function PATCH(
         },
         request,
       });
+
+      // Log separate event for guest permission changes
+      if (guestPermissionChanged) {
+        await logUserAction<CalendarGuestPermissionChangedMetadata>({
+          action: "calendar.guest_permission.changed",
+          userId: user.id,
+          resourceType: "calendar",
+          resourceId: calendar.id,
+          metadata: {
+            calendarName: calendar.name,
+            oldPermission: (oldGuestPermission || "none") as
+              | "none"
+              | "read"
+              | "write",
+            newPermission: calendar.guestPermission as
+              | "none"
+              | "read"
+              | "write",
+          },
+          request,
+        });
+      }
     }
 
     return NextResponse.json(calendar);

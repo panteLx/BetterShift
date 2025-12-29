@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User, LogOut, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { CalendarDiscoveryDialog } from "@/components/calendar-discovery-dialog";
+import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
 
 /**
  * User menu dropdown for authenticated users
@@ -118,7 +118,7 @@ export function UserMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
 
-      <CalendarDiscoveryDialog
+      <CalendarDiscoverySheet
         open={discoveryOpen}
         onOpenChange={setDiscoveryOpen}
       />
