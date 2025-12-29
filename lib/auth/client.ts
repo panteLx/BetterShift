@@ -2,7 +2,6 @@
 
 import { createAuthClient } from "better-auth/react";
 import { genericOAuthClient } from "better-auth/client/plugins";
-import { BETTER_AUTH_URL } from "./env";
 
 /**
  * Better Auth client for client-side authentication
@@ -17,8 +16,9 @@ import { BETTER_AUTH_URL } from "./env";
  */
 export const authClient = createAuthClient({
   baseURL:
-    BETTER_AUTH_URL ||
-    (typeof window !== "undefined" ? window.location.origin : ""),
+    typeof window !== "undefined" && window.__PUBLIC_CONFIG__
+      ? window.__PUBLIC_CONFIG__.auth.url
+      : "",
   plugins: [genericOAuthClient()],
 });
 
