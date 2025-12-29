@@ -22,8 +22,7 @@ import {
 } from "@/lib/auth/env";
 
 export const auth = betterAuth({
-  // Base URL for reverse proxy compatibility (e.g., Cloudflare Tunnels)
-  baseURL: BETTER_AUTH_TRUSTED_ORIGINS[0] || process.env.BETTER_AUTH_URL,
+  baseURL: process.env.BETTER_AUTH_URL,
 
   database: drizzleAdapter(db, {
     provider: "sqlite",
