@@ -19,10 +19,12 @@ export const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET || "";
 export const BETTER_AUTH_URL =
   process.env.BETTER_AUTH_URL || "http://localhost:3000";
 
+// SECURITY: Always set trustedOrigins to enable CSRF protection
+// Default to BETTER_AUTH_URL if not explicitly configured
 export const BETTER_AUTH_TRUSTED_ORIGINS = process.env
   .BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",")
-  : [];
+  : [BETTER_AUTH_URL]; // Default: Trust only the configured base URL
 
 // =============================================================================
 // User Registration Settings

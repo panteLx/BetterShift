@@ -97,8 +97,16 @@ export const auth = betterAuth({
 
   // Advanced settings
   advanced: {
-    // Enable experimental joins for better performance
-    useSecureCookies: process.env.NODE_ENV === "production",
+    // Secure cookies: Use HTTPS detection instead of just NODE_ENV
+    // Better Auth will automatically add __Secure- prefix when enabled
+    useSecureCookies: BETTER_AUTH_URL.startsWith("https://"),
+
+    // Default cookie attributes (defense in depth)
+    defaultCookieAttributes: {
+      sameSite: "lax", // CSRF protection (already default, but explicit)
+      secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
+      httpOnly: true, // Prevent XSS attacks (already default, but explicit)
+    },
   },
 
   // User registration settings

@@ -5,10 +5,11 @@
  */
 
 import { db } from "@/lib/db";
-import { externalSyncs } from "@/lib/db/schema";
-import { gt } from "drizzle-orm";
+import { externalSyncs, calendars } from "@/lib/db/schema";
+import { gt, eq } from "drizzle-orm";
 import { eventEmitter } from "@/lib/event-emitter";
 import { syncExternalCalendar } from "@/app/api/external-syncs/[id]/sync/route";
+import { isAuthEnabled } from "@/lib/auth/feature-flags";
 
 interface SyncJob {
   syncId: string;
@@ -20,6 +21,8 @@ class AutoSyncService {
   private jobs: Map<string, SyncJob> = new Map();
   private timers: Map<string, NodeJS.Timeout> = new Map();
   private pollInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private lastCleanupTime: number = 0;
   private isRunning = false;
 
   /**
@@ -39,6 +42,13 @@ class AutoSyncService {
 
     // Check for syncs every 5 minutes in case of changes
     this.pollInterval = setInterval(() => this.loadSyncs(), 5 * 60 * 1000);
+
+    // Run orphaned sync cleanup every 24 hours
+    await this.cleanupOrphanedSyncs();
+    this.cleanupInterval = setInterval(
+      () => this.cleanupOrphanedSyncs(),
+      24 * 60 * 60 * 1000
+    );
   }
 
   /**
@@ -52,6 +62,12 @@ class AutoSyncService {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
+    }
+
+    // Clear the cleanup interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
     }
 
     // Clear all sync job timers
@@ -69,19 +85,46 @@ class AutoSyncService {
     try {
       // Get all syncs with auto-sync enabled (autoSyncInterval > 0)
       const syncs = await db
-        .select()
+        .select({
+          sync: externalSyncs,
+          calendar: calendars,
+        })
         .from(externalSyncs)
+        .leftJoin(calendars, eq(externalSyncs.calendarId, calendars.id))
         .where(gt(externalSyncs.autoSyncInterval, 0));
 
       // Remove jobs for syncs that were deleted or disabled
       for (const [syncId] of this.jobs) {
-        if (!syncs.find((s) => s.id === syncId)) {
+        if (!syncs.find((s) => s.sync.id === syncId)) {
           this.removeJob(syncId);
         }
       }
 
       // Add or update jobs for active syncs
-      for (const sync of syncs) {
+      for (const { sync, calendar } of syncs) {
+        // Skip syncs for orphaned calendars (only when auth is enabled)
+        if (isAuthEnabled() && calendar && !calendar.ownerId) {
+          console.warn(
+            `Sync skipped for calendar [${calendar.id}] - no owner (orphaned calendar)`
+          );
+          // Remove job if it exists (calendar lost its owner)
+          if (this.jobs.has(sync.id)) {
+            this.removeJob(sync.id);
+          }
+          continue;
+        }
+
+        // Skip if calendar doesn't exist (shouldn't happen with foreign keys)
+        if (!calendar) {
+          console.warn(
+            `Sync skipped for external sync [${sync.id}] - calendar not found`
+          );
+          if (this.jobs.has(sync.id)) {
+            this.removeJob(sync.id);
+          }
+          continue;
+        }
+
         const intervalMs = sync.autoSyncInterval * 60 * 1000; // Convert minutes to milliseconds
         const existingJob = this.jobs.get(sync.id);
 
@@ -211,6 +254,87 @@ class AutoSyncService {
     } catch (error) {
       console.error(`Manual sync error for ${syncId}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Cleanup orphaned syncs (syncs for calendars without owners)
+   * This runs periodically to disable auto-sync for orphaned calendars
+   */
+  private async cleanupOrphanedSyncs() {
+    // Only run cleanup when auth is enabled
+    if (!isAuthEnabled()) {
+      return;
+    }
+
+    // Prevent running cleanup too frequently (minimum 1 hour between runs)
+    const now = Date.now();
+    if (now - this.lastCleanupTime < 60 * 60 * 1000) {
+      return;
+    }
+
+    this.lastCleanupTime = now;
+    console.log("Running orphaned sync cleanup...");
+
+    try {
+      // Find all external syncs with auto-sync enabled that belong to orphaned calendars
+      const results = await db
+        .select({
+          syncId: externalSyncs.id,
+          syncName: externalSyncs.name,
+          calendarId: externalSyncs.calendarId,
+          ownerId: calendars.ownerId,
+        })
+        .from(externalSyncs)
+        .leftJoin(calendars, eq(externalSyncs.calendarId, calendars.id))
+        .where(gt(externalSyncs.autoSyncInterval, 0));
+
+      // Filter for orphaned syncs (calendar exists but has no owner)
+      const orphanedSyncs = results.filter(
+        (r) => r.calendarId && r.ownerId === null
+      );
+
+      if (orphanedSyncs.length === 0) {
+        console.log("No orphaned syncs found.");
+        return;
+      }
+
+      console.log(`Found ${orphanedSyncs.length} orphaned sync(s) to disable`);
+
+      // Disable auto-sync for orphaned calendars by setting interval to 0
+      for (const orphanedSync of orphanedSyncs) {
+        try {
+          await db
+            .update(externalSyncs)
+            .set({
+              autoSyncInterval: 0,
+              updatedAt: new Date(),
+            })
+            .where(eq(externalSyncs.id, orphanedSync.syncId));
+
+          console.log(
+            `Disabled auto-sync for orphaned calendar: ${orphanedSync.syncName} (Calendar: ${orphanedSync.calendarId})`
+          );
+
+          // Remove from active jobs
+          if (this.jobs.has(orphanedSync.syncId)) {
+            this.removeJob(orphanedSync.syncId);
+          }
+
+          // TODO: Log to audit log when Admin Panel is implemented (Phase 9)
+          // This will be tracked as: action: "sync.orphaned.disabled"
+          // Metadata: { calendarId, syncName, reason: "calendar_has_no_owner" }
+        } catch (error) {
+          console.error(
+            `Failed to disable sync ${orphanedSync.syncId}:`,
+            error
+          );
+        }
+      }
+
+      console.log("Orphaned sync cleanup completed.");
+    } catch (error) {
+      console.error("Error during orphaned sync cleanup:", error);
     }
   }
 }
