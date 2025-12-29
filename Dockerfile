@@ -7,8 +7,8 @@ WORKDIR /app
 
 # Copy only package files for better caching
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+RUN --mount=type=cache,target=/root/.npm-deps \
+    npm ci --cache /root/.npm-deps
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -41,8 +41,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install only production dependencies
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production && \
+RUN --mount=type=cache,target=/root/.npm-prod \
+    npm ci --omit=dev --cache /root/.npm-prod && \
     npm cache clean --force
 
 # Stage 4: Runner
