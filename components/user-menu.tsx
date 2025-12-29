@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Settings, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { User, LogOut, Settings, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarDiscoveryDialog } from "@/components/calendar-discovery-dialog";
 
@@ -25,7 +26,8 @@ import { CalendarDiscoveryDialog } from "@/components/calendar-discovery-dialog"
  * Shows:
  * - User avatar and name
  * - Profile link
- * - Settings (optional)
+ * - Activity Log link (with unread badge)
+ * - Browse Calendars
  * - Sign out button
  */
 export function UserMenu() {
@@ -98,6 +100,10 @@ export function UserMenu() {
         <DropdownMenuItem onClick={() => router.replace("/profile")}>
           <User className="mr-2 h-4 w-4" />
           {t("auth.profile")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.replace("/profile/activity")}>
+          <FileText className="mr-2 h-4 w-4" />
+          {t("activityLog.title")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setDiscoveryOpen(true)}>
           <Users className="mr-2 h-4 w-4" />

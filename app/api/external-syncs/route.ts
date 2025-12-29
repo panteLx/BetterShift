@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -10,9 +10,10 @@ import {
   isValidICSContent,
   type CalendarSyncType,
 } from "@/lib/external-calendar-utils";
+import { logUserAction, type SyncCreatedMetadata } from "@/lib/audit-log";
 
 // GET all external syncs for a calendar
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const calendarId = searchParams.get("calendarId");
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
 }
 
 // POST create new external sync
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
@@ -195,6 +196,22 @@ export async function POST(request: Request) {
         updatedAt: new Date(),
       })
       .returning();
+
+    // Log external sync creation event
+    if (user) {
+      await logUserAction<SyncCreatedMetadata>({
+        action: "sync.created",
+        userId: user.id,
+        resourceType: "sync",
+        resourceId: externalSync.id,
+        metadata: {
+          calendarName: calendar.name,
+          syncUrl: isOneTimeImport ? "file-upload" : finalCalendarUrl,
+          syncName: externalSync.name,
+        },
+        request,
+      });
+    }
 
     return NextResponse.json(externalSync, { status: 201 });
   } catch (error) {

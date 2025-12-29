@@ -1,17 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendars, shifts } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  calendars,
+  shifts,
+  shiftPresets,
+  calendarNotes,
+} from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/session";
 import {
   canViewCalendar,
   canManageCalendar,
   canDeleteCalendar,
 } from "@/lib/auth/permissions";
+import {
+  logUserAction,
+  type CalendarUpdatedMetadata,
+  type CalendarDeletedMetadata,
+} from "@/lib/audit-log";
 
 // GET single calendar
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -57,7 +67,7 @@ export async function GET(
 
 // PATCH update calendar (requires admin permission)
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -89,12 +99,24 @@ export async function PATCH(
     }
 
     const updateData: Partial<typeof calendars.$inferInsert> = {};
-    if (name) updateData.name = name;
-    if (color) updateData.color = color;
-    if (guestPermission !== undefined) {
+    const changes: string[] = [];
+
+    if (name && name !== existingCalendar.name) {
+      updateData.name = name;
+      changes.push("name");
+    }
+    if (color && color !== existingCalendar.color) {
+      updateData.color = color;
+      changes.push("color");
+    }
+    if (
+      guestPermission !== undefined &&
+      guestPermission !== existingCalendar.guestPermission
+    ) {
       // Validate guest permission value
       if (["none", "read", "write"].includes(guestPermission)) {
         updateData.guestPermission = guestPermission;
+        changes.push("guestPermission");
       }
     }
 
@@ -103,6 +125,21 @@ export async function PATCH(
       .set(updateData)
       .where(eq(calendars.id, id))
       .returning();
+
+    // Log calendar update event if there were actual changes
+    if (user && changes.length > 0) {
+      await logUserAction<CalendarUpdatedMetadata>({
+        action: "calendar.updated",
+        userId: user.id,
+        resourceType: "calendar",
+        resourceId: calendar.id,
+        metadata: {
+          calendarName: calendar.name,
+          changes,
+        },
+        request,
+      });
+    }
 
     return NextResponse.json(calendar);
   } catch (error) {
@@ -116,7 +153,7 @@ export async function PATCH(
 
 // DELETE calendar (requires owner permission)
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -145,7 +182,35 @@ export async function DELETE(
       );
     }
 
+    // Count related records before deletion
+    const [{ shiftsCount, presetsCount, notesCount }] = await db
+      .select({
+        shiftsCount: sql<number>`(SELECT COUNT(*) FROM ${shifts} WHERE ${shifts.calendarId} = ${calendar.id})`,
+        presetsCount: sql<number>`(SELECT COUNT(*) FROM ${shiftPresets} WHERE ${shiftPresets.calendarId} = ${calendar.id})`,
+        notesCount: sql<number>`(SELECT COUNT(*) FROM ${calendarNotes} WHERE ${calendarNotes.calendarId} = ${calendar.id})`,
+      })
+      .from(calendars)
+      .where(eq(calendars.id, id));
+
+    // Delete calendar (cascade will delete related records)
     await db.delete(calendars).where(eq(calendars.id, id));
+
+    // Log calendar deletion event
+    if (user) {
+      await logUserAction<CalendarDeletedMetadata>({
+        action: "calendar.deleted",
+        userId: user.id,
+        resourceType: "calendar",
+        resourceId: calendar.id,
+        metadata: {
+          calendarName: calendar.name,
+          shiftsDeleted: shiftsCount,
+          presetsDeleted: presetsCount,
+          notesDeleted: notesCount,
+        },
+        request,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

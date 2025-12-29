@@ -12,6 +12,7 @@ import {
 import { eq, or } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
 import { rateLimit } from "@/lib/rate-limiter";
+import { logUserAction, type AccountDeletedMetadata } from "@/lib/audit-log";
 
 /**
  * Delete user account endpoint
@@ -96,7 +97,22 @@ export async function DELETE(req: NextRequest) {
       .where(eq(userCalendarSubscriptionsTable.userId, userId));
 
     // 3. Delete user's calendars (cascade will delete shifts, presets, notes, external syncs)
-    await db.delete(calendarsTable).where(eq(calendarsTable.ownerId, userId));
+    const deletedCalendars = await db
+      .delete(calendarsTable)
+      .where(eq(calendarsTable.ownerId, userId))
+      .returning();
+
+    // Log account deletion event BEFORE deleting the user
+    await logUserAction<AccountDeletedMetadata>({
+      action: "auth.account.deleted",
+      userId: userId,
+      resourceType: "user",
+      resourceId: userId,
+      metadata: {
+        calendarsDeleted: deletedCalendars.length,
+      },
+      request: req,
+    });
 
     // 4. Delete user's sessions
     await db.delete(sessionTable).where(eq(sessionTable.userId, userId));

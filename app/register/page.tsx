@@ -156,7 +156,8 @@ export default function RegisterPage() {
   }
 
   // Prevent hydration mismatch by showing skeleton until mounted
-  if (!mounted) {
+  // Also show skeleton while redirecting authenticated users
+  if (!mounted || isAuthenticated) {
     return (
       <div className="flex flex-col min-h-screen">
         <AuthHeaderSkeleton />

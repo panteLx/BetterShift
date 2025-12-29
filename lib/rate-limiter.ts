@@ -26,6 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logSecurityEvent, type RateLimitHitMetadata } from "@/lib/audit-log";
 
 // =============================================================================
 // Configuration from Environment Variables
@@ -68,7 +69,7 @@ const config = {
       parseInt(process.env.RATE_LIMIT_UPLOAD_AVATAR_WINDOW || "300", 10) * 1000,
   },
   sseConnection: {
-    requests: parseInt(process.env.RATE_LIMIT_SSE_CONNECTIONS || "3", 10),
+    requests: parseInt(process.env.RATE_LIMIT_SSE_CONNECTIONS || "10", 10),
     windowMs: parseInt(process.env.RATE_LIMIT_SSE_WINDOW || "10", 10) * 1000,
   },
   calendarCreate: {
@@ -303,6 +304,19 @@ export function rateLimit(
     console.warn(
       `[Rate Limit] ${type} - ${identifier} exceeded limit (${result.limit} requests per ${options.windowMs}ms)`
     );
+
+    // Log rate limit event to audit logs (fire-and-forget)
+    logSecurityEvent<RateLimitHitMetadata>({
+      action: "security.rate_limit.hit",
+      userId: userId || null,
+      resourceType: "rate_limit",
+      metadata: {
+        endpoint: type,
+        limit: result.limit,
+        resetTime: result.resetAt,
+      },
+      request: req,
+    }).catch((err) => console.error("Failed to log rate limit event:", err));
 
     const response = NextResponse.json(
       {

@@ -853,46 +853,253 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 - Better Auth client wraps 429 errors - requires checking `result.error.status === 429`
 - All user-facing errors show retry time in user-friendly format (minutes/hours, not seconds)
 
-### 4.2 Audit Logging System
+### 4.2 Audit Logging & Activity Logs System ✅
 
-**Priority**: Medium (Minimal Scope)
+**Priority**: Medium
 
-**Goal**: Track critical security events (failed logins, admin actions) for compliance and troubleshooting.
+**Goal**: Track security events, user actions, and calendar activities for compliance, troubleshooting, and user transparency.
 
-- [ ] Database Schema - Audit Logs
-  - [ ] Create `auditLogs` table in `lib/db/schema.ts`
-    - `id` (text, primary key, UUID)
-    - `userId` (text, nullable, references users, SET NULL on delete)
-    - `action` (text, not null) - Action type (e.g., "login.failed", "admin.user.delete")
-    - `resourceType` (text, nullable) - "user", "calendar", "share", etc.
-    - `resourceId` (text, nullable) - ID of affected resource
-    - `metadata` (text, nullable) - JSON string with additional context
-    - `ipAddress` (text, nullable)
-    - `userAgent` (text, nullable)
-    - `timestamp` (timestamp, not null, default: current timestamp)
-  - [ ] Add indexes on `(userId, timestamp)` and `(action, timestamp)`
-  - [ ] Generate migration: `npm run db:generate`
-- [ ] Audit Logging Helper
-  - [ ] Create `lib/audit-log.ts`
-    - `logAuditEvent(action, userId?, resourceType?, resourceId?, metadata?, request?)` function
+**Architecture**: Two-tier logging system:
+
+1. **Audit Logs** - All events (admin view in Phase 9)
+2. **Activity Logs** - User-visible events (per-user view)
+
+#### 4.2.1 Database Schema - Audit Logs ✅
+
+- [x] Create `auditLogs` table in `lib/db/schema.ts`
+  - `id` (text, primary key, UUID)
+  - `userId` (text, nullable, references users, SET NULL on delete)
+  - `action` (text, not null) - Action type (e.g., "auth.login.failed", "calendar.created")
+  - `resourceType` (text, nullable) - "user", "calendar", "share", "sync", "session"
+  - `resourceId` (text, nullable) - ID of affected resource
+  - `metadata` (text, nullable) - JSON string with typed metadata per action
+  - `ipAddress` (text, nullable) - Client IP (supports Docker + Cloudflare + direct)
+  - `userAgent` (text, nullable) - Browser/device info
+  - `severity` (text, not null) - "info" | "warning" | "error" | "critical"
+  - `isUserVisible` (boolean, not null, default false) - Show in user's activity log
+  - `timestamp` (timestamp, not null, default: current timestamp)
+- [x] Add indexes:
+  - `(userId, timestamp)` - User activity queries
+  - `(action, timestamp)` - Admin filtering
+  - `(isUserVisible, userId, timestamp)` - User activity log queries
+- [x] Generate migration: `npm run db:generate`
+
+#### 4.2.2 IP Address Extraction Helper ✅
+
+- [x] Create `lib/ip-utils.ts`
+  - `getClientIp(request: NextRequest): string | null` - Extract real client IP
+  - Support multiple proxy scenarios:
+    - Direct connection: `request.ip`
+    - Docker/reverse proxy: `X-Forwarded-For` (first IP)
+    - Cloudflare: `CF-Connecting-IP` (highest priority)
+    - Fallback: `X-Real-IP`
+  - Return first non-internal IP address
+  - Handle IPv6 addresses
+
+#### 4.2.3 Audit Logging Helper ✅
+
+- [x] Create `lib/audit-log.ts`
+  - TypeScript interfaces for typed metadata per action:
+    ```typescript
+    interface LoginFailedMetadata {
+      email: string;
+      reason: "invalid_password" | "user_not_found" | "rate_limited";
+    }
+    interface CalendarCreatedMetadata {
+      calendarName: string;
+      color: string;
+    }
+    interface CalendarSharedMetadata {
+      sharedWith: string; // user email
+      permission: "read" | "write" | "admin";
+    }
+    // ... more interfaces per event type
+    ```
+  - `logAuditEvent<T>(options)` function:
+    - Parameters: `{ action, userId?, resourceType?, resourceId?, metadata: T, request?, severity, isUserVisible }`
     - Extract IP address and user agent from request
-    - Store event in database (fire-and-forget, don't block request)
-- [ ] Events to Log (Minimal Scope)
-  - [ ] **Failed login attempts** - Track in `app/api/auth/[...all]/route.ts`
-    - Action: `"login.failed"`
-    - Metadata: `{ email: "user@example.com", reason: "invalid_password" }`
-  - [ ] **Admin actions** (Phase 9)
-    - User deletion: `"admin.user.delete"`
-    - Calendar transfer: `"admin.calendar.transfer"`
-    - Password reset: `"admin.user.password_reset"`
-- [ ] Admin Panel UI (Phase 9)
-  - [ ] Create `app/admin/logs/page.tsx` - View audit logs
-  - [ ] Filters: action type, user, date range
-  - [ ] Pagination for large datasets
-  - [ ] Export logs as CSV
-- [ ] Retention Policy (Optional)
-  - [ ] Auto-delete logs older than 90 days (configurable)
-  - [ ] Background job or on-access cleanup
+    - Store event in database (fire-and-forget via `queueMicrotask()` - don't block request)
+    - Type-safe metadata based on action type
+  - Helper functions:
+    ```typescript
+    logSecurityEvent(); // severity: critical, isUserVisible: true
+    logUserAction(); // severity: info, isUserVisible: true
+    logAdminAction(); // severity: warning, isUserVisible: false
+    logSystemEvent(); // severity: info, isUserVisible: false
+    ```
+
+#### 4.2.4 Events to Log
+
+**Security Events** (User-visible, Critical):
+
+- [x] **Failed login attempts** - `lib/auth/audit-plugin.ts`
+  - Action: `"auth.login.failed"`
+  - Metadata: `{ email, reason }`
+  - Tracked via Better Auth hooks (after hook on `/sign-in/email`)
+- [x] **Successful logins** (Optional - can be many)
+  - Action: `"auth.login.success"`
+  - Metadata: `{ email, newDevice: boolean }`
+  - Tracked via Better Auth hooks (after hook on `/sign-in/email`)
+- [x] **User registration** - `lib/auth/audit-plugin.ts`
+  - Action: `"auth.user.registered"`
+  - Metadata: `{ email, name, registrationMethod: "email" | "oauth_google" | "oauth_github" | "oauth_discord" }`
+  - Tracked via Better Auth hooks (after hook on `/sign-up/email`)
+- [x] **Profile updated** - `lib/auth/audit-plugin.ts`
+  - Action: `"auth.profile.updated"`
+  - Metadata: `{ changes: string[], newValues: { name?, email? } }`
+  - Tracked via Better Auth hooks (after hook on `/update-user`)
+- [x] **Password changes** - `app/api/auth/change-password/route.ts`
+  - Action: `"auth.password.changed"`
+  - Metadata: `{ sessionsRevoked: number }`
+- [x] **Account deletion** - `app/api/auth/delete-account/route.ts`
+  - Action: `"auth.account.deleted"`
+  - Metadata: `{ calendarsDeleted: number }`
+
+**Calendar Events** (User-visible, Info):
+
+- [x] **Calendar created** - `app/api/calendars/route.ts`
+  - Action: `"calendar.created"`
+  - Metadata: `{ calendarName, color }`
+- [x] **Calendar deleted** - `app/api/calendars/[id]/route.ts`
+  - Action: `"calendar.deleted"`
+  - Metadata: `{ calendarName, shiftsDeleted: number, presetsDeleted: number, notesDeleted: number }`
+- [x] **Calendar settings changed** - `app/api/calendars/[id]/route.ts`
+  - Action: `"calendar.updated"`
+  - Metadata: `{ calendarName, changes: string[] }` (e.g., ["name", "color", "guestPermission"])
+
+**External Sync Events** (User-visible, Info/Warning):
+
+- [x] **External sync added** - `app/api/external-syncs/route.ts`
+  - Action: `"sync.created"`
+  - Metadata: `{ calendarName, syncUrl, syncName }`
+- [x] **External sync removed** - `app/api/external-syncs/[id]/route.ts`
+  - Action: `"sync.deleted"`
+  - Metadata: `{ calendarName, syncUrl, syncName }`
+- [x] **External sync executed** - `app/api/external-syncs/[id]/sync/route.ts`
+  - Action: `"sync.executed"`
+  - Metadata: `{ calendarName, syncName, shiftsAdded: number, shiftsUpdated: number, shiftsDeleted: number, success: boolean, error?: string }`
+  - Severity: `success ? "info" : "warning"`
+
+**Rate Limit Events** (User-visible, Warning):
+
+- [x] **Rate limit hit** - `lib/rate-limiter.ts`
+  - Action: `"security.rate_limit.hit"`
+  - Metadata: `{ endpoint: string, limit: number, resetTime: number }`
+
+#### 4.2.5 Activity Logs API (User-facing)
+
+- [x] Create `app/api/activity-logs/route.ts`
+  - **GET**: List user's visible activity logs (merged from auditLogs + syncLogs)
+    - Merge data from two sources:
+      1. `auditLogs` table (where `isUserVisible = true AND userId = currentUser`)
+      2. `syncLogs` table (converted to unified activity format)
+    - Query params: `?type=` (auth/calendar/sync), `?startDate=`, `?endDate=`
+    - Pagination: `?page=`, `?limit=` (default 50, max 100)
+    - Sort: Combined by timestamp DESC
+    - Returns: `{ logs: UnifiedActivityLog[], total: number, page: number, hasMore: boolean }`
+  - **DELETE**: Clear user's activity logs
+    - Only delete logs where `userId = currentUser` AND `isUserVisible = true`
+    - Cannot delete admin/system logs
+- [x] Extend GET endpoint to merge syncLogs
+  - Query syncLogs for user's calendars
+  - Convert syncLog entries to unified format:
+    ```typescript
+    {
+      id: string,
+      type: "sync" | "auth" | "calendar" | "security",
+      action: string,
+      timestamp: Date,
+      severity: string,
+      metadata: object,
+      resourceType?: string,
+      resourceId?: string,
+      isRead?: boolean, // Only for sync events
+    }
+    ```
+  - Merge with auditLogs, sort by timestamp
+  - Handle pagination across both data sources
+
+#### 4.2.6 Activity Log Page UI (User-facing)
+
+**Location**: `/profile/activity` (new dedicated page)
+
+**Design**: Professional audit log viewer with full-screen table layout
+
+**Status**: ✅ **COMPLETED** (28. Dezember 2025)
+
+**Mobile Optimization & Design Updates (28. Dezember 2025)**:
+
+- ✅ Mobile-responsive layout (full width on mobile: `max-w-full sm:max-w-4xl`, reduced padding: `px-2 sm:px-4`)
+- ✅ Removed mobile warning (page is now properly optimized for mobile)
+- ✅ Applied profile page design system:
+  - Gradient background: `bg-gradient-to-br from-background via-background to-primary/5`
+  - Card gradient: `bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm`
+  - Title gradient: `bg-gradient-to-r from-foreground via-foreground to-foreground/70`
+- ✅ Compact table cells on mobile (p-2 sm:p-3 instead of p-3)
+- ✅ Hide button labels on mobile (show only icons for Refresh, Mark All Read, Clear All)
+- ✅ Toast feedback on refresh button (`activityLog.refreshed` translation added)
+- ✅ Responsive actions row (flex-wrap for better mobile layout)
+
+- [x] Create `app/profile/activity/page.tsx`
+  - Full-width table layout (not constrained by profile container)
+  - Columns: Time, Event Type, Action, Resource, Details, Status
+  - Sortable columns (click header to sort timestamp, type, severity)
+  - Expandable rows for JSON metadata (click any row)
+  - Empty state: "No activity recorded yet"
+  - Loading skeleton during fetch
+- [x] Advanced Filters (top bar)
+  - Event Type dropdown: All / Auth / Calendar / Sync / Security
+  - Date Range Picker (startDate → endDate) - using react-day-picker with 2-month view
+  - Severity Filter: All / Info / Warning / Error / Critical
+  - Search box: Filter by action, resource, or ID (client-side)
+  - "Clear Filters" button (shows when any filter active)
+- [x] Table Features
+  - Sortable columns (timestamp, type, severity)
+  - Pagination controls (Previous / Next + showing X-Y of Z)
+  - Color-coded severity badges (blue/yellow/orange/red)
+  - Color-coded type badges (purple=auth, green=calendar, cyan=sync, red=security)
+  - Expandable details row (show full metadata JSON with syntax highlighting)
+  - Timestamp in locale format (MMM dd, yyyy HH:mm:ss)
+  - Unread indicator for sync events (blue background + "New" badge)
+- [x] Actions
+  - "Clear All Activity" button (confirmation dialog)
+  - "Mark All as Read" button (for sync events with isRead flag)
+  - "Refresh" button to reload data
+  - Shows total log count + unread count in header
+- [x] Navigation & Access
+  - Add "Activity Log" link to User Menu dropdown (with FileText icon)
+  - Badge on User Menu showing unread count (red badge on avatar, blue badge in menu item)
+  - Auto-refresh unread count every 30 seconds
+- [x] Create `hooks/useActivityLogs.ts`
+  - Fetch logs from `/api/activity-logs` with filters
+  - State: `logs`, `filteredLogs`, `loading`, `error`, `total`, `hasMore`, `unreadCount`
+  - Actions: `fetchLogs()`, `clearLogs()`, `markAllRead()`, `markLogsRead(ids)`, `fetchUnreadCount()`
+  - Client-side filters: severity, search (applied after API response)
+  - Server-side filters: type, dateRange (sent to API)
+  - Pagination management: `goToNextPage()`, `goToPreviousPage()`
+- [x] Responsive Design
+  - Desktop: Full table with all columns visible
+  - Tablet/Mobile: Horizontal scroll for table (keeps all data accessible)
+- [x] shadcn/ui Components Created
+  - `components/ui/calendar.tsx` - Calendar component (react-day-picker wrapper)
+  - `components/ui/popover.tsx` - Popover primitive (Radix UI)
+  - `components/ui/date-range-picker.tsx` - Custom date range picker with 2-month view
+
+**Keep syncLogs table**: Used for technical sync details + `isRead` badge logic. Both `syncLogs` and `auditLogs` coexist - merged in API for unified timeline.
+
+#### 4.2.7 Translations
+
+**Status**: ✅ **COMPLETED** (28. Dezember 2025)
+
+**Note**: Admin Panel Audit Logs UI moved to Phase 9.4
+
+**Implementation Notes**:
+
+- Use `crypto.randomUUID()` for log IDs
+- Store metadata as JSON string, parse on read
+- Fire-and-forget logging (don't block API responses)
+- Indexes critical for performance on large datasets
+- IP extraction supports Docker, Cloudflare, and direct connections
 
 **Note**: Email-Verification will be deliberately **not** enforced - the `emailVerified` field exists but is not used.
 
@@ -901,6 +1108,14 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 **Priority**: Medium (Low Priority, Full Features)
 
 **Goal**: Give users visibility and control over their active sessions.
+
+**Audit Logging**:
+
+- [ ] **Sessions revoked** - Session management API
+
+  - Action: `"auth.session.revoked"`
+  - Metadata: `{ revokedBy: 'user' | 'password_change' | 'admin' }`
+  - Integrate into session revocation endpoints below
 
 - [ ] Database Query Helper
   - [ ] Create `lib/auth/sessions.ts`
@@ -1013,12 +1228,25 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ### 5.1 Sharing API
 
+**Audit Logging**: Integrate these events into the sharing API endpoints:
+
+- [ ] **Calendar shared** - `app/api/calendars/[id]/shares/route.ts` POST
+  - Action: `"calendar.shared"`
+  - Metadata: `{ calendarName, sharedWith, permission }`
+- [ ] **Calendar share removed** - `app/api/calendars/[id]/shares/[shareId]/route.ts` DELETE
+  - Action: `"calendar.share.removed"`
+  - Metadata: `{ calendarName, removedUser, removedBy: 'owner' | 'admin' | 'self' }`
+- [ ] **Calendar permission changed** - `app/api/calendars/[id]/shares/[shareId]/route.ts` PUT
+
+  - Action: `"calendar.permission.changed"`
+  - Metadata: `{ calendarName, user, oldPermission, newPermission }`
+
 - [ ] Create `app/api/calendars/[id]/shares/route.ts`
   - GET: List all shares for calendar (admin/owner only)
-  - POST: Share calendar with user (admin/owner only)
+  - POST: Share calendar with user (admin/owner only) + log `"calendar.shared"` event
 - [ ] Create `app/api/calendars/[id]/shares/[shareId]/route.ts`
-  - PUT: Update share permission (admin/owner only)
-  - DELETE: Remove share (admin/owner or self)
+  - PUT: Update share permission (admin/owner only) + log `"calendar.permission.changed"` event
+  - DELETE: Remove share (admin/owner or self) + log `"calendar.share.removed"` event
 
 ### 5.2 User Search/Invite
 
@@ -1689,7 +1917,39 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] `components/admin/calendar-transfer-dialog.tsx` - Transfer ownership
   - [ ] `components/admin/calendar-stats.tsx` - Calendar statistics
 
-### 9.4 Admin Panel - System Overview
+### 9.4 Admin Panel - Audit Logs
+
+**Admin Action Logging**: Integrate these events into admin panel endpoints:
+
+- [ ] **User deletion** - Admin user management DELETE
+  - Action: `"admin.user.delete"`
+  - Metadata: `{ deletedUser, calendarsTransferred: number }`
+- [ ] **Calendar transfer** - Admin calendar transfer POST
+  - Action: `"admin.calendar.transfer"`
+  - Metadata: `{ calendarName, fromUser, toUser }`
+- [ ] **Password reset** - Admin password reset PUT
+
+  - Action: `"admin.user.password_reset"`
+  - Metadata: `{ targetUser }`
+
+- [ ] Create `app/admin/logs/page.tsx` - View ALL audit logs (admin only)
+  - Same table layout as user activity page
+  - Additional columns: User (email/name), User ID
+  - Filters: action type, user, resource type, severity, date range
+  - Search: by action, userId, resourceId, IP address, email
+  - Show both `isUserVisible = true` AND `isUserVisible = false` logs
+  - Pagination for large datasets (100+ rows per page)
+  - Export logs as CSV/JSON
+- [ ] Manual log deletion (admin only)
+  - Bulk delete by date range or action type
+  - No automatic deletion (retention managed manually)
+  - Confirm dialog with impact preview ("X logs will be deleted")
+  - Option to delete specific log entries
+- [ ] Admin Navigation
+  - Add "Audit Logs" to admin sidebar/menu
+  - Show admin badge with critical event count
+
+### 9.5 Admin Panel - System Overview
 
 - [ ] Create `app/api/admin/stats/route.ts`
   - GET: System-wide statistics (users, calendars, shifts, shares)
@@ -1709,11 +1969,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 - [ ] Create `hooks/useAdminAccess.ts`
   - `isSuperAdmin` check
   - Redirect non-admins to homepage
-- [ ] Add audit logging for admin actions
-  - Log user password changes
-  - Log calendar transfers
-  - Log user deletions
-  - Store in new `admin_logs` table
 
 ### 9.6 Admin Panel UI/UX
 

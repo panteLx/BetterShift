@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { account as accountTable } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  account as accountTable,
+  session as sessionTable,
+} from "@/lib/db/schema";
+import { eq, and, ne } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { rateLimit } from "@/lib/rate-limiter";
+import { logUserAction, type PasswordChangedMetadata } from "@/lib/audit-log";
 
 /**
  * Change user password endpoint
@@ -94,9 +98,33 @@ export async function POST(req: NextRequest) {
         )
       );
 
+    // Revoke all other sessions (keep current session active)
+    const revokedSessions = await db
+      .delete(sessionTable)
+      .where(
+        and(
+          eq(sessionTable.userId, session.user.id),
+          ne(sessionTable.token, session.session.token)
+        )
+      )
+      .returning();
+
+    // Log password change event
+    await logUserAction<PasswordChangedMetadata>({
+      action: "auth.password.changed",
+      userId: session.user.id,
+      resourceType: "user",
+      resourceId: session.user.id,
+      metadata: {
+        sessionsRevoked: revokedSessions.length,
+      },
+      request: req,
+    });
+
     return NextResponse.json({
       success: true,
       message: "Password changed successfully",
+      sessionsRevoked: revokedSessions.length,
     });
   } catch (error) {
     console.error("Error changing password:", error);

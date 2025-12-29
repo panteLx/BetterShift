@@ -13,6 +13,8 @@ import { rateLimit } from "@/lib/rate-limiter";
  * Wraps Better Auth handlers to enforce:
  * - ALLOW_USER_REGISTRATION flag for OAuth/OIDC sign-ups
  * - Existing users can still sign in via OAuth even when registration is disabled
+ *
+ * Note: Audit logging is handled by the auditLogPlugin in lib/auth/audit-plugin.ts
  */
 
 const handlers = toNextJsHandler(auth);
@@ -98,8 +100,8 @@ export const POST = async (req: NextRequest) => {
     }
   }
 
-  // Call original Better Auth handler
-  return originalPost(req);
+  // Call original Better Auth handler (audit logging handled by plugin)
+  return await originalPost(req);
 };
 
 // Export GET handler as-is

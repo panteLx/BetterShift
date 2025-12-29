@@ -13,15 +13,24 @@ import {
 } from "@/lib/external-calendar-utils";
 import { eventEmitter } from "@/lib/event-emitter";
 import { rateLimit } from "@/lib/rate-limiter";
+import {
+  logUserAction,
+  logSystemEvent,
+  type SyncExecutedMetadata,
+} from "@/lib/audit-log";
 
 /**
  * Core sync logic extracted for reuse by both API route and auto-sync service
  * @param syncId - The external sync ID
  * @param syncType - Whether this is "auto" or "manual" sync
+ * @param userId - Optional user ID for audit logging (null for auto-sync)
+ * @param request - Optional request object for audit logging
  */
 export async function syncExternalCalendar(
   syncId: string,
-  syncType: "auto" | "manual" = "manual"
+  syncType: "auto" | "manual" = "manual",
+  userId?: string | null,
+  request?: NextRequest
 ) {
   // Get the external sync configuration
   const [externalSync] = await db
@@ -302,6 +311,24 @@ export async function syncExternalCalendar(
 
     stats = transactionResult;
 
+    // Log successful sync event to audit logs
+    const logFunction = syncType === "auto" ? logSystemEvent : logUserAction;
+    await logFunction<SyncExecutedMetadata>({
+      action: "sync.executed",
+      userId: userId || null,
+      resourceType: "sync",
+      resourceId: syncId,
+      metadata: {
+        calendarName: externalSync.calendarId, // Will be enriched with actual name in UI
+        syncName: externalSync.name,
+        shiftsAdded: stats.created,
+        shiftsUpdated: stats.updated,
+        shiftsDeleted: stats.deleted,
+        success: true,
+      },
+      request,
+    });
+
     // Emit event for sync log creation after successful transaction
     eventEmitter.emit("calendar-change", {
       type: "sync-log",
@@ -325,6 +352,25 @@ export async function syncExternalCalendar(
       shiftsDeleted: 0,
       syncType,
       syncedAt: new Date(),
+    });
+
+    // Log failed sync event to audit logs
+    const logFunction = syncType === "auto" ? logSystemEvent : logUserAction;
+    await logFunction<SyncExecutedMetadata>({
+      action: "sync.executed",
+      userId: userId || null,
+      resourceType: "sync",
+      resourceId: syncId,
+      metadata: {
+        calendarName: externalSync.calendarId,
+        syncName: externalSync.name,
+        shiftsAdded: 0,
+        shiftsUpdated: 0,
+        shiftsDeleted: 0,
+        success: false,
+        error: errorMessage,
+      },
+      request,
     });
 
     // Emit event for sync log creation
@@ -392,7 +438,12 @@ export async function POST(
       );
     }
 
-    const stats = await syncExternalCalendar(syncId, "manual");
+    const stats = await syncExternalCalendar(
+      syncId,
+      "manual",
+      user?.id,
+      request
+    );
 
     return NextResponse.json({
       success: true,

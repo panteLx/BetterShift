@@ -11,6 +11,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { rateLimit } from "@/lib/rate-limiter";
+import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
 
 // GET all calendars (only those accessible to the user)
 export async function GET(request: Request) {
@@ -133,6 +134,21 @@ export async function POST(request: NextRequest) {
         ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
       })
       .returning();
+
+    // Log calendar creation event
+    if (user) {
+      await logUserAction<CalendarCreatedMetadata>({
+        action: "calendar.created",
+        userId: user.id,
+        resourceType: "calendar",
+        resourceId: calendar.id,
+        metadata: {
+          calendarName: calendar.name,
+          color: calendar.color,
+        },
+        request,
+      });
+    }
 
     return NextResponse.json(calendar, { status: 201 });
   } catch (error) {

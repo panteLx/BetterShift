@@ -16,6 +16,24 @@ CREATE TABLE `account` (
 );
 --> statement-breakpoint
 CREATE INDEX `account_userId_idx` ON `account` (`user_id`);--> statement-breakpoint
+CREATE TABLE `audit_logs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text,
+	`action` text NOT NULL,
+	`resource_type` text,
+	`resource_id` text,
+	`metadata` text,
+	`ip_address` text,
+	`user_agent` text,
+	`severity` text DEFAULT 'info' NOT NULL,
+	`is_user_visible` integer DEFAULT false NOT NULL,
+	`timestamp` integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE INDEX `audit_logs_userId_timestamp_idx` ON `audit_logs` (`user_id`,`timestamp`);--> statement-breakpoint
+CREATE INDEX `audit_logs_action_timestamp_idx` ON `audit_logs` (`action`,`timestamp`);--> statement-breakpoint
+CREATE INDEX `audit_logs_userVisible_userId_timestamp_idx` ON `audit_logs` (`is_user_visible`,`user_id`,`timestamp`);--> statement-breakpoint
 CREATE TABLE `calendar_shares` (
 	`id` text PRIMARY KEY NOT NULL,
 	`calendar_id` text NOT NULL,

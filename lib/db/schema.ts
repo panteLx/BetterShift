@@ -313,11 +313,48 @@ export const syncLogs = sqliteTable("sync_logs", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const auditLogs = sqliteTable(
+  "audit_logs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    resourceType: text("resource_type"),
+    resourceId: text("resource_id"),
+    metadata: text("metadata"), // JSON string
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    severity: text("severity").notNull().default("info"), // info, warning, error, critical
+    isUserVisible: integer("is_user_visible", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    timestamp: integer("timestamp", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("audit_logs_userId_timestamp_idx").on(table.userId, table.timestamp),
+    index("audit_logs_action_timestamp_idx").on(table.action, table.timestamp),
+    index("audit_logs_userVisible_userId_timestamp_idx").on(
+      table.isUserVisible,
+      table.userId,
+      table.timestamp
+    ),
+  ]
+);
+
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
 
 export type ExternalSync = typeof externalSyncs.$inferSelect;
 export type NewExternalSync = typeof externalSyncs.$inferInsert;
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type NewAuditLog = typeof auditLogs.$inferInsert;
 export type Shift = typeof shifts.$inferSelect;
 export type NewShift = typeof shifts.$inferInsert;
 export type ShiftPreset = typeof shiftPresets.$inferSelect;
@@ -349,6 +386,7 @@ export const userRelations = relations(user, ({ many }) => ({
   ownedCalendars: many(calendars),
   calendarShares: many(calendarShares),
   calendarSubscriptions: many(userCalendarSubscriptions),
+  auditLogs: many(auditLogs),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -407,3 +445,10 @@ export const userCalendarSubscriptionsRelations = relations(
     }),
   })
 );
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(user, {
+    fields: [auditLogs.userId],
+    references: [user.id],
+  }),
+}));

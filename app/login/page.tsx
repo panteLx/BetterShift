@@ -106,7 +106,6 @@ export default function LoginPage() {
       }
 
       toast.success(t("auth.loginSuccess"));
-      // Mark that user just logged in to trigger navigation
       setJustLoggedIn(true);
     } catch (error) {
       console.error("Login error:", error);
@@ -157,16 +156,21 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  // Redirect authenticated users ONLY if:
-  // 1. They just logged in, OR
-  // 2. They have a returnUrl (came from a protected page)
-  // This prevents auto-redirect after logout when guest access is enabled
+  // Redirect authenticated users who actively navigated to /login
+  // Users who just logged in get redirected with justLoggedIn flag
+  // Users who logged out and got redirected to /login won't have justLoggedIn set
   useEffect(() => {
     if (mounted && isAuthenticated) {
       const returnUrl = searchParams.get("returnUrl");
-      if (justLoggedIn || returnUrl) {
+
+      if (justLoggedIn) {
+        // Just logged in - redirect to requested page or home
         router.replace(returnUrl || "/");
         setJustLoggedIn(false);
+      } else if (!returnUrl) {
+        // Already authenticated and no return URL - user manually visited /login
+        // Redirect them to home
+        router.replace("/");
       }
     }
   }, [mounted, isAuthenticated, justLoggedIn, searchParams, router]);

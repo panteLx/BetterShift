@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth } from "better-auth/plugins";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { auditLogPlugin } from "@/lib/auth/audit-plugin";
 import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -57,6 +58,10 @@ export const auth = betterAuth({
 
   // Generic OAuth plugin for Custom OIDC
   plugins: [
+    // Audit logging plugin
+    auditLogPlugin(),
+
+    // Custom OIDC
     genericOAuth({
       config: [
         // Custom OIDC Provider

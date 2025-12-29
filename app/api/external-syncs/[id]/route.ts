@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -9,10 +9,11 @@ import {
   isValidCalendarUrl,
   type CalendarSyncType,
 } from "@/lib/external-calendar-utils";
+import { logUserAction, type SyncDeletedMetadata } from "@/lib/audit-log";
 
 // GET single external sync
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -66,7 +67,7 @@ export async function GET(
 
 // PATCH update external sync
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -221,7 +222,7 @@ export async function PATCH(
 
 // DELETE external sync and all associated shifts
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -264,6 +265,24 @@ export async function DELETE(
     }
 
     await db.delete(externalSyncs).where(eq(externalSyncs.id, id));
+
+    // Log external sync deletion event
+    if (user) {
+      await logUserAction<SyncDeletedMetadata>({
+        action: "sync.deleted",
+        userId: user.id,
+        resourceType: "sync",
+        resourceId: id,
+        metadata: {
+          calendarName: calendar.name,
+          syncUrl: existingSync.isOneTimeImport
+            ? "file-upload"
+            : existingSync.calendarUrl,
+          syncName: existingSync.name,
+        },
+        request,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
