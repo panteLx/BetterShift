@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useConnectedAccounts } from "@/hooks/useConnectedAccounts";
 import { signOut, authClient } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
@@ -43,6 +43,7 @@ export default function ProfilePage() {
   const t = useTranslations();
   const router = useRouter();
   const { user, isLoading, refetch } = useAuth();
+  const { isAuthEnabled } = useAuthFeatures();
   const { accounts, isLoading: accountsLoading } = useConnectedAccounts();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -61,8 +62,6 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-
-  const authEnabled = isAuthEnabled();
 
   // Check if user has password-based authentication
   const hasPasswordAuth = accounts.some(
@@ -85,14 +84,14 @@ export default function ProfilePage() {
 
   // Redirect if auth disabled or not logged in
   useEffect(() => {
-    if (!authEnabled) {
+    if (!isAuthEnabled) {
       router.replace("/");
     } else if (!isLoading && !user) {
       router.replace("/login");
     }
-  }, [authEnabled, isLoading, user, router]);
+  }, [isAuthEnabled, isLoading, user, router]);
 
-  if (!authEnabled || (!isLoading && !user)) {
+  if (!isAuthEnabled || (!isLoading && !user)) {
     return null;
   }
 

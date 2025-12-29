@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { PRESET_COLORS } from "@/lib/constants";
 import {
   AlertTriangle,
@@ -32,7 +33,6 @@ import { ExportDialog } from "@/components/export-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "sonner";
 import { useDirtyState } from "@/hooks/useDirtyState";
-import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 
 interface CalendarSettingsSheetProps {
   open: boolean;
@@ -66,7 +66,7 @@ export function CalendarSettingsSheet({
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
   const { isOwner } = useCalendarPermission(calendarId);
-  const guestAccessEnabled = allowGuestAccess();
+  const { isAuthEnabled, allowGuest } = useAuthFeatures();
 
   // Use props directly as initial state, controlled by key prop on component
   const [name, setName] = useState(calendarName);
@@ -224,7 +224,7 @@ export function CalendarSettingsSheet({
             </div>
 
             {/* Guest Access Section - Only show if auth and guest access are enabled */}
-            {isAuthEnabled() && guestAccessEnabled && (
+            {isAuthEnabled && allowGuest && (
               <div className="pt-4 mt-4 border-t border-border/50">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">

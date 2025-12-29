@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { signUp } from "@/lib/auth/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +17,6 @@ import { AuthHeaderSkeleton } from "@/components/skeletons/header-skeleton";
 import { AuthContentSkeleton } from "@/components/skeletons/auth-content-skeleton";
 import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
-import { isAuthEnabled, allowUserRegistration } from "@/lib/auth/feature-flags";
 import {
   isRateLimitError,
   handleRateLimitError,
@@ -36,6 +36,7 @@ export default function RegisterPage() {
   const t = useTranslations();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { isAuthEnabled, allowRegistration } = useAuthFeatures();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,9 +44,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const versionInfo = useVersionInfo();
-
-  const authEnabled = isAuthEnabled();
-  const registrationAllowed = allowUserRegistration();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,14 +142,14 @@ export default function RegisterPage() {
 
   // Redirect if auth disabled or registration not allowed
   useEffect(() => {
-    if (!authEnabled) {
+    if (!isAuthEnabled) {
       router.replace("/");
-    } else if (!registrationAllowed) {
+    } else if (!allowRegistration) {
       router.replace("/login");
     }
-  }, [authEnabled, registrationAllowed, router]);
+  }, [isAuthEnabled, allowRegistration, router]);
 
-  if (!authEnabled || !registrationAllowed) {
+  if (!isAuthEnabled || !allowRegistration) {
     return null;
   }
 

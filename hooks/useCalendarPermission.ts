@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCalendars } from "@/hooks/useCalendars";
 import { CalendarWithCount } from "@/lib/types";
-import { isAuthEnabled } from "@/lib/auth/feature-flags";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import type { CalendarPermission } from "@/lib/auth/permissions";
 
 /**
@@ -33,6 +33,7 @@ export function useCalendarPermission(
 ) {
   const { user, isGuest } = useAuth();
   const { calendars } = useCalendars();
+  const { auth } = usePublicConfig();
 
   // Resolve calendar object if string ID was provided
   const calendar = useMemo(() => {
@@ -57,7 +58,7 @@ export function useCalendarPermission(
     }
 
     // If auth is disabled, grant full owner access (backwards compatibility)
-    if (!isAuthEnabled()) {
+    if (!auth.enabled) {
       return {
         level: "owner" as const,
         canView: true,
@@ -181,7 +182,7 @@ export function useCalendarPermission(
       isReadOnly: true,
       isOwner: false,
     };
-  }, [calendar, user, isGuest]);
+  }, [calendar, user, isGuest, auth.enabled]);
 
   return permission;
 }

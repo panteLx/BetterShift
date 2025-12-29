@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 
 /**
  * Auth Provider for client-side session management
@@ -18,16 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-
-  // Check auth enabled flag only on client side to avoid hydration mismatch
-  const authEnabledFlag =
-    typeof window !== "undefined" &&
-    process.env.NEXT_PUBLIC_AUTH_ENABLED === "true";
-
-  // Check guest access flag
-  const guestAccessAllowed =
-    typeof window !== "undefined" &&
-    process.env.NEXT_PUBLIC_ALLOW_GUEST_ACCESS === "true";
+  const { auth } = usePublicConfig();
 
   // Public routes that don't require authentication
   const publicRoutes = ["/login", "/register"];
@@ -43,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
 
     // Skip auth check if auth is disabled
-    if (!authEnabledFlag) {
+    if (!auth.enabled) {
       return;
     }
 
@@ -60,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Redirect unauthenticated users from protected routes to login
     // ONLY if guest access is NOT allowed
-    if (!isPublicRoute && !isAuthenticated && !guestAccessAllowed) {
+    if (!isPublicRoute && !isAuthenticated && !auth.allowGuestAccess) {
       const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname)}`;
       router.replace(loginUrl);
     }
@@ -68,8 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mounted,
     isAuthenticated,
     isLoading,
-    authEnabledFlag,
-    guestAccessAllowed,
+    auth.enabled,
+    auth.allowGuestAccess,
     isPublicRoute,
     pathname,
     router,
@@ -81,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Show loading state while checking auth
-  if (authEnabledFlag && !isPublicRoute && isLoading) {
+  if (auth.enabled && !isPublicRoute && isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -94,11 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Don't render protected content if not authenticated (unless guest access allowed)
   if (
-    authEnabledFlag &&
+    auth.enabled &&
     !isPublicRoute &&
     !isAuthenticated &&
     !isLoading &&
-    !guestAccessAllowed
+    !auth.allowGuestAccess
   ) {
     return null;
   }

@@ -42,9 +42,9 @@ npm run db:studio    # Open Drizzle Studio GUI
 
 ### 3. Authentication & Permissions
 
-**Feature flag**: Auth is **optional** and disabled by default (`NEXT_PUBLIC_AUTH_ENABLED=false`). This will be the default until the migration is complete.
+**Feature flag**: Auth is **optional** and disabled by default (`AUTH_ENABLED=false`). This will be the default until the migration is complete.
 
-**Configuration**: [`lib/auth.ts`](lib/auth.ts), [`lib/auth/env.ts`](lib/auth/env.ts)
+**Configuration**: [`lib/auth.ts`](lib/auth.ts), [`lib/auth/env.ts`](lib/auth/env.ts), [`lib/public-config.ts`](lib/public-config.ts)
 
 **Permission hierarchy** (highest to lowest):
 
@@ -78,7 +78,57 @@ const { canEdit, canDelete, canShare, permission } =
   useCalendarPermission(calendarId);
 ```
 
-### 4. Real-Time Updates (SSE)
+### 4. Public Configuration (Environment Variables)
+
+**NO MORE `NEXT_PUBLIC_` prefixes!** Server-only variables are exposed to the client safely via SSR injection.
+
+**Architecture**:
+
+- **Server-side**: [`lib/public-config.ts`](lib/public-config.ts) - `getPublicConfig()` function defines what's exposed
+- **Client-side**: [`hooks/usePublicConfig.ts`](hooks/usePublicConfig.ts) - `usePublicConfig()` hook for React components
+- **SSR Injection**: Config injected as `window.__PUBLIC_CONFIG__` in root layout (zero latency)
+
+**Usage patterns**:
+
+```typescript
+// Server Components (direct access)
+import { getPublicConfig } from "@/lib/public-config";
+const config = getPublicConfig();
+if (config.auth.enabled) {
+  /* ... */
+}
+
+// Client Components (use hook)
+import { usePublicConfig } from "@/hooks/usePublicConfig";
+const { auth, oauth, oidc } = usePublicConfig();
+if (auth.enabled) {
+  /* ... */
+}
+
+// Auth-specific helper hook
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+const { isAuthEnabled, allowRegistration, allowGuest, providers } =
+  useAuthFeatures();
+```
+
+**Environment variables** (no duplicates needed):
+
+```bash
+# Auth config (automatically exposed to client)
+AUTH_ENABLED=false
+BETTER_AUTH_URL=http://localhost:3000
+ALLOW_USER_REGISTRATION=true
+ALLOW_GUEST_ACCESS=false
+```
+
+**Key functions**:
+
+- `getPublicConfig()` - Server: Returns config object with all public values
+- `usePublicConfig()` - Client: Hook to access config in React components
+- `useAuthFeatures()` - Client: Convenience hook for auth-related flags
+- Feature flags in [`lib/auth/feature-flags.ts`](lib/auth/feature-flags.ts) are SERVER-ONLY now
+
+### 5. Real-Time Updates (SSE)
 
 **Event stream**: [`app/api/events/stream/route.ts`](app/api/events/stream/route.ts) - Server-Sent Events endpoint
 
@@ -100,7 +150,7 @@ eventEmitter.emit("calendar-change", {
 
 **Client connection**: Use `useSSEConnection` hook in [`hooks/useSSEConnection.ts`](hooks/useSSEConnection.ts) - automatically reconnects, handles visibility changes, and triggers data refreshes.
 
-### 5. Component Architecture
+### 6. Component Architecture
 
 **Sheet pattern** (side panel): All forms use [`components/ui/base-sheet.tsx`](components/ui/base-sheet.tsx):
 
@@ -119,7 +169,7 @@ eventEmitter.emit("calendar-change", {
 - Actions: `useShiftActions`, `useNoteActions` (handle CRUD + optimistic updates)
 - Forms: `useShiftForm`, `usePresetManagement` (form state + validation)
 
-### 6. Internationalization
+### 7. Internationalization
 
 **Config**: [`lib/i18n.ts`](lib/i18n.ts) - Detects locale from cookie (`NEXT_LOCALE`) or `Accept-Language` header
 
@@ -135,7 +185,7 @@ t("common.createError", { item: t("shift.title") }); // With interpolation
 
 **Message files**: [`messages/en.json`](messages/en.json), `de.json`, `it.json` - Nested JSON structure
 
-### 7. External Calendar Sync
+### 8. External Calendar Sync
 
 **iCal parsing**: Uses `ical.js` library to parse `.ics` feeds
 
@@ -160,9 +210,11 @@ t("common.createError", { item: t("shift.title") }); // With interpolation
 **Critical env vars**:
 
 - `DATABASE_URL` - Default: `file:./sqlite.db`
-- `NEXT_PUBLIC_AUTH_ENABLED` - Enable/disable auth system (default: `false`)
+- `AUTH_ENABLED` - Enable/disable auth system (default: `false`)
 - `BETTER_AUTH_SECRET` - Required if auth enabled (generate with `npx @better-auth/cli secret`)
-- `NEXT_PUBLIC_BETTER_AUTH_URL` - Auth callback URL (e.g., `http://localhost:3000`)
+- `BETTER_AUTH_URL` - Auth callback URL (e.g., `http://localhost:3000`)
+
+**Note**: No `NEXT_PUBLIC_` prefixes needed - client values are automatically exposed via [`lib/public-config.ts`](lib/public-config.ts)
 
 ### Running the App
 
@@ -261,12 +313,16 @@ See [`hooks/useShifts.ts`](hooks/useShifts.ts) `createShift` function:
 - [`app/page.tsx`](app/page.tsx) - Main calendar view (1300+ lines, complex state management)
 - [`lib/db/schema.ts`](lib/db/schema.ts) - Complete database schema (Better Auth + app tables)
 - [`lib/auth/permissions.ts`](lib/auth/permissions.ts) - Permission checks and calendar access logic
+- [`lib/public-config.ts`](lib/public-config.ts) - Server-side public config definition (no NEXT*PUBLIC*)
+- [`hooks/usePublicConfig.ts`](hooks/usePublicConfig.ts) - Client-side config access hook
+- [`hooks/useAuthFeatures.ts`](hooks/useAuthFeatures.ts) - Auth-specific feature flags hook
 - [`components/calendar-grid.tsx`](components/calendar-grid.tsx) - Core calendar rendering with shift display
 - [`hooks/useSSEConnection.ts`](hooks/useSSEConnection.ts) - Real-time sync connection management
 - [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) - Detailed auth migration plan with phases and todos
 
 ## Important Notes
 
+- **No NEXT*PUBLIC***: Use `getPublicConfig()` on server, `usePublicConfig()` hook on client - never `process.env.NEXT_PUBLIC_*`
 - **Better Auth first**: Always check [Better Auth docs](https://www.better-auth.com/docs) before implementing auth features - use built-in methods, don't reinvent
 - **SSE is required**: All mutations must emit events to keep clients in sync
 - **Permission checks everywhere**: Check permissions in both API routes (server) and UI (client) for security + UX

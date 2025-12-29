@@ -6,6 +6,12 @@ const withNextIntl = createNextIntlPlugin("./lib/i18n.ts");
 const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
+
+  // Build optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+
   async headers() {
     return [
       {

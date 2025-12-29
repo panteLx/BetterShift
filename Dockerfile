@@ -1,18 +1,25 @@
 # Dockerfile for BetterShift Production
 
-# Stage 1: Builder
-FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat python3 make g++
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Build argument for version (set during docker build)
-ARG VERSION=dev
-
-# Copy package files and install ALL dependencies
-# These layers are cached unless package files change
+# Copy only package files for better caching
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
+
+# Stage 2: Builder
+FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Build argument for version
+ARG VERSION=dev
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
 COPY . .
@@ -21,12 +28,26 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build the application
-RUN npm run build
+# Build the application with cache mount
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
-# Stage 2: Runner
-FROM node:20-alpine AS runner
+# Stage 3: Production dependencies
+FROM node:20-alpine AS prod-deps
 RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install only production dependencies
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production && \
+    npm cache clean --force
+
+# Stage 4: Runner
+FROM node:20-alpine AS runner
+RUN apk add --no-cache libc6-compat dumb-init
 WORKDIR /app
 
 # Get VERSION from builder stage
@@ -34,6 +55,9 @@ ARG VERSION=dev
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create data directory
+RUN mkdir -p /app/data
 
 # Copy necessary files from builder
 COPY --from=builder /app/.next/standalone ./
@@ -44,22 +68,21 @@ COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
-# Install only production dependencies (including drizzle-kit now)
-COPY --from=builder /app/package-lock.json ./package-lock.json
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production
+# Copy production dependencies
+COPY --from=prod-deps /app/node_modules ./node_modules
 
-# Write VERSION to file for runtime access
+# Write VERSION to file
 RUN echo "$VERSION" > /app/.version
-
-# Create data directory for SQLite database
-RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["node", "server.js"]
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Start with migration, then server
+CMD ["sh", "-c", "npm run db:migrate && node server.js"]

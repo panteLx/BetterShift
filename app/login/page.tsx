@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +17,6 @@ import { AuthHeaderSkeleton } from "@/components/skeletons/header-skeleton";
 import { AuthContentSkeleton } from "@/components/skeletons/auth-content-skeleton";
 import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
-import {
-  isAuthEnabled,
-  allowUserRegistration,
-  allowGuestAccess,
-  getEnabledProviders,
-} from "@/lib/auth/feature-flags";
 import {
   isRateLimitError,
   handleRateLimitError,
@@ -42,23 +37,47 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
+  const { isAuthEnabled, allowRegistration, allowGuest, providers, oidc } =
+    useAuthFeatures();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const versionInfo = useVersionInfo();
 
-  const authEnabled = isAuthEnabled();
-  const registrationAllowed = allowUserRegistration();
-  const guestAccessAllowed = allowGuestAccess();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Get available OAuth providers
-  const enabledProviders = getEnabledProviders();
-  const hasGoogle = enabledProviders.includes("google");
-  const hasGitHub = enabledProviders.includes("github");
-  const hasDiscord = enabledProviders.includes("discord");
-  const hasCustomOidc = enabledProviders.includes("custom-oidc");
+  // Redirect authenticated users to home or returnUrl
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      const returnUrl = searchParams.get("returnUrl");
+      router.replace(returnUrl || "/");
+    }
+  }, [mounted, isAuthenticated, searchParams, router]);
+
+  // If auth is disabled, redirect to home
+  useEffect(() => {
+    if (!isAuthEnabled) {
+      router.replace("/");
+    }
+  }, [isAuthEnabled, router]);
+
+  if (!isAuthEnabled) {
+    return null;
+  }
+
+  // Prevent hydration mismatch by showing skeleton until mounted
+  if (!mounted) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <AuthHeaderSkeleton />
+        <AuthContentSkeleton />
+        <AppFooterSkeleton />
+      </div>
+    );
+  }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +125,7 @@ export default function LoginPage() {
       }
 
       toast.success(t("auth.loginSuccess"));
-      setJustLoggedIn(true);
+      // Redirect will be handled by useEffect when isAuthenticated updates
     } catch (error) {
       console.error("Login error:", error);
       toast.error(t("auth.loginError"));
@@ -151,38 +170,7 @@ export default function LoginPage() {
     }
   };
 
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Redirect authenticated users who actively navigated to /login
-  // Users who just logged in get redirected with justLoggedIn flag
-  // Users who logged out and got redirected to /login won't have justLoggedIn set
-  useEffect(() => {
-    if (mounted && isAuthenticated) {
-      const returnUrl = searchParams.get("returnUrl");
-
-      if (justLoggedIn) {
-        // Just logged in - redirect to requested page or home
-        router.replace(returnUrl || "/");
-        setJustLoggedIn(false);
-      } else if (!returnUrl) {
-        // Already authenticated and no return URL - user manually visited /login
-        // Redirect them to home
-        router.replace("/");
-      }
-    }
-  }, [mounted, isAuthenticated, justLoggedIn, searchParams, router]);
-
-  // If auth is disabled, redirect to home
-  useEffect(() => {
-    if (!authEnabled) {
-      router.replace("/");
-    }
-  }, [authEnabled, router]);
-
-  if (!authEnabled) {
+  if (!isAuthEnabled) {
     return null;
   }
 
@@ -251,7 +239,7 @@ export default function LoginPage() {
             </form>
 
             {/* OAuth Providers */}
-            {(hasGoogle || hasGitHub || hasDiscord || hasCustomOidc) && (
+            {(providers.hasAny || oidc.enabled) && (
               <>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
@@ -265,7 +253,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {hasGoogle && (
+                  {providers.google && (
                     <Button
                       variant="outline"
                       className="w-full"
@@ -278,7 +266,7 @@ export default function LoginPage() {
                     </Button>
                   )}
 
-                  {hasGitHub && (
+                  {providers.github && (
                     <Button
                       variant="outline"
                       className="w-full"
@@ -291,7 +279,7 @@ export default function LoginPage() {
                     </Button>
                   )}
 
-                  {hasDiscord && (
+                  {providers.discord && (
                     <Button
                       variant="outline"
                       className="w-full"
@@ -304,7 +292,7 @@ export default function LoginPage() {
                     </Button>
                   )}
 
-                  {hasCustomOidc && (
+                  {oidc.enabled && (
                     <Button
                       variant="outline"
                       className="w-full"
@@ -312,9 +300,7 @@ export default function LoginPage() {
                       disabled={isLoading}
                     >
                       {t("auth.continueWith", {
-                        provider:
-                          process.env.NEXT_PUBLIC_CUSTOM_OIDC_NAME ||
-                          t("auth.provider.customOidc"),
+                        provider: oidc.name || t("auth.provider.customOidc"),
                       })}
                     </Button>
                   )}
@@ -323,7 +309,7 @@ export default function LoginPage() {
             )}
 
             {/* Continue as Guest */}
-            {guestAccessAllowed && (
+            {allowGuest && (
               <>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
@@ -351,7 +337,7 @@ export default function LoginPage() {
             )}
 
             {/* Register Link */}
-            {registrationAllowed && (
+            {allowRegistration && (
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 {t("auth.noAccountYet")}{" "}
                 <Link

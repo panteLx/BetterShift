@@ -5,6 +5,8 @@ import { getMessages, getLocale } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { AuthProvider } from "@/components/auth-provider";
+import { PublicConfigProvider } from "@/components/public-config-provider";
+import { getPublicConfig } from "@/lib/public-config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -63,9 +65,18 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const publicConfig = getPublicConfig();
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        {/* Inject public config for immediate client-side access (zero latency) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__PUBLIC_CONFIG__=${JSON.stringify(publicConfig)};`,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
@@ -76,7 +87,9 @@ export default async function RootLayout({
           disableTransitionOnChange={false}
         >
           <NextIntlClientProvider messages={messages} locale={locale}>
-            <AuthProvider>{children}</AuthProvider>
+            <PublicConfigProvider initialConfig={publicConfig}>
+              <AuthProvider>{children}</AuthProvider>
+            </PublicConfigProvider>
             <ThemedToaster />
           </NextIntlClientProvider>
         </ThemeProvider>
