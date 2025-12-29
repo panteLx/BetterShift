@@ -7,7 +7,7 @@ import {
   calendarNotes,
 } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import {
   canViewCalendar,
   canManageCalendar,

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 // GET all presets for a calendar

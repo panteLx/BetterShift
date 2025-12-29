@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { jsPDF } from "jspdf";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
 import { rateLimit } from "@/lib/rate-limiter";
 

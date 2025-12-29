@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { dismissCalendar } from "@/lib/auth/permissions";
 import { eventEmitter } from "@/lib/event-emitter";
 

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import ICAL from "ical.js";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
 
 export async function GET(

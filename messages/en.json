@@ -72,6 +72,8 @@
     "createDescription": "Create a new calendar to organize your shifts",
     "selectDescription": "Choose a calendar to manage your shifts",
     "name": "Calendar Name",
+    "myCalendars": "My Calendars",
+    "sharedCalendars": "Shared Calendars",
     "select": "Your BetterShift Calendar",
     "deleteCalendar": "Delete Calendar",
     "deleteWarning": "All shifts, presets and notes will also be deleted.",
@@ -431,7 +433,16 @@
       "github": "GitHub",
       "discord": "Discord",
       "customOidc": "SSO"
-    }
+    },
+    "activeSessions": "Active Sessions",
+    "activeSessionsDescription": "Manage your logged-in devices and sessions",
+    "noActiveSessions": "No active sessions",
+    "browser": "Browser",
+    "operatingSystem": "OS",
+    "ipAddress": "IP Address",
+    "lastActive": "Last active",
+    "logoutAllDevices": "Logout from all other devices",
+    "sessionsRevokedCount": "Logged out from {count} device(s)"
   },
   "guest": {
     "viewingAsGuest": "You are viewing as guest",

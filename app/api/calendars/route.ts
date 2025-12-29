@@ -7,7 +7,7 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 import { sql, eq, or, and } from "drizzle-orm";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { rateLimit } from "@/lib/rate-limiter";

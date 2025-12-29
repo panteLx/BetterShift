@@ -6,10 +6,12 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useConnectedAccounts } from "@/hooks/useConnectedAccounts";
+import { useSessions } from "@/hooks/useSessions";
 import { signOut } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UAParser } from "ua-parser-js";
 import {
   Card,
   CardContent,
@@ -21,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AuthHeader } from "@/components/auth-header";
+import { Smartphone, Monitor, Tablet, HelpCircle, LogOut } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
 import { ProfileContentSkeleton } from "@/components/skeletons/profile-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
@@ -45,6 +48,11 @@ export default function ProfilePage() {
   const { user, isLoading, refetch } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
   const { accounts, isLoading: accountsLoading } = useConnectedAccounts();
+  const {
+    sessions,
+    isLoading: sessionsLoading,
+    revokeAllSessions,
+  } = useSessions();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -347,6 +355,74 @@ export default function ProfilePage() {
     }
   };
 
+  const handleRevokeAllSessions = async () => {
+    const result = await revokeAllSessions();
+
+    if (result.success) {
+      toast.success(
+        t("auth.sessionsRevokedCount", { count: result.revokedCount || 0 })
+      );
+    } else {
+      toast.error(result.error || t("common.error"));
+    }
+  };
+
+  // Parse user agent to get device info
+  const parseUserAgent = (userAgent: string | null | undefined) => {
+    if (!userAgent) {
+      return {
+        browser: "Unknown Browser",
+        os: "Unknown OS",
+        deviceType: "unknown" as const,
+        deviceName: "Unknown Device",
+      };
+    }
+
+    const parser = new UAParser(userAgent);
+    const result = parser.getResult();
+
+    const browser = result.browser.name
+      ? `${result.browser.name}${
+          result.browser.version ? ` ${result.browser.version}` : ""
+        }`
+      : "Unknown Browser";
+    const os = result.os.name
+      ? `${result.os.name}${result.os.version ? ` ${result.os.version}` : ""}`
+      : "Unknown OS";
+
+    let deviceType: "desktop" | "mobile" | "tablet" | "unknown" = "unknown";
+    if (result.device.type === "mobile") {
+      deviceType = "mobile";
+    } else if (result.device.type === "tablet") {
+      deviceType = "tablet";
+    } else if (result.device.type === undefined && result.os.name) {
+      // Desktop devices typically don't have a device.type
+      deviceType = "desktop";
+    }
+
+    return {
+      browser,
+      os,
+      deviceType,
+      deviceName: `${result.browser.name || "Unknown"} on ${
+        result.os.name || "Unknown"
+      }`,
+    };
+  };
+
+  const getDeviceIcon = (deviceType: string) => {
+    switch (deviceType) {
+      case "mobile":
+        return <Smartphone className="h-5 w-5" />;
+      case "tablet":
+        return <Tablet className="h-5 w-5" />;
+      case "desktop":
+        return <Monitor className="h-5 w-5" />;
+      default:
+        return <HelpCircle className="h-5 w-5" />;
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <AuthHeader showUserMenu />
@@ -581,6 +657,88 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Active Sessions */}
+            <Card className="border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      {t("auth.activeSessions")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("auth.activeSessionsDescription")}
+                    </CardDescription>
+                  </div>
+                  {sessions.length > 1 && !sessionsLoading && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRevokeAllSessions}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {t("auth.logoutAllDevices")}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {sessionsLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("common.loading")}
+                  </p>
+                ) : sessions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("auth.noActiveSessions")}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {sessions.map((session) => {
+                      const deviceInfo = parseUserAgent(session.userAgent);
+
+                      return (
+                        <div
+                          key={session.id}
+                          className="flex items-start gap-3 rounded-lg border border-border/50 p-3 transition-colors"
+                        >
+                          <div className="mt-0.5 text-muted-foreground">
+                            {getDeviceIcon(deviceInfo.deviceType)}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium truncate">
+                                {deviceInfo.deviceName}
+                              </p>
+                            </div>
+                            <div className="text-xs text-muted-foreground space-y-0.5">
+                              <p className="truncate">
+                                {t("auth.browser")}: {deviceInfo.browser}
+                              </p>
+                              <p className="truncate">
+                                {t("auth.operatingSystem")}: {deviceInfo.os}
+                              </p>
+                              {session.ipAddress && (
+                                <p className="truncate">
+                                  {t("auth.ipAddress")}: {session.ipAddress}
+                                </p>
+                              )}
+                              <p>
+                                {t("auth.lastActive")}:{" "}
+                                {new Intl.DateTimeFormat(undefined, {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                }).format(new Date(session.updatedAt))}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

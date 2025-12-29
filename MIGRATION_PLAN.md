@@ -1109,58 +1109,97 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 **Goal**: Give users visibility and control over their active sessions.
 
+**Status**: ✅ **COMPLETED** (29. Dezember 2025)
+
 **Audit Logging**:
 
-- [ ] **Sessions revoked** - Session management API
+- [x] **Sessions revoked** - Session management API
 
   - Action: `"auth.session.revoked"`
-  - Metadata: `{ revokedBy: 'user' | 'password_change' | 'admin' }`
-  - Integrate into session revocation endpoints below
+  - Metadata: `{ revokedBy: 'user' | 'password_change' | 'admin', count: number }`
+  - Integrated into session revocation (bulk revocation only)
 
-- [ ] Database Query Helper
-  - [ ] Create `lib/auth/sessions.ts`
-    - `getUserSessions(userId)` - Fetch all active sessions for user
-    - `revokeSession(sessionId)` - Invalidate specific session
-    - `revokeAllSessions(userId, exceptCurrent?)` - Logout from all devices
-    - Parse user agent for device/browser info
-- [ ] Profile Page - Sessions Tab
-  - [ ] Update `app/profile/page.tsx`
-    - Add "Active Sessions" section
-    - Show table/list of sessions:
-      - Device/Browser (parsed from user agent)
-      - IP Address (with geolocation if available)
-      - Last Activity timestamp
-      - "Current Session" badge
-      - "Revoke" button per session
-    - Add "Logout from All Devices" button
-    - Show loading states during revocation
-- [ ] Session Revocation API
-  - [ ] Create `app/api/auth/sessions/route.ts`
-    - GET: List user's active sessions
-    - DELETE: Revoke all sessions (except current, optional)
-  - [ ] Create `app/api/auth/sessions/[id]/route.ts`
-    - DELETE: Revoke specific session
-- [ ] Auto-Logout on Password Change
-  - [ ] Update `app/api/auth/change-password/route.ts`
-    - After successful password change, invalidate all sessions
-    - Keep current session active (user stays logged in)
-    - Show toast: "Password changed. All other sessions logged out."
-- [ ] Security Alerts (Optional)
-  - [ ] New login notification
-    - Show toast on next visit: "New login from [Device] at [Time]"
-    - Store in session metadata or separate table
-    - "Was this you?" with "Yes" / "Secure my account" buttons
-  - [ ] Suspicious activity detection (future)
-    - Login from unusual location
-    - Multiple failed login attempts
-    - Session from different country
+- [x] Better Auth Integration
+  - [x] Migrated from custom API routes to Better Auth client methods
+    - Uses `authClient.listSessions()` to fetch active sessions
+    - Uses `authClient.revokeOtherSessions()` to logout from all other devices
+    - Session ID comparison via cookie (`better-auth.session_token`)
+  - [x] Updated `lib/auth/sessions.ts`
+    - `getUserSessions(userId, currentSessionId?)` - Server-side session listing with device info parsing
+    - `revokeAllSessions(userId, exceptCurrent?)` - Server-side bulk revocation for API routes
+    - Removed `revokeSession(sessionId)` and `getSessionUserId()` - no longer needed
+    - Parse user agent with `ua-parser-js` (browser, OS, device type)
+    - Device icons: Desktop/Mobile/Tablet/Unknown
+- [x] Profile Page - Sessions Section
+  - [x] Updated `app/profile/page.tsx`
+    - Added "Active Sessions" card between "Connected Accounts" and "Danger Zone"
+    - Card-list design (prettier than table, mobile-optimized)
+    - Shows for each session:
+      - Device icon (Desktop/Mobile/Tablet)
+      - Device name parsed with UAParser (e.g., "Chrome 120 on Windows 10")
+      - Browser + OS details
+      - IP address
+      - Last active timestamp (formatted with Intl.DateTimeFormat)
+      - "Current Device" badge (blue, primary color)
+    - "Logout from All Devices" button in card header (only shown if >1 session)
+    - Uses `authClient.revokeOtherSessions()` - prevents accidental self-revocation
+    - Loading states during fetch
+    - Empty state if no sessions
+    - Current session highlighted with primary border + badge
+    - **No individual session revocation** - only bulk "revoke all other sessions" to prevent users from accidentally logging themselves out
+- [x] Session Revocation API (Simplified)
+  - [x] Updated `app/api/auth/sessions/route.ts`
+    - GET: List user's active sessions with parsed device info (uses Better Auth `auth.api.getSession()`)
+    - DELETE: Revoke all sessions except current (uses Better Auth bulk revocation)
+  - [x] **Removed** `app/api/auth/sessions/[id]/route.ts`
+    - No longer needed - individual session revocation removed
+    - Better Auth client handles session management directly
+- [x] Auto-Logout on Password Change
+  - [x] Updated `app/api/auth/change-password/route.ts`
+    - After successful password change, invalidate all sessions except current
+    - Current session stays active (user remains logged in)
+    - Returns `sessionsRevoked` count in response
+    - Audit log event with `revokedBy: "password_change"` + session count
+- [x] Session Hook
+  - [x] Updated `hooks/useSessions.ts`
+    - Uses Better Auth client methods internally
+    - `sessions` - Array of SessionWithDevice objects from Better Auth
+    - `isLoading` - Loading state
+    - `error` - Error message
+    - `refetch()` - Reload sessions
+    - `revokeAllSessions()` - Revoke all except current using `authClient.revokeOtherSessions()`
+    - **Removed** `revokeSession(id)` - individual session revocation no longer supported
+- [x] Translations
+  - [x] English (`messages/en.json`)
+  - [x] German (`messages/de.json`)
+  - [x] Italian (`messages/it.json`)
+  - Added keys:
+    - `auth.activeSessions` - "Active Sessions"
+    - `auth.activeSessionsDescription` - Description text
+    - `auth.noActiveSessions` - Empty state
+    - `auth.browser` - "Browser"
+    - `auth.operatingSystem` - "OS"
+    - `auth.ipAddress` - "IP Address"
+    - `auth.lastActive` - "Last active"
+    - `auth.logoutAllDevices` - Bulk revoke button
+    - `auth.sessionsRevokedCount` - Success toast with count
+  - **Removed** keys (no longer used):
+    - `auth.revokeSession` - Individual session revocation removed
+    - `auth.sessionRevoked` - Individual revocation toast removed
 
 **Implementation Notes**:
 
-- Use Better Auth's session table (`session` table already exists)
-- `ipAddress` and `userAgent` fields already available in schema
-- Parse user agent with `ua-parser-js` or similar library
-- Consider IP geolocation API (optional, e.g., `ipapi.co`)
+- Uses Better Auth's built-in session management (`authClient.listSessions()`, `authClient.revokeOtherSessions()`)
+- User agent parsed with `ua-parser-js` on client-side (~60KB library, already in project)
+- Device type detection: mobile, tablet, desktop, unknown
+- Session identification: Compares session token from Better Auth with cookie value
+- Card-list design for better mobile UX vs table layout
+- Current session protection: Only "revoke all other sessions" available (no individual revocation to prevent self-logout)
+- All sessions revoked on password change (except current) for security
+- Audit logging: Bulk revocation logged with appropriate metadata
+- No IP geolocation (KISS principle)
+- No custom session names (future enhancement if needed)
+- **Simplified architecture**: Removed custom session revocation logic, relies entirely on Better Auth client methods
 
 ### 4.4 CSRF Protection & Security Review
 

@@ -62,14 +62,45 @@ npm run db:studio    # Open Drizzle Studio GUI
 
 **Guest access**: When auth is enabled, unauthenticated users (`userId = null`) can access calendars with `guestPermission != "none"`. Use `allowGuestAccess()` to check if feature is enabled.
 
-**Session handling** in API routes:
+**Session utilities** in [`lib/auth/sessions.ts`](lib/auth/sessions.ts):
 
 ```typescript
-import { getSessionUser } from "@/lib/auth/session";
+import {
+  getSessionUser,
+  getUserSessions,
+  revokeAllSessions,
+} from "@/lib/auth/sessions";
 
+// Get current user from request (API routes)
 const user = await getSessionUser(request.headers);
-const hasAccess = await canViewCalendar(user?.id, calendarId);
+
+// Session management (API routes only - for bulk operations)
+const sessions = await getUserSessions(userId, currentSessionId);
+await revokeAllSessions(userId, exceptCurrentId); // Bulk revoke all except current
 ```
+
+**Client-side session management**: Use Better Auth's built-in client functions:
+
+```typescript
+import { authClient } from "@/lib/auth/client";
+
+// List all active sessions for current user
+const sessions = await authClient.listSessions();
+
+// Revoke all other sessions (except current)
+await authClient.revokeOtherSessions();
+```
+
+**Session management hook** in [`hooks/useSessions.ts`](hooks/useSessions.ts):
+
+```typescript
+const { sessions, isLoading, revokeAllSessions } = useSessions();
+
+// Revoke all other sessions
+await revokeAllSessions(); // Uses authClient.revokeOtherSessions() internally
+```
+
+**Note**: Individual session revocation is not supported to prevent users from accidentally revoking their own active session. Only "revoke all other sessions" is available.
 
 **UI permission checks**: Use `useCalendarPermission(calendarId)` hook:
 
@@ -249,7 +280,7 @@ Pre-built images: `ghcr.io/pantelx/bettershift:latest` (stable), `:dev` (bleedin
 ```typescript
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { checkPermission } from "@/lib/auth/permissions";
 import { eventEmitter } from "@/lib/event-emitter";
 
@@ -313,7 +344,9 @@ See [`hooks/useShifts.ts`](hooks/useShifts.ts) `createShift` function:
 - [`app/page.tsx`](app/page.tsx) - Main calendar view (1300+ lines, complex state management)
 - [`lib/db/schema.ts`](lib/db/schema.ts) - Complete database schema (Better Auth + app tables)
 - [`lib/auth/permissions.ts`](lib/auth/permissions.ts) - Permission checks and calendar access logic
-- [`lib/public-config.ts`](lib/public-config.ts) - Server-side public config definition (no NEXT*PUBLIC*)
+- [`lib/auth/sessions.ts`](lib/auth/sessions.ts) - Session management & current user utilities (request context + Better Auth integration)
+- [`hooks/useSessions.ts`](hooks/useSessions.ts) - Client-side session management hook (uses Better Auth client)
+- [`lib/public-config.ts`](lib/public-config.ts) - Server-side public config definition (no NEXT*PUBLIC*\*)
 - [`hooks/usePublicConfig.ts`](hooks/usePublicConfig.ts) - Client-side config access hook
 - [`hooks/useAuthFeatures.ts`](hooks/useAuthFeatures.ts) - Auth-specific feature flags hook
 - [`components/calendar-grid.tsx`](components/calendar-grid.tsx) - Core calendar rendering with shift display

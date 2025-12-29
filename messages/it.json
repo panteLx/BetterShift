@@ -72,6 +72,8 @@
     "createDescription": "Crea un nuovo calendario per organizzare i tuoi turni",
     "selectDescription": "Scegli un calendario per gestire i tuoi turni",
     "name": "Nome Calendario",
+    "myCalendars": "I Miei Calendari",
+    "sharedCalendars": "Calendari Condivisi",
     "select": "Il tuo Calendario BetterShift",
     "deleteCalendar": "Elimina Calendario",
     "deleteWarning": "Anche tutti i turni, i preset e le note verranno eliminati.",
@@ -431,7 +433,16 @@
       "github": "GitHub",
       "discord": "Discord",
       "customOidc": "SSO"
-    }
+    },
+    "activeSessions": "Sessioni Attive",
+    "activeSessionsDescription": "Gestisci i tuoi dispositivi e sessioni attive",
+    "noActiveSessions": "Nessuna sessione attiva",
+    "browser": "Browser",
+    "operatingSystem": "Sistema Operativo",
+    "ipAddress": "Indirizzo IP",
+    "lastActive": "Ultima attività",
+    "logoutAllDevices": "Disconnetti da tutti gli altri dispositivi",
+    "sessionsRevokedCount": "Disconnesso da {count} dispositivo/i"
   },
   "guest": {
     "viewingAsGuest": "Stai visualizzando come ospite",

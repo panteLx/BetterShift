@@ -72,6 +72,8 @@
     "createDescription": "Erstelle einen neuen Kalender, um deine Schichten zu organisieren",
     "selectDescription": "Wähle einen Kalender aus, um deine Schichten zu verwalten",
     "name": "Kalendername",
+    "myCalendars": "Meine Kalender",
+    "sharedCalendars": "Geteilte Kalender",
     "select": "Dein BetterShift Kalender",
     "deleteCalendar": "Kalender löschen",
     "deleteWarning": "Alle Schichten, Presets und Notizen werden ebenfalls gelöscht.",
@@ -431,7 +433,16 @@
       "github": "GitHub",
       "discord": "Discord",
       "customOidc": "SSO"
-    }
+    },
+    "activeSessions": "Aktive Sitzungen",
+    "activeSessionsDescription": "Verwalte deine angemeldeten Geräte und Sitzungen",
+    "noActiveSessions": "Keine aktiven Sitzungen",
+    "browser": "Browser",
+    "operatingSystem": "Betriebssystem",
+    "ipAddress": "IP-Adresse",
+    "lastActive": "Zuletzt aktiv",
+    "logoutAllDevices": "Von allen anderen Geräten abmelden",
+    "sessionsRevokedCount": "Von {count} Gerät(en) abgemeldet"
   },
   "guest": {
     "viewingAsGuest": "Du betrachtest als Gast",

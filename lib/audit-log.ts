@@ -49,7 +49,8 @@ export interface AccountDeletedMetadata {
 
 export interface SessionRevokedMetadata {
   revokedBy: "user" | "password_change" | "admin";
-  sessionId: string;
+  sessionId?: string; // For single session revocation
+  count?: number; // For bulk revocation
 }
 
 export interface CalendarCreatedMetadata {

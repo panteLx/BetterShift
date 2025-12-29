@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
 import { rateLimit } from "@/lib/rate-limiter";
 

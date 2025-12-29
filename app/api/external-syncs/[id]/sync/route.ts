@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canEditCalendar } from "@/lib/auth/permissions";
 import {
   expandRecurringEvents,

@@ -17,8 +17,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Bell, Copy, Settings, Lock } from "lucide-react";
+import {
+  Plus,
+  Bell,
+  Copy,
+  Settings,
+  Lock,
+  User,
+  Users,
+  Globe,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 
 interface CalendarSelectorProps {
   calendars: CalendarWithCount[];
@@ -45,6 +55,7 @@ export function CalendarSelector({
 }: CalendarSelectorProps) {
   const t = useTranslations();
   const { isGuest, user } = useAuth();
+  const { isAuthEnabled } = useAuthFeatures();
 
   // Filter calendars: guests only see calendars with read or write permission
   const visibleCalendars = isGuest
@@ -56,6 +67,22 @@ export function CalendarSelector({
   const selectedCalendar = visibleCalendars.find((c) => c.id === selectedId);
   const canCompare = visibleCalendars.length >= 2;
 
+  // Group calendars by ownership
+  const ownCalendars = visibleCalendars.filter(
+    (c) => isAuthEnabled && user && !isGuest && c.ownerId === user.id
+  );
+  const sharedCalendars = visibleCalendars.filter(
+    (c) =>
+      isAuthEnabled &&
+      user &&
+      !isGuest &&
+      c.ownerId !== user.id &&
+      (c.sharePermission || c.isSubscribed)
+  );
+  // For guests or when auth is disabled, show all visible calendars
+  const guestAccessibleCalendars =
+    !isAuthEnabled || isGuest ? visibleCalendars : [];
+
   // Check if selected calendar is read-only
   const isReadOnly =
     (isGuest && selectedCalendar?.guestPermission === "read") ||
@@ -65,7 +92,48 @@ export function CalendarSelector({
       selectedCalendar?.guestPermission === "read");
 
   // Check if user is owner (can access settings)
-  const isOwner = user && selectedCalendar?.ownerId === user.id;
+  // When auth is disabled, everyone has owner permissions
+  const isOwner = isAuthEnabled
+    ? user && selectedCalendar?.ownerId === user.id
+    : true;
+
+  // Helper function to render calendar icon
+  const getCalendarIcon = (calendar: CalendarWithCount) => {
+    if (!isAuthEnabled || !user) {
+      return <Globe className="h-3.5 w-3.5 text-muted-foreground/60" />;
+    }
+    if (calendar.ownerId === user.id) {
+      return <User className="h-3.5 w-3.5 text-muted-foreground/60" />;
+    }
+    return <Users className="h-3.5 w-3.5 text-muted-foreground/60" />;
+  };
+
+  // Helper function to render calendar item
+  const renderCalendarItem = (calendar: CalendarWithCount) => {
+    const isCalendarReadOnly =
+      (isGuest && calendar.guestPermission === "read") ||
+      (!isGuest && calendar.sharePermission === "read") ||
+      (!isGuest &&
+        calendar.isSubscribed &&
+        calendar.guestPermission === "read");
+
+    return (
+      <SelectItem key={calendar.id} value={calendar.id}>
+        <div className="flex items-center gap-2.5 w-full">
+          {isCalendarReadOnly ? (
+            <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+          ) : (
+            getCalendarIcon(calendar)
+          )}
+          <div
+            className="w-3 h-3 rounded-full flex-shrink-0"
+            style={{ backgroundColor: calendar.color }}
+          />
+          <span className="flex-1 truncate">{calendar.name}</span>
+        </div>
+      </SelectItem>
+    );
+  };
 
   // Desktop: Compact icon-based layout
   if (variant === "desktop") {
@@ -75,52 +143,62 @@ export function CalendarSelector({
           <SelectTrigger className="flex-1 h-9 sm:h-10 text-sm">
             {selectedCalendar ? (
               <div className="flex items-center gap-2 flex-1">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: selectedCalendar.color }}
-                />
-                <span className="truncate">{selectedCalendar.name}</span>
-                {isReadOnly && (
+                {isReadOnly ? (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
+                        <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>{t("guest.readOnlyAccess")}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                ) : (
+                  getCalendarIcon(selectedCalendar)
                 )}
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: selectedCalendar.color }}
+                />
+                <span className="truncate">{selectedCalendar.name}</span>
               </div>
             ) : (
               <SelectValue placeholder={t("calendar.title")} />
             )}
           </SelectTrigger>
           <SelectContent>
-            {visibleCalendars.map((calendar) => {
-              const isCalendarReadOnly =
-                (isGuest && calendar.guestPermission === "read") ||
-                (!isGuest && calendar.sharePermission === "read") ||
-                (!isGuest &&
-                  calendar.isSubscribed &&
-                  calendar.guestPermission === "read");
+            {/* Own Calendars */}
+            {isAuthEnabled && ownCalendars.length > 0 && (
+              <>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <User className="h-3 w-3" />
+                  {t("calendar.myCalendars", { default: "Meine Kalender" })}
+                </div>
+                {ownCalendars.map(renderCalendarItem)}
+              </>
+            )}
 
-              return (
-                <SelectItem key={calendar.id} value={calendar.id}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: calendar.color }}
-                    />
-                    <span className="flex-1">{calendar.name}</span>
-                    {isCalendarReadOnly && (
-                      <Lock className="h-3 w-3 text-muted-foreground ml-2" />
-                    )}
-                  </div>
-                </SelectItem>
-              );
-            })}
+            {/* Shared Calendars */}
+            {isAuthEnabled && sharedCalendars.length > 0 && (
+              <>
+                {ownCalendars.length > 0 && <Separator className="my-1" />}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Users className="h-3 w-3" />
+                  {t("calendar.sharedCalendars", {
+                    default: "Geteilte Kalender",
+                  })}
+                </div>
+                {sharedCalendars.map(renderCalendarItem)}
+              </>
+            )}
+
+            {/* Guest Accessible Calendars (when auth disabled or user is guest) */}
+            {(!isAuthEnabled || isGuest) &&
+              guestAccessibleCalendars.length > 0 && (
+                <>{guestAccessibleCalendars.map(renderCalendarItem)}</>
+              )}
+
             {!isGuest && (
               <>
                 <Separator className="my-1" />
@@ -196,39 +274,53 @@ export function CalendarSelector({
         <SelectTrigger className="w-full h-10 text-sm">
           {selectedCalendar ? (
             <div className="flex items-center gap-2 flex-1">
+              {isReadOnly ? (
+                <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+              ) : (
+                getCalendarIcon(selectedCalendar)
+              )}
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: selectedCalendar.color }}
               />
               <span className="truncate">{selectedCalendar.name}</span>
-              {isReadOnly && (
-                <Lock className="h-3 w-3 text-muted-foreground ml-auto" />
-              )}
             </div>
           ) : (
             <SelectValue placeholder={t("calendar.title")} />
           )}
         </SelectTrigger>
         <SelectContent>
-          {visibleCalendars.map((calendar) => {
-            const isCalendarReadOnly =
-              isGuest && calendar.guestPermission === "read";
+          {/* Own Calendars */}
+          {isAuthEnabled && ownCalendars.length > 0 && (
+            <>
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <User className="h-3 w-3" />
+                {t("calendar.myCalendars", { default: "Meine Kalender" })}
+              </div>
+              {ownCalendars.map(renderCalendarItem)}
+            </>
+          )}
 
-            return (
-              <SelectItem key={calendar.id} value={calendar.id}>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: calendar.color }}
-                  />
-                  <span className="flex-1">{calendar.name}</span>
-                  {isCalendarReadOnly && (
-                    <Lock className="h-3 w-3 text-muted-foreground ml-2" />
-                  )}
-                </div>
-              </SelectItem>
-            );
-          })}
+          {/* Shared Calendars */}
+          {isAuthEnabled && sharedCalendars.length > 0 && (
+            <>
+              {ownCalendars.length > 0 && <Separator className="my-1" />}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Users className="h-3 w-3" />
+                {t("calendar.sharedCalendars", {
+                  default: "Geteilte Kalender",
+                })}
+              </div>
+              {sharedCalendars.map(renderCalendarItem)}
+            </>
+          )}
+
+          {/* Guest Accessible Calendars (when auth disabled or user is guest) */}
+          {(!isAuthEnabled || isGuest) &&
+            guestAccessibleCalendars.length > 0 && (
+              <>{guestAccessibleCalendars.map(renderCalendarItem)}</>
+            )}
+
           {!isGuest && (
             <>
               <Separator className="my-1" />

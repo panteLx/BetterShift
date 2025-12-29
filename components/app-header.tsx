@@ -7,6 +7,7 @@ import { CalendarSelector } from "@/components/calendar-selector";
 import { PresetSelector } from "@/components/preset-selector";
 import { UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -79,6 +80,7 @@ export function AppHeader({
   const t = useTranslations();
   const locale = useLocale();
   const { isGuest } = useAuth();
+  const { isAuthEnabled } = useAuthFeatures();
   const { versionInfo } = useVersionUpdateCheck();
   const [showChangelog, setShowChangelog] = useState(false);
 
@@ -164,16 +166,19 @@ export function AppHeader({
                 </div>
 
                 {/* Divider */}
-                <Separator orientation="vertical" className="h-8" />
+                {isAuthEnabled && (
+                  <Separator orientation="vertical" className="h-8" />
+                )}
 
                 {/* User Menu or Guest Login Button */}
-                {isGuest ? (
-                  <Button asChild variant="default" size="sm">
-                    <Link href="/login">{t("auth.login")}</Link>
-                  </Button>
-                ) : (
-                  <UserMenu />
-                )}
+                {isAuthEnabled &&
+                  (isGuest ? (
+                    <Button asChild variant="default" size="sm">
+                      <Link href="/login">{t("auth.login")}</Link>
+                    </Button>
+                  ) : (
+                    <UserMenu />
+                  ))}
               </motion.div>
             </div>
 
@@ -286,20 +291,22 @@ export function AppHeader({
               </button>
 
               {/* User Menu - Right */}
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-                className="shrink-0"
-              >
-                {isGuest ? (
-                  <Button asChild variant="default" size="sm">
-                    <Link href="/login">{t("auth.login")}</Link>
-                  </Button>
-                ) : (
-                  <UserMenu />
-                )}
-              </motion.div>
+              {isAuthEnabled && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                  className="shrink-0"
+                >
+                  {isGuest ? (
+                    <Button asChild variant="default" size="sm">
+                      <Link href="/login">{t("auth.login")}</Link>
+                    </Button>
+                  ) : (
+                    <UserMenu />
+                  )}
+                </motion.div>
+              )}
             </div>
 
             {/* Preset Selector */}

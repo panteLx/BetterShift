@@ -7,7 +7,7 @@ import {
   calendars,
 } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
 import { calculateShiftDuration } from "@/lib/date-utils";
 import {

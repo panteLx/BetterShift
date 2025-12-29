@@ -5,7 +5,7 @@ import {
   calendarShares,
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { eq, and, or, ne, isNull } from "drizzle-orm";
 import { undismissCalendar } from "@/lib/auth/permissions";
 import { eventEmitter } from "@/lib/event-emitter";

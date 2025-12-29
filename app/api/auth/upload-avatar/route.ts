@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { rateLimit } from "@/lib/rate-limiter";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "avatars");

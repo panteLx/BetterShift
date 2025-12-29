@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { syncLogs, calendars } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
 export async function GET(request: NextRequest) {
