@@ -19,10 +19,13 @@ import {
   SESSION_MAX_AGE,
   SESSION_UPDATE_AGE,
   BETTER_AUTH_TRUSTED_ORIGINS,
+  BETTER_AUTH_URL,
 } from "@/lib/auth/env";
 
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL,
+  // Base URL configuration (critical for reverse proxy setups)
+  baseURL: BETTER_AUTH_URL,
+  basePath: "/api/auth",
 
   database: drizzleAdapter(db, {
     provider: "sqlite",
@@ -96,8 +99,6 @@ export const auth = betterAuth({
   advanced: {
     // Enable experimental joins for better performance
     useSecureCookies: process.env.NODE_ENV === "production",
-    // Trust proxy headers for reverse proxy setups (e.g., Cloudflare Tunnels)
-    trustProxy: true,
   },
 
   // User registration settings
