@@ -1873,55 +1873,19 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ---
 
-## Phase 7: Data Migration
-
-### 7.1 Migration Script
-
-- [ ] Create `lib/migrate-to-auth.ts` script
-- [ ] Generate default admin user for existing data
-  - Email: `admin@localhost`
-  - Set password or force password reset
-- [ ] Assign all existing calendars to admin user
-- [ ] Mark all calendars as owned (no shares initially)
-
-### 7.2 Migration Execution
-
-- [ ] Backup database before migration
-- [ ] Generate Drizzle migration files
-  ```bash
-  npx drizzle-kit generate
-  ```
-- [ ] Apply migrations to database
-  ```bash
-  npx drizzle-kit migrate
-  ```
-- [ ] Run data migration script
-  ```bash
-  node lib/migrate-to-auth.js
-  ```
-- [ ] Verify all calendars have owners
-- [ ] Test auth system with test user
-
-### 7.3 Backwards Compatibility
-
-- [ ] If `AUTH_ENABLED=false`:
-  - Skip authentication checks
-  - Show all calendars to everyone
-  - Hide user-related UI
-  - Use "single-user mode" behavior
-- [ ] Add migration guide to README
-
-### 7.4 Runtime Auth Toggle Handling
+## Phase 7: Data Migration - Orphaned Calendars on Auth Toggle
 
 **Scenario**: User creates calendars with `AUTH_ENABLED=false` (ownerId=null), then enables auth later.
 
 **Priority**: Medium (Important for self-hosted instances)
 
-**Goal**: Automatically handle orphaned calendars when auth is enabled at runtime.
+**Goal**: Automatically handle orphaned calendars when auth is enabled.
+
+- [ ] First created user becomes admin
 
 - [ ] **Admin Panel Detection & Management** (Main Solution)
 
-  - [ ] When admin logs in first time after enabling auth:
+  - [ ] When admin logs in first time after enabling auth or orphaned calendars exist:
     - Detect orphaned calendars (ownerId=null)
     - Show warning banner: "X calendars need owner assignment"
     - Link to orphaned calendar management page
@@ -1957,7 +1921,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 **Implementation Notes**:
 
-- No automatic assignment at startup (avoid surprises)
 - Admin has full control over assignment process
 - Backwards compatibility: orphaned calendars remain readable
 - Admin panel provides clear overview and bulk actions
@@ -1966,91 +1929,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ## Phase 8: UI/UX Enhancements
 
-### 8.1 Permission UI Indicators & Calendar List Updates
-
-**Priority**: Important (Before Production, Low Priority Currently)
-
-**Goal**: Show users their permission level and disable actions they cannot perform.
-
-- [ ] **Calendar Selector Enhancements**
-  - [ ] Update `components/calendar-selector.tsx`
-    - Show permission badge next to calendar name:
-      - "Owner" (blue badge)
-      - "Shared - Admin" (green badge)
-      - "Shared - Edit" (yellow badge)
-      - "Shared - Read-only" (gray badge)
-    - Add owner name tooltip: "Owned by [Name]" for shared calendars
-    - Disable/hide buttons based on permissions:
-      - Settings button: Only admin/owner
-      - Delete: Hidden for non-owners
-      - External Sync: Only write permission or higher
-    - Group calendars in dropdown:
-      - Section 1: "My Calendars"
-      - Section 2: "Shared with me"
-- [ ] **Client-Side Permission Hook**
-  - [ ] Create `hooks/useCalendarPermission.ts`
-    - `useCalendarPermission(calendarId)` → returns permission level
-    - Fetch permission from server on mount
-    - Cache result in React state
-    - Provide helper functions:
-      - `canView()`, `canEdit()`, `canManage()`, `canDelete()`
-- [ ] **Button Visibility Control**
-  - [ ] Update `components/calendar-settings-sheet.tsx`
-    - Disable "Delete Calendar" button if not owner
-    - Show "You don't have permission" message
-    - Hide password/lock settings if not admin
-  - [ ] Update `components/shift-sheet.tsx`
-    - Set form to read-only mode if permission < write
-    - Disable save/delete buttons
-    - Show banner: "Read-only access - You cannot edit shifts"
-  - [ ] Update `components/preset-manage-sheet.tsx`
-    - Disable preset editing if permission < write
-    - Hide "Add Preset" button
-    - Show read-only indicator
-  - [ ] Update `components/note-sheet.tsx`
-    - Same read-only logic as shifts
-    - Disable form inputs if permission < write
-- [ ] **Read-Only Banners**
-  - [ ] Create `components/read-only-banner.tsx`
-    - Reusable component for permission warnings
-    - Shows: "You have [permission] access to this calendar"
-    - Icon and color based on permission level
-  - [ ] Add to main calendar view (above grid)
-  - [ ] Add to sheets/dialogs where relevant
-- [ ] **Permission Badges Component**
-  - [ ] Create `components/ui/permission-badge.tsx`
-    - Reusable badge component
-    - Props: `permission`, `ownerId`, `ownerName`
-    - Variants: owner, admin, write, read
-    - Tooltip with detailed explanation
-- [ ] **Tooltips & Help Text**
-  - [ ] Add permission explanations to UI
-    - "Admin: Can manage settings and shares"
-    - "Edit: Can create and edit shifts"
-    - "Read-only: Can view calendar only"
-  - [ ] Add to calendar selector dropdown
-  - [ ] Add to share dialog (Phase 5.3)
-
-### 8.2 Permission-Based UI Actions
-
-- [ ] Hide "Delete" button if not owner
-- [ ] Disable "Settings" button if not admin
-- [ ] Show read-only banner on shared calendars
-- [ ] Disable shift editing if permission < write
-
-### 8.3 Notifications & Feedback
-
-- [ ] Show toast when calendar is shared with you
-- [ ] Notify owner when someone accepts share
-- [ ] Email notifications (optional)
-
-### 8.4 Mobile Optimization
-
-- [ ] Responsive share dialog
-- [ ] Touch-friendly permission selector
-- [ ] Mobile user search
-
-### 8.5 Loading States & Skeleton Optimization
+### 8.1 Loading States & Skeleton Optimization
 
 **Priority**: Medium (Polish & User Experience)
 
@@ -2071,7 +1950,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 - `components/calendar-grid.tsx` - Calendar grid with shifts
 - All components except header/footer
 
-#### 8.5.1 Implement Delayed Skeleton Pattern
+#### 8.1.1 Implement Delayed Skeleton Pattern
 
 **Strategy**: Use a **Delayed Skeleton Pattern with Minimum Display Time** to prevent flicker while maintaining loading feedback.
 
@@ -2119,7 +1998,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
     } as const;
     ```
 
-#### 8.5.2 Update Components to Use Delayed Loading
+#### 8.1.2 Update Components to Use Delayed Loading
 
 - [ ] **Update `app/page.tsx`**
   - [ ] Replace `loading` with `useDelayedLoading(loading)`
@@ -2141,7 +2020,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Apply delayed loading pattern consistently
   - [ ] Document exceptions (e.g., footer/header never show skeletons)
 
-#### 8.5.3 Optimistic UI for User Actions
+#### 8.1.3 Optimistic UI for User Actions
 
 **Goal**: Implement instant feedback for user interactions (no loading states).
 
@@ -2158,7 +2037,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Test preset selection has no delay
   - [ ] No loading spinners on button clicks (use disabled state instead)
 
-#### 8.5.4 Router Navigation Optimization
+#### 8.1.4 Router Navigation Optimization
 
 **Goal**: Prevent double-skeleton from router redirect chain.
 
@@ -2174,13 +2053,12 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Option C: Cache calendar selection in localStorage/cookie
   - [ ] Test each approach and implement best solution
 
-#### 8.5.5 Loading Feedback Patterns (Style Guide)
+#### 8.1.5 Loading Feedback Patterns (Style Guide)
 
 **Goal**: Standardize when to use which loading pattern across the app.
 
 - [ ] **Create Loading Pattern Documentation** (in code comments or README)
 
-  ```markdown
   ## Loading Feedback Patterns
 
   ### 1. Delayed Skeletons (Initial Page Load)
@@ -2212,7 +2090,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - **Use for**: Multi-step processes, file uploads, sync operations
   - **Examples**: Calendar export (PDF), External sync, Bulk operations
   - **Pattern**: Progress bar or percentage with cancel option
-  ```
 
 - [ ] **Apply Patterns Consistently**:
   - [ ] Audit all loading states in codebase
@@ -2220,7 +2097,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Refactor to use correct pattern
   - [ ] Remove any skeleton + spinner combos
 
-#### 8.5.6 Testing & Validation
+#### 8.1.6 Testing & Validation
 
 - [ ] **Test Slow Network Conditions**
 
@@ -2388,7 +2265,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - Active sessions count
   - Recent activity log
 
-### 9.5 Admin Panel - Access Control
+### 9.6 Admin Panel - Access Control
 
 - [ ] Add admin-only middleware check in `proxy.ts`
   - Block `/admin` routes for non-super-admin users
@@ -2397,7 +2274,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - `isSuperAdmin` check
   - Redirect non-admins to homepage
 
-### 9.6 Admin Panel UI/UX
+### 9.7 Admin Panel UI/UX
 
 - [ ] Admin panel layout: `app/admin/layout.tsx`
   - Sidebar navigation (Users, Calendars, Stats, Logs)
@@ -2436,6 +2313,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 - [ ] Update README.md
   - Auth system overview
   - Admin panel features
+  - Public/User/Token share differences
   - Environment variables
   - OIDC configuration guide
   - Migration instructions
@@ -2444,7 +2322,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - OIDC provider configuration (Google, GitHub, Discord)
   - Custom OIDC provider setup (Keycloak, Authentik, etc.)
   - Self-hosting considerations
-- [ ] Update Docker setup for auth
 
 ### 10.2 Integration Testing
 
@@ -2452,16 +2329,13 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 - [ ] Test permission system with multiple users
 - [ ] Test calendar sharing workflows
 - [ ] Test access token functionality
-- [ ] Test data migration script
 - [ ] Test backwards compatibility (AUTH_ENABLED=false)
 - [ ] Performance testing with realistic data
 - [ ] Cross-browser compatibility testing
 
 ---
 
-## Phase 11: Performance & Polish
-
-### 11.1 Performance Optimization & Permission Caching
+## Phase 11: Performance Optimizations
 
 **Priority**: Medium (Post-MVP)
 
@@ -2501,109 +2375,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Batch permission checks where possible
   - [ ] Consider prepared statements for hot paths
 
-### 11.2 SSE Updates
-
-- [ ] Emit share events via SSE
-- [ ] Real-time calendar share notifications
-- [ ] Update `instrumentation.ts` for multi-user
-
-### 11.3 Edge Cases
-
-- [ ] **Orphaned Calendars**
-  - [ ] Handle calendars with `ownerId = null` (after user deletion)
-  - [ ] Migration script assigns to admin (Phase 7.1 - one-time migration)
-  - [ ] Runtime auth toggle handling (Phase 7.4 - ongoing management)
-  - [ ] Admin panel shows orphaned calendars (Phase 9.3 - detailed implementation)
-  - [ ] Prevent creation of calendars without owner (when auth enabled)
-  - [ ] Note: See Phase 7.4 for AUTH_ENABLED toggle scenario
-- [ ] **Deleted Users**
-  - [ ] Verify cascade cleanup of:
-    - Sessions
-    - Calendar shares
-    - Audit logs (set userId to null)
-  - [ ] Handle calendar ownership: `SET NULL` (becomes orphaned)
-  - [ ] Test deletion flow end-to-end
-- [ ] **Calendar Transfer**
-  - [ ] Handle owner change (future feature)
-  - [ ] Update all related shares
-  - [ ] Notify old and new owner
-  - [ ] Transfer external sync ownership
-- [ ] **Permission Conflicts**
-  - [ ] User has multiple shares for same calendar (shouldn't happen)
-  - [ ] Resolution: Take highest permission level
-  - [ ] Add unique constraint to prevent duplicates (already done in 1.4)
-
----
-
-## Environment Variables
-
-**Note**: Currently requires duplicated variables (server + NEXT*PUBLIC* for client). Phase 2.1 will evaluate if deduplication is possible.
-
-```env
-# Auth System
-NEXT_PUBLIC_AUTH_ENABLED=true|false        # Enable/disable entire auth system
-BETTER_AUTH_SECRET=<random-secret>         # Session encryption key (use: npx @better-auth/cli secret)
-NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000  # Base URL for auth
-BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000  # Comma-separated (server-side only)
-
-# User Registration Settings
-NEXT_PUBLIC_ALLOW_USER_REGISTRATION=true|false    # Enable/disable new user signups (default: true)
-
-# Session Settings (server-side only)
-SESSION_MAX_AGE=604800                     # 7 days (in seconds)
-SESSION_UPDATE_AGE=86400                   # 1 day (in seconds)
-
-# Google OAuth (optional)
-GOOGLE_CLIENT_ID=                          # Server-side (required for auth)
-GOOGLE_CLIENT_SECRET=                      # Server-side (required for auth)
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=              # Client-side (required for UI detection)
-
-# GitHub OAuth (optional)
-GITHUB_CLIENT_ID=                          # Server-side (required for auth)
-GITHUB_CLIENT_SECRET=                      # Server-side (required for auth)
-NEXT_PUBLIC_GITHUB_CLIENT_ID=              # Client-side (required for UI detection)
-
-# Discord OAuth (optional)
-DISCORD_CLIENT_ID=                         # Server-side (required for auth)
-DISCORD_CLIENT_SECRET=                     # Server-side (required for auth)
-NEXT_PUBLIC_DISCORD_CLIENT_ID=             # Client-side (required for UI detection)
-
-# Custom OIDC Provider (optional)
-CUSTOM_OIDC_ENABLED=false                  # Server-side (required for auth)
-CUSTOM_OIDC_NAME="Custom SSO"              # Display name for login button
-CUSTOM_OIDC_ISSUER=https://sso.example.com/.well-known/openid-configuration  # Discovery URL
-CUSTOM_OIDC_CLIENT_ID=                     # Server-side (required for auth)
-CUSTOM_OIDC_CLIENT_SECRET=                 # Server-side (required for auth)
-CUSTOM_OIDC_SCOPES=openid profile email    # Space separated
-
-# Client-side (required for UI detection)
-NEXT_PUBLIC_CUSTOM_OIDC_ENABLED=false
-NEXT_PUBLIC_CUSTOM_OIDC_CLIENT_ID=
-NEXT_PUBLIC_CUSTOM_OIDC_NAME="Custom SSO"
-
-# Guest Access Settings (Phase 3.4)
-NEXT_PUBLIC_ALLOW_GUEST_ACCESS=false      # Allow viewing calendars without login (default: false)
-```
-
----
-
-## Risk Assessment & Mitigation
-
-### High Risk
-
-- **Data Migration Failure**: Mitigation → Backup before migration, rollback plan
-- **Breaking Existing Instances**: Mitigation → Auth disabled by default, gradual rollout
-
-### Medium Risk
-
-- **Permission Logic Bugs**: Mitigation → Comprehensive testing, security review
-- **OIDC Configuration Complexity**: Mitigation → Detailed documentation, examples
-
-### Low Risk
-
-- **Performance Degradation**: Mitigation → Database indexes, query optimization
-- **UI Confusion**: Mitigation → Clear permission indicators, tooltips
-
 ---
 
 ## Success Criteria
@@ -2611,10 +2382,9 @@ NEXT_PUBLIC_ALLOW_GUEST_ACCESS=false      # Allow viewing calendars without logi
 - [ ] Auth can be fully disabled (single-user mode works)
 - [ ] Auth can be enabled with username/password
 - [ ] At least 2 OIDC providers working (Google + GitHub)
-- [ ] Custom OIDC provider configuration works (tested with Keycloak)
+- [ ] Custom OIDC provider configuration works
 - [ ] Calendar sharing works with all permission levels
 - [ ] Existing data migrates successfully
-- [ ] No breaking changes for existing users (when auth disabled)
 - [ ] All API routes properly protected
 - [ ] Documentation complete and clear
 - [ ] Security review passed
@@ -2629,11 +2399,10 @@ NEXT_PUBLIC_ALLOW_GUEST_ACCESS=false      # Allow viewing calendars without logi
 - **Generic OAuth plugin** required for custom OIDC providers (not built-in)
 - **CLI auto-generates** schema + relations for Drizzle (use `npx @better-auth/cli generate`)
 - **Old password system will be removed** completely (no hybrid approach)
-- **Auth disabled by default** to ensure backwards compatibility
-- **Orphaned calendars** (no owner) will be handled in migration script
+- **Auth enabled by default** to ensure security best practices
+- **First user becomes admin** on initial auth setup
+- **Orphaned calendars** (no owner) will be handled in admin panel
 - **Permission hierarchy**: Owner > Admin > Write > Read
-- **Calendar transfer** feature postponed to post-MVP
-- **Email invites** optional feature for Phase 4
 - **Environment variables** use `BETTER_AUTH_` prefix (not `AUTH_`)
 - **Discovery URL** for custom OIDC should include `/.well-known/openid-configuration`
 - **Experimental joins** optional but recommended for 2-3x performance boost

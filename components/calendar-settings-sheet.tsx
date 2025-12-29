@@ -18,6 +18,7 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { CalendarShareManagementSheet } from "@/components/calendar-share-management-sheet";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { PRESET_COLORS } from "@/lib/constants";
 import { AlertTriangle, Trash2, Download, Cloud, Users } from "lucide-react";
 import { ExportDialog } from "@/components/export-dialog";
@@ -55,6 +56,7 @@ export function CalendarSettingsSheet({
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
   const { canShare, canManage, canDelete } = useCalendarPermission(calendarId);
+  const { isAuthEnabled } = useAuthFeatures();
 
   // Use props directly as initial state, controlled by key prop on component
   const [name, setName] = useState(calendarName);
@@ -209,7 +211,7 @@ export function CalendarSettingsSheet({
             </div>
 
             {/* Manage Sharing Section */}
-            {canShare && (
+            {isAuthEnabled && canShare && (
               <div className="pt-4 mt-4 border-t border-border/50">
                 <Button
                   type="button"

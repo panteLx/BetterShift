@@ -12,7 +12,7 @@
 // Core Auth Settings
 // =============================================================================
 
-export const AUTH_ENABLED = process.env.AUTH_ENABLED === "true";
+export const AUTH_ENABLED = process.env.AUTH_ENABLED !== "false"; // Default: true
 
 export const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET || "";
 

@@ -9,7 +9,7 @@
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript 5 (strict mode)
 - **UI**: Tailwind CSS 4, shadcn/ui (Radix UI primitives), Lucide icons, Motion animations
 - **Database**: SQLite (via better-sqlite3) + Drizzle ORM 0.44
-- **Auth**: Better Auth 1.4 (optional, disabled by default) - email/password + OAuth (Google/GitHub/Discord) + custom OIDC
+- **Auth**: Better Auth 1.4 (enabled by default) - email/password + OAuth (Google/GitHub/Discord) + custom OIDC
 - **i18n**: next-intl 4.5 - Supported locales: `en`, `de`, `it`
 - **Key Libraries**: date-fns, ical.js, jsPDF, @dnd-kit, recharts, sonner (toasts)
 
@@ -42,7 +42,7 @@ npm run db:studio    # Open Drizzle Studio GUI
 
 ### 3. Authentication & Permissions
 
-**Feature flag**: Auth is **optional** and disabled by default (`AUTH_ENABLED=false`). This will be the default until the migration is complete.
+**Feature flag**: Auth is **enabled by default** (`AUTH_ENABLED=true`) for better security. Can be disabled by setting `AUTH_ENABLED=false`.
 
 **Configuration**: [`lib/auth.ts`](lib/auth.ts), [`lib/auth/env.ts`](lib/auth/env.ts), [`lib/public-config.ts`](lib/public-config.ts)
 
@@ -146,7 +146,7 @@ const { isAuthEnabled, allowRegistration, allowGuest, providers } =
 
 ```bash
 # Auth config (automatically exposed to client)
-AUTH_ENABLED=false
+AUTH_ENABLED=true
 BETTER_AUTH_URL=http://localhost:3000
 ALLOW_USER_REGISTRATION=true
 ALLOW_GUEST_ACCESS=false
@@ -241,7 +241,7 @@ t("common.createError", { item: t("shift.title") }); // With interpolation
 **Critical env vars**:
 
 - `DATABASE_URL` - Default: `file:./sqlite.db`
-- `AUTH_ENABLED` - Enable/disable auth system (default: `false`)
+- `AUTH_ENABLED` - Enable/disable auth system (default: `true`)
 - `BETTER_AUTH_SECRET` - Required if auth enabled (generate with `npx @better-auth/cli secret`)
 - `BETTER_AUTH_URL` - Auth callback URL (e.g., `http://localhost:3000`)
 
@@ -261,7 +261,6 @@ npm run test            # Run lint + build (CI check)
 
 ```bash
 docker-compose up -d --build    # Build and start container
-docker compose exec bettershift npm run db:migrate  # Apply migrations
 ```
 
 Pre-built images: `ghcr.io/pantelx/bettershift:latest` (stable), `:dev` (bleeding edge)
@@ -337,7 +336,7 @@ See [`hooks/useShifts.ts`](hooks/useShifts.ts) `createShift` function:
 
 **Status**: Auth system migration is **in progress**. See [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) for full details.
 
-**Backward compatibility**: All features work without auth enabled. When auth is off, all users have `owner` permission to all calendars.
+**Backward compatibility**: All features work without auth enabled. Auth can be disabled by setting `AUTH_ENABLED=false`. When auth is off, all users have `owner` permission to all calendars.
 
 ## Key Files Reference
 
