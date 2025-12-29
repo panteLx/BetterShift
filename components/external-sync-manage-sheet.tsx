@@ -572,7 +572,6 @@ export function ExternalSyncManageSheet({
       setIsSavingEdit(false);
     }
   }, [
-    calendarId,
     editingSync,
     formName,
     formUrl,

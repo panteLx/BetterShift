@@ -34,17 +34,19 @@ export function PublicConfigProvider({
   children,
   initialConfig,
 }: PublicConfigProviderProps) {
-  const [config, setConfig] = useState<PublicConfig>(initialConfig);
+  // Initialize config with SSR value or hydrate from window
+  const [config, setConfig] = useState<PublicConfig>(() => {
+    // Try window first (CSR hydration)
+    if (typeof window !== "undefined" && window.__PUBLIC_CONFIG__) {
+      return window.__PUBLIC_CONFIG__;
+    }
+    // Fall back to SSR initial config
+    return initialConfig;
+  });
 
   useEffect(() => {
-    // Hydrate from window.__PUBLIC_CONFIG__ if available (CSR fallback)
-    if (typeof window !== "undefined" && window.__PUBLIC_CONFIG__) {
-      setConfig(window.__PUBLIC_CONFIG__);
-      return;
-    }
-
-    // If no window config and no initial config, fetch from API (rare case)
-    if (!initialConfig) {
+    // Only fetch if we have no config at all (rare edge case)
+    if (!config && typeof window !== "undefined") {
       fetch("/api/public-config")
         .then((res) => res.json())
         .then((data) => setConfig(data))
@@ -52,7 +54,7 @@ export function PublicConfigProvider({
           console.error("[PUBLIC_CONFIG] Failed to fetch config:", err)
         );
     }
-  }, [initialConfig]);
+  }, [config]);
 
   return (
     <PublicConfigContext.Provider value={config}>

@@ -51,7 +51,7 @@ export default function ActivityLogPage() {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
   const router = useRouter();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
   const versionInfo = useVersionInfo();
   const {
     logs,
@@ -226,7 +226,10 @@ export default function ActivityLogPage() {
                 value={filters.type || "all"}
                 onValueChange={(value) =>
                   updateFilters({
-                    type: value === "all" ? undefined : (value as any),
+                    type:
+                      value === "all"
+                        ? undefined
+                        : (value as "auth" | "calendar" | "sync" | "security"),
                   })
                 }
               >
@@ -253,7 +256,10 @@ export default function ActivityLogPage() {
                 value={filters.severity || "all"}
                 onValueChange={(value) =>
                   updateFilters({
-                    severity: value === "all" ? undefined : (value as any),
+                    severity:
+                      value === "all"
+                        ? undefined
+                        : (value as "info" | "warning" | "error" | "critical"),
                   })
                 }
               >

@@ -8,7 +8,6 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 
 interface UseShiftActionsProps {
-  selectedCalendar: string | null;
   shifts: ShiftWithCalendar[];
   setShifts: (shifts: ShiftWithCalendar[]) => void;
   presets: ShiftPreset[];
@@ -19,7 +18,6 @@ interface UseShiftActionsProps {
 }
 
 export function useShiftActions({
-  selectedCalendar,
   shifts,
   setShifts,
   presets,
@@ -153,15 +151,7 @@ export function useShiftActions({
         });
       }
     },
-    [
-      selectedCalendar,
-      shifts,
-      setShifts,
-      presets,
-      createShift,
-      onStatsRefresh,
-      t,
-    ]
+    [shifts, setShifts, presets, createShift, onStatsRefresh, t]
   );
 
   return {

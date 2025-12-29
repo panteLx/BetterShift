@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useConnectedAccounts } from "@/hooks/useConnectedAccounts";
-import { signOut, authClient } from "@/lib/auth/client";
+import { signOut } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -377,6 +377,7 @@ export default function ProfilePage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
                   {user?.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={user.image}
                       alt={user.name || "User"}
@@ -415,6 +416,7 @@ export default function ProfilePage() {
                       <Label htmlFor="avatar">{t("auth.profilePicture")}</Label>
                       <div className="flex items-center gap-4">
                         {avatarPreview && (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={avatarPreview}
                             alt="Avatar preview"

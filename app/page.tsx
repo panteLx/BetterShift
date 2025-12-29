@@ -61,7 +61,6 @@ function HomeContent() {
     selectedCalendar,
     setSelectedCalendar,
     loading,
-    hasLoadedOnce,
     createCalendar: createCalendarHook,
     deleteCalendar: deleteCalendarHook,
     refetchCalendars,
@@ -262,7 +261,6 @@ function HomeContent() {
 
   // Shift actions
   const shiftActions = useShiftActions({
-    selectedCalendar: selectedCalendar || null,
     shifts,
     setShifts,
     presets,
@@ -394,10 +392,6 @@ function HomeContent() {
   };
 
   // External sync operations
-  const handleExternalSyncClick = () => {
-    dialogStates.setShowExternalSyncDialog(true);
-  };
-
   const handleSyncNotifications = () => {
     dialogStates.setShowSyncNotificationDialog(true);
   };

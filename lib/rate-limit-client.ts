@@ -80,7 +80,7 @@ export async function handleRateLimitError(
       description: action ? `${action}\n\n${message}` : message,
       duration: 6000,
     });
-  } catch (e) {
+  } catch {
     // Fallback if JSON parsing fails
     const title = t("rateLimit.title");
     const fallback = t("rateLimit.fallback");

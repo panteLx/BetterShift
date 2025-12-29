@@ -84,7 +84,7 @@ export function usePresetManagement({
         return false;
       }
     },
-    [calendarId, onSuccess, t]
+    [onSuccess, t]
   );
 
   const deletePreset = useCallback(
@@ -113,7 +113,7 @@ export function usePresetManagement({
         return false;
       }
     },
-    [calendarId, onSuccess, t]
+    [onSuccess, t]
   );
 
   const reorderPresets = useCallback(

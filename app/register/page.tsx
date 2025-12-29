@@ -98,7 +98,7 @@ export default function RegisterPage() {
               await handleRateLimitError(testResponse, t);
               return;
             }
-          } catch (e) {
+          } catch {
             // If test request fails, show generic rate limit message
             toast.error(t("rateLimit.title"), {
               description: t("rateLimit.fallback"),

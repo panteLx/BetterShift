@@ -159,7 +159,7 @@ export function useSSEConnection({
         }
 
         return true;
-      } catch (error) {
+      } catch {
         // If HEAD fails, try regular connection anyway
         return true;
       }
@@ -293,7 +293,7 @@ export function useSSEConnection({
         eventSource.close();
       };
     }); // End of testConnection().then()
-  }, [calendarId]);
+  }, [calendarId, t]);
 
   return {
     lastSyncTimeRef,

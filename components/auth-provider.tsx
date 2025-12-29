@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
@@ -27,7 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     pathname.startsWith(route)
   );
 
-  useEffect(() => {
+  // Set mounted after initial render to avoid hydration mismatch
+  // This is a legitimate pattern for SSR hydration - calling setState in useLayoutEffect
+  // is the recommended approach to avoid hydration mismatches in client components.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

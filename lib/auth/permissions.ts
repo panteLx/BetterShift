@@ -4,7 +4,7 @@ import {
   calendarShares,
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
-import { eq, and, or, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 
 /**
@@ -227,8 +227,7 @@ export async function getUserAccessibleCalendars(
     },
   });
 
-  // Track which calendars are shared to prevent duplicates
-  const sharedIds = new Set(sharedCalendars.map((s) => s.calendarId));
+  // Track which calendars exist to prevent duplicates
   const existingIds = new Set(results.map((r) => r.id));
 
   // Add shared calendars (share permission takes precedence over guest permission)

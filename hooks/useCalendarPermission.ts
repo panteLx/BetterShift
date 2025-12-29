@@ -86,7 +86,8 @@ export function useCalendarPermission(
       }
 
       // Check if user has explicit share permission
-      const sharePermission = (calendar as any).sharePermission;
+      const sharePermission = (calendar as { sharePermission?: string })
+        .sharePermission;
       if (sharePermission) {
         const isOwner = sharePermission === "owner";
         const isAdmin = sharePermission === "admin";
@@ -106,7 +107,8 @@ export function useCalendarPermission(
 
       // Check if calendar is public (guest permission) and user is subscribed
       // In this case, user gets the guest permission level
-      const isSubscribed = (calendar as any).isSubscribed;
+      const isSubscribed = (calendar as { isSubscribed?: boolean })
+        .isSubscribed;
       if (isSubscribed && calendar.guestPermission !== "none") {
         const guestPerm = calendar.guestPermission as CalendarPermission;
         return {

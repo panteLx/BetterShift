@@ -59,7 +59,11 @@ export function useCalendars(initialCalendarId?: string | null) {
     }
   }, []);
 
-  const createCalendar = async (name: string, color: string) => {
+  const createCalendar = async (
+    name: string,
+    color: string,
+    guestPermission: "none" | "read" | "write" = "none"
+  ) => {
     try {
       const response = await fetch("/api/calendars", {
         method: "POST",
@@ -67,6 +71,7 @@ export function useCalendars(initialCalendarId?: string | null) {
         body: JSON.stringify({
           name,
           color,
+          guestPermission,
         }),
       });
 
@@ -205,20 +210,20 @@ export function useCalendars(initialCalendarId?: string | null) {
     };
 
     // Listen to SSE calendar-change events
-    window.addEventListener("calendar-change" as any, handleCalendarChange);
+    window.addEventListener("calendar-change" as never, handleCalendarChange);
     // Listen to direct calendar list changes (subscriptions/dismissals)
     window.addEventListener(
-      "calendar-list-change" as any,
+      "calendar-list-change" as never,
       handleCalendarListChange
     );
 
     return () => {
       window.removeEventListener(
-        "calendar-change" as any,
+        "calendar-change" as never,
         handleCalendarChange
       );
       window.removeEventListener(
-        "calendar-list-change" as any,
+        "calendar-list-change" as never,
         handleCalendarListChange
       );
     };

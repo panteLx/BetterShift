@@ -14,24 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { GuestPermissionSelector } from "@/components/guest-permission-selector";
 import { useCalendars } from "@/hooks/useCalendars";
-import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { PRESET_COLORS } from "@/lib/constants";
-import {
-  AlertTriangle,
-  Trash2,
-  Download,
-  Cloud,
-  Users,
-  Eye,
-  Edit,
-} from "lucide-react";
+import { AlertTriangle, Trash2, Download, Cloud } from "lucide-react";
 import { ExportDialog } from "@/components/export-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { toast } from "sonner";
 import { useDirtyState } from "@/hooks/useDirtyState";
 
 interface CalendarSettingsSheetProps {
@@ -65,7 +55,6 @@ export function CalendarSettingsSheet({
 }: CalendarSettingsSheetProps) {
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
-  const { isOwner } = useCalendarPermission(calendarId);
   const { isAuthEnabled, allowGuest } = useAuthFeatures();
 
   // Use props directly as initial state, controlled by key prop on component
@@ -225,84 +214,11 @@ export function CalendarSettingsSheet({
 
             {/* Guest Access Section - Only show if auth and guest access are enabled */}
             {isAuthEnabled && allowGuest && (
-              <div className="pt-4 mt-4 border-t border-border/50">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-4 bg-gradient-to-b from-blue-500 to-blue-400 rounded-full"></div>
-                    <Label className="text-sm font-medium">
-                      {t("guest.guestPermission")}
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {t("guest.guestPermissionDescription")}
-                  </p>
-
-                  <RadioGroup
-                    value={guestPermission}
-                    onValueChange={(value) =>
-                      setGuestPermission(value as "none" | "read" | "write")
-                    }
-                    className="space-y-2"
-                  >
-                    {/* No Access */}
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                      <RadioGroupItem value="none" id="guest-none" />
-                      <Label
-                        htmlFor="guest-none"
-                        className="flex-1 cursor-pointer space-y-1"
-                      >
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-red-500" />
-                          <span className="font-medium">
-                            {t("guest.guestPermissionNone")}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {t("guest.guestPermissionNoneDesc")}
-                        </p>
-                      </Label>
-                    </div>
-
-                    {/* Read Only */}
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                      <RadioGroupItem value="read" id="guest-read" />
-                      <Label
-                        htmlFor="guest-read"
-                        className="flex-1 cursor-pointer space-y-1"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Eye className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">
-                            {t("guest.guestPermissionRead")}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {t("guest.guestPermissionReadDesc")}
-                        </p>
-                      </Label>
-                    </div>
-
-                    {/* Read & Write */}
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                      <RadioGroupItem value="write" id="guest-write" />
-                      <Label
-                        htmlFor="guest-write"
-                        className="flex-1 cursor-pointer space-y-1"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Edit className="h-4 w-4 text-green-500" />
-                          <span className="font-medium">
-                            {t("guest.guestPermissionWrite")}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {t("guest.guestPermissionWriteDesc")}
-                        </p>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </div>
+              <GuestPermissionSelector
+                value={guestPermission}
+                onChange={setGuestPermission}
+                idPrefix="calendar-settings"
+              />
             )}
 
             {/* Delete Section */}

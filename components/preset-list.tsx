@@ -32,7 +32,6 @@ interface PresetListProps {
 }
 
 export function PresetList({
-  calendars,
   calendarId,
   presets,
   selectedPresetId,

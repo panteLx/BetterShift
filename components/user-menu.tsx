@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,8 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { User, LogOut, Settings, Users, FileText } from "lucide-react";
+import { User, LogOut, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarDiscoveryDialog } from "@/components/calendar-discovery-dialog";
 

@@ -165,7 +165,7 @@ export function useActivityLogs() {
   // Initial fetch + fetch on filter/page change
   useEffect(() => {
     fetchLogs(page);
-  }, [page, filters.type, filters.startDate, filters.endDate]); // Re-fetch on server-side filter changes
+  }, [page, filters.type, filters.startDate, filters.endDate, fetchLogs]); // Re-fetch on server-side filter changes
 
   // Apply client-side filters when they change
   useEffect(() => {

@@ -20,6 +20,12 @@ export function getClientIp(request: NextRequest | Request): string | null {
     socket: {},
   };
 
-  const ip = RequestIp.getClientIp(expressLikeRequest as any);
+  const ip = RequestIp.getClientIp(
+    expressLikeRequest as {
+      headers: Record<string, string>;
+      connection: Record<string, unknown>;
+      socket: Record<string, unknown>;
+    }
+  );
   return ip || null;
 }

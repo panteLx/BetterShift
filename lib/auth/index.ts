@@ -72,7 +72,12 @@ export const auth = AUTH_ENABLED
     ({
       handler: async () => new Response("Auth disabled", { status: 404 }),
       api: {},
-    } as any);
+      $Infer: {} as { Session: { user: Record<string, unknown> } },
+    } as {
+      handler: () => Promise<Response>;
+      api: Record<string, unknown>;
+      $Infer: { Session: { user: Record<string, unknown> } };
+    });
 
 // Export types for TypeScript
 export type Session = (typeof auth)["$Infer"]["Session"];

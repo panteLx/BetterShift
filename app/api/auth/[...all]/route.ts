@@ -55,7 +55,7 @@ export const POST = async (req: NextRequest) => {
       let bodyText = "";
       try {
         bodyText = await clonedReq.text();
-      } catch (e) {
+      } catch {
         // Body might not be readable, continue
       }
 
@@ -67,7 +67,7 @@ export const POST = async (req: NextRequest) => {
         try {
           const body = JSON.parse(bodyText);
           emailToCheck = body.email || null;
-        } catch (e) {
+        } catch {
           // Not JSON or no email field
         }
       }

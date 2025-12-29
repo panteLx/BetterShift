@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Eye, Lock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -13,8 +12,6 @@ export function ReadOnlyBanner({
   message,
   variant = "default",
 }: ReadOnlyBannerProps) {
-  const t = useTranslations();
-
   if (variant === "compact") {
     return (
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-md p-2 flex items-center gap-2">

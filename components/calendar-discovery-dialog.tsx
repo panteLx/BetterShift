@@ -9,16 +9,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import {
   useCalendarSubscriptions,
   type AvailableCalendar,
-  type DismissedCalendar,
 } from "@/hooks/useCalendarSubscriptions";
 import { Users, Search, Eye, Edit, EyeOff, Loader2, Check } from "lucide-react";
 import {

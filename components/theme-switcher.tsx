@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useLayoutEffect } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Moon, Sun } from "lucide-react";
@@ -11,8 +11,11 @@ export function ThemeSwitcher() {
   const t = useTranslations();
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch by only rendering after mount
-  useEffect(() => {
+  // Set mounted after initial render to avoid hydration mismatch
+  // This is a legitimate pattern for SSR hydration - calling setState in useLayoutEffect
+  // is the recommended approach to avoid hydration mismatches in client components.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

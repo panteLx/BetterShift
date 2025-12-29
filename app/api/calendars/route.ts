@@ -26,9 +26,6 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
-    // Create a permission map for quick lookup
-    const permissionMap = new Map(accessible.map((a) => [a.id, a]));
-
     // Fetch calendars with counts
     const userCalendars = await db
       .select({
@@ -77,7 +74,6 @@ export async function GET(request: Request) {
 
     // Enrich calendars with permission metadata
     const enrichedCalendars = userCalendars.map((cal) => {
-      const isOwner = user && cal.ownerId === user.id;
       const share = shares.get(cal.id);
       const subscription = subscriptions.get(cal.id);
 
@@ -117,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, guestPermission } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -132,6 +128,7 @@ export async function POST(request: NextRequest) {
         name,
         color: color || "#3b82f6",
         ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
+        guestPermission: guestPermission || "none",
       })
       .returning();
 

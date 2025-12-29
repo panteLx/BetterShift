@@ -37,12 +37,22 @@ export function useConnectedAccounts() {
       }
 
       // Format accounts for component
-      const formattedAccounts = (data || []).map((account: any) => ({
-        id: account.id,
-        provider: account.providerId,
-        accountId: account.accountId,
-        createdAt: account.createdAt ? new Date(account.createdAt) : null,
-      }));
+      const formattedAccounts = (data || []).map(
+        (account: {
+          id: string;
+          providerId: string;
+          accountId: string;
+          createdAt: Date;
+          updatedAt: Date;
+          userId: string;
+          scopes: string[];
+        }) => ({
+          id: account.id,
+          provider: account.providerId,
+          accountId: account.accountId,
+          createdAt: account.createdAt ? new Date(account.createdAt) : null,
+        })
+      );
 
       setAccounts(formattedAccounts);
     } catch (err) {

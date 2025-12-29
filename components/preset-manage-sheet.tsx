@@ -187,7 +187,6 @@ export function PresetManageSheet({
   readOnly = false,
 }: PresetManageSheetProps) {
   const t = useTranslations();
-  const [presetToDelete, setPresetToDelete] = useState<string | null>(null);
 
   const permission = useCalendarPermission(calendarId);
 
