@@ -1918,49 +1918,100 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 **Goal**: Automatically handle orphaned calendars when auth is enabled.
 
-- [ ] First created user becomes admin
+**Status**: ✅ **COMPLETED** (30. Dezember 2025)
 
-- [ ] **Admin Panel Detection & Management** (Main Solution)
+**Design Decision**: Use Better Auth's built-in Admin Plugin for role management instead of custom implementation.
 
-  - [ ] When admin logs in first time after enabling auth or orphaned calendars exist:
-    - Detect orphaned calendars (ownerId=null)
-    - Show warning banner: "X calendars need owner assignment"
-    - Link to orphaned calendar management page
-  - [ ] Admin panel shows list of orphaned calendars (Phase 9.3)
-    - Manual assignment to users
-    - Bulk assignment to admin user
-    - Delete option for unwanted calendars
-  - [ ] See Phase 9.3 for detailed implementation
+### 7.1 Better Auth Admin Plugin Integration
 
-- [ ] **API Protection for Orphaned Calendars**
+**Why Better Auth Admin Plugin?**
 
-  - [ ] Update calendar API routes to handle orphaned calendars:
-    - If `AUTH_ENABLED=true` AND `ownerId=null`:
-      - GET: Allow read-only access (backwards compatibility)
-      - PUT/DELETE: Require admin permission
-      - POST shifts/presets: Block with clear error message
-    - Return warning header: `X-Calendar-Orphaned: true`
-  - [ ] Show UI warning on orphaned calendars:
-    - "This calendar has no owner. Contact admin to assign ownership."
-    - Disable edit actions until owner assigned
+- Built-in `role` field on `user` table (no custom schema needed)
+- Support for multiple admin roles: `superadmin`, `admin`
+- Complete user management API (ban, impersonate, setRole, etc.)
+- Access control system for future features
+- Industry-standard implementation
 
-- [ ] **Documentation**
-  - [ ] Add to README.md:
-    - Section: "Enabling Auth on Existing Instance"
-    - Steps: 1) Enable AUTH_ENABLED, 2) Create admin user, 3) Assign orphaned calendars
-    - Warning: Orphaned calendars are read-only until assigned
-  - [ ] Add to `.env.example`:
-    - Comment: "Note: Calendars created before enabling auth will need owner assignment"
-  - [ ] Create migration guide: `docs/MIGRATION_AUTH_TOGGLE.md`
-    - Detailed step-by-step process
-    - Screenshots of admin panel
-    - Troubleshooting section
+- [x] **Add Better Auth Admin Plugin**
+  - [x] Update `lib/auth.ts`:
+    - Import `admin` plugin from `better-auth/plugins`
+    - Add to plugins array with config (simplified to use default roles)
+  - [x] Update `lib/auth/client.ts`:
+    - Import `adminClient` from `better-auth/client/plugins`
+    - Add to client plugins array
+  - [x] Generate migration: `npx @better-auth/cli generate`
+    - Adds `role`, `banned`, `banReason`, `banExpires` to `user` table
+    - Adds `impersonatedBy` to `session` table
+  - [x] Apply migration: `npm run db:migrate` → `0013_first_phantom_reporter.sql`
+
+### 7.2 First User Auto-Promotion
+
+**Requirement**: First registered user automatically becomes `superadmin` for initial setup.
+
+- [x] **Update Registration Logic**
+  - [x] Create `lib/auth/first-user.ts`:
+    - `isFirstUser(userId)` - Check if this is the only user in database
+    - `promoteToSuperAdmin(userId)` - Set role to "superadmin"
+    - `handleFirstUserPromotion(userId)` - Main function called from hook
+  - [x] Update `lib/auth.ts` with after hook:
+    - Added `createAuthMiddleware` after hook for sign-up
+    - Automatically promotes first user to superadmin
+    - Logs to audit log: `user_promoted_to_superadmin`
+    - Non-blocking execution (doesn't delay response)
+
+### 7.3 Admin Role Helpers
+
+- [x] **Create `lib/auth/admin.ts`**
+  - [x] `isAdmin(user)` - Check if user has `admin` or `superadmin` role
+  - [x] `isSuperAdmin(user)` - Check if user has `superadmin` role specifically
+  - [x] `requireAdmin(user)` - Throw error if not admin (for API routes)
+  - [x] `requireSuperAdmin(user)` - Throw error if not superadmin (for API routes)
+  - [x] `getAdminLevel(user)` - Get user's admin level for display
+
+### 7.4 API Protection for Orphaned Calendars
+
+**Current State**: Orphaned calendars (ownerId=null) are already invisible to normal users via permission system.
+
+**New Requirement**: Orphaned calendars are invisible in normal UI for **ALL users** (including admins). Only visible in dedicated Admin Panel.
+
+- [x] **Update `lib/auth/permissions.ts`**
+
+  - [x] Extend `getUserCalendarPermission()`:
+    - If `calendar.ownerId === null`:
+      - Return `null` (no permission for ANY user, including admins)
+      - Orphaned calendars are excluded from normal calendar lists
+  - [x] Add `getOrphanedCalendars()` function (admin only):
+    - Query: `SELECT * FROM calendars WHERE ownerId IS NULL`
+    - Returns orphaned calendars for Admin Panel only
+    - Requires admin role check before calling
+    - Used by Admin Panel in Phase 9.3
+
+- [x] **Verify Calendar API Routes**
+  - [x] `app/api/calendars/route.ts` GET:
+    - ✅ Uses `getUserAccessibleCalendars()` which excludes orphaned calendars
+    - Normal calendar list never returns orphaned calendars
+  - [x] `app/api/calendars/[id]/route.ts` GET/PUT/PATCH/DELETE:
+    - ✅ Uses `canViewCalendar()` which returns false for orphaned calendars
+    - Direct access to orphaned calendar by ID returns 403
+
+### 7.5 Future: Admin Panel (Phase 9.3)
+
+**Out of Scope for Phase 7** - Will be implemented in Phase 9.3:
+
+- UI for orphaned calendar management
+- Bulk assignment actions
+- User to calendar assignment interface
+- Warning banners for orphaned calendars
 
 **Implementation Notes**:
 
-- Admin has full control over assignment process
-- Backwards compatibility: orphaned calendars remain readable
-- Admin panel provides clear overview and bulk actions
+- ✅ **Better Auth Admin Plugin** handles all user role management (no custom schema)
+- ✅ **First user auto-promotion** ensures there's always a superadmin
+- ✅ **Orphaned calendars** invisible for ALL users in normal UI (including admins)
+- ✅ **Admin Panel** (Phase 9.3) will have dedicated API for orphaned calendar management
+- ✅ **Backwards compatibility** maintained - orphaned calendars not accessible until assigned
+- ✅ **DB migrations** run automatically on container start (Dockerfile)
+- ✅ **Documentation** (README, .env.example, migration guides) moved to Phase 10.1
 
 ---
 
@@ -2347,18 +2398,52 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ### 10.1 Documentation
 
-- [ ] Update README.md
-  - Auth system overview
-  - Admin panel features
-  - Public/User/Token share differences
-  - Environment variables
-  - OIDC configuration guide
-  - Migration instructions
-- [ ] Create `docs/AUTH_SETUP.md`
-  - Step-by-step setup guide
-  - OIDC provider configuration (Google, GitHub, Discord)
-  - Custom OIDC provider setup (Keycloak, Authentik, etc.)
-  - Self-hosting considerations
+- [ ] **Update README.md**
+
+  - [ ] Auth system overview
+  - [ ] Admin panel features (first user = superadmin)
+  - [ ] Public/User/Token share differences
+  - [ ] Environment variables
+  - [ ] OIDC configuration guide
+  - [ ] Migration instructions
+  - [ ] **Add section: "Enabling Auth on Existing Instance"** (Phase 7)
+    - Prerequisites: Calendars created with `AUTH_ENABLED=false`
+    - Steps:
+      1. Set `AUTH_ENABLED=true` in `.env`
+      2. Restart application (triggers migrations)
+      3. Register first user (automatically becomes superadmin)
+      4. Login as superadmin
+      5. Navigate to Admin Panel → Orphaned Calendars
+      6. Assign orphaned calendars to users (or yourself)
+    - Warning: Orphaned calendars are invisible in normal UI for all users until assigned
+
+- [ ] **Update `.env.example`**
+
+  - [ ] Add comment to `AUTH_ENABLED`:
+    ```bash
+    # Enable authentication system (defaults to true)
+    # Note: Calendars created with AUTH_ENABLED=false will need owner assignment
+    # The first registered user will automatically become superadmin
+    AUTH_ENABLED=true
+    ```
+
+- [ ] **Create Migration Guide** (`docs/MIGRATION_AUTH_TOGGLE.md`) (Phase 7)
+
+  - [ ] Detailed step-by-step process with screenshots
+  - [ ] Troubleshooting section:
+    - "What happens to existing calendars?"
+    - "Can I undo the auth toggle?"
+    - "How to add more admins?"
+  - [ ] Best practices:
+    - Backup database before enabling auth
+    - Assign orphaned calendars immediately after first login
+    - Document admin credentials securely
+
+- [ ] **Create `docs/AUTH_SETUP.md`**
+  - [ ] Step-by-step setup guide
+  - [ ] OIDC provider configuration (Google, GitHub, Discord)
+  - [ ] Custom OIDC provider setup (Keycloak, Authentik, etc.)
+  - [ ] Self-hosting considerations
 
 ### 10.2 Integration Testing
 

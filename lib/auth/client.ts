@@ -1,7 +1,7 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { genericOAuthClient } from "better-auth/client/plugins";
+import { genericOAuthClient, adminClient } from "better-auth/client/plugins";
 
 /**
  * Better Auth client for client-side authentication
@@ -19,7 +19,7 @@ export const authClient = createAuthClient({
     typeof window !== "undefined" && window.__PUBLIC_CONFIG__
       ? window.__PUBLIC_CONFIG__.auth.url
       : "",
-  plugins: [genericOAuthClient()],
+  plugins: [genericOAuthClient(), adminClient()],
 });
 
 export const { signIn, signOut, signUp, useSession } = authClient;

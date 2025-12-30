@@ -15,6 +15,8 @@ export interface LoginFailedMetadata {
 export interface LoginSuccessMetadata {
   email: string;
   newDevice: boolean;
+  provider?: string; // OAuth/OIDC provider ID (e.g., "google", "custom-oidc")
+  method: "email" | "oauth" | "oidc";
 }
 
 export interface UserRegisteredMetadata {
@@ -24,7 +26,9 @@ export interface UserRegisteredMetadata {
     | "email"
     | "oauth_google"
     | "oauth_github"
-    | "oauth_discord";
+    | "oauth_discord"
+    | "oidc_custom";
+  provider?: string; // OAuth/OIDC provider ID (e.g., "google", "custom-oidc")
 }
 
 export interface ProfileUpdatedMetadata {

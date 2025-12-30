@@ -4,7 +4,7 @@ import {
   calendarShares,
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 import {
   getTokenPermission,
@@ -61,6 +61,12 @@ export async function getUserCalendarPermission(
   });
 
   if (!calendar) {
+    return null;
+  }
+
+  // CRITICAL: Orphaned calendars (ownerId=null) are invisible to ALL users
+  // They can only be accessed via dedicated admin panel API routes
+  if (calendar.ownerId === null) {
     return null;
   }
 
@@ -464,4 +470,28 @@ export async function undismissCalendar(
       source: share ? "shared" : "guest",
     });
   }
+}
+
+/**
+ * Get all orphaned calendars (calendars with ownerId=null)
+ * ADMIN-ONLY function - must check admin permissions before calling
+ *
+ * This function is used exclusively by the Admin Panel to list calendars
+ * that need owner assignment. Normal calendar APIs exclude these calendars.
+ *
+ * @returns Promise<Array> - List of orphaned calendars with basic info
+ */
+export async function getOrphanedCalendars() {
+  const orphanedCalendars = await db.query.calendars.findMany({
+    where: isNull(calendars.ownerId),
+    columns: {
+      id: true,
+      name: true,
+      color: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return orphanedCalendars;
 }

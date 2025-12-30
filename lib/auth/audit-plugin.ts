@@ -25,6 +25,7 @@ export const auditLogPlugin = () => {
             return (
               context.path.startsWith("/sign-in") ||
               context.path.startsWith("/sign-up") ||
+              context.path.startsWith("/callback") ||
               context.path === "/update-user"
             );
           },
@@ -32,7 +33,7 @@ export const auditLogPlugin = () => {
             try {
               const newSession = ctx.context.newSession;
 
-              // Log successful logins
+              // Log successful email logins
               if (ctx.path === "/sign-in/email" && newSession?.user) {
                 await logUserAction<LoginSuccessMetadata>({
                   action: "auth.login.success",
@@ -41,9 +42,60 @@ export const auditLogPlugin = () => {
                   metadata: {
                     email: newSession.user.email,
                     newDevice: false, // TODO: Track device fingerprint
+                    method: "email",
                   },
                   request: ctx.request!,
                 });
+              }
+
+              // Log OIDC/OAuth callback events
+              if (ctx.path.startsWith("/callback/") && newSession?.user) {
+                // Extract provider from path (e.g., /callback/google -> "google")
+                const provider = ctx.path.replace("/callback/", "");
+
+                // Determine if this is a registration or login
+                // Better Auth creates the user just before calling this hook
+                // We check if the user was created very recently (within last 5 seconds)
+                const userCreatedAt = new Date(newSession.user.createdAt);
+                const now = new Date();
+                const timeDiff = now.getTime() - userCreatedAt.getTime();
+                const isNewUser = timeDiff < 5000; // User created within last 5 seconds
+
+                if (isNewUser) {
+                  // This is a new user registration via OAuth/OIDC
+                  await logUserAction<UserRegisteredMetadata>({
+                    action: "auth.user.registered",
+                    userId: newSession.user.id,
+                    resourceType: "user",
+                    metadata: {
+                      email: newSession.user.email,
+                      name: newSession.user.name,
+                      registrationMethod:
+                        provider === "custom-oidc"
+                          ? "oidc_custom"
+                          : (`oauth_${provider}` as
+                              | "oauth_google"
+                              | "oauth_github"
+                              | "oauth_discord"),
+                      provider,
+                    },
+                    request: ctx.request!,
+                  });
+                } else {
+                  // This is an existing user login via OAuth/OIDC
+                  await logUserAction<LoginSuccessMetadata>({
+                    action: "auth.login.success",
+                    userId: newSession.user.id,
+                    resourceType: "user",
+                    metadata: {
+                      email: newSession.user.email,
+                      newDevice: false, // TODO: Track device fingerprint
+                      provider,
+                      method: provider === "custom-oidc" ? "oidc" : "oauth",
+                    },
+                    request: ctx.request!,
+                  });
+                }
               }
 
               // Log failed logins (no session was created)
@@ -63,7 +115,7 @@ export const auditLogPlugin = () => {
                 }
               }
 
-              // Log user registrations
+              // Log user registrations via email
               if (ctx.path === "/sign-up/email" && newSession?.user) {
                 await logUserAction<UserRegisteredMetadata>({
                   action: "auth.user.registered",
@@ -73,6 +125,7 @@ export const auditLogPlugin = () => {
                     email: newSession.user.email,
                     name: newSession.user.name,
                     registrationMethod: "email",
+                    provider: "email",
                   },
                   request: ctx.request!,
                 });

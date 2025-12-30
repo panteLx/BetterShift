@@ -1,9 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { genericOAuth } from "better-auth/plugins";
+import { genericOAuth, admin } from "better-auth/plugins";
+import { createAuthMiddleware } from "better-auth/api";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { auditLogPlugin } from "@/lib/auth/audit-plugin";
+import { handleFirstUserPromotion } from "@/lib/auth/first-user";
 import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -66,6 +68,11 @@ export const auth = betterAuth({
     // Audit logging plugin
     auditLogPlugin(),
 
+    // Admin plugin for user management
+    admin({
+      defaultRole: "user",
+    }),
+
     // Custom OIDC
     genericOAuth({
       config: [
@@ -119,6 +126,38 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
     },
+  },
+
+  // Hooks for custom logic
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // Auto-promote first user to superadmin
+      // This runs for both email registration (/sign-up/email) and OAuth/OIDC callbacks
+      const newSession = ctx.context.newSession;
+
+      if (newSession?.user?.id) {
+        // Check if this is a new user registration
+        // For email: /sign-up/email path
+        // For OAuth/OIDC: /callback/* path with newly created user (check createdAt timestamp)
+        const isEmailSignup = ctx.path.startsWith("/sign-up");
+
+        let isOAuthCallback = false;
+        if (ctx.path.startsWith("/callback/")) {
+          // Check if user was just created (within last 5 seconds)
+          const userCreatedAt = new Date(newSession.user.createdAt);
+          const now = new Date();
+          const timeDiff = now.getTime() - userCreatedAt.getTime();
+          isOAuthCallback = timeDiff < 5000;
+        }
+
+        if (isEmailSignup || isOAuthCallback) {
+          // Non-blocking promotion (don't wait for it)
+          handleFirstUserPromotion(newSession.user.id).catch((error) => {
+            console.error("Failed to promote first user:", error);
+          });
+        }
+      }
+    }),
   },
 
   // Trust host for deployment
