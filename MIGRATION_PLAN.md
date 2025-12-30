@@ -2241,6 +2241,51 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - DELETE: Delete user and handle orphaned calendars
 - [ ] Create `app/api/admin/users/[id]/password/route.ts`
   - PUT: Change user password (super admin can reset any password)
+- [ ] **User Ban System**
+  - [ ] Add `isBanned` flag to `user` table (boolean, default: false)
+  - [ ] Add `bannedAt` timestamp to `user` table (nullable)
+  - [ ] Add `bannedBy` to `user` table (references users, nullable)
+  - [ ] Add `banReason` text field to `user` table (nullable)
+  - [ ] Create `bannedIps` table:
+    - `id` (text, primary key)
+    - `ipAddress` (text, unique, indexed)
+    - `bannedBy` (references users)
+    - `bannedAt` (timestamp)
+    - `reason` (text, nullable)
+    - `expiresAt` (timestamp, nullable for permanent bans)
+  - [ ] Create `app/api/admin/users/[id]/ban/route.ts`
+    - POST: Ban user account (sets isBanned=true, terminates all sessions)
+    - Body: `{ reason: string, alsoIpBan: boolean }`
+    - If `alsoIpBan=true`, add user's IPs to `bannedIps` table
+  - [ ] Create `app/api/admin/users/[id]/unban/route.ts`
+    - POST: Unban user account (sets isBanned=false)
+  - [ ] Create `app/api/admin/ip-bans/route.ts`
+    - GET: List all banned IPs
+    - POST: Add IP to ban list
+    - DELETE: Remove IP from ban list
+  - [ ] Create `app/api/admin/ip-bans/[ip]/route.ts`
+    - DELETE: Unban specific IP address
+  - [ ] Middleware enforcement in `proxy.ts`:
+    - Check `isBanned` flag before auth middleware
+    - Check IP against `bannedIps` table
+    - Return 403 Forbidden for banned accounts/IPs
+    - Log ban attempts to audit logs
+  - [ ] Admin UI Components:
+    - [ ] `components/admin/user-ban-dialog.tsx` - Ban user with reason
+    - [ ] `components/admin/user-unban-dialog.tsx` - Unban confirmation
+    - [ ] `components/admin/banned-users-list.tsx` - View all banned users
+    - [ ] `components/admin/banned-ips-list.tsx` - Manage IP ban list
+    - [ ] `components/admin/ip-ban-dialog.tsx` - Add IP to ban list
+  - [ ] User list UI enhancements:
+    - Show "BANNED" badge on banned users
+    - Quick ban/unban actions in user list
+    - Filter: Show only banned users
+  - [ ] Audit logging for ban actions:
+    - Action: `"admin.user.ban"` - Account banned
+    - Action: `"admin.user.unban"` - Account unbanned
+    - Action: `"admin.ip.ban"` - IP address banned
+    - Action: `"admin.ip.unban"` - IP address unbanned
+    - Metadata: `{ userId, ipAddress, reason, bannedBy }`
 - [ ] Admin UI Components:
   - [ ] `components/admin/user-list.tsx` - Table of all users
   - [ ] `components/admin/user-edit-dialog.tsx` - Edit user details
