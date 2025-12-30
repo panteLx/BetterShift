@@ -6,6 +6,11 @@ import {
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
+import {
+  getTokenPermission,
+  getTokensFromCookie,
+  validateAccessToken,
+} from "@/lib/auth/token-auth";
 
 /**
  * Calendar permission levels
@@ -28,10 +33,15 @@ export type GuestPermission = "none" | "read" | "write";
  * Get user's permission level for a specific calendar
  * Returns null if user has no access to the calendar
  *
- * For guest users (userId = null), returns guest permission if:
- * - Auth is enabled
- * - Guest access is enabled
- * - Calendar has guestPermission != "none"
+ * Permission priority (highest to lowest):
+ * 1. Owner (calendar.ownerId matches userId)
+ * 2. Shared permission (via calendarShares)
+ * 3. Access token (via cookie)
+ * 4. Public/Guest permission (for subscribed users or when guest access enabled)
+ *
+ * For guest users (userId = null), checks:
+ * - Access token permission
+ * - Guest permission (if auth enabled + guest access enabled + calendar allows it)
  */
 export async function getUserCalendarPermission(
   userId: string | null | undefined,
@@ -45,7 +55,7 @@ export async function getUserCalendarPermission(
     return calendar ? "owner" : null;
   }
 
-  // Fetch calendar first (needed for both authenticated and guest users)
+  // Fetch calendar first (needed for all checks)
   const calendar = await db.query.calendars.findFirst({
     where: eq(calendars.id, calendarId),
   });
@@ -54,8 +64,14 @@ export async function getUserCalendarPermission(
     return null;
   }
 
-  // If no user ID, check guest permissions
+  // If no user ID, check token and guest permissions
   if (!userId) {
+    // Check for access token first (higher priority than guest)
+    const tokenPermission = await getTokenPermission(calendarId);
+    if (tokenPermission) {
+      return tokenPermission;
+    }
+
     // Guest access only works when explicitly enabled
     if (allowGuestAccess() && calendar.guestPermission !== "none") {
       return calendar.guestPermission as CalendarPermission;
@@ -68,7 +84,7 @@ export async function getUserCalendarPermission(
     return "owner";
   }
 
-  // Check shared permissions
+  // Check shared permissions (higher priority than tokens)
   const share = await db.query.calendarShares.findFirst({
     where: and(
       eq(calendarShares.calendarId, calendarId),
@@ -78,6 +94,12 @@ export async function getUserCalendarPermission(
 
   if (share) {
     return share.permission as CalendarPermission;
+  }
+
+  // Check for access token (authenticated users can also use tokens)
+  const tokenPermission = await getTokenPermission(calendarId);
+  if (tokenPermission) {
+    return tokenPermission;
   }
 
   // Check if user is subscribed to this public calendar
@@ -164,8 +186,9 @@ export async function canDeleteCalendar(
  * Get all calendar IDs accessible to a user (or guest)
  * Returns array of calendar IDs with their permission levels
  *
- * For guest users (userId = null), returns calendars with guestPermission != "none"
- * if guest access is enabled.
+ * For guest users (userId = null), returns:
+ * - Calendars accessible via access tokens (always, regardless of allowGuestAccess)
+ * - Calendars with guestPermission != "none" (only if guest access is enabled)
  */
 export async function getUserAccessibleCalendars(
   userId: string | null | undefined
@@ -179,20 +202,43 @@ export async function getUserAccessibleCalendars(
     }));
   }
 
-  // Guest access: return calendars with guest permissions
+  // Guest access: return calendars accessible via tokens or guest permissions
   if (!userId) {
-    if (!allowGuestAccess()) {
-      return [];
+    const results: Array<{ id: string; permission: CalendarPermission }> = [];
+    const existingIds = new Set<string>();
+
+    // First, check for token-based access (always works, regardless of allowGuestAccess)
+    const tokens = await getTokensFromCookie();
+    for (const tokenData of tokens) {
+      // Validate token is still valid
+      const validation = await validateAccessToken(tokenData.token);
+      if (validation && validation.calendarId === tokenData.calendarId) {
+        results.push({
+          id: tokenData.calendarId,
+          permission: tokenData.permission as CalendarPermission,
+        });
+        existingIds.add(tokenData.calendarId);
+      }
     }
 
-    const guestAccessibleCalendars = await db.query.calendars.findMany({
-      where: (calendars, { ne }) => ne(calendars.guestPermission, "none"),
-    });
+    // Then, check for guest permissions (only if guest access is enabled)
+    if (allowGuestAccess()) {
+      const guestAccessibleCalendars = await db.query.calendars.findMany({
+        where: (calendars, { ne }) => ne(calendars.guestPermission, "none"),
+      });
 
-    return guestAccessibleCalendars.map((cal) => ({
-      id: cal.id,
-      permission: cal.guestPermission as CalendarPermission,
-    }));
+      for (const cal of guestAccessibleCalendars) {
+        if (!existingIds.has(cal.id)) {
+          results.push({
+            id: cal.id,
+            permission: cal.guestPermission as CalendarPermission,
+          });
+          existingIds.add(cal.id);
+        }
+      }
+    }
+
+    return results;
   }
 
   const results: Array<{ id: string; permission: CalendarPermission }> = [];
@@ -257,6 +303,23 @@ export async function getUserAccessibleCalendars(
       id: sub.calendarId,
       permission: sub.calendar.guestPermission as CalendarPermission,
     });
+    existingIds.add(sub.calendarId);
+  }
+
+  // Add token-accessible calendars (authenticated users can also use access tokens)
+  const tokens = await getTokensFromCookie();
+  for (const tokenData of tokens) {
+    if (existingIds.has(tokenData.calendarId)) continue;
+
+    // Validate token is still valid
+    const validation = await validateAccessToken(tokenData.token);
+    if (validation && validation.calendarId === tokenData.calendarId) {
+      results.push({
+        id: tokenData.calendarId,
+        permission: tokenData.permission as CalendarPermission,
+      });
+      existingIds.add(tokenData.calendarId);
+    }
   }
 
   return results;

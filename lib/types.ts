@@ -12,8 +12,9 @@ export interface CalendarWithCount {
   _count?: number;
   // Permission metadata (only for authenticated users)
   sharePermission?: "owner" | "admin" | "write" | "read";
+  tokenPermission?: "read" | "write"; // Permission from access token
   isSubscribed?: boolean;
-  subscriptionSource?: "guest" | "shared";
+  subscriptionSource?: "guest" | "shared" | "token";
 }
 
 export interface ShiftWithCalendar {

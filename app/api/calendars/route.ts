@@ -12,6 +12,10 @@ import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
+import {
+  getTokensFromCookie,
+  validateAccessToken,
+} from "@/lib/auth/token-auth";
 
 // GET all calendars (only those accessible to the user)
 export async function GET(request: Request) {
@@ -49,6 +53,17 @@ export async function GET(request: Request) {
     let subscriptions: Map<string, { status: string; source: string }> =
       new Map();
     let shares: Map<string, string> = new Map();
+    const tokens: Map<string, "read" | "write"> = new Map();
+
+    // Get token permissions (works for both guests and authenticated users)
+    const userTokens = await getTokensFromCookie();
+    for (const tokenData of userTokens) {
+      // Validate token is still valid
+      const validation = await validateAccessToken(tokenData.token);
+      if (validation && validation.calendarId === tokenData.calendarId) {
+        tokens.set(tokenData.calendarId, tokenData.permission);
+      }
+    }
 
     if (user) {
       // Get subscriptions
@@ -76,12 +91,21 @@ export async function GET(request: Request) {
     const enrichedCalendars = userCalendars.map((cal) => {
       const share = shares.get(cal.id);
       const subscription = subscriptions.get(cal.id);
+      const token = tokens.get(cal.id);
+
+      // Determine subscription source
+      let subscriptionSource: "guest" | "shared" | "token" | undefined =
+        subscription?.source as "guest" | "shared" | undefined;
+      if (token && !share && !subscription) {
+        subscriptionSource = "token";
+      }
 
       return {
         ...cal,
         sharePermission: share || undefined,
-        isSubscribed: !!subscription,
-        subscriptionSource: subscription?.source || undefined,
+        tokenPermission: token || undefined,
+        isSubscribed: !!subscription || !!token,
+        subscriptionSource,
       };
     });
 

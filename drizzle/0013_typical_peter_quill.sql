@@ -34,6 +34,26 @@ CREATE TABLE `audit_logs` (
 CREATE INDEX `audit_logs_userId_timestamp_idx` ON `audit_logs` (`user_id`,`timestamp`);--> statement-breakpoint
 CREATE INDEX `audit_logs_action_timestamp_idx` ON `audit_logs` (`action`,`timestamp`);--> statement-breakpoint
 CREATE INDEX `audit_logs_userVisible_userId_timestamp_idx` ON `audit_logs` (`is_user_visible`,`user_id`,`timestamp`);--> statement-breakpoint
+CREATE TABLE `calendar_access_tokens` (
+	`id` text PRIMARY KEY NOT NULL,
+	`calendar_id` text NOT NULL,
+	`token` text NOT NULL,
+	`name` text,
+	`permission` text DEFAULT 'read' NOT NULL,
+	`expires_at` integer,
+	`created_by` text NOT NULL,
+	`created_at` integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`last_used_at` integer,
+	`usage_count` integer DEFAULT 0 NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL,
+	FOREIGN KEY (`calendar_id`) REFERENCES `calendars`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`created_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `calendar_access_tokens_token_unique` ON `calendar_access_tokens` (`token`);--> statement-breakpoint
+CREATE INDEX `calendar_access_tokens_token_idx` ON `calendar_access_tokens` (`token`);--> statement-breakpoint
+CREATE INDEX `calendar_access_tokens_calendarId_isActive_idx` ON `calendar_access_tokens` (`calendar_id`,`is_active`);--> statement-breakpoint
+CREATE INDEX `calendar_access_tokens_createdBy_idx` ON `calendar_access_tokens` (`created_by`);--> statement-breakpoint
 CREATE TABLE `calendar_shares` (
 	`id` text PRIMARY KEY NOT NULL,
 	`calendar_id` text NOT NULL,

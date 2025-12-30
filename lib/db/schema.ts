@@ -347,8 +347,46 @@ export const auditLogs = sqliteTable(
   ]
 );
 
+export const calendarAccessTokens = sqliteTable(
+  "calendar_access_tokens",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    calendarId: text("calendar_id")
+      .notNull()
+      .references(() => calendars.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(), // base64url encoded, 43 chars
+    name: text("name"), // Optional label (e.g., "Family Link")
+    permission: text("permission", { enum: ["read", "write"] })
+      .notNull()
+      .default("read"),
+    expiresAt: integer("expires_at", { mode: "timestamp" }), // null = never expires
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+    usageCount: integer("usage_count").notNull().default(0),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  },
+  (table) => [
+    index("calendar_access_tokens_token_idx").on(table.token),
+    index("calendar_access_tokens_calendarId_isActive_idx").on(
+      table.calendarId,
+      table.isActive
+    ),
+    index("calendar_access_tokens_createdBy_idx").on(table.createdBy),
+  ]
+);
+
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
+
+export type CalendarAccessToken = typeof calendarAccessTokens.$inferSelect;
+export type NewCalendarAccessToken = typeof calendarAccessTokens.$inferInsert;
 
 export type ExternalSync = typeof externalSyncs.$inferSelect;
 export type NewExternalSync = typeof externalSyncs.$inferInsert;
@@ -410,6 +448,7 @@ export const calendarsRelations = relations(calendars, ({ one, many }) => ({
   }),
   shares: many(calendarShares),
   subscriptions: many(userCalendarSubscriptions),
+  accessTokens: many(calendarAccessTokens),
   shifts: many(shifts),
   presets: many(shiftPresets),
   notes: many(calendarNotes),
@@ -452,3 +491,17 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const calendarAccessTokensRelations = relations(
+  calendarAccessTokens,
+  ({ one }) => ({
+    calendar: one(calendars, {
+      fields: [calendarAccessTokens.calendarId],
+      references: [calendars.id],
+    }),
+    createdByUser: one(user, {
+      fields: [calendarAccessTokens.createdBy],
+      references: [user.id],
+    }),
+  })
+);

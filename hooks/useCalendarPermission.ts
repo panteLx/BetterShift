@@ -109,6 +109,23 @@ export function useCalendarPermission(
         };
       }
 
+      // Check if user has token-based access
+      const tokenPermission = (
+        calendar as { tokenPermission?: "read" | "write" }
+      ).tokenPermission;
+      if (tokenPermission) {
+        return {
+          level: tokenPermission,
+          canView: true,
+          canEdit: tokenPermission === "write",
+          canManage: false,
+          canDelete: false,
+          canShare: false,
+          isReadOnly: tokenPermission === "read",
+          isOwner: false,
+        };
+      }
+
       // Check if calendar is public (guest permission) and user is subscribed
       // In this case, user gets the guest permission level
       const isSubscribed = (calendar as { isSubscribed?: boolean })
@@ -142,6 +159,24 @@ export function useCalendarPermission(
 
     // If user is guest (not authenticated)
     if (isGuest) {
+      // Check for token-based access first (higher priority)
+      const tokenPermission = (
+        calendar as { tokenPermission?: "read" | "write" }
+      ).tokenPermission;
+      if (tokenPermission) {
+        return {
+          level: tokenPermission,
+          canView: true,
+          canEdit: tokenPermission === "write",
+          canManage: false,
+          canDelete: false,
+          canShare: false,
+          isReadOnly: tokenPermission === "read",
+          isOwner: false,
+        };
+      }
+
+      // Then check guest permission
       const guestPerm = calendar.guestPermission || "none";
 
       if (guestPerm === "write") {

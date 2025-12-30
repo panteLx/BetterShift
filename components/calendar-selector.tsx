@@ -62,7 +62,11 @@ export function CalendarSelector({
   // Filter calendars: guests only see calendars with read or write permission
   const visibleCalendars = isGuest
     ? calendars.filter(
-        (c) => c.guestPermission === "read" || c.guestPermission === "write"
+        (c) =>
+          c.guestPermission === "read" ||
+          c.guestPermission === "write" ||
+          c.tokenPermission === "read" ||
+          c.tokenPermission === "write"
       )
     : calendars;
 
@@ -79,28 +83,42 @@ export function CalendarSelector({
       user &&
       !isGuest &&
       c.ownerId !== user.id &&
-      (c.sharePermission || c.isSubscribed)
+      c.sharePermission // Only calendars with explicit share permission, not tokens
   );
+  const tokenCalendars = isAuthEnabled
+    ? visibleCalendars.filter(
+        (c) =>
+          c.tokenPermission &&
+          !c.sharePermission &&
+          (!user || c.ownerId !== user?.id)
+      )
+    : [];
   // For guests or when auth is disabled, show all visible calendars
+  // Exclude calendars that are already shown in tokenCalendars group
   const guestAccessibleCalendars =
-    !isAuthEnabled || isGuest ? visibleCalendars : [];
+    !isAuthEnabled || isGuest
+      ? visibleCalendars.filter((c) => !c.tokenPermission)
+      : [];
 
   // Check if selected calendar is read-only
-  // Share permission takes precedence over guest permission
+  // Priority: sharePermission > tokenPermission > guestPermission
   const isReadOnly =
-    (isGuest && selectedCalendar?.guestPermission === "read") ||
-    (!isGuest && selectedCalendar?.sharePermission === "read") ||
-    (!isGuest &&
-      selectedCalendar?.isSubscribed &&
-      selectedCalendar?.guestPermission === "read" &&
-      !selectedCalendar?.sharePermission); // Only if no share permission exists
+    selectedCalendar?.sharePermission === "read" ||
+    (!selectedCalendar?.sharePermission &&
+      selectedCalendar?.tokenPermission === "read") ||
+    (!selectedCalendar?.sharePermission &&
+      !selectedCalendar?.tokenPermission &&
+      selectedCalendar?.guestPermission === "read");
 
   // Check if user can manage settings (owner or admin)
   const { canManage } = useCalendarPermission(selectedCalendar);
 
   // Helper function to render calendar icon
   const getCalendarIcon = (calendar: CalendarWithCount) => {
-    if (!isAuthEnabled || !user) {
+    if (!isAuthEnabled) {
+      return null;
+    }
+    if (!user) {
       return <Globe className="h-3.5 w-3.5 text-muted-foreground/60" />;
     }
     // Check for admin/owner permission
@@ -122,29 +140,32 @@ export function CalendarSelector({
   const renderCalendarItem = (calendar: CalendarWithCount) => {
     // Check for admin/owner first
     const isAdmin =
-      calendar.sharePermission === "admin" ||
-      calendar.sharePermission === "owner";
+      isAuthEnabled &&
+      (calendar.sharePermission === "admin" ||
+        calendar.sharePermission === "owner");
 
     // Check if calendar is read-only
-    // Share permission takes precedence over guest permission
+    // Priority: sharePermission > tokenPermission > guestPermission
     const isCalendarReadOnly =
-      (isGuest && calendar.guestPermission === "read") ||
-      (!isGuest && calendar.sharePermission === "read") ||
-      (!isGuest &&
-        calendar.isSubscribed &&
-        calendar.guestPermission === "read" &&
-        !calendar.sharePermission); // Only if no share permission exists
+      isAuthEnabled &&
+      (calendar.sharePermission === "read" ||
+        (!calendar.sharePermission && calendar.tokenPermission === "read") ||
+        (!calendar.sharePermission &&
+          !calendar.tokenPermission &&
+          calendar.guestPermission === "read"));
+
+    const icon = isAdmin ? (
+      <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+    ) : isCalendarReadOnly ? (
+      <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+    ) : (
+      getCalendarIcon(calendar)
+    );
 
     return (
       <SelectItem key={calendar.id} value={calendar.id}>
         <div className="flex items-center gap-2.5 w-full">
-          {isAdmin ? (
-            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
-          ) : isCalendarReadOnly ? (
-            <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
-          ) : (
-            getCalendarIcon(calendar)
-          )}
+          {icon}
           <div
             className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: calendar.color }}
@@ -163,32 +184,33 @@ export function CalendarSelector({
           <SelectTrigger className="flex-1 h-9 sm:h-10 text-sm">
             {selectedCalendar ? (
               <div className="flex items-center gap-2 flex-1">
-                {selectedCalendar.sharePermission === "admin" ||
-                selectedCalendar.sharePermission === "owner" ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("share.permissionAdmin")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : isReadOnly ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("guest.readOnlyAccess")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  getCalendarIcon(selectedCalendar)
-                )}
+                {isAuthEnabled &&
+                  (selectedCalendar.sharePermission === "admin" ||
+                  selectedCalendar.sharePermission === "owner" ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("share.permissionAdmin")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : isReadOnly ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("guest.readOnlyAccess")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    getCalendarIcon(selectedCalendar)
+                  ))}
                 <div
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: selectedCalendar.color }}
@@ -222,6 +244,22 @@ export function CalendarSelector({
                   })}
                 </div>
                 {sharedCalendars.map(renderCalendarItem)}
+              </>
+            )}
+
+            {/* Token-accessible Calendars */}
+            {tokenCalendars.length > 0 && (
+              <>
+                {(ownCalendars.length > 0 || sharedCalendars.length > 0) && (
+                  <Separator className="my-1" />
+                )}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Globe className="h-3 w-3" />
+                  {t("calendar.tokenCalendars", {
+                    default: "Via Zugangslink",
+                  })}
+                </div>
+                {tokenCalendars.map(renderCalendarItem)}
               </>
             )}
 
@@ -306,14 +344,15 @@ export function CalendarSelector({
         <SelectTrigger className="w-full h-10 text-sm">
           {selectedCalendar ? (
             <div className="flex items-center gap-2 flex-1">
-              {selectedCalendar.sharePermission === "admin" ||
-              selectedCalendar.sharePermission === "owner" ? (
-                <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
-              ) : isReadOnly ? (
-                <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
-              ) : (
-                getCalendarIcon(selectedCalendar)
-              )}
+              {isAuthEnabled &&
+                (selectedCalendar.sharePermission === "admin" ||
+                selectedCalendar.sharePermission === "owner" ? (
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
+                ) : isReadOnly ? (
+                  <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+                ) : (
+                  getCalendarIcon(selectedCalendar)
+                ))}
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: selectedCalendar.color }}
@@ -347,6 +386,22 @@ export function CalendarSelector({
                 })}
               </div>
               {sharedCalendars.map(renderCalendarItem)}
+            </>
+          )}
+
+          {/* Token-accessible Calendars */}
+          {tokenCalendars.length > 0 && (
+            <>
+              {(ownCalendars.length > 0 || sharedCalendars.length > 0) && (
+                <Separator className="my-1" />
+              )}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Globe className="h-3 w-3" />
+                {t("calendar.tokenCalendars", {
+                  default: "Via Zugangslink",
+                })}
+              </div>
+              {tokenCalendars.map(renderCalendarItem)}
             </>
           )}
 

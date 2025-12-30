@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarShareList } from "@/components/calendar-share-list";
+import { CalendarTokenList } from "@/components/calendar-token-list";
 import { GuestPermissionSelector } from "@/components/guest-permission-selector";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
@@ -104,11 +105,7 @@ export function CalendarShareManagementSheet({
                     <span className="sm:hidden">{t("share.public")}</span>
                   </TabsTrigger>
                 )}
-                <TabsTrigger
-                  value="links"
-                  disabled
-                  className="gap-2 opacity-50"
-                >
+                <TabsTrigger value="links" className="gap-2">
                   <LinkIcon className="h-4 w-4" />
                   <span className="hidden sm:inline">
                     {t("share.accessLinks")}
@@ -153,23 +150,9 @@ export function CalendarShareManagementSheet({
                 </TabsContent>
               )}
 
-              {/* Access Links Tab (Phase 6 - Placeholder) */}
+              {/* Access Links Tab */}
               <TabsContent value="links" className="mt-0">
-                <div className="border rounded-lg p-8 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                      <LinkIcon className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {t("share.accessLinksComingSoon")}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t("share.accessLinksComingSoonDesc")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <CalendarTokenList calendarId={calendarId} />
               </TabsContent>
             </div>
           </Tabs>

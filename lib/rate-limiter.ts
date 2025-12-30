@@ -23,10 +23,14 @@
  * - RATE_LIMIT_EXTERNAL_SYNC_WINDOW
  * - RATE_LIMIT_EXPORT_PDF_REQUESTS - PDF export
  * - RATE_LIMIT_EXPORT_PDF_WINDOW
+ * - RATE_LIMIT_TOKEN_VALIDATION_REQUESTS - Token validation (per IP)
+ * - RATE_LIMIT_TOKEN_VALIDATION_WINDOW
+ * - RATE_LIMIT_TOKEN_CREATION_REQUESTS - Token creation (per calendar)
+ * - RATE_LIMIT_TOKEN_CREATION_WINDOW
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { logSecurityEvent, type RateLimitHitMetadata } from "@/lib/audit-log";
+import { logAuditEvent, type RateLimitHitMetadata } from "@/lib/audit-log";
 
 // =============================================================================
 // Configuration from Environment Variables
@@ -93,6 +97,24 @@ const config = {
     requests: parseInt(process.env.RATE_LIMIT_EXPORT_PDF_REQUESTS || "10", 10),
     windowMs:
       parseInt(process.env.RATE_LIMIT_EXPORT_PDF_WINDOW || "600", 10) * 1000, // 10 minutes
+  },
+  tokenValidation: {
+    requests: parseInt(
+      process.env.RATE_LIMIT_TOKEN_VALIDATION_REQUESTS || "10",
+      10
+    ),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_TOKEN_VALIDATION_WINDOW || "60", 10) *
+      1000, // 1 minute
+  },
+  tokenCreation: {
+    requests: parseInt(
+      process.env.RATE_LIMIT_TOKEN_CREATION_REQUESTS || "10",
+      10
+    ),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_TOKEN_CREATION_WINDOW || "3600", 10) *
+      1000, // 1 hour
   },
 };
 
@@ -236,6 +258,7 @@ function addRateLimitHeaders(
  * @param req - Next.js request object
  * @param userId - Optional user ID for authenticated requests
  * @param type - Type of endpoint to determine limits
+ * @param resourceId - Optional resource ID (e.g., calendarId for token-creation)
  * @returns NextResponse if rate limit exceeded, null otherwise
  *
  * @example
@@ -261,9 +284,20 @@ export function rateLimit(
     | "sse"
     | "calendar-create"
     | "external-sync"
-    | "export-pdf" = "auth"
+    | "export-pdf"
+    | "token-validation"
+    | "token-creation" = "auth",
+  resourceId?: string
 ): NextResponse | null {
-  const identifier = getClientIdentifier(req, userId);
+  // Special handling for resource-based limits (e.g., token-creation per calendar)
+  let identifier: string;
+  if (type === "token-creation" && resourceId) {
+    identifier = `calendar:${resourceId}`;
+  } else if (type === "external-sync" && resourceId) {
+    identifier = `calendar:${resourceId}`;
+  } else {
+    identifier = getClientIdentifier(req, userId);
+  }
 
   // Select config based on type
   let options: RateLimitOptions;
@@ -295,6 +329,12 @@ export function rateLimit(
     case "export-pdf":
       options = config.exportPdf;
       break;
+    case "token-validation":
+      options = config.tokenValidation;
+      break;
+    case "token-creation":
+      options = config.tokenCreation;
+      break;
   }
 
   const result = checkRateLimit(identifier, options);
@@ -306,7 +346,7 @@ export function rateLimit(
     );
 
     // Log rate limit event to audit logs (fire-and-forget)
-    logSecurityEvent<RateLimitHitMetadata>({
+    logAuditEvent<RateLimitHitMetadata>({
       action: "security.rate_limit.hit",
       userId: userId || null,
       resourceType: "rate_limit",
@@ -316,6 +356,8 @@ export function rateLimit(
         resetTime: result.resetAt,
       },
       request: req,
+      severity: "warning",
+      isUserVisible: userId ? true : false, // Show in activity log only for authenticated users
     }).catch((err) => console.error("Failed to log rate limit event:", err));
 
     const response = NextResponse.json(
@@ -349,7 +391,9 @@ export function getRateLimitStatus(
     | "sse"
     | "calendar-create"
     | "external-sync"
-    | "export-pdf" = "auth"
+    | "export-pdf"
+    | "token-validation"
+    | "token-creation" = "auth"
 ): RateLimitResult {
   let options: RateLimitOptions;
   switch (type) {
@@ -379,6 +423,12 @@ export function getRateLimitStatus(
       break;
     case "export-pdf":
       options = config.exportPdf;
+      break;
+    case "token-validation":
+      options = config.tokenValidation;
+      break;
+    case "token-creation":
+      options = config.tokenCreation;
       break;
   }
 

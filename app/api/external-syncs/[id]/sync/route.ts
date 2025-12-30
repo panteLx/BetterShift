@@ -406,12 +406,16 @@ export async function POST(
       );
     }
 
+    // Get user for audit logging and rate limiting
+    const user = await getSessionUser(request.headers);
+
     // Rate limiting: 5 syncs per 5 minutes PER CALENDAR
     // Use calendarId as identifier to prevent spamming one calendar
     const rateLimitResponse = rateLimit(
       request,
-      externalSync.calendarId,
-      "external-sync"
+      user?.id || null,
+      "external-sync",
+      externalSync.calendarId
     );
     if (rateLimitResponse) return rateLimitResponse;
 
@@ -429,7 +433,6 @@ export async function POST(
     }
 
     // Check edit permissions (works for both authenticated users and guests)
-    const user = await getSessionUser(request.headers);
     const hasAccess = await canEditCalendar(user?.id, externalSync.calendarId);
     if (!hasAccess) {
       return NextResponse.json(

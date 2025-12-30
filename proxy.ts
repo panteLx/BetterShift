@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isAuthEnabled, allowGuestAccess } from "@/lib/auth/feature-flags";
+import {
+  validateAccessToken,
+  storeTokenInCookie,
+  updateTokenUsage,
+} from "@/lib/auth/token-auth";
+import { logAuditEvent } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limiter";
 
 /**
  * Proxy for authentication and route protection (Next.js 16)
@@ -11,9 +18,80 @@ import { isAuthEnabled, allowGuestAccess } from "@/lib/auth/feature-flags";
  * - Allows public routes (login, register, API)
  * - Stores return URL for post-login redirect
  * - Supports guest access for viewing calendars
+ * - Handles access token sharing (/share/token/xyz)
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // =====================================================
+  // Access Token Handling (/share/token/[token])
+  // =====================================================
+  if (pathname.startsWith("/share/token/")) {
+    const token = pathname.split("/share/token/")[1];
+
+    if (token) {
+      // Rate limit: 10 requests per minute per IP
+      const rateLimitResponse = rateLimit(request, null, "token-validation");
+      if (rateLimitResponse) return rateLimitResponse;
+
+      // Validate the token
+      const validation = await validateAccessToken(token);
+
+      if (validation) {
+        // Token is valid - store in cookie and redirect to calendar
+        const response = NextResponse.redirect(
+          new URL(`/?id=${validation.calendarId}`, request.url)
+        );
+
+        storeTokenInCookie(
+          token,
+          validation.calendarId,
+          validation.permission,
+          response,
+          request // Pass request to read existing tokens
+        );
+
+        // Update usage stats (non-blocking)
+        void updateTokenUsage(validation.id);
+
+        // Audit log: Token used
+        void logAuditEvent({
+          userId: null, // Token access is anonymous
+          action: "calendar_token_used",
+          resourceType: "calendar",
+          resourceId: validation.calendarId,
+          metadata: {
+            tokenId: validation.id,
+            calendarName: validation.calendarName,
+            permission: validation.permission,
+          },
+          request,
+          severity: "info",
+          isUserVisible: false,
+        });
+
+        return response;
+      } else {
+        // Invalid token - audit log and redirect to home with error
+        void logAuditEvent({
+          userId: null,
+          action: "calendar_token_invalid",
+          resourceType: "calendar",
+          resourceId: null,
+          metadata: {
+            tokenPreview: `${token.slice(0, 6)}...`,
+          },
+          request,
+          severity: "warning",
+          isUserVisible: false,
+        });
+
+        const response = NextResponse.redirect(new URL("/", request.url));
+        // Could set a query param to show error toast on client
+        return response;
+      }
+    }
+  }
 
   // If auth is disabled, allow all routes
   if (!isAuthEnabled()) {
