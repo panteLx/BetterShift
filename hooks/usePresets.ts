@@ -4,6 +4,7 @@ import { ShiftPreset } from "@/lib/db/schema";
 export function usePresets(calendarId: string | undefined) {
   const [presets, setPresets] = useState<ShiftPreset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const fetchPresets = useCallback(
     async (silent = false) => {
@@ -27,6 +28,7 @@ export function usePresets(calendarId: string | undefined) {
         }
         const data = await response.json();
         setPresets(data);
+        setHasLoadedOnce(true);
       } catch (error) {
         console.error("Failed to fetch presets:", error);
         setPresets([]);
@@ -51,6 +53,7 @@ export function usePresets(calendarId: string | undefined) {
   return {
     presets,
     loading,
+    hasLoadedOnce,
     refetchPresets: fetchPresets,
   };
 }

@@ -8,6 +8,7 @@ export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
   const [shifts, setShifts] = useState<ShiftWithCalendar[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const fetchShifts = useCallback(
     async (showLoading = true) => {
@@ -26,6 +27,7 @@ export function useShifts(calendarId: string | undefined) {
         }
         const data = await response.json();
         setShifts(data);
+        setHasLoadedOnce(true);
       } catch (error) {
         console.error("Failed to fetch shifts:", error);
         setShifts([]);
@@ -166,6 +168,7 @@ export function useShifts(calendarId: string | undefined) {
     shifts,
     setShifts,
     loading,
+    hasLoadedOnce,
     createShift,
     updateShift,
     deleteShift,

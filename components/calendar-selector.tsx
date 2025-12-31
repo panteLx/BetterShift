@@ -85,30 +85,45 @@ export function CalendarSelector({
       c.ownerId !== user.id &&
       c.sharePermission // Only calendars with explicit share permission, not tokens
   );
-  const tokenCalendars = isAuthEnabled
-    ? visibleCalendars.filter(
-        (c) =>
-          c.tokenPermission &&
-          !c.sharePermission &&
-          (!user || c.ownerId !== user?.id)
-      )
-    : [];
-  // For guests or when auth is disabled, show all visible calendars
-  // Exclude calendars that are already shown in tokenCalendars group
-  const guestAccessibleCalendars =
-    !isAuthEnabled || isGuest
-      ? visibleCalendars.filter((c) => !c.tokenPermission)
+  const tokenCalendars =
+    isAuthEnabled && !isGuest
+      ? visibleCalendars.filter(
+          (c) =>
+            c.tokenPermission &&
+            !c.sharePermission &&
+            (!user || c.ownerId !== user?.id)
+        )
       : [];
+  // Public calendars: Calendars with guestPermission that authenticated users have subscribed to
+  // Exclude calendars already shown in other groups (own, shared, token)
+  const publicCalendars =
+    isAuthEnabled && user && !isGuest
+      ? visibleCalendars.filter(
+          (c) =>
+            c.guestPermission &&
+            !c.sharePermission &&
+            !c.tokenPermission &&
+            c.ownerId !== user.id
+        )
+      : [];
+  // For guests or when auth is disabled, show all visible calendars without grouping
+  // Guests see all their accessible calendars in one list (no separation by token/guest permission)
+  const guestAccessibleCalendars =
+    !isAuthEnabled || isGuest ? visibleCalendars : [];
 
   // Check if selected calendar is read-only
-  // Priority: sharePermission > tokenPermission > guestPermission
+  // Owner is never read-only, even if guestPermission is "read"
+  // Guests (no user) or non-owners see read-only based on permissions
+  // Priority: owner > sharePermission > tokenPermission > guestPermission
   const isReadOnly =
-    selectedCalendar?.sharePermission === "read" ||
-    (!selectedCalendar?.sharePermission &&
-      selectedCalendar?.tokenPermission === "read") ||
-    (!selectedCalendar?.sharePermission &&
-      !selectedCalendar?.tokenPermission &&
-      selectedCalendar?.guestPermission === "read");
+    selectedCalendar &&
+    (!user || selectedCalendar.ownerId !== user.id) &&
+    (selectedCalendar.sharePermission === "read" ||
+      (!selectedCalendar.sharePermission &&
+        selectedCalendar.tokenPermission === "read") ||
+      (!selectedCalendar.sharePermission &&
+        !selectedCalendar.tokenPermission &&
+        selectedCalendar.guestPermission === "read"));
 
   // Check if user can manage settings (owner or admin)
   const { canManage } = useCalendarPermission(selectedCalendar);
@@ -145,9 +160,12 @@ export function CalendarSelector({
         calendar.sharePermission === "owner");
 
     // Check if calendar is read-only
-    // Priority: sharePermission > tokenPermission > guestPermission
+    // Owner is never read-only, even if guestPermission is "read"
+    // Guests (no user) or non-owners see read-only based on permissions
+    // Priority: owner > sharePermission > tokenPermission > guestPermission
     const isCalendarReadOnly =
       isAuthEnabled &&
+      (!user || calendar.ownerId !== user.id) &&
       (calendar.sharePermission === "read" ||
         (!calendar.sharePermission && calendar.tokenPermission === "read") ||
         (!calendar.sharePermission &&
@@ -260,6 +278,22 @@ export function CalendarSelector({
                   })}
                 </div>
                 {tokenCalendars.map(renderCalendarItem)}
+              </>
+            )}
+
+            {/* Public Calendars (guestPermission subscribed by authenticated users) */}
+            {publicCalendars.length > 0 && (
+              <>
+                {(ownCalendars.length > 0 ||
+                  sharedCalendars.length > 0 ||
+                  tokenCalendars.length > 0) && <Separator className="my-1" />}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Globe className="h-3 w-3" />
+                  {t("calendar.publicCalendars", {
+                    default: "Öffentliche Kalender",
+                  })}
+                </div>
+                {publicCalendars.map(renderCalendarItem)}
               </>
             )}
 
@@ -402,6 +436,22 @@ export function CalendarSelector({
                 })}
               </div>
               {tokenCalendars.map(renderCalendarItem)}
+            </>
+          )}
+
+          {/* Public Calendars (guestPermission subscribed by authenticated users) */}
+          {publicCalendars.length > 0 && (
+            <>
+              {(ownCalendars.length > 0 ||
+                sharedCalendars.length > 0 ||
+                tokenCalendars.length > 0) && <Separator className="my-1" />}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Globe className="h-3 w-3" />
+                {t("calendar.publicCalendars", {
+                  default: "Öffentliche Kalender",
+                })}
+              </div>
+              {publicCalendars.map(renderCalendarItem)}
             </>
           )}
 

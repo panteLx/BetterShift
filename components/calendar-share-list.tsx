@@ -51,7 +51,7 @@ export function CalendarShareList({
   const locale = useLocale();
   const { user: currentUser } = useAuth();
   const { isOwner } = useCalendarPermission(calendarId);
-  const { shares, loading, fetchShares, updateShare, removeShare } =
+  const { shares, fetchShares, updateShare, removeShare } =
     useCalendarShares(calendarId);
 
   const [showAddUser, setShowAddUser] = useState(false);
@@ -104,19 +104,6 @@ export function CalendarShareList({
   };
 
   const isSelf = (share: CalendarShare) => share.userId === currentUser?.id;
-
-  if (loading && shares.length === 0) {
-    return (
-      <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="h-16 bg-muted/50 rounded-lg animate-pulse"
-          ></div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <>

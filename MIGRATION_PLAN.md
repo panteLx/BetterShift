@@ -2017,206 +2017,126 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ## Phase 8: UI/UX Enhancements
 
-### 8.1 Loading States & Skeleton Optimization
+### 8.1 Loading States & Skeleton Optimization ✅
 
-**Priority**: Medium (Polish & User Experience)
+**Priority**: High (User Experience Critical)
 
-**Goal**: Implement consistent, non-intrusive loading feedback across the app to prevent UI flicker and improve perceived performance.
+**Goal**: Implement a single, consistent fullscreen loading pattern across the app to eliminate skeleton flicker and provide a clean initial load experience.
 
-**Current Problems:**
+**Decision**: Based on user feedback and UX analysis from other modern apps:
 
-1. **Skeleton Flicker**: Skeletons appear for very short durations (0.5s or less), causing visual noise
-2. **Double Loading Feedback**: Some components (e.g., `calendar-grid.tsx`) show skeleton → then loading spinner
-3. **Router-Induced Re-renders**: Navigation chain `/ → /?id=XXX` triggers multiple skeleton renders
-4. **Inconsistent Patterns**: Different components use different loading strategies
+- **Single fullscreen spinner** on initial page load
+- **No skeleton components** (completely removed)
+- **SSE for real-time updates** after initial load (no additional loading states needed)
+- **Optimistic UI** for all user actions (instant feedback)
 
-**Affected Components:**
+**Current Problems (Solved):**
 
-- `app/page.tsx` - Main calendar page (initial load)
-- `app/profile/page.tsx` - Profile page
-- `components/preset-list.tsx` - Preset selector
-- `components/calendar-grid.tsx` - Calendar grid with shifts
-- All components except header/footer
+1. ~~**Skeleton Flicker**~~: Eliminated by removing all skeletons
+2. ~~**Double Loading Feedback**~~: Eliminated by single loading pattern
+3. ~~**Router-Induced Re-renders**~~: Handled by per-page loading state
+4. ~~**Inconsistent Patterns**~~: Unified to single fullscreen spinner
 
-#### 8.1.1 Implement Delayed Skeleton Pattern
+**Affected Pages:**
 
-**Strategy**: Use a **Delayed Skeleton Pattern with Minimum Display Time** to prevent flicker while maintaining loading feedback.
+- `app/page.tsx` - Main calendar page (Calendars + Shifts + Presets + Notes)
+- `app/profile/page.tsx` - Profile page (User + Accounts + Sessions)
+- `app/profile/activity/page.tsx` - Activity logs page (Activity + Sync logs)
 
-- [ ] **Create `useDelayedLoading` Hook**
+#### 8.1.1 Create Fullscreen Loading Component
 
-  - [ ] Create `hooks/useDelayedLoading.ts`
-    ```typescript
-    /**
-     * Hook to delay skeleton display and enforce minimum display time
-     *
-     * @param isLoading - Actual loading state from data hook
-     * @param delayMs - Delay before showing skeleton (default: 200ms)
-     * @param minDisplayMs - Minimum time to show skeleton once visible (default: 400ms)
-     * @returns shouldShowSkeleton - Boolean indicating if skeleton should render
-     *
-     * Behavior:
-     * - If loading completes < delayMs: No skeleton shown
-     * - If loading completes > delayMs: Skeleton shown for at least minDisplayMs
-     * - Prevents rapid flicker for fast loads
-     * - Ensures smooth transitions for slow loads
-     */
-    ```
-  - [ ] Parameters:
-    - `delayMs`: 200-300ms (don't show skeleton for very fast loads)
-    - `minDisplayMs`: 400ms (if skeleton shown, display long enough to read)
-  - [ ] Return: `shouldShowSkeleton` boolean
-  - [ ] Internal logic: Track timestamps, use `useEffect` + `setTimeout`
+- [x] **Create `components/fullscreen-loader.tsx`**
+  - [x] Fullscreen centered spinner with app branding
+  - [x] Smooth fade-in animation (prevent flash for very fast loads)
+  - [x] Uses Lucide `Loader2` icon with rotation animation
+  - [x] Optional loading message (e.g., "Loading your calendars...")
+  - [x] Dark/light theme support via theme-provider
 
-- [ ] **Create Loading Configuration**
+#### 8.1.2 Remove All Skeleton Components
 
-  - [ ] Create `lib/loading-config.ts`
+- [x] **Delete `components/skeletons/` Directory**
+  - [x] `calendar-header-skeleton.tsx`
+  - [x] `calendar-compare-header-skeleton.tsx`
+  - [x] `calendar-content-skeleton.tsx`
+  - [x] `footer-skeleton.tsx`
+  - [x] `profile-skeleton.tsx`
+  - [x] All other skeleton components
 
-    ```typescript
-    export const LOADING_THRESHOLDS = {
-      // Don't show skeleton for loads < 200ms (instant feel)
-      DELAY_THRESHOLD: 200,
+#### 8.1.3 Update Pages with Fullscreen Loader
 
-      // Show skeleton for minimum 400ms (smooth transition)
-      MIN_DISPLAY_TIME: 400,
+- [x] **Update `app/page.tsx`**
 
-      // Component-specific overrides
-      PROFILE_PAGE: { DELAY: 300, MIN_DISPLAY: 500 },
-      CALENDAR_GRID: { DELAY: 150, MIN_DISPLAY: 400 },
-      PRESET_LIST: { DELAY: 250, MIN_DISPLAY: 300 },
-    } as const;
-    ```
+  - [x] Replace all skeleton imports with `FullscreenLoader`
+  - [x] Show loader when `loading || shiftsLoading || presetsLoading`
+  - [x] Remove skeleton components from render
+  - [x] Ensure SSE connection starts after initial load
 
-#### 8.1.2 Update Components to Use Delayed Loading
+- [x] **Update `app/profile/page.tsx`**
 
-- [ ] **Update `app/page.tsx`**
-  - [ ] Replace `loading` with `useDelayedLoading(loading)`
-  - [ ] Remove redundant loading checks
-  - [ ] Ensure only ONE skeleton per section (no skeleton + spinner combos)
-- [ ] **Update `app/profile/page.tsx`**
-  - [ ] Use `useDelayedLoading(isLoading || accountsLoading)`
-  - [ ] Remove skeleton if data loads < delay threshold
-- [ ] **Update `components/preset-list.tsx`**
-  - [ ] Replace `if (loading) return <PresetListSkeleton />` pattern
-  - [ ] Use `useDelayedLoading(loading)` hook
-- [ ] **Update `components/calendar-content.tsx`**
+  - [x] Replace skeleton with `FullscreenLoader`
+  - [x] Show loader when `isLoading || accountsLoading || sessionsLoading`
+  - [x] Remove `ProfileContentSkeleton` import
 
-  - [ ] Remove duplicate loading spinners if skeleton already shown
-  - [ ] Ensure calendar-grid.tsx doesn't show skeleton + spinner
+- [x] **Update `app/profile/activity/page.tsx`**
+  - [x] Add `FullscreenLoader` component
+  - [x] Show loader when `authLoading || loading` (initial load)
+  - [x] Keep inline skeletons only for pagination/filters (acceptable)
 
-- [ ] **Update All Other Components with Skeletons**
-  - [ ] Search for all `*Skeleton` component usages
-  - [ ] Apply delayed loading pattern consistently
-  - [ ] Document exceptions (e.g., footer/header never show skeletons)
+#### 8.1.4 Loading Feedback Patterns (Updated)
 
-#### 8.1.3 Optimistic UI for User Actions
+**New Simplified Patterns:**
 
-**Goal**: Implement instant feedback for user interactions (no loading states).
+### 1. Fullscreen Loader (Initial Page Load Only)
 
-- [ ] **Already Implemented** (verify consistency):
+- **Use for**: First data fetch when entering a page
+- **Examples**: `/`, `/profile`, `/profile/activity`
+- **Pattern**: `{isLoading ? <FullscreenLoader /> : <PageContent />}`
+- **Duration**: Until all critical data is fetched
 
-  - ✅ Shift creation - Optimistic update with temp ID
-  - ✅ Shift deletion - Immediate removal from UI
-  - ✅ Preset selection - Instant state change
-  - ✅ Calendar switching - Immediate UI update
+### 2. Optimistic UI (User Actions) ✅
 
-- [ ] **Verify No Regressions**:
-  - [ ] Test shift creation shows immediately
-  - [ ] Test calendar switching feels instant
-  - [ ] Test preset selection has no delay
-  - [ ] No loading spinners on button clicks (use disabled state instead)
+- **Use for**: Create/Update/Delete operations triggered by user
+- **Examples**: Shift creation, Preset selection, Note editing
+- **Pattern**: Update UI immediately, revert on error
+- **Already Implemented**: No changes needed
 
-#### 8.1.4 Router Navigation Optimization
+### 3. Inline Spinners (Button Actions) ✅
 
-**Goal**: Prevent double-skeleton from router redirect chain.
+- **Use for**: Long-running server operations in forms
+- **Examples**: "Save" button, "Export" button, "Sync" button
+- **Pattern**: Button disabled + spinner icon + "Saving..." text
+- **Already Implemented**: No changes needed
 
-- [ ] **Investigate Router Behavior**
+### 4. No Loading Feedback (Instant Actions) ✅
 
-  - [ ] Check why `/ → /?id=XXX` causes double render
-  - [ ] Consider using `router.replace` instead of `router.push` for initial redirect
-  - [ ] Test if pre-populating `?id` in URL prevents re-render
+- **Use for**: Pure client-side state changes, SSE updates
+- **Examples**: Theme toggle, Language switch, Real-time shift updates
+- **Pattern**: Immediate state change, no loading indicator
+- **Already Implemented**: No changes needed
 
-- [ ] **Potential Solutions**:
-  - [ ] Option A: Pre-load calendar ID before first render (SSR/server component)
-  - [ ] Option B: Use `useTransition` to defer skeleton until after router settle
-  - [ ] Option C: Cache calendar selection in localStorage/cookie
-  - [ ] Test each approach and implement best solution
+### 5. Progress Indicators (Long Operations) ✅
 
-#### 8.1.5 Loading Feedback Patterns (Style Guide)
+- **Use for**: Multi-step processes, file uploads, sync operations
+- **Examples**: Calendar export (PDF), External sync, Bulk operations
+- **Pattern**: Progress bar or percentage with cancel option
+- **Already Implemented**: No changes needed
 
-**Goal**: Standardize when to use which loading pattern across the app.
+#### 8.1.5 Verify Optimistic UI (No Regressions)
 
-- [ ] **Create Loading Pattern Documentation** (in code comments or README)
+- [x] **Test User Actions Feel Instant**:
+  - [x] Shift creation shows immediately (temp ID pattern)
+  - [x] Shift deletion removes from UI instantly
+  - [x] Preset selection updates immediately
+  - [x] Calendar switching feels instant
+  - [x] No loading spinners on button clicks (disabled state only)
 
-  ## Loading Feedback Patterns
+**Implementation Priority**: ✅ **COMPLETED**
 
-  ### 1. Delayed Skeletons (Initial Page Load)
+**Estimated Effort**: 1 day
 
-  - **Use for**: Page-level data fetching, large component trees
-  - **Examples**: Calendar page, Profile page, Compare view
-  - **Pattern**: `useDelayedLoading()` hook with skeleton components
+**Dependencies**: None
 
-  ### 2. Optimistic UI (User Actions)
-
-  - **Use for**: Create/Update/Delete operations triggered by user
-  - **Examples**: Shift creation, Preset selection, Note editing
-  - **Pattern**: Update UI immediately, revert on error
-
-  ### 3. Inline Spinners (Button Actions)
-
-  - **Use for**: Long-running server operations in forms
-  - **Examples**: "Save" button, "Export" button, "Sync" button
-  - **Pattern**: Button disabled + spinner icon + "Saving..." text
-
-  ### 4. No Loading Feedback (Instant Actions)
-
-  - **Use for**: Pure client-side state changes
-  - **Examples**: Theme toggle, Language switch, View settings
-  - **Pattern**: Immediate state change, no loading indicator
-
-  ### 5. Progress Indicators (Long Operations)
-
-  - **Use for**: Multi-step processes, file uploads, sync operations
-  - **Examples**: Calendar export (PDF), External sync, Bulk operations
-  - **Pattern**: Progress bar or percentage with cancel option
-
-- [ ] **Apply Patterns Consistently**:
-  - [ ] Audit all loading states in codebase
-  - [ ] Categorize by pattern type
-  - [ ] Refactor to use correct pattern
-  - [ ] Remove any skeleton + spinner combos
-
-#### 8.1.6 Testing & Validation
-
-- [ ] **Test Slow Network Conditions**
-
-  - [ ] Enable Chrome DevTools network throttling (Slow 3G)
-  - [ ] Verify skeletons appear after delay threshold
-  - [ ] Verify skeletons stay visible for minimum time
-  - [ ] Confirm smooth transition to real content
-
-- [ ] **Test Fast Network Conditions**
-
-  - [ ] Disable throttling (fast connection)
-  - [ ] Verify NO skeleton flicker for instant loads
-  - [ ] Confirm page feels responsive and fast
-
-- [ ] **Test Edge Cases**
-
-  - [ ] Rapid route switching (click calendar A → B → C quickly)
-  - [ ] Browser back/forward navigation
-  - [ ] Refresh during loading
-  - [ ] Offline → online transition
-
-- [ ] **Performance Metrics**
-  - [ ] Measure time to first meaningful paint
-  - [ ] Track skeleton display frequency (should be rare for fast users)
-  - [ ] Monitor user feedback on loading experience
-
-**Implementation Priority**: Medium (after auth migration stable, before production)
-
-**Estimated Effort**: 2-3 days
-
-**Dependencies**: None (can implement independently)
+**Status**: Ready for production deployment
 
 ---
 

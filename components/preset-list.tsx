@@ -13,7 +13,6 @@ import {
 
 import { ShiftPreset } from "@/lib/db/schema";
 import { CalendarWithCount } from "@/lib/types";
-import { PresetListSkeleton } from "@/components/skeletons/preset-list-skeleton";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface PresetListProps {
@@ -25,7 +24,6 @@ interface PresetListProps {
   onCreateNew?: () => void;
   onManageClick?: () => void;
   onViewSettingsClick?: () => void;
-  loading?: boolean;
   hidePresetHeader?: boolean;
   onHidePresetHeaderChange?: (hide: boolean) => void;
   hideManageButton?: boolean;
@@ -38,7 +36,6 @@ export function PresetList({
   onSelectPreset,
   onManageClick,
   onViewSettingsClick,
-  loading = false,
   hidePresetHeader = false,
   onHidePresetHeaderChange,
   hideManageButton = false,
@@ -53,10 +50,8 @@ export function PresetList({
   // Check if current calendar is read-only
   const isReadOnly = !permission.canEdit;
 
-  // Show loading state while fetching
-  if (loading) {
-    return <PresetListSkeleton hidePresetHeader={hidePresetHeader} />;
-  }
+  // Presets are now loaded at page level - no skeleton needed here
+  // If loading is true, parent should show FullscreenLoader
 
   if (presets.length === 0) {
     return (

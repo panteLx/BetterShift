@@ -78,6 +78,7 @@
     "myCalendars": "Meine Kalender",
     "sharedCalendars": "Geteilte Kalender",
     "tokenCalendars": "Via Zugangslink",
+    "publicCalendars": "Öffentliche Kalender",
     "select": "Dein BetterShift Kalender",
     "deleteCalendar": "Kalender löschen",
     "deleteWarning": "Alle Schichten, Presets und Notizen werden ebenfalls gelöscht.",

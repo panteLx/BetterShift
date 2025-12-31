@@ -29,10 +29,7 @@ import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { useAuth } from "@/hooks/useAuth";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { GuestEmptyState } from "@/components/guest-empty-state";
-import { CalendarHeaderSkeleton } from "@/components/skeletons/calendar-header-skeleton";
-import { CalendarCompareHeaderSkeleton } from "@/components/skeletons/calendar-compare-header-skeleton";
-import { CalendarContentSkeleton } from "@/components/skeletons/calendar-content-skeleton";
-import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
+import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { CalendarContent } from "@/components/calendar-content";
 import { CalendarCompareSheet } from "@/components/calendar-compare-sheet";
 import { CalendarCompareView } from "@/components/calendar-compare-view";
@@ -61,6 +58,7 @@ function HomeContent() {
     selectedCalendar,
     setSelectedCalendar,
     loading,
+    hasLoadedOnce,
     createCalendar: createCalendarHook,
     deleteCalendar: deleteCalendarHook,
     refetchCalendars,
@@ -70,6 +68,7 @@ function HomeContent() {
     shifts,
     setShifts,
     loading: shiftsLoading,
+    hasLoadedOnce: shiftsLoadedOnce,
     createShift: createShiftHook,
     updateShift: updateShiftHook,
     deleteShift: deleteShiftHook,
@@ -79,6 +78,7 @@ function HomeContent() {
   const {
     presets,
     loading: presetsLoading,
+    hasLoadedOnce: presetsLoadedOnce,
     refetchPresets,
   } = usePresets(selectedCalendar);
 
@@ -738,36 +738,24 @@ function HomeContent() {
     dialogStates.setShowSyncedShiftsDialog(true);
   };
 
+  // Show fullscreen loader only on first load (prevents spinner on navigation)
+  // Only show if at least one data source hasn't loaded yet
+  if (
+    (!hasLoadedOnce && loading) ||
+    (!shiftsLoadedOnce && shiftsLoading) ||
+    (!presetsLoadedOnce && presetsLoading)
+  ) {
+    return <FullscreenLoader message={t("common.loading")} />;
+  }
+
   // Calendar grid calculations
   const calendarDays = getCalendarDays(currentDate);
 
   // If in compare mode, render compare view
   if (isCompareMode) {
-    // Show skeleton while loading
+    // Show loader while loading compare data
     if (compareDataLoading) {
-      return (
-        <div className="min-h-screen flex flex-col">
-          <CalendarCompareHeaderSkeleton />
-          <div className="flex-1 w-full px-1 sm:px-4 py-4">
-            <div
-              className={`grid gap-4 ${
-                selectedCompareIds.length === 2
-                  ? "grid-cols-1 lg:grid-cols-2"
-                  : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
-              }`}
-            >
-              {Array.from({ length: selectedCompareIds.length }).map(
-                (_, index) => (
-                  <div key={index} className="space-y-4">
-                    <CalendarContentSkeleton daysCount={35} />
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-          <AppFooterSkeleton />
-        </div>
-      );
+      return <FullscreenLoader message={t("compare.loading")} />;
     }
 
     return (
@@ -1006,19 +994,6 @@ function HomeContent() {
     );
   }
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <CalendarHeaderSkeleton />
-        <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
-          <CalendarContentSkeleton />
-        </div>
-        <AppFooterSkeleton />
-      </div>
-    );
-  }
-
   // Empty state
   if (calendars.length === 0) {
     // If user is guest, show guest empty state (no create calendar option)
@@ -1152,47 +1127,43 @@ function HomeContent() {
       />
 
       <div className="container max-w-4xl mx-auto px-1 py-3 sm:p-4 flex-1">
-        {shiftsLoading ? (
-          <CalendarContentSkeleton daysCount={calendarDays.length} />
-        ) : (
-          <CalendarContent
-            calendarDays={calendarDays}
-            currentDate={currentDate}
-            onDateChange={setCurrentDate}
-            shifts={shifts}
-            notes={notes}
-            selectedPresetId={selectedPresetId}
-            togglingDates={shiftActions.togglingDates}
-            externalSyncs={externalSyncs}
-            maxShiftsToShow={
-              viewSettings.shiftsPerDay === null
-                ? undefined
-                : viewSettings.shiftsPerDay
-            }
-            maxExternalShiftsToShow={
-              viewSettings.externalShiftsPerDay === null
-                ? undefined
-                : viewSettings.externalShiftsPerDay
-            }
-            showShiftNotes={viewSettings.showShiftNotes}
-            showFullTitles={viewSettings.showFullTitles}
-            shiftSortType={viewSettings.shiftSortType}
-            shiftSortOrder={viewSettings.shiftSortOrder}
-            combinedSortMode={viewSettings.combinedSortMode}
-            highlightedWeekdays={viewSettings.highlightedWeekdays}
-            highlightColor={viewSettings.highlightColor}
-            selectedCalendar={selectedCalendar || null}
-            statsRefreshTrigger={statsRefreshTrigger}
-            locale={dateLocale}
-            onDayClick={handleDayClick}
-            onDayRightClick={handleDayRightClick}
-            onNoteIconClick={handleNoteIconClick}
-            onLongPress={handleLongPressDay}
-            onShowAllShifts={handleShowAllShifts}
-            onShowSyncedShifts={handleShowSyncedShifts}
-            onDeleteShift={shiftActions.handleDeleteShift}
-          />
-        )}
+        <CalendarContent
+          calendarDays={calendarDays}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          shifts={shifts}
+          notes={notes}
+          selectedPresetId={selectedPresetId}
+          togglingDates={shiftActions.togglingDates}
+          externalSyncs={externalSyncs}
+          maxShiftsToShow={
+            viewSettings.shiftsPerDay === null
+              ? undefined
+              : viewSettings.shiftsPerDay
+          }
+          maxExternalShiftsToShow={
+            viewSettings.externalShiftsPerDay === null
+              ? undefined
+              : viewSettings.externalShiftsPerDay
+          }
+          showShiftNotes={viewSettings.showShiftNotes}
+          showFullTitles={viewSettings.showFullTitles}
+          shiftSortType={viewSettings.shiftSortType}
+          shiftSortOrder={viewSettings.shiftSortOrder}
+          combinedSortMode={viewSettings.combinedSortMode}
+          highlightedWeekdays={viewSettings.highlightedWeekdays}
+          highlightColor={viewSettings.highlightColor}
+          selectedCalendar={selectedCalendar || null}
+          statsRefreshTrigger={statsRefreshTrigger}
+          locale={dateLocale}
+          onDayClick={handleDayClick}
+          onDayRightClick={handleDayRightClick}
+          onNoteIconClick={handleNoteIconClick}
+          onLongPress={handleLongPressDay}
+          onShowAllShifts={handleShowAllShifts}
+          onShowSyncedShifts={handleShowSyncedShifts}
+          onDeleteShift={shiftActions.handleDeleteShift}
+        />
       </div>
 
       {/* Floating Action Button */}

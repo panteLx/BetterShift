@@ -78,6 +78,7 @@
     "myCalendars": "My Calendars",
     "sharedCalendars": "Shared Calendars",
     "tokenCalendars": "Via Access Link",
+    "publicCalendars": "Public Calendars",
     "select": "Your BetterShift Calendar",
     "deleteCalendar": "Delete Calendar",
     "deleteWarning": "All shifts, presets and notes will also be deleted.",

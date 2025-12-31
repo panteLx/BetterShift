@@ -32,7 +32,6 @@ export function PresetSelector({
   onStatsRefresh,
   calendarId,
   onViewSettingsClick,
-  loading = false,
   hidePresetHeader = false,
   onHidePresetHeaderChange,
   hideManageButton = false,
@@ -60,7 +59,6 @@ export function PresetSelector({
         onCreateNew={handleManageClick}
         onManageClick={handleManageClick}
         onViewSettingsClick={onViewSettingsClick}
-        loading={loading}
         hidePresetHeader={hidePresetHeader}
         onHidePresetHeaderChange={onHidePresetHeaderChange}
         hideManageButton={hideManageButton}

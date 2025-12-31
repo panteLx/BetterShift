@@ -11,11 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
-import { AuthHeaderSkeleton } from "@/components/skeletons/header-skeleton";
-import { AuthContentSkeleton } from "@/components/skeletons/auth-content-skeleton";
-import { AppFooterSkeleton } from "@/components/skeletons/footer-skeleton";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import {
   isRateLimitError,
@@ -153,16 +151,10 @@ export default function RegisterPage() {
     return null;
   }
 
-  // Prevent hydration mismatch by showing skeleton until mounted
-  // Also show skeleton while redirecting authenticated users
+  // Prevent hydration mismatch by showing loader until mounted
+  // Also show loader while redirecting authenticated users
   if (!mounted || isAuthenticated) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <AuthHeaderSkeleton />
-        <AuthContentSkeleton />
-        <AppFooterSkeleton />
-      </div>
-    );
+    return <FullscreenLoader />;
   }
 
   return (

@@ -45,11 +45,11 @@ export function UserMenu() {
         fetchOptions: {
           onSuccess: () => {
             toast.success(t("auth.logoutSuccess"));
-            // Redirect to login after session is fully cleared
-            router.replace("/login");
           },
         },
       });
+      // Always redirect to login after sign out, regardless of auth method
+      router.replace("/login");
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error(t("common.error"));

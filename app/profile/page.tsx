@@ -25,7 +25,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { AuthHeader } from "@/components/auth-header";
 import { Smartphone, Monitor, Tablet, HelpCircle, LogOut } from "lucide-react";
 import { AppFooter } from "@/components/app-footer";
-import { ProfileContentSkeleton } from "@/components/skeletons/profile-skeleton";
+import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import {
   isRateLimitError,
@@ -99,19 +99,18 @@ export default function ProfilePage() {
     }
   }, [isAuthEnabled, isLoading, user, router]);
 
-  if (!isAuthEnabled || (!isLoading && !user)) {
+  // Show fullscreen loader during initial data fetch
+  if (isLoading || accountsLoading || sessionsLoading) {
+    return <FullscreenLoader />;
+  }
+
+  if (!isAuthEnabled || !user) {
     return null;
   }
 
-  // Show skeleton during initial load or while loading accounts
-  if (!mounted || isLoading || accountsLoading) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <AuthHeader showUserMenu />
-        <ProfileContentSkeleton />
-        <AppFooter versionInfo={versionInfo} />
-      </div>
-    );
+  // Don't render until mounted (prevent hydration issues)
+  if (!mounted) {
+    return null;
   }
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {

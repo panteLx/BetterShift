@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
+import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -78,14 +79,7 @@ export default function ActivityLogPage() {
     goToPreviousPage,
   } = useActivityLogs();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.replace("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
-
-  // UI State
+  // UI State (must be defined before any early returns)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<
     "timestamp" | "type" | "severity" | null
@@ -94,6 +88,18 @@ export default function ActivityLogPage() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  // Show fullscreen loader during initial data fetch
+  if (authLoading || loading) {
+    return <FullscreenLoader />;
+  }
 
   // Toggle row expansion
   const toggleRow = (logId: string) => {

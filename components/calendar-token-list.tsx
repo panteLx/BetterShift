@@ -33,7 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarTokenCreateDialog } from "@/components/calendar-token-create-dialog";
 import {
   Plus,
@@ -56,7 +55,7 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
 
-  const { tokens, isLoading, fetchTokens, deleteToken, updateToken } =
+  const { tokens, fetchTokens, deleteToken, updateToken } =
     useCalendarTokens(calendarId);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -85,16 +84,6 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
       isActive: !token.isActive,
     });
   };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
