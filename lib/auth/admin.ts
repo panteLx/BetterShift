@@ -235,6 +235,50 @@ export function canManageCalendar(
 }
 
 /**
+ * Check if admin can edit a calendar
+ *
+ * Rules:
+ * - Both admin and superadmin can edit calendars
+ * - Can edit name, color, guest permission
+ * - Cannot change owner via edit (use transfer instead)
+ *
+ * @param adminUser - The admin performing the action
+ * @returns boolean - true if admin can edit calendars
+ */
+export function canEditCalendar(adminUser: User | null | undefined): boolean {
+  return isAdmin(adminUser);
+}
+
+/**
+ * Check if admin can delete a calendar
+ *
+ * Rules:
+ * - Only superadmin can delete calendars
+ *
+ * @param adminUser - The admin performing the action
+ * @returns boolean - true if admin can delete calendars
+ */
+export function canDeleteCalendar(adminUser: User | null | undefined): boolean {
+  return isSuperAdmin(adminUser);
+}
+
+/**
+ * Check if admin can transfer calendar ownership
+ *
+ * Rules:
+ * - Both admin and superadmin can transfer calendars
+ * - Can transfer any calendar (orphaned or owned)
+ *
+ * @param adminUser - The admin performing the action
+ * @returns boolean - true if admin can transfer calendars
+ */
+export function canTransferCalendar(
+  adminUser: User | null | undefined
+): boolean {
+  return isAdmin(adminUser);
+}
+
+/**
  * Check if admin can assign orphaned calendars
  *
  * Rules:
