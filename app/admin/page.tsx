@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { StatsCardsGrid } from "@/components/admin/stats-cards";
 import { useAdminStats } from "@/hooks/useAdminStats";
-import { Users, FolderOpen, RefreshCw } from "lucide-react";
+import { FolderOpen, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
 import { useLocale } from "next-intl";
@@ -94,36 +94,6 @@ export default function AdminDashboardPage() {
 
       {/* Stats Cards */}
       <StatsCardsGrid stats={stats} isLoading={isLoading} />
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("admin.quickActions")}</CardTitle>
-          <CardDescription>
-            {t("admin.quickActionsDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => router.push("/admin/users")}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              {t("admin.manageUsers")}
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => router.push("/admin/calendars/orphaned")}
-            >
-              <FolderOpen className="mr-2 h-4 w-4" />
-              {t("admin.viewOrphanedCalendars")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Recent Activity Preview */}
       {stats?.activity.logs && stats.activity.logs.length > 0 && (
