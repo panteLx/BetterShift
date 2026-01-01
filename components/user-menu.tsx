@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Users, FileText } from "lucide-react";
+import { User, LogOut, Users, FileText, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
+import { useIsAdmin } from "@/hooks/useAdminAccess";
 
 /**
  * User menu dropdown for authenticated users
@@ -25,7 +26,8 @@ import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
  * Shows:
  * - User avatar and name
  * - Profile link
- * - Activity Log link (with unread badge)
+ * - Activity Log link
+ * - Admin Panel link (if user is admin)
  * - Browse Calendars
  * - Sign out button
  */
@@ -33,6 +35,7 @@ export function UserMenu() {
   const t = useTranslations();
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const isAdmin = useIsAdmin();
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
 
   if (isLoading || !isAuthenticated || !user) {
@@ -108,6 +111,15 @@ export function UserMenu() {
           <Users className="mr-2 h-4 w-4" />
           {t("calendar.browseCalendars")}
         </DropdownMenuItem>
+        {isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.replace("/admin")}>
+              <Shield className="mr-2 h-4 w-4" />
+              {t("admin.adminPanel")}
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleSignOut}

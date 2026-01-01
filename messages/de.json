@@ -619,5 +619,240 @@
     "warning": "Warnung",
     "error": "Fehler",
     "critical": "Kritisch"
+  },
+  "admin": {
+    "title": "Admin-Panel",
+    "adminPanel": "Admin-Panel",
+    "dashboard": "Dashboard",
+    "usersMenu": "Benutzer",
+    "calendarsMenu": "Kalender",
+    "orphanedCalendars": "Verwaiste Kalender",
+    "auditLogs": "Audit-Logs",
+    "backToApp": "Zurück zur App",
+    "superadminBadge": "Superadmin",
+    "adminBadge": "Admin",
+    "expandSidebar": "Seitenleiste ausklappen",
+    "collapseSidebar": "Seitenleiste einklappen",
+    "accessDenied": "Admin-Zugriff erforderlich",
+    "accessDeniedDescription": "Sie haben keine Berechtigung, auf das Admin-Panel zuzugreifen",
+    "stats": {
+      "totalUsers": "Benutzer gesamt",
+      "totalCalendars": "Kalender gesamt",
+      "orphanedCalendars": "Verwaiste Kalender",
+      "totalShifts": "Schichten gesamt",
+      "totalShares": "Kalenderfreigaben",
+      "activeShares": "Aktive Freigaben",
+      "recentActivity": "Letzte Admin Aktivitäten",
+      "activeUsers": "Aktive Benutzer",
+      "bannedUsers": "Gesperrte Benutzer",
+      "usersByRole": "{superadmin} Superadmin, {admin} Admin, {user} Benutzer",
+      "calendarsDescription": "Kalender mit Besitzern",
+      "orphanedDescription": "Kalender ohne Besitzer",
+      "sharesDescription": "Aktive Kalenderfreigaben",
+      "shiftsDescription": "Schichten über alle Kalender",
+      "last7Days": "Letzte 7 Tage",
+      "needsAttention": "Benötigt Aufmerksamkeit"
+    },
+    "dashboardDescription": "Willkommen im BetterShift Admin-Panel",
+    "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
+    "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weisen Sie diese Benutzern zu.",
+    "manageOrphanedCalendars": "Verwaiste Kalender verwalten",
+    "quickActions": "Schnellaktionen",
+    "quickActionsDescription": "Häufige Admin-Aufgaben",
+    "manageUsers": "Benutzer verwalten",
+    "viewOrphanedCalendars": "Verwaiste Kalender anzeigen",
+    "recentActivityDescription": "Neueste Admin-Aktivitätsprotokolle",
+    "viewAll": "Alle anzeigen",
+    "statsFetchError": "Fehler beim Laden der Statistiken",
+    "users": {
+      "title": "Benutzerverwaltung",
+      "addUser": "Benutzer hinzufügen",
+      "searchPlaceholder": "Nach Name oder E-Mail suchen...",
+      "allRoles": "Alle Rollen",
+      "allStatuses": "Alle Status",
+      "role": {
+        "user": "Benutzer",
+        "admin": "Admin",
+        "superadmin": "Superadmin"
+      },
+      "status": {
+        "active": "Aktiv",
+        "banned": "Gesperrt"
+      },
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "role": "Rolle",
+        "status": "Status",
+        "created": "Registriert",
+        "lastActivity": "Letzte Aktivität",
+        "calendars": "Kalender",
+        "actions": "Aktionen"
+      },
+      "actions": {
+        "viewDetails": "Details anzeigen",
+        "editUser": "Benutzer bearbeiten",
+        "resetPassword": "Passwort zurücksetzen",
+        "banUser": "Benutzer sperren",
+        "unbanUser": "Sperre aufheben",
+        "deleteUser": "Benutzer löschen"
+      },
+      "noUsers": "Keine Benutzer gefunden",
+      "editSheet": {
+        "title": "Benutzer bearbeiten",
+        "name": "Name",
+        "email": "E-Mail",
+        "role": "Rolle",
+        "emailVerified": "E-Mail verifiziert",
+        "saveSuccess": "Benutzer erfolgreich aktualisiert",
+        "saveError": "Fehler beim Aktualisieren des Benutzers"
+      },
+      "detailsSheet": {
+        "title": "Benutzerdetails",
+        "info": "Benutzerinformationen",
+        "stats": "Statistiken",
+        "ownedCalendars": "Eigene Kalender",
+        "sharedCalendars": "Geteilte Kalender",
+        "activeSessions": "Aktive Sitzungen",
+        "quickActions": "Schnellaktionen"
+      },
+      "banDialog": {
+        "title": "Benutzer sperren",
+        "message": "Benutzer {name} sperren?",
+        "reason": "Sperrgrund",
+        "reasonPlaceholder": "Grund für die Sperre eingeben (erforderlich)",
+        "expiresAt": "Sperre läuft ab",
+        "permanent": "Permanente Sperre",
+        "warning": "Benutzer wird sofort abgemeldet und kann sich erst nach Aufhebung der Sperre wieder anmelden",
+        "confirm": "Benutzer sperren",
+        "success": "Benutzer erfolgreich gesperrt",
+        "error": "Fehler beim Sperren des Benutzers"
+      },
+      "unbanDialog": {
+        "title": "Sperre aufheben",
+        "message": "Sperre für {name} aufheben?",
+        "originalReason": "Ursprünglicher Sperrgrund",
+        "confirm": "Sperre aufheben",
+        "success": "Sperre erfolgreich aufgehoben",
+        "error": "Fehler beim Aufheben der Sperre"
+      },
+      "deleteDialog": {
+        "title": "Benutzer löschen",
+        "message": "Benutzer {name} löschen?",
+        "warning": "Dadurch werden alle Kalender dieses Benutzers verwaist",
+        "confirmationLabel": "Benutzernamen zur Bestätigung eingeben",
+        "confirmationPlaceholder": "Benutzernamen eingeben",
+        "confirmCheckbox": "Ich verstehe, dass diese Aktion nicht rückgängig gemacht werden kann",
+        "confirm": "Benutzer löschen",
+        "success": "Benutzer erfolgreich gelöscht",
+        "error": "Fehler beim Löschen des Benutzers"
+      },
+      "passwordResetDialog": {
+        "title": "Passwort zurücksetzen",
+        "message": "Passwort für {name} zurücksetzen",
+        "newPassword": "Neues Passwort",
+        "confirmPassword": "Passwort bestätigen",
+        "generate": "Zufälliges Passwort generieren",
+        "strength": "Passwortstärke",
+        "warning": "Es wird keine E-Mail gesendet. Sie müssen den Benutzer manuell über das neue Passwort informieren.",
+        "securityNote": "Dieses Passwort wird sofort gespeichert. Kopieren Sie es, bevor Sie diesen Dialog schließen.",
+        "confirm": "Passwort setzen",
+        "success": "Passwort erfolgreich zurückgesetzt",
+        "error": "Fehler beim Zurücksetzen des Passworts",
+        "copied": "Passwort in Zwischenablage kopiert"
+      }
+    },
+    "calendars": {
+      "orphaned": {
+        "title": "Verwaiste Kalender",
+        "description": "Diese Kalender haben keinen Besitzer und sind für Benutzer nicht zugänglich",
+        "searchPlaceholder": "Nach Kalendername suchen...",
+        "selectAll": "Alle auswählen",
+        "clearSelection": "Auswahl löschen",
+        "selected": "{count} ausgewählt",
+        "bulkActions": "Massenaktionen",
+        "assignSelected": "Ausgewählte zuweisen",
+        "deleteSelected": "Ausgewählte löschen",
+        "noCalendars": "Keine verwaisten Kalender",
+        "noCalendarsDescription": "Alle Kalender wurden Benutzern zugewiesen",
+        "columns": {
+          "name": "Name",
+          "color": "Farbe",
+          "created": "Erstellt",
+          "shifts": "Schichten",
+          "notes": "Notizen",
+          "presets": "Vorlagen",
+          "actions": "Aktionen"
+        },
+        "actions": {
+          "viewCalendar": "Kalender anzeigen",
+          "assignToUser": "Benutzer zuweisen",
+          "deleteCalendar": "Kalender löschen"
+        },
+        "assignSheet": {
+          "title": "Kalender zuweisen",
+          "titleBulk": "{count} Kalender zuweisen",
+          "selectUser": "Benutzer auswählen",
+          "userPlaceholder": "Nach Benutzer suchen...",
+          "calendars": "Kalender",
+          "warning": "{userName} wird Besitzer von {count, plural, one {diesem Kalender} other {# Kalendern}}",
+          "confirm": "Zuweisen",
+          "success": "{count, plural, one {Kalender} other {# Kalender}} erfolgreich {userName} zugewiesen",
+          "error": "Fehler beim Zuweisen der Kalender"
+        },
+        "deleteDialog": {
+          "title": "Kalender löschen",
+          "titleBulk": "{count} Kalender löschen",
+          "message": "Kalender {name} löschen?",
+          "messageBulk": "{count} Kalender löschen?",
+          "warning": "Dadurch werden alle Schichten, Notizen und Vorlagen gelöscht",
+          "stats": "{shifts} Schichten, {notes} Notizen, {presets} Vorlagen",
+          "confirmationLabel": "Kalendernamen zur Bestätigung eingeben",
+          "confirmCheckbox": "Ich verstehe, dass diese Aktion nicht rückgängig gemacht werden kann",
+          "confirm": "Kalender löschen",
+          "success": "Kalender erfolgreich gelöscht",
+          "successBulk": "{count} Kalender erfolgreich gelöscht",
+          "error": "Fehler beim Löschen des Kalenders"
+        }
+      }
+    },
+    "logs": {
+      "title": "Audit-Protokolle",
+      "description": "Alle Admin- und Systemereignisse anzeigen",
+      "searchPlaceholder": "Nach Aktion, Benutzer oder Ressource suchen...",
+      "filters": "Filter",
+      "applyFilters": "Filter anwenden",
+      "resetFilters": "Filter zurücksetzen",
+      "export": "Als CSV exportieren",
+      "deleteOld": "Alte Protokolle löschen",
+      "noLogs": "Keine Audit-Protokolle gefunden",
+      "columns": {
+        "timestamp": "Zeitstempel",
+        "action": "Aktion",
+        "user": "Benutzer",
+        "actor": "Akteur",
+        "details": "Details",
+        "ipAddress": "IP-Adresse"
+      },
+      "filterLabels": {
+        "actionType": "Aktionstyp",
+        "user": "Benutzer",
+        "targetUser": "Zielbenutzer",
+        "dateRange": "Datumsbereich",
+        "severity": "Schweregrad",
+        "resourceType": "Ressourcentyp"
+      },
+      "deleteDialog": {
+        "title": "Alte Protokolle löschen",
+        "message": "Audit-Protokolle älter als ausgewähltes Datum löschen?",
+        "dateBefore": "Protokolle löschen vor",
+        "preview": "Dies wird ungefähr {count} Protokolle löschen",
+        "warning": "Diese Aktion kann nicht rückgängig gemacht werden",
+        "confirmCheckbox": "Ich verstehe, dass Audit-Protokolle dauerhaft gelöscht werden",
+        "confirm": "Protokolle löschen",
+        "success": "{count} Protokolle erfolgreich gelöscht",
+        "error": "Fehler beim Löschen der Protokolle"
+      }
+    }
   }
 }

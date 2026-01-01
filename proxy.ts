@@ -8,6 +8,8 @@ import {
 } from "@/lib/auth/token-auth";
 import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
+import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/admin";
 
 /**
  * Proxy for authentication and route protection (Next.js 16)
@@ -115,6 +117,79 @@ export async function proxy(request: NextRequest) {
   // Allow public routes
   if (isPublicRoute) {
     return NextResponse.next();
+  }
+
+  // =====================================================
+  // Admin Panel Protection (/admin/*)
+  // =====================================================
+  if (pathname.startsWith("/admin")) {
+    // Admin panel requires authentication (no guest access)
+    const sessionToken = request.cookies.get("better-auth.session_token");
+
+    if (!sessionToken) {
+      // Not authenticated - redirect to login
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("returnUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Validate session and check admin role
+    try {
+      const session = await auth.api.getSession({ headers: request.headers });
+
+      if (!session?.user) {
+        // Invalid session - redirect to login
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("returnUrl", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+
+      // Check if user is admin
+      if (!isAdmin(session.user)) {
+        // Not an admin - redirect to home with error
+        const homeUrl = new URL("/", request.url);
+        homeUrl.searchParams.set("error", "admin_access_required");
+
+        // Audit log: Unauthorized admin access attempt
+        void logAuditEvent({
+          userId: session.user.id,
+          action: "admin_access_denied",
+          resourceType: "admin_panel",
+          resourceId: null,
+          metadata: {
+            attemptedPath: pathname,
+            userRole: session.user.role || "user",
+          },
+          request,
+          severity: "warning",
+          isUserVisible: false,
+        });
+
+        return NextResponse.redirect(homeUrl);
+      }
+
+      // Admin access granted - continue
+      // Audit log: Admin access (for monitoring)
+      void logAuditEvent({
+        userId: session.user.id,
+        action: "admin_access_granted",
+        resourceType: "admin_panel",
+        resourceId: null,
+        metadata: {
+          path: pathname,
+          userRole: session.user.role,
+        },
+        request,
+        severity: "info",
+        isUserVisible: false,
+      });
+    } catch (error) {
+      console.error("[Proxy] Admin access check failed:", error);
+      // Session validation failed - redirect to login
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("returnUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   // Check for session cookie (Better Auth uses "better-auth.session_token")

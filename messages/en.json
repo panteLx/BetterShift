@@ -619,5 +619,240 @@
     "warning": "Warning",
     "error": "Error",
     "critical": "Critical"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "adminPanel": "Admin Panel",
+    "dashboard": "Dashboard",
+    "usersMenu": "Users",
+    "calendarsMenu": "Calendars",
+    "orphanedCalendars": "Orphaned Calendars",
+    "auditLogs": "Audit Logs",
+    "backToApp": "Back to App",
+    "superadminBadge": "Superadmin",
+    "adminBadge": "Admin",
+    "expandSidebar": "Expand Sidebar",
+    "collapseSidebar": "Collapse Sidebar",
+    "accessDenied": "Admin access required",
+    "accessDeniedDescription": "You don't have permission to access the admin panel",
+    "stats": {
+      "totalUsers": "Total Users",
+      "totalCalendars": "Total Calendars",
+      "orphanedCalendars": "Orphaned Calendars",
+      "totalShifts": "Total Shifts",
+      "totalShares": "Calendar Shares",
+      "activeShares": "Active Shares",
+      "recentActivity": "Recent Admin Activity",
+      "activeUsers": "Active Users",
+      "bannedUsers": "Banned Users",
+      "usersByRole": "{superadmin} superadmin, {admin} admin, {user} users",
+      "calendarsDescription": "Total calendars with owners",
+      "orphanedDescription": "Calendars without an owner",
+      "sharesDescription": "Active calendar shares",
+      "shiftsDescription": "Total shifts across all calendars",
+      "last7Days": "Last 7 days",
+      "needsAttention": "Needs Attention"
+    },
+    "dashboardDescription": "Welcome to the BetterShift Admin Panel",
+    "orphanedCalendarsWarning": "Orphaned Calendars Detected",
+    "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",
+    "manageOrphanedCalendars": "Manage Orphaned Calendars",
+    "quickActions": "Quick Actions",
+    "quickActionsDescription": "Common admin tasks",
+    "manageUsers": "Manage Users",
+    "viewOrphanedCalendars": "View Orphaned Calendars",
+    "recentActivityDescription": "Latest admin activity logs",
+    "viewAll": "View All",
+    "statsFetchError": "Failed to load statistics",
+    "users": {
+      "title": "User Management",
+      "addUser": "Add User",
+      "searchPlaceholder": "Search by name or email...",
+      "allRoles": "All Roles",
+      "allStatuses": "All Statuses",
+      "role": {
+        "user": "User",
+        "admin": "Admin",
+        "superadmin": "Superadmin"
+      },
+      "status": {
+        "active": "Active",
+        "banned": "Banned"
+      },
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "created": "Registered",
+        "lastActivity": "Last Activity",
+        "calendars": "Calendars",
+        "actions": "Actions"
+      },
+      "actions": {
+        "viewDetails": "View Details",
+        "editUser": "Edit User",
+        "resetPassword": "Reset Password",
+        "banUser": "Ban User",
+        "unbanUser": "Unban User",
+        "deleteUser": "Delete User"
+      },
+      "noUsers": "No users found",
+      "editSheet": {
+        "title": "Edit User",
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "emailVerified": "Email Verified",
+        "saveSuccess": "User updated successfully",
+        "saveError": "Failed to update user"
+      },
+      "detailsSheet": {
+        "title": "User Details",
+        "info": "User Information",
+        "stats": "Statistics",
+        "ownedCalendars": "Owned Calendars",
+        "sharedCalendars": "Shared Calendars",
+        "activeSessions": "Active Sessions",
+        "quickActions": "Quick Actions"
+      },
+      "banDialog": {
+        "title": "Ban User",
+        "message": "Ban user {name}?",
+        "reason": "Ban Reason",
+        "reasonPlaceholder": "Enter reason for ban (required)",
+        "expiresAt": "Ban Expires",
+        "permanent": "Permanent ban",
+        "warning": "User will be logged out immediately and cannot sign in until unbanned",
+        "confirm": "Ban User",
+        "success": "User banned successfully",
+        "error": "Failed to ban user"
+      },
+      "unbanDialog": {
+        "title": "Unban User",
+        "message": "Unban user {name}?",
+        "originalReason": "Original Ban Reason",
+        "confirm": "Unban User",
+        "success": "User unbanned successfully",
+        "error": "Failed to unban user"
+      },
+      "deleteDialog": {
+        "title": "Delete User",
+        "message": "Delete user {name}?",
+        "warning": "This will orphan all calendars owned by this user",
+        "confirmationLabel": "Type the username to confirm",
+        "confirmationPlaceholder": "Enter username",
+        "confirmCheckbox": "I understand this action cannot be undone",
+        "confirm": "Delete User",
+        "success": "User deleted successfully",
+        "error": "Failed to delete user"
+      },
+      "passwordResetDialog": {
+        "title": "Reset Password",
+        "message": "Reset password for {name}",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password",
+        "generate": "Generate Random Password",
+        "strength": "Password Strength",
+        "warning": "No email will be sent. You must manually inform the user of their new password.",
+        "securityNote": "This password will be saved immediately. Copy it before closing this dialog.",
+        "confirm": "Set Password",
+        "success": "Password reset successfully",
+        "error": "Failed to reset password",
+        "copied": "Password copied to clipboard"
+      }
+    },
+    "calendars": {
+      "orphaned": {
+        "title": "Orphaned Calendars",
+        "description": "These calendars have no owner and are not accessible to users",
+        "searchPlaceholder": "Search by calendar name...",
+        "selectAll": "Select All",
+        "clearSelection": "Clear Selection",
+        "selected": "{count} selected",
+        "bulkActions": "Bulk Actions",
+        "assignSelected": "Assign Selected to User",
+        "deleteSelected": "Delete Selected",
+        "noCalendars": "No orphaned calendars",
+        "noCalendarsDescription": "All calendars have been assigned to users",
+        "columns": {
+          "name": "Name",
+          "color": "Color",
+          "created": "Created",
+          "shifts": "Shifts",
+          "notes": "Notes",
+          "presets": "Presets",
+          "actions": "Actions"
+        },
+        "actions": {
+          "viewCalendar": "View Calendar",
+          "assignToUser": "Assign to User",
+          "deleteCalendar": "Delete Calendar"
+        },
+        "assignSheet": {
+          "title": "Assign Calendar",
+          "titleBulk": "Assign {count} Calendars",
+          "selectUser": "Select User",
+          "userPlaceholder": "Search for user...",
+          "calendars": "Calendars",
+          "warning": "This will make {userName} the owner of {count, plural, one {this calendar} other {# calendars}}",
+          "confirm": "Assign",
+          "success": "{count, plural, one {Calendar} other {# calendars}} assigned to {userName}",
+          "error": "Failed to assign calendars"
+        },
+        "deleteDialog": {
+          "title": "Delete Calendar",
+          "titleBulk": "Delete {count} Calendars",
+          "message": "Delete calendar {name}?",
+          "messageBulk": "Delete {count} calendars?",
+          "warning": "This will delete all shifts, notes, and presets",
+          "stats": "{shifts} shifts, {notes} notes, {presets} presets",
+          "confirmationLabel": "Type the calendar name to confirm",
+          "confirmCheckbox": "I understand this action cannot be undone",
+          "confirm": "Delete Calendar",
+          "success": "Calendar deleted successfully",
+          "successBulk": "{count} calendars deleted successfully",
+          "error": "Failed to delete calendar"
+        }
+      }
+    },
+    "logs": {
+      "title": "Audit Logs",
+      "description": "View all admin and system events",
+      "searchPlaceholder": "Search by action, user, or resource...",
+      "filters": "Filters",
+      "applyFilters": "Apply Filters",
+      "resetFilters": "Reset Filters",
+      "export": "Export to CSV",
+      "deleteOld": "Delete Old Logs",
+      "noLogs": "No audit logs found",
+      "columns": {
+        "timestamp": "Timestamp",
+        "action": "Action",
+        "user": "User",
+        "actor": "Actor",
+        "details": "Details",
+        "ipAddress": "IP Address"
+      },
+      "filterLabels": {
+        "actionType": "Action Type",
+        "user": "User",
+        "targetUser": "Target User",
+        "dateRange": "Date Range",
+        "severity": "Severity",
+        "resourceType": "Resource Type"
+      },
+      "deleteDialog": {
+        "title": "Delete Old Logs",
+        "message": "Delete audit logs older than selected date?",
+        "dateBefore": "Delete logs before",
+        "preview": "This will delete approximately {count} logs",
+        "warning": "This action cannot be undone",
+        "confirmCheckbox": "I understand audit logs will be permanently deleted",
+        "confirm": "Delete Logs",
+        "success": "{count} logs deleted successfully",
+        "error": "Failed to delete logs"
+      }
+    }
   }
 }

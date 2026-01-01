@@ -619,5 +619,240 @@
     "warning": "Avviso",
     "error": "Errore",
     "critical": "Critico"
+  },
+  "admin": {
+    "title": "Pannello Admin",
+    "adminPanel": "Pannello Admin",
+    "dashboard": "Dashboard",
+    "usersMenu": "Utenti",
+    "calendarsMenu": "Calendari",
+    "orphanedCalendars": "Calendari Orfani",
+    "auditLogs": "Log di Audit",
+    "backToApp": "Torna all'App",
+    "superadminBadge": "Superadmin",
+    "adminBadge": "Admin",
+    "expandSidebar": "Espandi Barra Laterale",
+    "collapseSidebar": "Comprimi Barra Laterale",
+    "accessDenied": "Accesso admin richiesto",
+    "accessDeniedDescription": "Non hai il permesso di accedere al pannello admin",
+    "stats": {
+      "totalUsers": "Utenti Totali",
+      "totalCalendars": "Calendari Totali",
+      "orphanedCalendars": "Calendari Orfani",
+      "totalShifts": "Turni Totali",
+      "totalShares": "Condivisioni Calendario",
+      "activeShares": "Condivisioni Attive",
+      "recentActivity": "Attività Admin Recente",
+      "activeUsers": "Utenti Attivi",
+      "bannedUsers": "Utenti Bannati",
+      "usersByRole": "{superadmin} superadmin, {admin} admin, {user} utenti",
+      "calendarsDescription": "Calendari con proprietari",
+      "orphanedDescription": "Calendari senza proprietario",
+      "sharesDescription": "Condivisioni calendario attive",
+      "shiftsDescription": "Turni totali in tutti i calendari",
+      "last7Days": "Ultimi 7 giorni",
+      "needsAttention": "Richiede Attenzione"
+    },
+    "dashboardDescription": "Benvenuto nel Pannello Admin di BetterShift",
+    "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
+    "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
+    "manageOrphanedCalendars": "Gestisci Calendari Orfani",
+    "quickActions": "Azioni Rapide",
+    "quickActionsDescription": "Attività amministrative comuni",
+    "manageUsers": "Gestisci Utenti",
+    "viewOrphanedCalendars": "Visualizza Calendari Orfani",
+    "recentActivityDescription": "Log delle ultime attività admin",
+    "viewAll": "Visualizza Tutto",
+    "statsFetchError": "Impossibile caricare le statistiche",
+    "users": {
+      "title": "Gestione Utenti",
+      "addUser": "Aggiungi Utente",
+      "searchPlaceholder": "Cerca per nome o email...",
+      "allRoles": "Tutti i Ruoli",
+      "allStatuses": "Tutti gli Stati",
+      "role": {
+        "user": "Utente",
+        "admin": "Admin",
+        "superadmin": "Superadmin"
+      },
+      "status": {
+        "active": "Attivo",
+        "banned": "Bannato"
+      },
+      "columns": {
+        "name": "Nome",
+        "email": "Email",
+        "role": "Ruolo",
+        "status": "Stato",
+        "created": "Registrato",
+        "lastActivity": "Ultima Attività",
+        "calendars": "Calendari",
+        "actions": "Azioni"
+      },
+      "actions": {
+        "viewDetails": "Visualizza Dettagli",
+        "editUser": "Modifica Utente",
+        "resetPassword": "Reimposta Password",
+        "banUser": "Banna Utente",
+        "unbanUser": "Rimuovi Ban",
+        "deleteUser": "Elimina Utente"
+      },
+      "noUsers": "Nessun utente trovato",
+      "editSheet": {
+        "title": "Modifica Utente",
+        "name": "Nome",
+        "email": "Email",
+        "role": "Ruolo",
+        "emailVerified": "Email Verificata",
+        "saveSuccess": "Utente aggiornato con successo",
+        "saveError": "Impossibile aggiornare l'utente"
+      },
+      "detailsSheet": {
+        "title": "Dettagli Utente",
+        "info": "Informazioni Utente",
+        "stats": "Statistiche",
+        "ownedCalendars": "Calendari Posseduti",
+        "sharedCalendars": "Calendari Condivisi",
+        "activeSessions": "Sessioni Attive",
+        "quickActions": "Azioni Rapide"
+      },
+      "banDialog": {
+        "title": "Banna Utente",
+        "message": "Bannare l'utente {name}?",
+        "reason": "Motivo del Ban",
+        "reasonPlaceholder": "Inserisci il motivo del ban (obbligatorio)",
+        "expiresAt": "Scadenza Ban",
+        "permanent": "Ban permanente",
+        "warning": "L'utente verrà disconnesso immediatamente e non potrà accedere fino alla rimozione del ban",
+        "confirm": "Banna Utente",
+        "success": "Utente bannato con successo",
+        "error": "Impossibile bannare l'utente"
+      },
+      "unbanDialog": {
+        "title": "Rimuovi Ban",
+        "message": "Rimuovere il ban per {name}?",
+        "originalReason": "Motivo Originale del Ban",
+        "confirm": "Rimuovi Ban",
+        "success": "Ban rimosso con successo",
+        "error": "Impossibile rimuovere il ban"
+      },
+      "deleteDialog": {
+        "title": "Elimina Utente",
+        "message": "Eliminare l'utente {name}?",
+        "warning": "Questo renderà orfani tutti i calendari posseduti da questo utente",
+        "confirmationLabel": "Digita il nome utente per confermare",
+        "confirmationPlaceholder": "Inserisci nome utente",
+        "confirmCheckbox": "Comprendo che questa azione non può essere annullata",
+        "confirm": "Elimina Utente",
+        "success": "Utente eliminato con successo",
+        "error": "Impossibile eliminare l'utente"
+      },
+      "passwordResetDialog": {
+        "title": "Reimposta Password",
+        "message": "Reimposta password per {name}",
+        "newPassword": "Nuova Password",
+        "confirmPassword": "Conferma Password",
+        "generate": "Genera Password Casuale",
+        "strength": "Forza Password",
+        "warning": "Non verrà inviata alcuna email. Devi informare manualmente l'utente della nuova password.",
+        "securityNote": "Questa password verrà salvata immediatamente. Copiala prima di chiudere questo dialogo.",
+        "confirm": "Imposta Password",
+        "success": "Password reimpostata con successo",
+        "error": "Impossibile reimpostare la password",
+        "copied": "Password copiata negli appunti"
+      }
+    },
+    "calendars": {
+      "orphaned": {
+        "title": "Calendari Orfani",
+        "description": "Questi calendari non hanno un proprietario e non sono accessibili agli utenti",
+        "searchPlaceholder": "Cerca per nome calendario...",
+        "selectAll": "Seleziona Tutto",
+        "clearSelection": "Cancella Selezione",
+        "selected": "{count} selezionati",
+        "bulkActions": "Azioni di Massa",
+        "assignSelected": "Assegna Selezionati",
+        "deleteSelected": "Elimina Selezionati",
+        "noCalendars": "Nessun calendario orfano",
+        "noCalendarsDescription": "Tutti i calendari sono stati assegnati agli utenti",
+        "columns": {
+          "name": "Nome",
+          "color": "Colore",
+          "created": "Creato",
+          "shifts": "Turni",
+          "notes": "Note",
+          "presets": "Preimpostazioni",
+          "actions": "Azioni"
+        },
+        "actions": {
+          "viewCalendar": "Visualizza Calendario",
+          "assignToUser": "Assegna a Utente",
+          "deleteCalendar": "Elimina Calendario"
+        },
+        "assignSheet": {
+          "title": "Assegna Calendario",
+          "titleBulk": "Assegna {count} Calendari",
+          "selectUser": "Seleziona Utente",
+          "userPlaceholder": "Cerca utente...",
+          "calendars": "Calendari",
+          "warning": "{userName} diventerà proprietario di {count, plural, one {questo calendario} other {# calendari}}",
+          "confirm": "Assegna",
+          "success": "{count, plural, one {Calendario assegnato} other {# calendari assegnati}} a {userName} con successo",
+          "error": "Impossibile assegnare i calendari"
+        },
+        "deleteDialog": {
+          "title": "Elimina Calendario",
+          "titleBulk": "Elimina {count} Calendari",
+          "message": "Eliminare il calendario {name}?",
+          "messageBulk": "Eliminare {count} calendari?",
+          "warning": "Questo eliminerà tutti i turni, le note e le preimpostazioni",
+          "stats": "{shifts} turni, {notes} note, {presets} preimpostazioni",
+          "confirmationLabel": "Digita il nome del calendario per confermare",
+          "confirmCheckbox": "Comprendo che questa azione non può essere annullata",
+          "confirm": "Elimina Calendario",
+          "success": "Calendario eliminato con successo",
+          "successBulk": "{count} calendari eliminati con successo",
+          "error": "Impossibile eliminare il calendario"
+        }
+      }
+    },
+    "logs": {
+      "title": "Log di Audit",
+      "description": "Visualizza tutti gli eventi admin e di sistema",
+      "searchPlaceholder": "Cerca per azione, utente o risorsa...",
+      "filters": "Filtri",
+      "applyFilters": "Applica Filtri",
+      "resetFilters": "Ripristina Filtri",
+      "export": "Esporta in CSV",
+      "deleteOld": "Elimina Vecchi Log",
+      "noLogs": "Nessun log di audit trovato",
+      "columns": {
+        "timestamp": "Timestamp",
+        "action": "Azione",
+        "user": "Utente",
+        "actor": "Attore",
+        "details": "Dettagli",
+        "ipAddress": "Indirizzo IP"
+      },
+      "filterLabels": {
+        "actionType": "Tipo Azione",
+        "user": "Utente",
+        "targetUser": "Utente Destinazione",
+        "dateRange": "Intervallo Date",
+        "severity": "Gravità",
+        "resourceType": "Tipo Risorsa"
+      },
+      "deleteDialog": {
+        "title": "Elimina Vecchi Log",
+        "message": "Eliminare i log di audit più vecchi della data selezionata?",
+        "dateBefore": "Elimina log prima del",
+        "preview": "Questo eliminerà approssimativamente {count} log",
+        "warning": "Questa azione non può essere annullata",
+        "confirmCheckbox": "Comprendo che i log di audit verranno eliminati permanentemente",
+        "confirm": "Elimina Log",
+        "success": "{count} log eliminati con successo",
+        "error": "Impossibile eliminare i log"
+      }
+    }
   }
 }

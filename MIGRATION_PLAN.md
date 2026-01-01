@@ -2142,70 +2142,1266 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ## Phase 9: Admin Panel & Super Admin Features
 
-### 9.1 Super Admin Concept
+**Goal**: Create a comprehensive admin panel for user and calendar management with role-based access control.
 
-- [ ] Add `isSuperAdmin` flag to `user` table (boolean, default: false)
-- [ ] Migration: Mark first created user as super admin (`ORDER BY createdAt LIMIT 1`)
-- [ ] Add helper function `isSuperAdmin(userId)` in `lib/auth/permissions.ts`
-- [ ] Super admin bypasses all permission checks (full access to everything)
+**Status**: 🚧 **IN PROGRESS** (1. Januar 2026)
 
-### 9.2 Admin Panel - User Management
+**⚠️ CRITICAL: Better Auth Admin Plugin & Existing Packages**
 
-- [ ] Create `app/admin/page.tsx` (protected route, super admin only)
-- [ ] Create `app/api/admin/users/route.ts`
-  - GET: List all users with details (email, name, createdAt, calendars count)
-  - POST: Create new user (super admin can create users)
-- [ ] Create `app/api/admin/users/[id]/route.ts`
-  - GET: Get user details
-  - PUT: Update user info (name, email, password)
-  - DELETE: Delete user and handle orphaned calendars
-- [ ] Create `app/api/admin/users/[id]/password/route.ts`
-  - PUT: Change user password (super admin can reset any password)
-- [ ] **User Ban System**
-  - [ ] Add `isBanned` flag to `user` table (boolean, default: false)
-  - [ ] Add `bannedAt` timestamp to `user` table (nullable)
-  - [ ] Add `bannedBy` to `user` table (references users, nullable)
-  - [ ] Add `banReason` text field to `user` table (nullable)
-  - [ ] Create `bannedIps` table:
-    - `id` (text, primary key)
-    - `ipAddress` (text, unique, indexed)
-    - `bannedBy` (references users)
-    - `bannedAt` (timestamp)
-    - `reason` (text, nullable)
-    - `expiresAt` (timestamp, nullable for permanent bans)
-  - [ ] Create `app/api/admin/users/[id]/ban/route.ts`
-    - POST: Ban user account (sets isBanned=true, terminates all sessions)
-    - Body: `{ reason: string, alsoIpBan: boolean }`
-    - If `alsoIpBan=true`, add user's IPs to `bannedIps` table
-  - [ ] Create `app/api/admin/users/[id]/unban/route.ts`
-    - POST: Unban user account (sets isBanned=false)
-  - [ ] Create `app/api/admin/ip-bans/route.ts`
-    - GET: List all banned IPs
-    - POST: Add IP to ban list
-    - DELETE: Remove IP from ban list
-  - [ ] Create `app/api/admin/ip-bans/[ip]/route.ts`
-    - DELETE: Unban specific IP address
-  - [ ] Middleware enforcement in `proxy.ts`:
-    - Check `isBanned` flag before auth middleware
-    - Check IP against `bannedIps` table
-    - Return 403 Forbidden for banned accounts/IPs
-    - Log ban attempts to audit logs
-  - [ ] Admin UI Components:
-    - [ ] `components/admin/user-ban-dialog.tsx` - Ban user with reason
-    - [ ] `components/admin/user-unban-dialog.tsx` - Unban confirmation
-    - [ ] `components/admin/banned-users-list.tsx` - View all banned users
-    - [ ] `components/admin/banned-ips-list.tsx` - Manage IP ban list
-    - [ ] `components/admin/ip-ban-dialog.tsx` - Add IP to ban list
-  - [ ] User list UI enhancements:
-    - Show "BANNED" badge on banned users
+Before implementing admin features, always follow these guidelines:
+
+1. **Better Auth Admin Plugin First**:
+
+   - 📚 Read: https://www.better-auth.com/docs/plugins/admin
+   - Use Better Auth's built-in admin methods (`authClient.admin.*`) instead of custom DB queries when possible
+   - Examples: `listUsers()`, `createUser()`, `banUser()`, `setRole()`, etc.
+   - Only use direct DB queries for statistics/aggregations that Better Auth doesn't provide
+
+2. **Use Existing Packages**:
+
+   - **IP Address**: Use `@supercharge/request-ip` via `lib/ip-utils.ts` → `getClientIp(request)`
+   - **User Agent**: Use `ua-parser-js` (already installed) for parsing browser/OS info
+   - **Never** manually parse `x-forwarded-for` or `user-agent` headers
+
+3. **Audit Logging**:
+   - Use `lib/audit-log.ts` → `logAuditEvent()` with `request` parameter
+   - IP and User-Agent are automatically extracted from request object
+   - Example: `await logAuditEvent({ userId, action, request, severity, isUserVisible })`
+
+**Design Decisions**:
+
+- **Better Auth Admin Plugin**: Use existing `role`, `banned`, `banReason`, `banExpires` fields (Phase 7 completed)
+- **No IP Banning**: Account banning only (IP banning deferred to future phase)
+- **Full-Page Admin Layout**: Dedicated `/admin` routes with custom layout (NOT dialogs)
+  - Professional admin interface (matches industry standards: Django Admin, WordPress, Ghost CMS)
+  - Sidebar navigation for admin sections
+  - Full-width data tables with pagination, sorting, filtering
+  - Browser back button works naturally
+  - Mobile-friendly responsive design
+- **Component Architecture**:
+  - **Pages** (Full-screen): Dashboard, User List, Orphaned Calendars, Audit Logs
+  - **Sheets** (Side panel): Edit user, View details, Assign calendar
+  - **Dialogs** (Modal): Confirmations only (ban, delete, password reset)
+- **Admin-Only Audit Logs**: Separate from user activity logs, admin-accessible only
+- **Role-Based Permissions**: Clear separation between Superadmin, Admin, and User
+
+**Implementation Decisions** (Confirmed 1. Januar 2026):
+
+1. **Admin Panel Access**: Link in UserMenu, visible only for admins when `AUTH_ENABLED=true`
+2. **Dashboard Statistics**: Implement core stats only (users, calendars, shifts, shares, activity)
+3. **Orphaned Calendar Assignment**: Multi-select with checkboxes → Assign to one user (bulk action)
+4. **Audit Log Filtering**: All events visible with comprehensive filtering (action, user, date, severity)
+5. **User Table Columns**: Avatar, Name, Email, Role, Status, Created, Last Activity, Calendar Count, Actions
+6. **User Ban System**: Free-form input (no presets) - reason + optional expiration date
+7. **Password Reset Method**: Direct password update (Option C) - admin sets new password, no email system
+8. **Mobile Responsiveness**: High priority - horizontal scrolling tables (like existing components)
+9. **Translations**: Implement all languages immediately (en, de, it)
+10. **Theme**: Use normal app theme (no special admin colors)
+
+**Quality Control & Code Organization** (Added 1. Januar 2026):
+
+- ⚠️ **After Each Phase**: Run `npm run lint` and `npm run build` to verify no errors
+  - Fix all lint warnings before proceeding to next phase
+  - Fix all TypeScript compilation errors immediately
+- 📁 **Component Organization**: All admin components under `components/admin/` directory
+  - Example: `components/admin/user-edit-sheet.tsx`, `components/admin/stats-cards.tsx`
+  - Keeps admin code separate and maintainable
+  - Easier to find and modify admin-specific components
+
+### Role Permissions Matrix
+
+| Feature                         | Superadmin | Admin | User |
+| ------------------------------- | ---------- | ----- | ---- |
+| **User Management**             |            |       |      |
+| View all users                  | ✅         | ✅    | ❌   |
+| Edit regular users (role: user) | ✅         | ✅    | ❌   |
+| Edit admins/superadmins         | ✅         | ❌    | ❌   |
+| Delete regular users            | ✅         | ❌    | ❌   |
+| Ban/Unban users                 | ✅         | ❌    | ❌   |
+| Change user roles               | ✅         | ❌    | ❌   |
+| Reset passwords                 | ✅         | ✅    | ❌   |
+| **Calendar Management**         |            |       |      |
+| View all calendars              | ✅         | ✅    | ❌   |
+| Transfer calendar ownership     | ✅         | ✅    | ❌   |
+| Delete any calendar             | ✅         | ❌    | ❌   |
+| **Orphaned Calendars**          |            |       |      |
+| View orphaned calendars         | ✅         | ✅    | ❌   |
+| Assign orphaned calendars       | ✅         | ✅    | ❌   |
+| Delete orphaned calendars       | ✅         | ❌    | ❌   |
+| **Audit Logs**                  |            |       |      |
+| View all audit logs             | ✅         | ✅    | ❌   |
+| Delete audit logs               | ✅         | ❌    | ❌   |
+| **System Stats**                |            |       |      |
+| View system statistics          | ✅         | ✅    | ❌   |
+
+### Admin Panel UI Architecture
+
+**Page Structure:**
+
+```
+/admin                              → Dashboard (System Stats + Quick Actions)
+/admin/users                        → User Management Table
+/admin/calendars/orphaned           → Orphaned Calendars Table
+/admin/logs                         → Audit Logs Table
+```
+
+**Layout Components:**
+
+- `app/admin/layout.tsx` - Admin layout with sidebar navigation
+- `components/admin/admin-sidebar.tsx` - Navigation sidebar with role-based menu items
+- `components/admin/admin-header.tsx` - Admin header with breadcrumbs
+
+**Page Components:**
+
+- `app/admin/page.tsx` - Dashboard with system statistics cards
+- `app/admin/users/page.tsx` - User management data table
+- `app/admin/calendars/orphaned/page.tsx` - Orphaned calendars table
+- `app/admin/logs/page.tsx` - Audit logs table with filters
+
+**Action Components:**
+
+**Sheets (Side Panel):**
+
+- `components/admin/user-edit-sheet.tsx` - Edit user details
+- `components/admin/user-details-sheet.tsx` - View user details (accounts, sessions, calendars)
+- `components/admin/calendar-assign-sheet.tsx` - Assign orphaned calendar to user
+
+**Dialogs (Modal Confirmations):**
+
+- `components/admin/user-ban-dialog.tsx` - Ban user with reason
+- `components/admin/user-unban-dialog.tsx` - Unban user confirmation
+- `components/admin/user-delete-dialog.tsx` - Delete user confirmation
+- `components/admin/user-password-reset-dialog.tsx` - Reset user password
+- `components/admin/calendar-delete-dialog.tsx` - Delete calendar confirmation
+
+**Data Components:**
+
+- `components/admin/stats-cards.tsx` - Dashboard statistics cards
+- `components/admin/user-table.tsx` - Data table for users
+- `components/admin/calendar-table.tsx` - Data table for calendars
+- `components/admin/audit-log-table.tsx` - Data table for audit logs
+
+**Benefits of Full-Page Layout:**
+
+✅ **More Space**: Complex tables with many columns fit comfortably
+✅ **Professional UX**: Matches user expectations for admin panels
+✅ **Better Navigation**: Browser back button, bookmarkable URLs
+✅ **Mobile-Friendly**: Responsive tables without nested overlays
+✅ **Clearer Context**: Dedicated space shows users they're in admin mode
+✅ **Scalability**: Easy to add new admin sections in the future
+
+### 9.1 Admin Panel Foundation (Phase 7 - Completed)
+
+- [x] **Better Auth Admin Plugin Integration** (Phase 7.1)
+  - [x] `role` field in `user` table (superadmin, admin, user)
+  - [x] `banned`, `banReason`, `banExpires` fields for ban system
+- [x] **Admin Helper Functions** (Phase 7.3)
+  - [x] `isAdmin(user)` - Check admin or superadmin role
+  - [x] `isSuperAdmin(user)` - Check superadmin role specifically
+  - [x] `requireAdmin(user)` - Throw error if not admin
+  - [x] `requireSuperAdmin(user)` - Throw error if not superadmin
+  - [x] `getAdminLevel(user)` - Get user's role level
+- [x] **First User Auto-Promotion** (Phase 7.2)
+  - [x] First registered user automatically becomes superadmin
+- [x] **Orphaned Calendar Detection** (Phase 7.4)
+  - [x] `getOrphanedCalendars()` function in `lib/auth/permissions.ts`
+  - [x] Orphaned calendars excluded from normal calendar APIs
+
+### 9.2 Admin Middleware & Access Control ✅
+
+**Priority**: Critical (Must be implemented first for security)
+
+**Status**: ✅ **COMPLETED** (1. Januar 2026)
+
+- [x] Update `proxy.ts` middleware
+  - [x] Add `/admin` route protection (check `isAdmin(user)`)
+  - [x] Redirect non-admins to homepage with error query param
+  - [x] Log unauthorized access attempts to audit log (`admin_access_denied`)
+  - [x] Log successful admin access (`admin_access_granted`)
+- [x] Update `lib/auth/admin.ts` with permission functions
+  - [x] `canEditUser(adminUser, targetUser)` - Check if admin can edit target user (synchron)
+    - Superadmin: Can edit anyone
+    - Admin: Can edit only regular users (role: "user" or null)
+  - [x] `canDeleteUser(adminUser, targetUser)` - Superadmin only, cannot delete self
+  - [x] `canBanUser(adminUser, targetUser)` - Superadmin only, cannot ban self or other superadmins
+  - [x] `canChangeUserRole(adminUser, targetUser)` - Superadmin only, cannot change own role
+  - [x] `canManageCalendar(adminUser, operation)` - View (both), Delete (superadmin only)
+  - [x] `canAssignOrphanedCalendar(adminUser)` - Both admin and superadmin
+  - [x] `canViewAuditLogs(adminUser)` - Both admin and superadmin
+  - [x] `canDeleteAuditLogs(adminUser)` - Superadmin only
+  - [x] `canResetPassword(adminUser, targetUser)` - Both admin and superadmin, cannot reset superadmin passwords (unless superadmin), cannot reset own
+- [x] Update `hooks/useAdminAccess.ts`
+  - [x] `useIsAdmin()` - Check if current user is admin (uses `lib/auth/admin.ts`)
+  - [x] `useIsSuperAdmin()` - Check if current user is superadmin
+  - [x] `useAdminLevel()` - Get user's admin level
+  - [x] `useRequireAdmin(redirectTo?)` - Redirect if not admin (client-side)
+  - [x] `useCanEditUser(targetUser)` - Check edit permissions (uses `canEditUser()` from `lib/auth/admin.ts`)
+  - [x] `useCanDeleteUser(targetUser)` - Check delete permissions
+  - [x] `useCanBanUser(targetUser)` - Check ban permissions
+  - [x] `useCanChangeUserRole(targetUser)` - Check role change permissions
+  - [x] `useCanManageCalendar(operation)` - Check calendar management permissions
+  - [x] `useCanAssignOrphanedCalendar()` - Check orphaned calendar assignment permissions
+  - [x] `useCanViewAuditLogs()` - Check audit log view permissions
+  - [x] `useCanDeleteAuditLogs()` - Check audit log delete permissions
+  - [x] `useCanResetPassword(targetUser)` - Check password reset permissions
+  - [x] `useUserPermissions(targetUser)` - Convenience hook returning all permissions
+  - Note: All hooks use synchronous functions from `lib/auth/admin.ts` internally
+- [x] Add translations (en, de, it)
+  - [x] Complete admin panel translations (users, calendars, logs, stats)
+  - [x] All dialogs and sheets
+  - [x] All action labels and messages
+  - [x] Success/error notifications
+
+### 9.2.1 Admin Layout Components
+
+**Priority**: High (Foundation for all admin pages)
+
+**Status**: ✅ **COMPLETED** (1. Januar 2026)
+
+- [x] Create `app/admin/layout.tsx`
+  - [x] Custom layout wrapper for admin pages
+  - [x] Include `AdminSidebar` and `AdminHeader`
+  - [x] Check admin access with `useRequireAdmin()` hook
+  - [x] Consistent padding/spacing for admin content
+  - [x] Dark/light theme support
+- [x] Create `components/admin/admin-sidebar.tsx`
+  - [x] Navigation menu with icons (Dashboard, Users, Calendars, Logs)
+  - [x] Active route highlighting
+  - [x] Role-based menu items (show/hide based on permissions)
+  - [x] Superadmin badge if user is superadmin
+  - [x] Collapsible on mobile (Icons only ↔ Icons + Text)
+  - [x] "Back to App" link at bottom
+- [x] Create `components/admin/admin-header.tsx`
+  - [x] Breadcrumb navigation (Admin > Users > Edit User)
+  - [x] Page title
+  - [x] Optional action buttons (right-aligned)
+  - [x] User menu (admin name + role badge)
+- [x] Create `components/ui/breadcrumb.tsx`
+  - [x] shadcn/ui style breadcrumb component
+  - [x] Support for links and separators
+- [x] Add translations (en, de, it)
+  - [x] `admin.title` - "Admin Panel"
+  - [x] `admin.adminPanel` - "Admin Panel"
+  - [x] `admin.dashboard` - "Dashboard"
+  - [x] `admin.users` - "Users"
+  - [x] `admin.calendars` - "Calendars"
+  - [x] `admin.orphanedCalendars` - "Orphaned Calendars"
+  - [x] `admin.auditLogs` - "Audit Logs"
+  - [x] `admin.backToApp` - "Back to App"
+  - [x] `admin.superadminBadge` - "Superadmin"
+  - [x] `admin.adminBadge` - "Admin"
+  - [x] `admin.expandSidebar` - "Expand Sidebar"
+  - [x] `admin.collapseSidebar` - "Collapse Sidebar"
+- [x] Update `components/user-menu.tsx`
+  - [x] Add "Admin Panel" link (visible only when `isAdmin()`)
+  - [x] Show link with Shield icon
+  - [x] Navigate to `/admin`
+- [x] Create `app/admin/page.tsx` (placeholder dashboard)
+  - [x] Stats cards placeholders
+  - [x] Quick actions placeholder
+  - [x] "Coming Soon" messages for Phase 9.3
+
+**Implementation Notes**:
+
+- ✅ Admin layout completely separate from app layout (no AppHeader/AppFooter)
+- ✅ Sidebar is collapsible (Icons only ↔ Icons + Text) via toggle button
+- ✅ Sidebar shows user avatar, name, and role badge (Superadmin/Admin)
+- ✅ Breadcrumbs auto-generated from URL pathname
+- ✅ Admin link in UserMenu only visible when user has admin/superadmin role
+- ✅ All admin components under `components/admin/` directory
+- ✅ Responsive design: Sidebar auto-collapses on mobile (80px width)
+- ✅ Build verified: `npm run lint` + `npm run build` successful
+
+**Files Created**:
+
+- `components/ui/breadcrumb.tsx` - Breadcrumb UI component
+- `components/admin/admin-sidebar.tsx` - Collapsible sidebar navigation
+- `components/admin/admin-header.tsx` - Header with breadcrumbs
+- `app/admin/layout.tsx` - Admin layout wrapper
+- `app/admin/page.tsx` - Placeholder dashboard page
+
+**Files Modified**:
+
+- `components/user-menu.tsx` - Added admin panel link
+- `messages/en.json` - Added admin translations
+- `messages/de.json` - Added admin translations
+- `messages/it.json` - Added admin translations
+
+### 9.3 Admin API - System Stats
+
+**Priority**: High (Needed for dashboard)
+
+**Status**: ✅ **COMPLETED** (1. Januar 2026)
+
+- [x] Create `app/api/admin/stats/route.ts`
+  - [x] **GET**: System-wide statistics (admin and superadmin)
+    - Total users count (by role: superadmin, admin, user)
+    - Total calendars count (exclude orphaned)
+    - Orphaned calendars count (ownerId = NULL)
+    - Active shares count
+    - Total shifts count
+    - Recent activity count (last 7 days, user-visible logs only)
+    - Orphaned calendars warning (if > 0)
+  - [x] Permission check: `requireAdmin(user)`
+  - [x] Return format: JSON with all statistics
+  - [x] IP/User-Agent extraction via `ip-utils.ts` and `ua-parser-js`
+  - [x] Audit logging with `logAuditEvent()`
+
+### 9.3.1 Admin Dashboard Page
+
+**Priority**: High (Entry point for admin panel)
+
+**Status**: ✅ **COMPLETED** (1. Januar 2026)
+
+- [x] Create `app/admin/page.tsx`
+  - [x] Fetch system stats from API
+  - [x] Display stats cards: Total Users, Total Calendars, Active Shares, etc.
+  - [x] Show orphaned calendars warning (if > 0)
+  - [x] Quick action buttons: "Manage Users", "View Orphaned Calendars"
+  - [x] Recent activity preview (last 5 audit logs)
+  - [x] Loading state with fullscreen loader
+- [x] Create `components/admin/stats-cards.tsx`
+  - [x] Card grid layout (responsive: 1 col mobile, 2-3 cols desktop)
+  - [x] Each card: Icon, Title, Value, Trend (optional)
+  - [x] Color coding: Info (blue), Warning (yellow), Success (green)
+  - [x] Clickable cards navigate to relevant page
+  - [x] Loading skeleton for individual cards
+- [x] Create `hooks/useAdminStats.ts`
+  - [x] `fetchStats()` - Get system statistics
+  - [x] Auto-refresh every 60 seconds (optional)
+  - [x] Error handling with toast notifications
+- [x] Add translations (en, de, it)
+  - [x] Complete admin panel statistics translations
+  - [x] Dashboard descriptions and messages
+  - [x] All success/error notifications
+
+**Implementation Notes**:
+
+- ✅ Stats API uses direct DB queries for efficiency (Better Auth Admin API doesn't provide stats endpoints)
+- ✅ **IP/User-Agent extraction**: Uses existing packages correctly:
+  - `@supercharge/request-ip` via `lib/ip-utils.ts` → `getClientIp(request)`
+  - `ua-parser-js` (already installed, ~60KB) for client-side parsing
+  - NO manual header parsing (`x-forwarded-for`, `user-agent`)
+- ✅ **Audit logging**: Uses `logAuditEvent({ request })` - auto-extracts IP/User-Agent
+- ✅ **Better Auth Admin Plugin**: Checked docs - no built-in stats API, direct DB queries appropriate here
+- ✅ All lint and build checks passed
+- ✅ Full translations for all three languages (en, de, it)
+- ✅ Responsive design with proper loading states
+
+**Files Created**:
+
+- `app/api/admin/stats/route.ts` - Admin statistics API
+- `components/admin/stats-cards.tsx` - Dashboard statistics cards
+- `hooks/useAdminStats.ts` - Statistics data hook
+- `app/admin/page.tsx` - Updated dashboard page with live stats
+
+**Files Modified**:
+
+- `messages/en.json` - Added admin statistics translations
+- `messages/de.json` - Added admin statistics translations
+- `messages/it.json` - Added admin statistics translations
+
+### 9.4 Admin API - User Management
+
+**Priority**: High (Core admin functionality)
+
+**Status**: ✅ **COMPLETED & IMPROVED** (1. Januar 2026)
+
+**✨ IMPROVEMENT: Simplified Permission System (Hybrid Approach)** (January 1, 2026)
+
+After analyzing Better Auth's Permission APIs, we decided on a **Hybrid Approach** that uses Better Auth for authentication and custom code for permission checks.
+
+### Why Hybrid Approach?
+
+**Problems with Full Better Auth Permission System:**
+
+- ❌ Too complex for 3 simple roles (`user`, `admin`, `superadmin`)
+- ❌ Async overhead for every permission check (API call instead of simple if/else)
+- ❌ Business logic (e.g., "Admin cannot edit superadmins") must be implemented custom anyway
+- ❌ Duplicate implementation: Server-side (async) + Client-side (synchronous) for UI
+
+**Solution: Hybrid Approach (Best of Both Worlds):**
+
+### ✅ Use Better Auth for:
+
+1. **Authentication & Session Management**
+
+   - Login, Logout, Session Handling
+   - Token Management, Cookie Handling
+   - Session Revocation, Multi-Device Support
+
+2. **OAuth Integration**
+
+   - Google, GitHub, Discord OAuth
+   - Custom OIDC Provider Support
+   - Account Linking
+
+3. **Admin Plugin Features** (Better Auth APIs)
+
+   - `auth.api.banUser()` - Ban user + auto session revocation
+   - `auth.api.unbanUser()` - Unban user cleanly
+   - `auth.api.setUserPassword()` - Password reset with BCrypt hashing
+   - `auth.api.removeUser()` - Delete auth data (user, sessions, accounts)
+
+4. **Access Control Configuration** (`lib/auth/access-control.ts`)
+   - Registers "admin" and "superadmin" roles with Better Auth
+   - Allows both roles to access Better Auth Admin APIs
+   - **IMPORTANT**: Only for Better Auth internal use - NOT for our permission checks!
+
+### ✅ Use Custom Code for:
+
+1. **Permission Checks** (`lib/auth/admin.ts`)
+
+   - All permission check functions: `canEditUser()`, `canDeleteUser()`, `canBanUser()`, etc.
+   - **Synchronous** - no async API calls, just simple if/else logic
+   - **Single Source of Truth** - used by both server-side (API routes) and client-side (React hooks)
+   - Clear hierarchy: `superadmin > admin > user`
+
+2. **Calendar Permissions** (`lib/auth/permissions.ts`)
+
+   - Calendar-specific hierarchy: `owner > admin > write > read`
+   - Guest Access Checks
+   - Calendar Sharing Permissions
+
+3. **Admin Operations Logic**
+
+   - User List Filtering & Sorting (direct DB queries)
+   - User Details with app data (calendars, shares, subscriptions)
+   - Orphaned Calendar Management
+
+4. **Audit Logging** (`lib/audit-log.ts`)
+   - App-specific event logs
+   - Admin Action Tracking
+   - IP & User-Agent Extraction
+
+### Architecture Overview:
+
+```
+lib/auth/
+├── admin.ts                 ← Permission Checks (ALL: canEdit, canDelete, etc.)
+│                              Synchronous, for server & client, single source of truth
+│
+├── admin-helpers.ts        ← API Route Utilities (getAdminUser, validation)
+│                              DRY helper functions for API routes
+│
+├── access-control.ts       ← Better Auth Role Config (MINIMAL!)
+│                              Only to register "admin"/"superadmin" with Better Auth
+│                              Both roles: Full Better Auth Admin Permissions
+│                              Fine-grained control: In lib/auth/admin.ts
+│
+├── auth.ts                 ← Better Auth Server Config
+│                              Admin Plugin with access-control.ts
+│
+├── client.ts               ← Better Auth Client Config
+│                              Admin Client with access-control.ts
+│
+└── sessions.ts             ← Session Management Utilities
+
+API Routes:                  React Hooks:
+✅ requireAdmin(user)        ✅ useIsAdmin()
+✅ canEditUser(admin, user)  ✅ useCanEditUser(user)
+✅ canBanUser(admin, user)   ✅ useCanBanUser(user)
+   ↓                            ↓
+Both use lib/auth/admin.ts (same functions!)
+```
+
+### Example Flow: User Ban
+
+```typescript
+// 1. API Route: app/api/admin/users/[id]/ban/route.ts
+import { requireSuperAdmin, canBanUser } from "@/lib/auth/admin";
+
+export async function POST(request: NextRequest) {
+  const adminUser = await getValidatedAdminUser(request);
+  const targetUser = await getValidatedTargetUser(userId);
+
+  // Custom Permission Check (lib/auth/admin.ts)
+  if (!canBanUser(adminUser, targetUser)) {
+    return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+  }
+
+  // Better Auth Admin API (does the actual ban + session revocation)
+  await auth.api.banUser({
+    body: { userId, reason, expiresAt },
+  });
+
+  return NextResponse.json({ success: true });
+}
+
+// 2. React Component
+import { useCanBanUser } from "@/hooks/useAdminAccess";
+
+function UserActions({ user }) {
+  const canBan = useCanBanUser(user); // Uses same canBanUser() from lib/auth/admin.ts
+
+  if (!canBan) return null;
+
+  return <Button onClick={handleBan}>Ban User</Button>;
+}
+```
+
+### Benefits of Hybrid Approach:
+
+- 🚀 **Simpler**: Synchronous role checks without async API calls
+- 🔒 **Secure**: Server-side validation + Better Auth for critical operations
+- 🧹 **Less Code**: Single source of truth (`lib/auth/admin.ts`) for server AND client
+- ⚡ **Faster**: No async API calls for simple if/else logic (e.g., UI button show/hide)
+- 📚 **Maintainable**: Clear separation - Better Auth for auth, custom code for permissions
+- 🎯 **Best of Both**: Better Auth Admin APIs for critical ops, custom code for logic
+
+### Changes Made:
+
+- ❌ **Removed**: `lib/auth/admin-permissions.ts` (async server-side permission checks)
+- ❌ **Removed**: `lib/auth/admin-permissions-client.ts` (client-side permission checks)
+- ✅ **Extended**: `lib/auth/admin.ts` with all permission check functions
+- ✅ **Kept**: `lib/auth/access-control.ts` (minimal, only for Better Auth Admin Plugin)
+- ✅ **Kept**: `lib/auth/admin-helpers.ts` (practical API route utilities)
+- ✅ **Updated**: All API routes now use `lib/auth/admin.ts` instead of separate files
+- ✅ **Updated**: All React hooks now use `lib/auth/admin.ts` instead of separate files
+
+- [x] Create `app/api/admin/users/route.ts`
+  - [x] **GET**: List all users (admin and superadmin)
+    - Include: id, name, email, role, banned, createdAt, calendarCount, lastActivity
+    - Filter by: role (superadmin, admin, user), banned (true, false), search (name/email)
+    - Sort by: createdAt, name, email, role
+  - [x] Permission check: `requireAdmin(user)`
+- [x] Create `app/api/admin/users/[id]/route.ts`
+
+  - [x] **GET**: Get user details (admin and superadmin)
+    - Full user info + owned calendars list + shares count + accounts + sessions count
+  - [x] **PATCH**: Update user (role-based)
+    - Superadmin: Can update any user (name, email, role)
+    - Admin: Can update regular users only (name, email)
+    - Permission check: `canEditUser(adminUser, targetUser)`
+    - Audit log: `"admin.user.update"`, metadata: `{ targetUser, changes, updatedBy }`
+  - [x] **DELETE**: Delete user (superadmin only)
+    - Delete all user data: calendar shares, subscriptions, calendars (cascade), sessions, accounts, user record
+    - Permission check: `canDeleteUser(adminUser, targetUser)`
+    - Audit log: `"admin.user.delete"`, metadata: `{ deletedUser, calendarsDeleted, deletedBy }`
+
+- [x] Create `app/api/admin/users/[id]/ban/route.ts`
+  - [x] **POST**: Ban user (superadmin only)
+    - Update Better Auth fields: `banned`, `banReason`, `banExpires`
+    - Revoke all sessions (force logout)
+    - Permission check: `canBanUser(adminUser, targetUser)`
+    - Audit log: `"admin.user.ban"`, metadata: `{ userId, reason, expiresAt, bannedBy }`
+- [x] Create `app/api/admin/users/[id]/unban/route.ts`
+
+  - [x] **POST**: Unban user (superadmin only)
+    - Update: `banned: false, banReason: null, banExpires: null`
+    - Permission check: `canBanUser(adminUser, targetUser)` (same permission)
+    - Audit log: `"admin.user.unban"`, metadata: `{ userId, unbannedBy }`
+
+- [x] Create `app/api/admin/users/[id]/password/route.ts`
+  - [x] **POST**: Reset user password (admin and superadmin)
+    - Use Better Auth Admin Plugin: `auth.api.setUserPassword({ userId, newPassword })`
+    - Permission check: `canResetPassword(adminUser, targetUser)`
+    - Audit log: `"admin.user.password_reset"`, metadata: `{ targetUserId, resetBy }`
+
+**Implementation Notes** (Updated January 1, 2026):
+
+- ✅ **Simplified Permission System**: Direct role-based checks without Better Auth Permission API
+  - All permission functions in `lib/auth/admin.ts` (synchronous, no async API calls)
+  - Used by both API routes (server-side) and React hooks (client-side)
+  - Better Auth only for auth operations: Ban/Unban, Password Reset, Session Management
+- ✅ **Hybrid Approach** - Better Auth for auth operations, custom code for permissions:
+  - **✅ Use Better Auth APIs for:**
+    - `auth.api.setUserPassword()` - Password reset with automatic BCrypt hashing ✅
+    - `auth.api.banUser()` - Ban user with automatic session revocation ✅
+    - `auth.api.unbanUser()` - Unban user cleanly ✅
+    - `auth.api.removeUser()` - Delete auth-related data (user record, sessions, accounts) ✅
+  - **✅ Use Custom DB Queries for:**
+    - User listing - Better Auth doesn't support multiple filters simultaneously ✅
+    - User details - Need to enrich with app-specific data (calendars, shares) ✅
+    - User updates (name/email) - Direct DB updates are simpler ✅
+    - Role changes - Direct DB update (Better Auth setRole requires custom permissions) ✅
+- ✅ **Permission System**: Simple role-based checks in `lib/auth/admin.ts`
+  - All permission functions: `canEditUser()`, `canDeleteUser()`, `canBanUser()`, etc.
+  - Used by API routes (server-side validation) AND React hooks (UI logic)
+  - No async API calls - just simple if/else logic based on `user.role`
+  - Clear permission hierarchy: superadmin > admin > user
+- ✅ **User Deletion**: Hybrid approach ensures complete cleanup
+  - Step 1: Manual deletion of app-specific data (calendars, shares, subscriptions)
+  - Step 2: Better Auth `removeUser()` for auth data (user, sessions, accounts)
+  - Ensures no orphaned data in database
+- ✅ **Pagination Support**: Custom implementation with `limit` and `offset` parameters
+- ✅ **All Filters Implemented**: Role, banned status, search by name/email via direct DB queries
+- ✅ **Audit Logging**: All actions logged with proper metadata and severity levels
+- ✅ **Lint & Build**: All checks passed successfully
+
+**Files Created**:
+
+- `app/api/admin/users/route.ts` - User listing API with filtering/sorting
+- `app/api/admin/users/[id]/route.ts` - User details, update, and delete
+- `app/api/admin/users/[id]/ban/route.ts` - Ban user endpoint
+- `app/api/admin/users/[id]/unban/route.ts` - Unban user endpoint
+- `app/api/admin/users/[id]/password/route.ts` - Password reset endpoint
+
+**Files Modified**:
+
+- `lib/auth/admin.ts` - Extended with all admin permission check functions (`canEditUser`, `canDeleteUser`, etc.)
+- `hooks/useAdminAccess.ts` - Updated to use synchronous functions from `lib/auth/admin.ts`
+- All admin API routes - Updated to use permission functions from `lib/auth/admin.ts` instead of Better Auth Permission API
+
+**Files Modified**:
+
+- `lib/auth/admin.ts` - Extended with all admin permission check functions
+- `hooks/useAdminAccess.ts` - Updated to use synchronous functions from `lib/auth/admin.ts`
+- `app/api/admin/stats/route.ts` - Removed unused import (lint warning fix)
+- All admin API routes - Updated to use permission functions from `lib/auth/admin.ts`
+
+### 9.4.1 User Management Page
+
+**Priority**: High (Core admin functionality)
+
+- [ ] Create `app/admin/users/page.tsx`
+  - [ ] Fetch users list from API
+  - [ ] Display `UserTable` component
+  - [ ] Search bar (filter by name/email)
+  - [ ] Role filter dropdown (All, Superadmin, Admin, User)
+  - [ ] Status filter (All, Active, Banned)
+  - [ ] Sort controls (Name, Email, Created, Role)
+  - [ ] Pagination controls
+  - [ ] "Add User" button (future feature)
+  - [ ] Loading state with fullscreen loader
+- [ ] Create `components/admin/user-table.tsx`
+  - [ ] Data table with columns: Avatar, Name, Email, Role, Status, Created, Last Activity, Calendar Count, Actions
+  - [ ] Role badge with color coding (Superadmin=red, Admin=orange, User=blue)
+  - [ ] Status badge (Active=green, Banned=red with ban reason tooltip)
+  - [ ] Last Activity: Relative time ("2 hours ago", "3 days ago")
+  - [ ] Calendar Count: Number of owned calendars (clickable filter)
+  - [ ] Row actions dropdown:
+    - View Details (Sheet)
+    - Edit User (Sheet)
+    - Reset Password (Dialog)
+    - Ban User (Dialog) - Superadmin only
+    - Delete User (Dialog) - Superadmin only
+  - [ ] Row click opens user details sheet
+  - [ ] Horizontal scrolling on mobile (high priority responsiveness)
+  - [ ] Empty state: "No users found"
+  - [ ] Loading skeleton for rows
+- [ ] Create `components/admin/user-edit-sheet.tsx`
+  - [ ] Form fields: Name, Email, Role (superadmin only)
+  - [ ] Role selector: User, Admin, Superadmin (superadmin only)
+  - [ ] Email verification status display
+  - [ ] Save button with loading state
+  - [ ] Cancel button (close sheet)
+  - [ ] Validation: Required fields, email format
+  - [ ] Permission check: `useCanEditUser(targetUser)`
+  - [ ] Success toast: "User updated successfully"
+  - [ ] Error handling with toast notifications
+- [ ] Create `components/admin/user-details-sheet.tsx`
+  - [ ] User info: Name, Email, Role, Status, Created, Last Login
+  - [ ] Statistics: Owned Calendars, Shared Calendars, Active Sessions
+  - [ ] Owned calendars list (links to calendar)
+  - [ ] Shared calendars list with permissions
+  - [ ] Active sessions list (count only, link to profile)
+  - [ ] Quick actions: Edit User, Reset Password, Ban/Unban
+  - [ ] Close button
+- [ ] Create `components/admin/user-ban-dialog.tsx`
+  - [ ] Confirmation message: "Ban user {name}?"
+  - [ ] Textarea: Ban reason (required, free-form input)
+  - [ ] Date picker: Ban expires (optional)
+  - [ ] Checkbox: "Permanent ban" (disables date picker)
+  - [ ] Warning: "User will be logged out immediately and cannot sign in until unbanned"
+  - [ ] Confirm button (destructive style, disabled until reason entered)
+  - [ ] Cancel button
+  - [ ] Permission check: `useIsSuperAdmin()`
+- [ ] Create `components/admin/user-unban-dialog.tsx`
+  - [ ] Confirmation message: "Unban user {name}?"
+  - [ ] Show original ban reason (read-only)
+  - [ ] Confirm button
+  - [ ] Cancel button
+- [ ] Create `components/admin/user-delete-dialog.tsx`
+  - [ ] Confirmation message: "Delete user {name}?"
+  - [ ] Warning: "This will orphan all calendars owned by this user"
+  - [ ] Checkbox: "I understand this action cannot be undone"
+  - [ ] Text input: Type username to confirm
+  - [ ] Confirm button (destructive style, disabled until confirmed)
+  - [ ] Cancel button
+  - [ ] Permission check: `useIsSuperAdmin()`
+- [ ] Create `components/admin/user-password-reset-dialog.tsx`
+  - [ ] Form: New password input (with strength indicator)
+  - [ ] Form: Confirm password input
+  - [ ] Validation: Match, min 8 chars, strength requirements
+  - [ ] "Generate Random Password" button (fills both fields)
+  - [ ] Copy password button (after generation)
+  - [ ] Warning (prominent): "No email will be sent. You must manually inform the user of their new password."
+  - [ ] Security note: "This password will be saved immediately. Copy it before closing this dialog."
+  - [ ] Confirm button ("Set Password")
+  - [ ] Cancel button
+- [ ] Create `hooks/useAdminUsers.ts`
+  - [ ] `fetchUsers(filters, sort, pagination)` - List all users
+  - [ ] `fetchUserDetails(userId)` - Get single user details
+  - [ ] `updateUser(userId, data)` - Update user
+  - [ ] `deleteUser(userId)` - Delete user
+  - [ ] `banUser(userId, reason, expiresAt)` - Ban user
+  - [ ] `unbanUser(userId)` - Unban user
+  - [ ] `resetPassword(userId, newPassword)` - Reset user password
+  - [ ] Optimistic updates for ban/unban/delete
+  - [ ] Error handling with toast notifications
+
+### 9.5 Admin API - Calendar Management (Orphaned Only)
+
+**Priority**: High (Critical feature for orphaned calendar handling)
+
+**Scope**: MVP focuses on orphaned calendar management only. Full calendar admin features (transfer, bulk delete) deferred to future phase.
+
+- [ ] Create `app/api/admin/calendars/orphaned/route.ts`
+
+  - [ ] **GET**: List all orphaned calendars (admin and superadmin)
+    - Use `getOrphanedCalendars()` from `lib/auth/permissions.ts`
+    - Include: id, name, color, createdAt, updatedAt
+    - Include counts: shifts, presets, notes, shares (if any)
+    - Permission check: `requireAdmin(user)`
+  - [ ] **DELETE**: Bulk delete orphaned calendars (superadmin only)
+    - Body: `{ calendarIds: string[] }`
+    - Cascade delete all related data (shifts, presets, notes, shares, syncs)
+    - Permission check: `requireSuperAdmin(user)`
+    - Audit log: `"admin.calendar.bulk_delete_orphaned"`, metadata: `{ count, deletedBy }`
+
+- [ ] Create `app/api/admin/calendars/orphaned/[id]/route.ts`
+
+  - [ ] **DELETE**: Delete orphaned calendar (superadmin only)
+    - Check permissions with `requireSuperAdmin(user)`
+    - Cascade delete: shifts, notes, presets, shares, tokens, sync logs
+    - Audit log: `"admin.calendar.delete_orphaned"`
+    - Return success message
+
+- [ ] Create `app/api/admin/calendars/orphaned/[id]/assign/route.ts`
+  - [ ] **POST**: Assign orphaned calendar to user (admin and superadmin)
+    - Body: `{ userId: string }` or `{ assignToSelf: true }`
+    - Validate: Target user must exist
+    - Update calendar `ownerId` to target user ID
+    - Permission check: `requireAdmin(user)` + `canAssignOrphanedCalendar(admin)` (both admin and superadmin)
+    - Audit log: `"admin.calendar.assign_orphaned"`, metadata: `{ calendarId, calendarName, newOwnerId, assignedBy }`
+- [ ] Create `app/api/admin/calendars/orphaned/[id]/route.ts`
+  - [ ] **DELETE**: Delete orphaned calendar (superadmin only)
+    - Check permissions with `requireSuperAdmin(user)`
+    - Cascade delete: shifts, notes, presets, shares, tokens, sync logs
+    - Audit log: `"admin.calendar.delete_orphaned"`
+    - Return success message
+
+### 9.5.1 Orphaned Calendars Page
+
+**Priority**: High (Critical feature for migration scenarios)
+
+- [ ] Create `app/admin/calendars/orphaned/page.tsx`
+  - [ ] Fetch orphaned calendars from API
+  - [ ] Display `CalendarTable` component
+  - [ ] Search bar (filter by calendar name)
+  - [ ] Sort controls (Name, Created, Shift Count)
+  - [ ] Warning banner: "These calendars have no owner and are not accessible to users"
+  - [ ] Multi-select with checkboxes (select multiple calendars)
+  - [ ] Bulk actions toolbar (appears when items selected):
+    - "Assign Selected to User" button → Opens user selector sheet
+    - "Delete Selected" button (superadmin only) → Opens confirmation dialog
+    - "Clear Selection" button
+  - [ ] Empty state: "No orphaned calendars" (success message)
+  - [ ] Loading state with fullscreen loader
+- [ ] Create `components/admin/calendar-table.tsx`
+  - [ ] Data table with columns: Checkbox, Name, Color, Created, Shifts, Notes, Presets, Actions
+  - [ ] Header checkbox: Select/Deselect all
+  - [ ] Row checkboxes: Individual selection
+  - [ ] Color preview (colored dot)
+  - [ ] Statistics: Shift count, Note count, Preset count
+  - [ ] Row actions dropdown:
+    - View Calendar (preview, read-only)
+    - Assign to User (Sheet)
+    - Delete Calendar (Dialog) - Superadmin only
+  - [ ] Selection state management (tracked in parent component)
+  - [ ] Horizontal scrolling on mobile (like other BetterShift tables)
+  - [ ] Empty state: "No calendars found"
+  - [ ] Loading skeleton for rows
+- [ ] Create `components/admin/calendar-assign-sheet.tsx`
+  - [ ] User search/select dropdown (autocomplete)
+  - [ ] Calendar preview(s): Show list of selected calendars (name, color)
+  - [ ] Calendar count: "Assigning {count} calendar(s)"
+  - [ ] Warning: "This will make {userName} the owner of {count} calendar(s)"
+  - [ ] Assign button with loading state
+  - [ ] Cancel button (close sheet)
+  - [ ] Success toast: "{count} calendar(s) assigned to {userName}"
+  - [ ] Error handling with toast notifications (shows which calendars failed)
+- [ ] Create `components/admin/calendar-delete-dialog.tsx`
+  - [ ] Confirmation message: "Delete calendar {name}?"
+  - [ ] Warning: "This will delete all shifts, notes, and presets"
+  - [ ] Statistics display: X shifts, Y notes, Z presets
+  - [ ] Checkbox: "I understand this action cannot be undone"
+  - [ ] Text input: Type calendar name to confirm
+  - [ ] Confirm button (destructive style, disabled until confirmed)
+  - [ ] Cancel button
+  - [ ] Permission check: `useIsSuperAdmin()`
+- [ ] Create `hooks/useOrphanedCalendars.ts`
+  - [ ] `fetchOrphanedCalendars(filters, sort)` - List orphaned calendars
+  - [ ] `assignCalendar(calendarId, userId)` - Assign to user
+  - [ ] `deleteCalendar(calendarId)` - Delete calendar (superadmin only)
+  - [ ] `bulkAssignCalendars(calendarIds, userId)` - Bulk assign
+  - [ ] `bulkDeleteCalendars(calendarIds)` - Bulk delete (superadmin only)
+  - [ ] Optimistic updates for assign/delete
+  - [ ] Error handling with toast notifications
+
+### 9.6 Admin API - Audit Logs
+
+**Priority**: Medium (Important for transparency)
+
+- [ ] Create `app/api/admin/audit-logs/route.ts`
+  - [ ] **GET**: View all audit logs (admin and superadmin)
+    - Include: id, action, userId, actorId, metadata, createdAt
+    - Join with user table for user names
+    - Filters: action type, user, date range
+    - Sort by: createdAt (default: newest first)
+    - Pagination: 50 logs per page
+    - Permission check: `requireAdmin(user)`
+  - [ ] **DELETE**: Delete old audit logs (superadmin only)
+    - Query param: `before` (date) - Delete logs older than date
+    - Permission check: `requireSuperAdmin(user)`
+    - Return: Number of deleted logs
+    - Audit log: `admin_audit_logs_deleted` (metadata: { deletedCount, before })
+
+### 9.6.1 Audit Logs Page
+
+**Priority**: Medium (Important for transparency and debugging)
+
+- [ ] Create `app/admin/logs/page.tsx`
+  - [ ] Fetch audit logs from API
+  - [ ] Display `AuditLogTable` component
+  - [ ] Comprehensive filters (collapsible filter panel):
+    - Action type: Multi-select dropdown (all admin*\*, calendar*\_, auth\_\_, sync*\*, security*\* events)
+    - User selector: Autocomplete search (actor who performed action)
+    - Target user: Autocomplete search (user affected by action)
+    - Date range: From/To date pickers
+    - Severity: Multi-select (info, warning, error, critical)
+    - Resource type: Multi-select (user, calendar, token, share, sync)
+    - "Apply Filters" and "Reset Filters" buttons
+  - [ ] Sort controls (Date, Action, User, Severity)
+  - [ ] Pagination controls (50 per page)
+  - [ ] Export button: "Export to CSV" (superadmin only)
+  - [ ] Bulk delete: "Delete Old Logs" (superadmin only)
+  - [ ] Live update indicator (shows new logs count)
+  - [ ] Loading state with fullscreen loader
+- [ ] Create `components/admin/audit-log-table.tsx`
+  - [ ] Data table with columns: Timestamp, Action, User, Actor, Details, IP Address
+  - [ ] Action badge with color coding (by category: User, Calendar, Token, Share)
+  - [ ] User link (opens user details sheet)
+  - [ ] Actor link (who performed the action)
+  - [ ] Details column: Formatted metadata (JSON viewer)
+  - [ ] Row click expands full details (collapsible)
+  - [ ] Empty state: "No audit logs found"
+  - [ ] Loading skeleton for rows
+- [ ] Create `components/admin/audit-log-details-dialog.tsx`
+  - [ ] Full log details: All fields
+  - [ ] Formatted metadata (pretty-printed JSON)
+  - [ ] User details: Name, Email, Role
+  - [ ] Actor details: Name, Email, Role
+  - [ ] Timestamp with timezone
+  - [ ] Copy button for raw JSON
+  - [ ] Close button
+- [ ] Create `components/admin/audit-log-delete-dialog.tsx`
+  - [ ] Confirmation message: "Delete old audit logs?"
+  - [ ] Date picker: "Delete logs older than"
+  - [ ] Preview: "This will delete approximately X logs"
+  - [ ] Warning: "This action cannot be undone"
+  - [ ] Checkbox: "I understand audit logs will be permanently deleted"
+  - [ ] Confirm button (destructive style)
+  - [ ] Cancel button
+  - [ ] Permission check: `useIsSuperAdmin()`
+- [ ] Create `hooks/useAuditLogs.ts`
+  - [ ] `fetchAuditLogs(filters, sort, pagination)` - List audit logs
+  - [ ] `deleteOldLogs(beforeDate)` - Delete logs (superadmin only)
+  - [ ] `exportLogs(filters)` - Export to CSV
+  - [ ] Error handling with toast notifications
+- [ ] Add translations for audit log actions (en, de, it)
+  - [ ] All `admin_*` action types
+  - [ ] Action categories
+  - [ ] Filter labels
+    - Return all logs including `isUserVisible = false` (admin-only logs)
+    - Include user details (name, email) via join
+    - Pagination: limit (default 50), offset
+    - Filters: action, userId, resourceType, severity, dateRange
+    - Sort: timestamp desc (newest first)
+    - Permission check: `requireAdmin(user)` + `canViewAuditLogs(user)`
+  - [ ] **DELETE**: Bulk delete audit logs (superadmin only)
+    - Body: `{ logIds: string[] }` or `{ beforeDate: string }`
+    - Permission check: `requireSuperAdmin(user)` + `canDeleteAuditLogs(user)`
+    - Audit log: `"admin.audit_log.delete"`, metadata: `{ count, deletedBy }`
+
+### 9.7 Admin Layout & Navigation
+
+**Priority**: High (Required for all admin features)
+
+- [ ] Create `app/admin/layout.tsx`
+  - [ ] Server-side admin check using `getSessionUser()` and `isAdmin()`
+  - [ ] Redirect non-admins to `/` with error toast
+  - [ ] Consistent header with main app (same AppHeader component)
+  - [ ] Admin badge in header: "Admin Panel" or "Superadmin Panel" based on role
+  - [ ] Sidebar navigation (left side, collapsible on mobile):
+    - Dashboard (Home icon) - `/admin`
+    - Users (Users icon) - `/admin/users`
+    - Orphaned Calendars (Calendar icon) - `/admin/calendars/orphaned`
+    - Audit Logs (FileText icon) - `/admin/logs`
+  - [ ] Highlight current page in sidebar (active state)
+  - [ ] "Back to App" link at bottom of sidebar
+  - [ ] Responsive: Hamburger menu on mobile, full sidebar on desktop
+- [ ] Update `components/user-menu.tsx`
+  - [ ] Add "Admin Panel" link for admins
+  - [ ] Icon: Shield or Settings
+  - [ ] Position: Above "Activity" link
+  - [ ] Visibility condition: `isAuthEnabled() && isAdmin(user)`
+  - [ ] Badge: "Admin" or "Superadmin" based on role
+  - [ ] Link: `/admin` (dashboard)
+- [ ] Create `components/admin/admin-sidebar.tsx`
+  - [ ] Reusable sidebar component
+  - [ ] Navigation links with Lucide icons
+  - [ ] Active state based on current pathname
+  - [ ] Role badge at top (Admin vs Superadmin)
+  - [ ] Collapsible on mobile with state management
+
+### 9.8 Admin Dashboard (MVP)
+
+**Priority**: High (Entry point for admin panel)
+
+- [ ] Create `app/admin/page.tsx`
+  - [ ] Server component - fetch stats via direct DB query or API
+  - [ ] Permission check: Handled by layout middleware
+  - [ ] Display system statistics cards:
+    - [ ] Total users (by role: superadmin count, admin count, user count)
+    - [ ] Total calendars (owned count)
+    - [ ] **Orphaned calendars count** (highlighted if > 0)
+    - [ ] Total shifts (last 30 days)
+  - [ ] Alert banner if orphaned calendars exist:
+    - [ ] Show `OrphanedCalendarBanner` component
+    - [ ] Message: "⚠️ X calendars have no owner and need assignment"
+    - [ ] Button: "Manage Orphaned Calendars" → `/admin/calendars/orphaned`
+  - [ ] Recent admin activity feed (last 10 actions from audit log)
+    - [ ] Show only admin actions (`action` starts with `"admin."`)
+    - [ ] Display: timestamp, action type, user (who performed it), brief description
+  - [ ] Quick action buttons:
+    - [ ] "View All Users" → `/admin/users`
+    - [ ] "View Audit Logs" → `/admin/logs`
+    - [ ] "Manage Orphaned Calendars" → `/admin/calendars/orphaned` (only if > 0)
+
+### 9.9 Admin UI - User Management
+
+**Priority**: High (Core admin feature)
+
+- [ ] Create `app/admin/users/page.tsx`
+
+  - [ ] Client component with data fetching from `/api/admin/users`
+  - [ ] Data table with columns:
+    - [ ] Name
+    - [ ] Email
+    - [ ] Role (badge: Superadmin/Admin/User)
+    - [ ] Banned status (badge if banned)
+    - [ ] Calendars count (owned)
+    - [ ] Created date
+    - [ ] Actions (View, Edit, Reset Password, Ban/Unban, Delete)
+  - [ ] Search bar (filter by name or email, client-side)
+  - [ ] Filter dropdowns:
+    - [ ] Role filter (All, Superadmin, Admin, User)
+    - [ ] Status filter (All, Active, Banned)
+  - [ ] Pagination (50 users per page)
+  - [ ] Sort by: name, email, created date, calendar count
+  - [ ] Role-based action visibility:
+    - [ ] Admin: Can view all, edit regular users only
+    - [ ] Superadmin: Full access (edit anyone, delete, ban)
+
+- [ ] Create `components/admin/user-list-table.tsx`
+
+  - [ ] Reusable table component
+  - [ ] Uses shadcn/ui Table component
+  - [ ] Row actions dropdown:
+    - [ ] View Details (opens dialog)
+    - [ ] Edit User (opens edit dialog)
+    - [ ] Reset Password (superadmin only, opens password dialog)
+    - [ ] Ban/Unban (superadmin only)
+    - [ ] Delete User (superadmin only, disabled for admins/superadmins)
+  - [ ] Loading skeleton during fetch
+  - [ ] Empty state: "No users found"
+
+- [ ] Create `components/admin/user-edit-dialog.tsx`
+
+  - [ ] Edit user form: name, email, role (if superadmin)
+  - [ ] Form validation (email format, name required)
+  - [ ] Permission check: Disable role change if not superadmin
+  - [ ] Save button → PATCH `/api/admin/users/[id]`
+  - [ ] Success toast: "User updated successfully"
+  - [ ] Error handling with toast
+
+- [ ] Create `components/admin/user-ban-dialog.tsx` (Superadmin only)
+
+  - [ ] Ban reason textarea (required)
+  - [ ] Expiration date picker (optional, null = permanent)
+  - [ ] Warning: "User will be logged out immediately"
+  - [ ] Confirm button → POST `/api/admin/users/[id]/ban`
+  - [ ] Success toast: "User banned successfully"
+
+- [ ] Create `components/admin/user-delete-dialog.tsx` (Superadmin only)
+
+  - [ ] Confirmation dialog with impact preview:
+    - [ ] Show calendar count that will be orphaned
+    - [ ] Show shares count that will be removed
+    - [ ] Warning: "This action cannot be undone"
+  - [ ] Type-to-confirm: User must type user's email to confirm
+  - [ ] Delete button → DELETE `/api/admin/users/[id]`
+  - [ ] Success toast: "User deleted, X calendars orphaned"
+
+- [ ] Create `components/admin/user-password-dialog.tsx` (Admin and Superadmin)
+  - [ ] Password reset form for target user
+  - [ ] New password input field (type="password", min 8 chars)
+  - [ ] Confirm password input field (must match new password)
+  - [ ] Password strength indicator (weak/medium/strong)
+  - [ ] Show password toggle button (eye icon)
+  - [ ] Validation:
+    - [ ] Minimum 8 characters (Better Auth default)
+    - [ ] Passwords must match
+    - [ ] Cannot be empty
+  - [ ] Warning banner: "⚠️ User will NOT receive an email. Communicate the new password securely."
+  - [ ] Copy password button (for admin to copy and send via secure channel)
+  - [ ] Reset button → POST `/api/admin/users/[id]/password`
+  - [ ] Success toast: "Password reset successfully. Make sure to inform the user."
+  - [ ] Error handling with specific error messages
+
+### 9.10 Admin UI - Orphaned Calendar Management
+
+**Priority**: High (Critical for Phase 7 orphaned calendar handling)
+
+- [ ] Create `app/admin/calendars/orphaned/page.tsx`
+
+  - [ ] Client component with data fetching from `/api/admin/calendars/orphaned`
+  - [ ] Data table with columns:
+    - [ ] Calendar name (with color indicator)
+    - [ ] Created date
+    - [ ] Shifts count
+    - [ ] Presets count
+    - [ ] Notes count
+    - [ ] Actions (Assign, Delete)
+  - [ ] Bulk selection checkboxes
+  - [ ] Bulk actions toolbar (appears when > 0 selected):
+    - [ ] "Assign All to Me" button (admin and superadmin)
+    - [ ] "Assign All to User" button (admin and superadmin, opens user selector)
+    - [ ] "Delete Selected" button (superadmin only)
+  - [ ] Search bar (filter by calendar name)
+  - [ ] Sort by: name, created date, shifts count
+  - [ ] Empty state: "No orphaned calendars found 🎉"
+  - [ ] Loading skeleton during fetch
+
+- [ ] Create `components/admin/orphaned-calendar-table.tsx`
+
+  - [ ] Reusable table component
+  - [ ] Row actions dropdown:
+    - [ ] Assign to User (opens assign dialog, admin and superadmin)
+    - [ ] Assign to Me (quick action, admin and superadmin)
+    - [ ] Delete Calendar (superadmin only)
+  - [ ] Checkbox for bulk selection
+  - [ ] Highlight row on hover
+
+- [ ] Create `components/admin/assign-calendar-dialog.tsx`
+
+  - [ ] User search/select dropdown (combobox)
+    - [ ] Fetch users from `/api/admin/users`
+    - [ ] Searchable by name or email
+    - [ ] Show user role badge in dropdown
+  - [ ] "Assign to Myself" shortcut button (autofill current admin)
+  - [ ] Calendar preview:
+    - [ ] Name, color
+    - [ ] Stats: X shifts, Y presets, Z notes
+  - [ ] Confirmation message: "Assign [Calendar] to [User]?"
+  - [ ] Assign button → POST `/api/admin/calendars/orphaned/[id]/assign`
+  - [ ] Success toast: "Calendar assigned to [User]"
+
+- [ ] Create `components/admin/orphaned-calendar-banner.tsx`
+  - [ ] Warning banner component for dashboard
+  - [ ] Icon: AlertTriangle (Lucide)
+  - [ ] Message: "⚠️ {count} calendar(s) have no owner and need assignment"
+  - [ ] Button: "Manage Orphaned Calendars" → navigate to orphaned page
+  - [ ] Dismissible (hide with X button, show again on next page load if still orphaned)
+  - [ ] Only render if orphaned count > 0
+
+### 9.11 Admin UI - Audit Logs
+
+**Priority**: Medium (Important for accountability)
+
+- [ ] Create `app/admin/logs/page.tsx`
+
+  - [ ] Client component with data fetching from `/api/admin/audit-logs`
+  - [ ] Data table with columns:
+    - [ ] Timestamp (relative + absolute on hover)
+    - [ ] Action type (badge with color based on severity)
+    - [ ] User (name + email, with role badge)
+    - [ ] Resource (type + ID)
+    - [ ] IP Address
+    - [ ] Details (expandable row or tooltip with metadata JSON)
+  - [ ] Advanced filters:
+    - [ ] Action type dropdown (All, admin._, calendar._, user.\*, etc.)
+    - [ ] User filter (searchable dropdown)
+    - [ ] Severity filter (All, Info, Warning, Error, Critical)
+    - [ ] Date range picker (last 7 days, last 30 days, custom range)
+  - [ ] Search bar (search by action, resource ID, IP, metadata)
+  - [ ] Export button:
+    - [ ] Export as CSV
+    - [ ] Export as JSON
+    - [ ] Includes current filters
+  - [ ] Bulk delete (superadmin only):
+    - [ ] Select multiple rows with checkboxes
+    - [ ] "Delete Selected" button
+    - [ ] Confirmation dialog
+  - [ ] Pagination (100 logs per page)
+  - [ ] Auto-refresh toggle (refresh every 30s)
+
+- [ ] Create `components/admin/audit-log-table.tsx`
+  - [ ] Reusable table component
+  - [ ] Expandable rows to show full metadata
+  - [ ] Color-coded severity badges:
+    - [ ] Info: Blue
+    - [ ] Warning: Yellow
+    - [ ] Error: Orange
+    - [ ] Critical: Red
+  - [ ] Action icons based on action type
+  - [ ] Empty state: "No logs found for selected filters"
+
+### 9.12 Translations (Admin Panel)
+
+**Priority**: High (Required for all UI components)
+
+- [ ] Add admin translation keys to `messages/en.json`:
+  ```json
+  "admin": {
+    "title": "Admin Panel",
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "calendars": "Calendars",
+    "orphanedCalendars": "Orphaned Calendars",
+    "auditLogs": "Audit Logs",
+    "backToApp": "Back to App",
+    "stats": {
+      "totalUsers": "Total Users",
+      "totalCalendars": "Total Calendars",
+      "orphanedCalendars": "Orphaned Calendars",
+      "totalShifts": "Total Shifts (Last 30 Days)"
+    },
+    "users": {
+      "title": "User Management",
+      "searchPlaceholder": "Search by name or email...",
+      "roleFilter": "Filter by Role",
+      "statusFilter": "Filter by Status",
+      "edit": "Edit User",
+      "ban": "Ban User",
+      "unban": "Unban User",
+      "delete": "Delete User",
+      "banReason": "Ban Reason",
+      "banExpires": "Ban Expires",
+      "deleteConfirm": "Type the user's email to confirm deletion",
+      "calendarsWillBeOrphaned": "{count} calendar(s) will be orphaned"
+    },
+    "orphaned": {
+      "title": "Orphaned Calendar Management",
+      "banner": "⚠️ {count} calendar(s) have no owner and need assignment",
+      "manageButton": "Manage Orphaned Calendars",
+      "assignToMe": "Assign to Me",
+      "assignToUser": "Assign to User",
+      "deleteSelected": "Delete Selected",
+      "assignDialog": {
+        "title": "Assign Calendar",
+        "selectUser": "Select User",
+        "assignToMyself": "Assign to Myself",
+        "confirm": "Assign "{calendar}" to "{user}"?"
+      }
+    },
+    "logs": {
+      "title": "Audit Logs",
+      "export": "Export Logs",
+      "deleteSelected": "Delete Selected",
+      "filterByAction": "Filter by Action",
+      "filterBySeverity": "Filter by Severity",
+      "dateRange": "Date Range"
+    }
+  }
+  ```
+- [ ] Copy translations to `messages/de.json` (German)
+- [ ] Copy translations to `messages/it.json` (Italian)
+
+### 9.13 Middleware Protection for Admin Routes
+
+**Priority**: Critical (Security requirement)
+
+- [ ] Update `proxy.ts` middleware
+  - [ ] Add route matcher for `/admin/*` paths
+  - [ ] Check authentication status (session exists)
+  - [ ] Check admin role using `isAdmin(user)`
+  - [ ] If not admin:
+    - [ ] Redirect to `/` with 302 status
+    - [ ] Set error message in cookie for toast display
+    - [ ] Log unauthorized access attempt to audit log:
+      - Action: `"admin.unauthorized_access"`
+      - Metadata: `{ attemptedPath, userId: user?.id || null, ipAddress }`
+      - Severity: `"warning"`
+  - [ ] If admin: Allow request to continue
+  - [ ] Enforce Better Auth ban check (if `user.banned === true`, block access)
+  - [ ] Rate limiting: Apply stricter limits on admin routes to prevent abuse
+
+### 9.14 Testing & Verification
+
+**Priority**: High (Ensure everything works)
+
+- [ ] **Admin Access Control**
+  - [ ] Verify non-admin users cannot access `/admin` routes
+  - [ ] Verify redirect works correctly with error toast
+  - [ ] Verify unauthorized attempts are logged
+- [ ] **User Management**
+  - [ ] Test user list loading and pagination
+  - [ ] Test user edit (name, email, role changes)
+  - [ ] Test ban/unban functionality
+  - [ ] Test user deletion and calendar orphaning
+  - [ ] Verify admins cannot edit other admins/superadmins
+- [ ] **Orphaned Calendar Management**
+  - [ ] Test orphaned calendar listing
+  - [ ] Test calendar assignment (to self, to other user)
+  - [ ] Test bulk assignment and deletion
+  - [ ] Verify orphaned calendars disappear from list after assignment
+- [ ] **Audit Logs**
+  - [ ] Verify all admin actions are logged
+  - [ ] Test log filtering and search
+  - [ ] Test log export (CSV, JSON)
+  - [ ] Test log deletion (superadmin only)
+- [ ] **Permissions**
+  - [ ] Verify role-based feature visibility
+  - [ ] Test that admins cannot delete users or calendars
+  - [ ] Test that only superadmins can ban users
+  - [ ] Verify permission checks in all API routes
+
+**Security Considerations**:
+
+- Superadmin actions bypass normal calendar permissions but require admin role
+- All admin actions must be logged to audit log for accountability
+- Superadmin role assignment only via first user auto-promotion (no UI toggle)
+- Admin API routes protected by middleware (session required)
+- Rate limiting applies to admin routes (prevent abuse)
+- Sensitive operations (delete, ban) require superadmin role specifically
+- Admins cannot elevate their own privileges or edit other admins
+- IP addresses logged for all admin actions (forensics)
+- Better Auth ban system integration (banned users blocked at middleware level)
+
+**Future Enhancements (Post-MVP)**:
+
+- Full calendar management (transfer ownership, bulk operations)
+- IP ban system (deferred due to complexity with proxies/VPNs)
+- Advanced statistics with charts and graphs
+- Two-factor authentication for admin accounts
+- Password generation with secure random passwords
+
+---
+
+## Phase 10: Testing & Documentation
+
     - Quick ban/unban actions in user list
     - Filter: Show only banned users
-  - [ ] Audit logging for ban actions:
-    - Action: `"admin.user.ban"` - Account banned
-    - Action: `"admin.user.unban"` - Account unbanned
-    - Action: `"admin.ip.ban"` - IP address banned
-    - Action: `"admin.ip.unban"` - IP address unbanned
-    - Metadata: `{ userId, ipAddress, reason, bannedBy }`
+
+- [ ] Audit logging for ban actions:
+  - Action: `"admin.user.ban"` - Account banned
+  - Action: `"admin.user.unban"` - Account unbanned
+  - Action: `"admin.ip.ban"` - IP address banned
+  - Action: `"admin.ip.unban"` - IP address unbanned
+  - Metadata: `{ userId, ipAddress, reason, bannedBy }`
 - [ ] Admin UI Components:
   - [ ] `components/admin/user-list.tsx` - Table of all users
   - [ ] `components/admin/user-edit-dialog.tsx` - Edit user details
@@ -2346,16 +3542,30 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - Filter by owner
   - Bulk actions (transfer, delete)
 - [ ] Admin logs page: `app/admin/logs/page.tsx`
+
   - Filterable audit log
-  - Export logs functionality
+    **Security Considerations**:
 
-**Security Considerations**:
+- Superadmin actions bypass normal calendar permissions but require admin role
+- All admin actions must be logged to audit log for accountability
+- Superadmin role assignment only via first user auto-promotion (no UI toggle)
+- Admin API routes protected by middleware (session required)
+- Rate limiting applies to admin routes (prevent abuse)
+- Sensitive operations (delete, ban) require superadmin role specifically
+- Admins cannot elevate their own privileges or edit other admins
+- IP addresses logged for all admin actions (forensics)
+- Better Auth ban system integration (banned users blocked at middleware level)
 
-- Super admin actions bypass normal permissions
-- All admin actions must be logged for audit trail
-- Super admin flag cannot be changed via UI (only database)
-- Rate limiting applies to admin routes
-- Admin panel requires active session (no API key access)
+**Future Enhancements (Post-MVP)**:
+
+- Full calendar management (transfer ownership, bulk operations)
+- User password reset via email (forgot password flow)
+- IP ban system (deferred due to complexity with proxies/VPNs)
+- Advanced statistics with charts and graphs
+- User impersonation for support (Better Auth feature available)
+- Two-factor authentication for admin accounts
+- Admin action approval workflow (multi-admin consent)
+- Automated orphaned calendar cleanup policies
 
 ---
 
@@ -2367,6 +3577,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
   - [ ] Auth system overview
   - [ ] Admin panel features (first user = superadmin)
+  - [ ] Role-based access control explanation
   - [ ] Public/User/Token share differences
   - [ ] Environment variables
   - [ ] OIDC configuration guide
@@ -2381,16 +3592,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
       5. Navigate to Admin Panel → Orphaned Calendars
       6. Assign orphaned calendars to users (or yourself)
     - Warning: Orphaned calendars are invisible in normal UI for all users until assigned
-
-- [ ] **Update `.env.example`**
-
-  - [ ] Add comment to `AUTH_ENABLED`:
-    ```bash
-    # Enable authentication system (defaults to true)
-    # Note: Calendars created with AUTH_ENABLED=false will need owner assignment
-    # The first registered user will automatically become superadmin
-    AUTH_ENABLED=true
-    ```
 
 - [ ] **Create Migration Guide** (`docs/MIGRATION_AUTH_TOGGLE.md`) (Phase 7)
 
@@ -2422,55 +3623,13 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ---
 
-## Phase 11: Performance Optimizations
-
-**Priority**: Medium (Post-MVP)
-
-- [ ] **Database Indexes**
-  - [ ] Index `ownerId` column in calendars
-  - [ ] Index `(calendarId, userId)` in shares
-  - [ ] Verify indexes with `EXPLAIN QUERY PLAN` (SQLite)
-- [ ] **Permission Caching**
-  - [ ] Update `lib/auth/permissions.ts`
-    - Add in-memory Map-based cache
-    - Cache key: `${userId}:${calendarId}`
-    - Cache value: `{ permission: string, expires: timestamp }`
-    - TTL: 60 seconds (configurable)
-  - [ ] Create `getCachedPermission(userId, calendarId)` function
-    - Check cache first, return if valid
-    - On cache miss: query DB, store in cache
-    - Return cached permission
-  - [ ] Cache Invalidation Strategy
-    - Manual invalidation on permission changes:
-      - Calendar ownership transfer
-      - Share creation/update/deletion
-      - Calendar deletion
-    - Emit SSE event: `permission.changed` with `{ userId, calendarId }`
-    - Clients refetch permissions on event
-  - [ ] Add cache statistics (optional)
-    - Track hit rate, miss rate
-    - Log to console in development
-    - Expose as admin metric (Phase 7)
-- [ ] **Performance Benchmarking**
-  - [ ] Measure permission check latency before caching
-  - [ ] Measure after caching implementation
-  - [ ] Target: < 5ms average permission check
-  - [ ] Document results in `docs/PERFORMANCE.md`
-- [ ] **Query Optimization**
-  - [ ] Review slow queries with SQLite profiling
-  - [ ] Optimize calendar list query (with permissions)
-  - [ ] Batch permission checks where possible
-  - [ ] Consider prepared statements for hot paths
-
----
-
-## Phase 12: Translation Keys Cleanup & Optimization
+## Phase 11: Translation Keys Cleanup & Optimization
 
 **Priority**: Medium (Post-MVP)
 
 **Goal**: Reduce duplication and improve maintainability of i18n translation keys.
 
-### 12.1 Audit Current Translation Usage
+### 11.1 Audit Current Translation Usage
 
 - [ ] **Scan Active Usage**
 
@@ -2485,7 +3644,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Verify keys are truly unused (check for dynamic key construction)
   - [ ] Remove dead keys from all three language files
 
-### 12.2 Restructure Translation Architecture
+### 11.2 Restructure Translation Architecture
 
 - [ ] **Identify Duplication Patterns**
 
@@ -2510,7 +3669,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Keep domain-specific keys in their sections (shift.allDay, preset.secondary)
   - [ ] Use interpolation for dynamic content: `t('common.deleteConfirm', { item: t('shift.title') })`
 
-### 12.3 Implementation
+### 11.3 Implementation
 
 - [ ] **Update Translation Files**
 
@@ -2532,7 +3691,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Remove obsolete keys from all language files
   - [ ] Run build test to ensure no broken translations
 
-### 12.4 Documentation & Guidelines
+### 11.4 Documentation & Guidelines
 
 - [ ] **Translation Style Guide**
 
@@ -2552,7 +3711,7 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [ ] Document process for adding new translations
   - [ ] Set up CI check for translation file consistency
 
-### 12.5 Tooling & Automation
+### 11.5 Tooling & Automation
 
 - [ ] **Install & Configure Tools**
 
@@ -2584,21 +3743,6 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 - [ ] **100% coverage** - All languages have identical key structures
 - [ ] **Build passing** - No missing translation errors
 - [ ] **Documentation complete** - Style guide published for contributors
-
----
-
-## Success Criteria
-
-- [ ] Auth can be fully disabled (single-user mode works)
-- [ ] Auth can be enabled with username/password
-- [ ] At least 2 OIDC providers working (Google + GitHub)
-- [ ] Custom OIDC provider configuration works
-- [ ] Calendar sharing works with all permission levels
-- [ ] Existing data migrates successfully
-- [ ] All API routes properly protected
-- [ ] Documentation complete and clear
-- [ ] Security review passed
-- [ ] Performance impact < 10% with auth enabled
 
 ---
 

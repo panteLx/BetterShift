@@ -46,6 +46,26 @@ npm run db:studio    # Open Drizzle Studio GUI
 
 **Configuration**: [`lib/auth.ts`](lib/auth.ts), [`lib/auth/env.ts`](lib/auth/env.ts), [`lib/public-config.ts`](lib/public-config.ts)
 
+#### Hybrid Approach: When to Use Better Auth vs. Custom Code
+
+**✅ Use Better Auth for:**
+
+- **Authentication**: Login, logout, session management, token handling
+- **OAuth**: Google, GitHub, Discord, custom OIDC integration
+- **Admin Operations**: `auth.api.banUser()`, `auth.api.setUserPassword()`, `auth.api.removeUser()`
+- **Access Control Config**: Role registration (`lib/auth/access-control.ts`) - only for Better Auth internal use
+
+**✅ Use Custom Code for:**
+
+- **Permission Checks**: All `canEditUser()`, `canDeleteUser()`, `canBanUser()` functions in `lib/auth/admin.ts`
+- **Calendar Permissions**: `owner > admin > write > read` hierarchy in `lib/auth/permissions.ts`
+- **Admin UI Logic**: User management, filtering, sorting (direct DB queries)
+- **Audit Logging**: App-specific event tracking in `lib/audit-log.ts`
+
+**Why**: Better Auth handles auth operations (with automatic session revocation, BCrypt hashing, etc.), while custom code provides synchronous, simple permission checks without async overhead. See [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) for full details.
+
+#### Calendar Permission Hierarchy
+
 **Permission hierarchy** (highest to lowest):
 
 1. `owner` - Created the calendar, full control
@@ -61,6 +81,8 @@ npm run db:studio    # Open Drizzle Studio GUI
 - `canViewCalendar(userId, calendarId)` - Shorthand for read permission check
 
 **Guest access**: When auth is enabled, unauthenticated users (`userId = null`) can access calendars with `guestPermission != "none"`. Use `allowGuestAccess()` to check if feature is enabled.
+
+#### Session Management
 
 **Session utilities** in [`lib/auth/sessions.ts`](lib/auth/sessions.ts):
 

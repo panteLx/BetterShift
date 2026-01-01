@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { auditLogPlugin } from "@/lib/auth/audit-plugin";
 import { handleFirstUserPromotion } from "@/lib/auth/first-user";
+import { ac, roles } from "@/lib/auth/access-control";
 import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -71,6 +72,12 @@ export const auth = betterAuth({
     // Admin plugin for user management
     admin({
       defaultRole: "user",
+      // Custom access control to support "admin" and "superadmin" roles
+      // Both roles get all Better Auth admin permissions
+      // Fine-grained permission control (e.g., only superadmin can ban/delete)
+      // is handled by our custom checks in lib/auth/admin.ts
+      ac,
+      roles,
     }),
 
     // Custom OIDC
