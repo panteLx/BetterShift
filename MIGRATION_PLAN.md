@@ -2464,6 +2464,129 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
 
 ---
 
+## Phase 12: Translation Keys Cleanup & Optimization
+
+**Priority**: Medium (Post-MVP)
+
+**Goal**: Reduce duplication and improve maintainability of i18n translation keys.
+
+### 12.1 Audit Current Translation Usage
+
+- [ ] **Scan Active Usage**
+
+  - [ ] Analyze all components for `useTranslations()` and `t()` calls
+  - [ ] Generate comprehensive report of all actively used translation keys
+  - [ ] Create automated script to extract all `t('key.path')` references from codebase
+  - [ ] Document usage frequency per key (which keys are used most often)
+
+- [ ] **Identify Dead Keys**
+  - [ ] Cross-reference used keys against all keys in `en.json`, `de.json`, `it.json`
+  - [ ] Create list of unused/obsolete translation keys
+  - [ ] Verify keys are truly unused (check for dynamic key construction)
+  - [ ] Remove dead keys from all three language files
+
+### 12.2 Restructure Translation Architecture
+
+- [ ] **Identify Duplication Patterns**
+
+  - [ ] Find component-specific keys that share identical or similar translations
+  - [ ] Examples to consolidate:
+    - `shift.create`, `note.create`, `preset.create` → `common.create`
+    - `shift.edit`, `note.edit`, `preset.edit` → `common.edit`
+    - `shift.delete`, `note.delete`, `preset.delete` → `common.delete`
+    - Validation messages (urlRequired, urlInvalid across components)
+    - Form labels (nameLabel, colorLabel, notesLabel)
+
+- [ ] **Design New Key Structure**
+  - [ ] Create hierarchical categories:
+    ```
+    common/
+      actions/     (create, edit, delete, save, cancel)
+      labels/      (name, color, notes, date, time)
+      states/      (loading, saving, error, success)
+      validation/  (required, invalid, tooLarge)
+      feedback/    (created, updated, deleted, error)
+    ```
+  - [ ] Keep domain-specific keys in their sections (shift.allDay, preset.secondary)
+  - [ ] Use interpolation for dynamic content: `t('common.deleteConfirm', { item: t('shift.title') })`
+
+### 12.3 Implementation
+
+- [ ] **Update Translation Files**
+
+  - [ ] Create new shared sections in `en.json` (master template)
+  - [ ] Copy structure to `de.json` and `it.json`
+  - [ ] Migrate existing translations to new structure
+  - [ ] Keep legacy keys temporarily for backwards compatibility
+
+- [ ] **Refactor Components** (Phased Approach)
+
+  - [ ] Phase 1: Core components (shift-sheet, note-sheet, preset-manage-sheet)
+  - [ ] Phase 2: Dialog components (shifts-overview, notes-list)
+  - [ ] Phase 3: Settings & management (calendar-settings, view-settings)
+  - [ ] Phase 4: Auth & profile pages
+  - [ ] Phase 5: Remaining components
+
+- [ ] **Remove Legacy Keys**
+  - [ ] After all components updated, verify no references to old keys
+  - [ ] Remove obsolete keys from all language files
+  - [ ] Run build test to ensure no broken translations
+
+### 12.4 Documentation & Guidelines
+
+- [ ] **Translation Style Guide**
+
+  - [ ] Document key naming conventions
+    - Use camelCase for keys: `deleteConfirm`, not `delete-confirm`
+    - Group related keys hierarchically: `common.actions.create`
+    - Avoid overly generic names: `message` → `errorMessage`
+  - [ ] When to create new vs. reuse existing keys
+    - Reuse if translation is identical across contexts
+    - Create new if context changes meaning/tone
+  - [ ] Interpolation patterns and best practices
+  - [ ] Pluralization rules (if needed)
+
+- [ ] **Developer Workflow**
+  - [ ] Add pre-commit hook to validate translation key usage
+  - [ ] Create script to check for missing translations across languages
+  - [ ] Document process for adding new translations
+  - [ ] Set up CI check for translation file consistency
+
+### 12.5 Tooling & Automation
+
+- [ ] **Install & Configure Tools**
+
+  - [ ] `i18n-unused` - Detect unused translation keys
+  - [ ] `eslint-plugin-i18n-json` - Lint translation JSON files
+  - [ ] Custom script: `npm run i18n:check` - Validate all translations present in all languages
+
+- [ ] **Create Utility Scripts**
+  - [ ] `scripts/i18n-audit.js` - Generate usage report
+  - [ ] `scripts/i18n-find-duplicates.js` - Find duplicate translations across keys
+  - [ ] `scripts/i18n-sync.js` - Ensure all languages have same keys
+  - [ ] `scripts/i18n-stats.js` - Show translation coverage statistics
+
+### Benefits
+
+- ✅ **Smaller bundle size** - Fewer unique strings to include
+- ✅ **Easier maintenance** - Change once, applies everywhere
+- ✅ **Consistent terminology** - Users see same words for same actions
+- ✅ **Faster translation** - Less work to add new languages
+- ✅ **Better developer experience** - Obvious which key to use
+- ✅ **Reduced translation costs** - Fewer strings to pay translators for
+
+### Success Metrics
+
+- [ ] **Target**: Reduce total unique translation keys by **40-50%**
+  - Current estimate: ~580 keys across all sections
+  - Target: ~290-350 keys after consolidation
+- [ ] **Zero unused keys** - All keys in files are actively used
+- [ ] **100% coverage** - All languages have identical key structures
+- [ ] **Build passing** - No missing translation errors
+- [ ] **Documentation complete** - Style guide published for contributors
+
+---
+
 ## Success Criteria
 
 - [ ] Auth can be fully disabled (single-user mode works)
