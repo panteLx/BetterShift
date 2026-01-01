@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -203,19 +202,6 @@ export default function ActivityLogPage() {
     await clearLogs();
   };
 
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <AuthHeader showUserMenu />
-        <main className="flex-1 container py-8">
-          <Skeleton className="h-8 w-64 mb-6" />
-          <Skeleton className="h-96 w-full" />
-        </main>
-        <AppFooter versionInfo={versionInfo} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen flex-col">
       <AuthHeader showUserMenu />
@@ -383,10 +369,8 @@ export default function ActivityLogPage() {
 
           {/* Table */}
           {loading && logs.length === 0 ? (
-            <div className="space-y-2">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
+            <div className="text-center py-12 text-muted-foreground">
+              {t("common.loading")}
             </div>
           ) : error ? (
             <div className="text-center py-12 text-red-500">

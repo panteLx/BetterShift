@@ -2750,96 +2750,38 @@ function UserActions({ user }) {
 - `app/api/admin/stats/route.ts` - Removed unused import (lint warning fix)
 - All admin API routes - Updated to use permission functions from `lib/auth/admin.ts`
 
-### 9.4.1 User Management Page
+### 9.4.1 User Management Page ✅
 
-**Priority**: High (Core admin functionality)
+**Status**: ✅ Completed  
+**Completed**: 1. Januar 2026
 
-- [ ] Create `app/admin/users/page.tsx`
-  - [ ] Fetch users list from API
-  - [ ] Display `UserTable` component
-  - [ ] Search bar (filter by name/email)
-  - [ ] Role filter dropdown (All, Superadmin, Admin, User)
-  - [ ] Status filter (All, Active, Banned)
-  - [ ] Sort controls (Name, Email, Created, Role)
-  - [ ] Pagination controls
-  - [ ] "Add User" button (future feature)
-  - [ ] Loading state with fullscreen loader
-- [ ] Create `components/admin/user-table.tsx`
-  - [ ] Data table with columns: Avatar, Name, Email, Role, Status, Created, Last Activity, Calendar Count, Actions
-  - [ ] Role badge with color coding (Superadmin=red, Admin=orange, User=blue)
-  - [ ] Status badge (Active=green, Banned=red with ban reason tooltip)
-  - [ ] Last Activity: Relative time ("2 hours ago", "3 days ago")
-  - [ ] Calendar Count: Number of owned calendars (clickable filter)
-  - [ ] Row actions dropdown:
-    - View Details (Sheet)
-    - Edit User (Sheet)
-    - Reset Password (Dialog)
-    - Ban User (Dialog) - Superadmin only
-    - Delete User (Dialog) - Superadmin only
-  - [ ] Row click opens user details sheet
-  - [ ] Horizontal scrolling on mobile (high priority responsiveness)
-  - [ ] Empty state: "No users found"
-  - [ ] Loading skeleton for rows
-- [ ] Create `components/admin/user-edit-sheet.tsx`
-  - [ ] Form fields: Name, Email, Role (superadmin only)
-  - [ ] Role selector: User, Admin, Superadmin (superadmin only)
-  - [ ] Email verification status display
-  - [ ] Save button with loading state
-  - [ ] Cancel button (close sheet)
-  - [ ] Validation: Required fields, email format
-  - [ ] Permission check: `useCanEditUser(targetUser)`
-  - [ ] Success toast: "User updated successfully"
-  - [ ] Error handling with toast notifications
-- [ ] Create `components/admin/user-details-sheet.tsx`
-  - [ ] User info: Name, Email, Role, Status, Created, Last Login
-  - [ ] Statistics: Owned Calendars, Shared Calendars, Active Sessions
-  - [ ] Owned calendars list (links to calendar)
-  - [ ] Shared calendars list with permissions
-  - [ ] Active sessions list (count only, link to profile)
-  - [ ] Quick actions: Edit User, Reset Password, Ban/Unban
-  - [ ] Close button
-- [ ] Create `components/admin/user-ban-dialog.tsx`
-  - [ ] Confirmation message: "Ban user {name}?"
-  - [ ] Textarea: Ban reason (required, free-form input)
-  - [ ] Date picker: Ban expires (optional)
-  - [ ] Checkbox: "Permanent ban" (disables date picker)
-  - [ ] Warning: "User will be logged out immediately and cannot sign in until unbanned"
-  - [ ] Confirm button (destructive style, disabled until reason entered)
-  - [ ] Cancel button
-  - [ ] Permission check: `useIsSuperAdmin()`
-- [ ] Create `components/admin/user-unban-dialog.tsx`
-  - [ ] Confirmation message: "Unban user {name}?"
-  - [ ] Show original ban reason (read-only)
-  - [ ] Confirm button
-  - [ ] Cancel button
-- [ ] Create `components/admin/user-delete-dialog.tsx`
-  - [ ] Confirmation message: "Delete user {name}?"
-  - [ ] Warning: "This will orphan all calendars owned by this user"
-  - [ ] Checkbox: "I understand this action cannot be undone"
-  - [ ] Text input: Type username to confirm
-  - [ ] Confirm button (destructive style, disabled until confirmed)
-  - [ ] Cancel button
-  - [ ] Permission check: `useIsSuperAdmin()`
-- [ ] Create `components/admin/user-password-reset-dialog.tsx`
-  - [ ] Form: New password input (with strength indicator)
-  - [ ] Form: Confirm password input
-  - [ ] Validation: Match, min 8 chars, strength requirements
-  - [ ] "Generate Random Password" button (fills both fields)
-  - [ ] Copy password button (after generation)
-  - [ ] Warning (prominent): "No email will be sent. You must manually inform the user of their new password."
-  - [ ] Security note: "This password will be saved immediately. Copy it before closing this dialog."
-  - [ ] Confirm button ("Set Password")
-  - [ ] Cancel button
-- [ ] Create `hooks/useAdminUsers.ts`
-  - [ ] `fetchUsers(filters, sort, pagination)` - List all users
-  - [ ] `fetchUserDetails(userId)` - Get single user details
-  - [ ] `updateUser(userId, data)` - Update user
-  - [ ] `deleteUser(userId)` - Delete user
-  - [ ] `banUser(userId, reason, expiresAt)` - Ban user
-  - [ ] `unbanUser(userId)` - Unban user
-  - [ ] `resetPassword(userId, newPassword)` - Reset user password
-  - [ ] Optimistic updates for ban/unban/delete
-  - [ ] Error handling with toast notifications
+**Implementation Notes**:
+
+- ✅ All components created and functional
+- ✅ Translations added for en, de, it (80+ new keys)
+- ✅ Permission system integrated (custom hooks)
+- ✅ Ban system with reason + expiration date (native HTML5 date input)
+- ✅ Login page shows ban banner with details (fetched from `/api/auth/ban-info`)
+- ✅ Delete dialog warning updated (calendars are deleted, not orphaned)
+- ✅ User edit sheet fixed (useEffect syncs with prop changes)
+- ✅ Avatar display pattern from calendar-share-list.tsx (image → initials → icon)
+- ✅ Pagination: 25/50/100 per page, default 25
+- ✅ Password reset with generator + copy-to-clipboard
+- ✅ All lint and build errors resolved
+
+**Files Created**:
+
+- `hooks/useAdminUsers.ts` - Central user management hook (8 operations)
+- `components/admin/user-table.tsx` - Main table with avatars, badges, actions
+- `components/admin/user-details-sheet.tsx` - Detailed user view with stats
+- `components/admin/user-edit-sheet.tsx` - Edit name/email/role
+- `components/admin/user-ban-dialog.tsx` - Ban with reason + expiry
+- `components/admin/user-unban-dialog.tsx` - Unban confirmation
+- `components/admin/user-delete-dialog.tsx` - Delete with double confirmation
+- `components/admin/user-password-reset-dialog.tsx` - Password reset with generator
+- `app/admin/users/page.tsx` - Main user management page
+- `app/api/auth/ban-info/route.ts` - Public API for ban details on login
+- `components/ui/pagination.tsx` - Simplified pagination component
 
 ### 9.5 Admin API - Calendar Management (Orphaned Only)
 

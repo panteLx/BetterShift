@@ -154,7 +154,7 @@ export async function proxy(request: NextRequest) {
         void logAuditEvent({
           userId: session.user.id,
           action: "admin_access_denied",
-          resourceType: "admin_panel",
+          resourceType: "admin",
           resourceId: null,
           metadata: {
             attemptedPath: pathname,
@@ -167,22 +167,6 @@ export async function proxy(request: NextRequest) {
 
         return NextResponse.redirect(homeUrl);
       }
-
-      // Admin access granted - continue
-      // Audit log: Admin access (for monitoring)
-      void logAuditEvent({
-        userId: session.user.id,
-        action: "admin_access_granted",
-        resourceType: "admin_panel",
-        resourceId: null,
-        metadata: {
-          path: pathname,
-          userRole: session.user.role,
-        },
-        request,
-        severity: "info",
-        isUserVisible: false,
-      });
     } catch (error) {
       console.error("[Proxy] Admin access check failed:", error);
       // Session validation failed - redirect to login

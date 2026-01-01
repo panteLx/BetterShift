@@ -11,7 +11,6 @@ import {
   Radar as RadarIcon,
 } from "lucide-react";
 import { formatDuration } from "@/lib/date-utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useShiftStats } from "@/hooks/useShiftStats";
 import {
   PieChart as RechartsPieChart,
@@ -286,9 +285,8 @@ export function ShiftStats({
 
           {/* Stats Display */}
           {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-20 w-full rounded-lg" />
-              <Skeleton className="h-64 w-full rounded-lg" />
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              {t("common.loading")}
             </div>
           ) : stats && Object.keys(stats.stats).length > 0 ? (
             <div className="space-y-3.5">

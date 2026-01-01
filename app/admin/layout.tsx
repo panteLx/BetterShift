@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { useRequireAdmin } from "@/hooks/useAdminAccess";
@@ -21,9 +22,23 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { isLoading } = useAuth();
+  const [sidebarWidth, setSidebarWidth] = useState(280);
 
   // Require admin access (redirects non-admins)
   useRequireAdmin("/");
+
+  // Listen for sidebar width changes
+  useEffect(() => {
+    const handleResize = () => {
+      // Mobile: always 80px, Desktop: Check if collapsed (80px) or expanded (280px)
+      const isCollapsed = window.innerWidth < 1024 ? true : false;
+      setSidebarWidth(isCollapsed ? 80 : 280);
+    };
+
+    handleResize(); // Initial check
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Show loader while checking auth
   if (isLoading) {
@@ -33,10 +48,13 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar Navigation */}
-      <AdminSidebar />
+      <AdminSidebar onWidthChange={setSidebarWidth} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden ml-[80px] lg:ml-[280px] transition-all duration-300">
+      <div
+        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+        style={{ marginLeft: `${sidebarWidth}px` }}
+      >
         {/* Header */}
         <AdminHeader />
 

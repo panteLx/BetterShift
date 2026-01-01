@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +16,9 @@ import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { AuthHeader } from "@/components/auth-header";
 import { AppFooter } from "@/components/app-footer";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
+import { AlertTriangle, X } from "lucide-react";
+import { format } from "date-fns";
+import { getDateLocale } from "@/lib/locales";
 import {
   isRateLimitError,
   handleRateLimitError,
@@ -32,6 +36,8 @@ import {
  */
 export default function LoginPage() {
   const t = useTranslations();
+  const locale = useLocale();
+  const dateLocale = getDateLocale(locale);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -41,6 +47,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [banInfo, setBanInfo] = useState<{
+    reason?: string;
+    expiresAt?: string;
+  } | null>(null);
   const versionInfo = useVersionInfo();
 
   useEffect(() => {
@@ -88,6 +98,40 @@ export default function LoginPage() {
       });
 
       if (result.error) {
+        // Check if user is banned (Better Auth returns BANNED_USER code)
+        if (
+          result.error.code === "BANNED_USER" ||
+          result.error.message?.toLowerCase().includes("banned")
+        ) {
+          // Fetch ban details from our API
+          try {
+            const banResponse = await fetch("/api/auth/ban-info", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+
+            if (banResponse.ok) {
+              const banData = await banResponse.json();
+              setBanInfo({
+                reason: banData.banReason,
+                expiresAt: banData.banExpires,
+              });
+            } else {
+              // Fallback if API fails
+              setBanInfo({
+                reason: result.error.message || t("auth.accountBanned"),
+              });
+            }
+          } catch {
+            // Fallback if fetch fails
+            setBanInfo({
+              reason: result.error.message || t("auth.accountBanned"),
+            });
+          }
+          return;
+        }
+
         // Check if the error indicates rate limiting (Better Auth wraps 429 errors)
         // The error might contain the fetch response status
         if (result.error.status === 429) {
@@ -177,6 +221,42 @@ export default function LoginPage() {
 
       <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4 py-8">
         <div className="w-full max-w-md space-y-8">
+          {/* Ban Warning Banner */}
+          {banInfo && (
+            <div className="relative rounded-lg border-2 border-destructive bg-destructive/5 p-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
+              <button
+                onClick={() => setBanInfo(null)}
+                className="absolute top-2 right-2 p-1 rounded-md hover:bg-destructive/10 transition-colors"
+              >
+                <X className="h-4 w-4 text-destructive" />
+              </button>
+              <div className="flex gap-3 pr-6">
+                <AlertTriangle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-destructive text-lg">
+                    {t("auth.accountBanned")}
+                  </h3>
+                  {banInfo.reason && (
+                    <p className="text-sm text-foreground">{banInfo.reason}</p>
+                  )}
+                  {banInfo.expiresAt ? (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {t("admin.bannedUntil", {
+                        date: format(new Date(banInfo.expiresAt), "PPP", {
+                          locale: dateLocale,
+                        }),
+                      })}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {t("admin.bannedPermanently")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">

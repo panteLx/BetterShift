@@ -13,16 +13,10 @@ import {
 } from "@/components/ui/breadcrumb";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { Separator } from "@/components/ui/separator";
 
 interface BreadcrumbSegment {
   label: string;
   href?: string;
-}
-
-interface AdminHeaderProps {
-  title?: string;
-  actions?: React.ReactNode;
 }
 
 /**
@@ -30,11 +24,9 @@ interface AdminHeaderProps {
  *
  * Features:
  * - Automatic breadcrumb navigation from URL
- * - Page title
- * - Optional action buttons (right-aligned)
  * - Theme + Language switchers
  */
-export function AdminHeader({ title, actions }: AdminHeaderProps) {
+export function AdminHeader() {
   const t = useTranslations();
   const pathname = usePathname();
 
@@ -84,7 +76,6 @@ export function AdminHeader({ title, actions }: AdminHeaderProps) {
   };
 
   const breadcrumbs = generateBreadcrumbs();
-  const pageTitle = title || breadcrumbs[breadcrumbs.length - 1]?.label;
 
   return (
     <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
@@ -121,26 +112,6 @@ export function AdminHeader({ title, actions }: AdminHeaderProps) {
             <ThemeSwitcher />
           </div>
         </div>
-
-        {/* Page Title + Actions */}
-        {(pageTitle || actions) && (
-          <>
-            <Separator />
-            <div className="flex items-center justify-between gap-4">
-              {/* Page Title */}
-              {pageTitle && (
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {pageTitle}
-                </h1>
-              )}
-
-              {/* Action Buttons */}
-              {actions && (
-                <div className="flex items-center gap-2">{actions}</div>
-              )}
-            </div>
-          </>
-        )}
       </div>
     </header>
   );

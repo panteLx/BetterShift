@@ -12,7 +12,6 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { AdminStats } from "@/hooks/useAdminStats";
@@ -75,10 +74,7 @@ function StatsCard({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-4 w-full" />
-          </div>
+          <div className="text-muted-foreground">-</div>
         ) : (
           <>
             <div className="flex items-center gap-2">

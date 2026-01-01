@@ -28,7 +28,6 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface SyncNotificationDialogProps {
   open: boolean;
@@ -258,10 +257,8 @@ export function SyncNotificationDialog({
 
           <div className="space-y-4 overflow-y-auto flex-1 px-6 pb-6">
             {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
+              <div className="text-center py-8 text-muted-foreground">
+                {t("common.loading")}
               </div>
             ) : filteredLogs.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
@@ -28,6 +28,10 @@ interface NavItem {
   adminOnly?: boolean; // Only visible for superadmin
 }
 
+interface AdminSidebarProps {
+  onWidthChange?: (width: number) => void;
+}
+
 /**
  * Admin Panel Sidebar Navigation
  *
@@ -38,16 +42,22 @@ interface NavItem {
  * - Mobile responsive
  * - "Back to App" link at bottom
  */
-export function AdminSidebar() {
+export function AdminSidebar({ onWidthChange }: AdminSidebarProps) {
   const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
   const adminLevel = useAdminLevel();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Default collapsed on mobile (< 1024px)
+  const [isCollapsed, setIsCollapsed] = useState(
+    typeof window !== "undefined" && window.innerWidth < 1024
+  );
 
   const isSuperAdmin = adminLevel === "superadmin";
-
+  // Notify parent of width changes
+  useEffect(() => {
+    onWidthChange?.(isCollapsed ? 80 : 280);
+  }, [isCollapsed, onWidthChange]);
   // Navigation items
   const navItems: NavItem[] = [
     {
