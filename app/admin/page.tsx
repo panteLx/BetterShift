@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
               </div>
               <Button
                 variant="outline"
-                onClick={() => router.push("/admin/calendars/orphaned")}
+                onClick={() => router.push("/admin/calendars")}
                 className="border-yellow-600 text-yellow-900 hover:bg-yellow-100 dark:text-yellow-100 dark:hover:bg-yellow-900/30"
               >
                 {t("admin.manageOrphanedCalendars")}

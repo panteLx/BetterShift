@@ -4,6 +4,7 @@ import {
   user,
   calendars,
   calendarShares,
+  calendarAccessTokens,
   shifts,
   auditLogs,
 } from "@/lib/db/schema";
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
 
     const orphanedCalendars = Number(orphanedCalendarsResult?.count || 0);
 
-    // 4. Active shares count
+    // 4. Active shares count (user shares)
     const [activeSharesResult] = await db
       .select({
         count: sql<number>`COUNT(*)`,
@@ -104,6 +105,16 @@ export async function GET(request: NextRequest) {
       .from(calendarShares);
 
     const activeShares = Number(activeSharesResult?.count || 0);
+
+    // 4a. Active token shares count
+    const [activeTokenSharesResult] = await db
+      .select({
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(calendarAccessTokens)
+      .where(eq(calendarAccessTokens.isActive, true));
+
+    const activeTokenShares = Number(activeTokenSharesResult?.count || 0);
 
     // 5. Total shifts count
     const [totalShiftsResult] = await db
@@ -141,7 +152,12 @@ export async function GET(request: NextRequest) {
         timestamp: auditLogs.timestamp,
       })
       .from(auditLogs)
-      .where(eq(auditLogs.isUserVisible, false)) // Admin-only logs
+      .where(
+        and(
+          eq(auditLogs.isUserVisible, false),
+          sql`${auditLogs.action} LIKE 'admin.%'` // Only admin actions (e.g., admin.user.ban, admin.calendar.delete)
+        )
+      )
       .orderBy(sql`${auditLogs.timestamp} DESC`)
       .limit(5);
 
@@ -152,7 +168,9 @@ export async function GET(request: NextRequest) {
         orphaned: orphanedCalendars,
       },
       shares: {
-        active: activeShares,
+        user: activeShares,
+        token: activeTokenShares,
+        active: activeShares + activeTokenShares,
       },
       shifts: {
         total: totalShifts,

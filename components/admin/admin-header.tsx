@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Menu } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,6 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
@@ -19,14 +21,19 @@ interface BreadcrumbSegment {
   href?: string;
 }
 
+interface AdminHeaderProps {
+  onMenuClick?: () => void;
+}
+
 /**
  * Admin Panel Header
  *
  * Features:
  * - Automatic breadcrumb navigation from URL
  * - Theme + Language switchers
+ * - Mobile menu toggle
  */
-export function AdminHeader() {
+export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const t = useTranslations();
   const pathname = usePathname();
 
@@ -82,8 +89,19 @@ export function AdminHeader() {
       <div className="p-4 space-y-3">
         {/* Top row: Breadcrumbs + Controls */}
         <div className="flex items-center justify-between gap-4">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMenuClick}
+            className="lg:hidden flex-shrink-0"
+            aria-label="Toggle menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
           {/* Breadcrumbs */}
-          <Breadcrumb>
+          <Breadcrumb className="flex-1 min-w-0">
             <BreadcrumbList>
               {breadcrumbs.map((segment, index) => {
                 const isLast = index === breadcrumbs.length - 1;

@@ -19,6 +19,8 @@ export interface AdminStats {
     orphaned: number;
   };
   shares: {
+    user: number;
+    token: number;
     active: number;
   };
   shifts: {

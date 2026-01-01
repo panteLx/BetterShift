@@ -145,6 +145,7 @@ export function StatsCardsGrid({ stats, isLoading }: StatsCardsGridProps) {
         description={t("admin.stats.calendarsDescription")}
         icon={Calendar}
         variant="default"
+        href="/admin/calendars"
         isLoading={isLoading}
       />
 
@@ -152,7 +153,14 @@ export function StatsCardsGrid({ stats, isLoading }: StatsCardsGridProps) {
       <StatsCard
         title={t("admin.stats.activeShares")}
         value={isLoading ? "-" : stats?.shares.active || 0}
-        description={t("admin.stats.sharesDescription")}
+        description={
+          isLoading
+            ? undefined
+            : t("admin.stats.sharesDescription", {
+                user: stats?.shares.user || 0,
+                token: stats?.shares.token || 0,
+              })
+        }
         icon={Share2}
         variant="success"
         isLoading={isLoading}
@@ -169,7 +177,7 @@ export function StatsCardsGrid({ stats, isLoading }: StatsCardsGridProps) {
             ? "warning"
             : "default"
         }
-        href="/admin/calendars/orphaned"
+        href="/admin/calendars"
         badge={
           !isLoading && stats && stats.calendars.orphaned > 0
             ? {

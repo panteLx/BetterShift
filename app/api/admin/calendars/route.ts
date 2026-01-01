@@ -7,6 +7,8 @@ import {
   calendarNotes,
   shiftPresets,
   calendarShares,
+  calendarAccessTokens,
+  externalSyncs,
 } from "@/lib/db/schema";
 import { sql, eq, and, isNull } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -14,7 +16,6 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { logAuditEvent } from "@/lib/audit-log";
 
 /**
  * Admin Calendar Management API
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     // Status filter
     if (statusFilter === "orphaned") {
       conditions.push(isNull(calendars.ownerId));
-    } else if (statusFilter === "owned") {
+    } else if (statusFilter === "with-owner") {
       conditions.push(sql`${calendars.ownerId} IS NOT NULL`);
     }
 
@@ -78,10 +79,11 @@ export async function GET(request: NextRequest) {
         color: calendars.color,
         ownerId: calendars.ownerId,
         guestPermission: calendars.guestPermission,
-        createdAt: calendars.createdAt,
-        updatedAt: calendars.updatedAt,
+        createdAt: sql<string>`${calendars.createdAt}`,
+        updatedAt: sql<string>`${calendars.updatedAt}`,
         ownerName: user.name,
         ownerEmail: user.email,
+        ownerImage: user.image,
       })
       .from(calendars)
       .leftJoin(user, eq(calendars.ownerId, user.id));
@@ -147,25 +149,55 @@ export async function GET(request: NextRequest) {
       .where(sql`${calendarShares.calendarId} IN ${calendarIds}`)
       .groupBy(calendarShares.calendarId);
 
+    // Get share token counts
+    const shareTokenCounts = await db
+      .select({
+        calendarId: calendarAccessTokens.calendarId,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(calendarAccessTokens)
+      .where(sql`${calendarAccessTokens.calendarId} IN ${calendarIds}`)
+      .groupBy(calendarAccessTokens.calendarId);
+
+    // Get external syncs counts
+    const externalSyncsCounts = await db
+      .select({
+        calendarId: externalSyncs.calendarId,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(externalSyncs)
+      .where(sql`${externalSyncs.calendarId} IN ${calendarIds}`)
+      .groupBy(externalSyncs.calendarId);
+
     // Build result with statistics
     const calendarsWithStats = calendarsData.map((calendar) => ({
       id: calendar.id,
       name: calendar.name,
       color: calendar.color,
       ownerId: calendar.ownerId,
-      ownerName: calendar.ownerName,
-      ownerEmail: calendar.ownerEmail,
+      owner: calendar.ownerId
+        ? {
+            name: calendar.ownerName,
+            email: calendar.ownerEmail,
+            image: calendar.ownerImage,
+          }
+        : null,
       guestPermission: calendar.guestPermission,
-      createdAt: calendar.createdAt,
-      updatedAt: calendar.updatedAt,
-      shiftCount:
+      createdAt: calendar.createdAt ? new Date(calendar.createdAt) : new Date(),
+      updatedAt: calendar.updatedAt ? new Date(calendar.updatedAt) : new Date(),
+      shiftsCount:
         shiftCounts.find((s) => s.calendarId === calendar.id)?.count || 0,
-      noteCount:
+      notesCount:
         noteCounts.find((n) => n.calendarId === calendar.id)?.count || 0,
-      presetCount:
+      presetsCount:
         presetCounts.find((p) => p.calendarId === calendar.id)?.count || 0,
-      shareCount:
-        shareCounts.find((s) => s.calendarId === calendar.id)?.count || 0,
+      sharesCount:
+        (shareCounts.find((s) => s.calendarId === calendar.id)?.count || 0) +
+        (shareTokenCounts.find((t) => t.calendarId === calendar.id)?.count ||
+          0),
+      externalSyncsCount:
+        externalSyncsCounts.find((e) => e.calendarId === calendar.id)?.count ||
+        0,
     }));
 
     // Apply sorting
@@ -187,30 +219,14 @@ export async function GET(request: NextRequest) {
         comparison =
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else if (sortBy === "ownerId") {
-        const aOwner = a.ownerName || a.ownerEmail || "";
-        const bOwner = b.ownerName || b.ownerEmail || "";
+        const aOwner = a.owner?.name || a.owner?.email || "";
+        const bOwner = b.owner?.name || b.owner?.email || "";
         comparison = aOwner.localeCompare(bOwner);
       } else if (sortBy === "shiftCount") {
-        comparison = a.shiftCount - b.shiftCount;
+        comparison = a.shiftsCount - b.shiftsCount;
       }
 
       return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    // Audit log
-    await logAuditEvent({
-      request,
-      action: "admin.calendar.list",
-      userId: currentUser.id,
-      severity: "info",
-      metadata: {
-        filters: {
-          status: statusFilter,
-          search: searchQuery,
-          ownerId: ownerIdFilter,
-        },
-        resultCount: sortedCalendars.length,
-      },
     });
 
     return NextResponse.json({

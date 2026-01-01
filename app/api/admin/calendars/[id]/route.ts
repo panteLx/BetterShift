@@ -69,8 +69,8 @@ export async function GET(
         color: calendarsTable.color,
         ownerId: calendarsTable.ownerId,
         guestPermission: calendarsTable.guestPermission,
-        createdAt: calendarsTable.createdAt,
-        updatedAt: calendarsTable.updatedAt,
+        createdAt: sql<string>`${calendarsTable.createdAt}`,
+        updatedAt: sql<string>`${calendarsTable.updatedAt}`,
         ownerName: userTable.name,
         ownerEmail: userTable.email,
         ownerImage: userTable.image,
@@ -122,26 +122,93 @@ export async function GET(
       .leftJoin(userTable, eq(calendarSharesTable.userId, userTable.id))
       .where(eq(calendarSharesTable.calendarId, calendarId));
 
-    // Get external syncs
+    // Get share tokens
+    const shareTokens = await db
+      .select({
+        id: tokensTable.id,
+        name: tokensTable.name,
+        permission: tokensTable.permission,
+        createdAt: sql<string>`${tokensTable.createdAt}`,
+      })
+      .from(tokensTable)
+      .where(eq(tokensTable.calendarId, calendarId));
+
+    // Get share token count
+    const [shareTokenCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(tokensTable)
+      .where(eq(tokensTable.calendarId, calendarId));
+
+    // Get external syncs with last sync info
     const externalSyncs = await db
       .select({
         id: externalSyncsTable.id,
         name: externalSyncsTable.name,
         syncType: externalSyncsTable.syncType,
-        calendarUrl: externalSyncsTable.calendarUrl,
-        createdAt: externalSyncsTable.createdAt,
+        url: externalSyncsTable.calendarUrl,
+        createdAt: sql<string>`${externalSyncsTable.createdAt}`,
       })
       .from(externalSyncsTable)
       .where(eq(externalSyncsTable.calendarId, calendarId));
 
+    // Get last synced timestamp for each external sync
+    const externalSyncsWithLastSync = await Promise.all(
+      externalSyncs.map(async (sync) => {
+        const [lastSync] = await db
+          .select({ syncedAt: syncLogsTable.syncedAt })
+          .from(syncLogsTable)
+          .where(eq(syncLogsTable.externalSyncId, sync.id))
+          .orderBy(sql`${syncLogsTable.syncedAt} DESC`)
+          .limit(1);
+
+        return {
+          ...sync,
+          lastSyncedAt: lastSync?.syncedAt ? new Date(lastSync.syncedAt) : null,
+        };
+      })
+    );
+
+    // Get external syncs count
+    const [externalSyncCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(externalSyncsTable)
+      .where(eq(externalSyncsTable.calendarId, calendarId));
+
     return NextResponse.json({
-      ...calendar,
-      shiftCount: Number(shiftCount?.count || 0),
-      noteCount: Number(noteCount?.count || 0),
-      presetCount: Number(presetCount?.count || 0),
-      shareCount: Number(shareCount?.count || 0),
-      shares,
-      externalSyncs,
+      id: calendar.id,
+      name: calendar.name,
+      color: calendar.color,
+      ownerId: calendar.ownerId,
+      owner: calendar.ownerId
+        ? {
+            name: calendar.ownerName,
+            email: calendar.ownerEmail,
+            image: calendar.ownerImage,
+          }
+        : null,
+      guestPermission: calendar.guestPermission,
+      createdAt: calendar.createdAt ? new Date(calendar.createdAt) : new Date(),
+      updatedAt: calendar.updatedAt ? new Date(calendar.updatedAt) : new Date(),
+      shiftsCount: Number(shiftCount?.count || 0),
+      notesCount: Number(noteCount?.count || 0),
+      presetsCount: Number(presetCount?.count || 0),
+      sharesCount:
+        Number(shareCount?.count || 0) + Number(shareTokenCount?.count || 0),
+      externalSyncsCount: Number(externalSyncCount?.count || 0),
+      shares: shares.map((s) => ({
+        userId: s.userId,
+        userName: s.userName || "",
+        userEmail: s.userEmail || "",
+        userImage: s.userImage,
+        permission: s.permission,
+      })),
+      shareTokens: shareTokens.map((t) => ({
+        id: t.id,
+        name: t.name,
+        permission: t.permission,
+        createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+      })),
+      externalSyncs: externalSyncsWithLastSync,
     });
   } catch (error) {
     console.error("[Admin Calendar Detail API] Error:", error);

@@ -2840,43 +2840,45 @@ Both use lib/auth/admin.ts (same functions!)
 
 - `lib/auth/admin.ts` - Added calendar permission helper functions
 
-#### 9.5.2 Calendar Management Page
+#### 9.5.2 Calendar Management Page ✅
 
 **Priority**: High (Critical feature for admin operations)
 
+**Status**: ✅ **COMPLETED** (1. Januar 2026)
+
 **Route**: `/admin/calendars`
 
-- [ ] Create `app/admin/calendars/page.tsx`
+- [x] Create `app/admin/calendars/page.tsx`
 
-  - [ ] Fetch all calendars from API
-  - [ ] Display `CalendarTable` component
-  - [ ] **Filter Controls**:
+  - [x] Fetch all calendars from API
+  - [x] Display `CalendarTable` component
+  - [x] **Filter Controls**:
     - Status dropdown: "All Calendars" | "Orphaned Only" | "With Owner"
     - Search bar (filter by calendar name)
-  - [ ] **Sort Controls**:
+  - [x] **Sort Controls**:
     - Dropdown: Name, Created Date, Owner, Shift Count
     - Direction toggle (asc/desc)
     - Default: Orphaned first, then by created date (desc)
-  - [ ] **Info Banner** (when orphaned calendars exist):
+  - [x] **Info Banner** (when orphaned calendars exist):
     - Warning icon + text: "{count} orphaned calendar(s) need owner assignment"
     - Auto-hidden when filter is "With Owner"
-  - [ ] **Multi-select with checkboxes** (select multiple calendars)
-  - [ ] **Bulk Actions Toolbar** (appears when items selected):
+  - [x] **Multi-select with checkboxes** (select multiple calendars)
+  - [x] **Bulk Actions Toolbar** (appears when items selected):
     - "Transfer Selected" button → Opens user selector sheet (Admin + Superadmin)
     - "Delete Selected" button → Confirmation dialog (Superadmin only)
     - Selection counter: "{count} calendar(s) selected"
     - "Clear Selection" button
-  - [ ] **Empty States**:
+  - [x] **Empty States**:
     - No calendars: "No calendars found" (neutral message)
     - No orphaned calendars (when filtered): "No orphaned calendars" (success message with checkmark icon)
     - Search no results: "No calendars match your search"
-  - [ ] Loading state with fullscreen loader
-  - [ ] Translations (en, de, it)
+  - [x] Loading state with fullscreen loader
+  - [x] Translations (en, de, it)
 
-- [ ] Create `components/admin/calendar-table.tsx`
+- [x] Create `components/admin/calendar-table.tsx`
 
-  - [ ] **Uses `components/ui/table.tsx`** (same component as User-Table)
-  - [ ] **Table Columns**:
+  - [x] **Uses `components/ui/table.tsx`** (same component as User-Table)
+  - [x] **Table Columns**:
     - Checkbox (for bulk selection)
     - **Name + Color**: Color dot + calendar name (truncated on mobile)
     - **Owner**: Avatar + Name (or red "ORPHANED" badge)
@@ -2884,118 +2886,118 @@ Both use lib/auth/admin.ts (same functions!)
     - **Created**: Formatted date (relative on mobile)
     - **Statistics**: Shifts / Notes / Presets counts (condensed on mobile)
     - **Actions**: Dropdown menu
-  - [ ] **Orphaned Badge Styling**:
+  - [x] **Orphaned Badge Styling**:
     - Red background: `bg-red-500/10 text-red-500 border-red-500/20`
     - Icon: AlertCircle from lucide-react
     - Text: "Orphaned" (translated)
-  - [ ] **Header Checkbox**: Select/Deselect all (respects current filter)
-  - [ ] **Row Checkboxes**: Individual selection
-  - [ ] **Row Click**: Open calendar details sheet (read-only preview)
-  - [ ] **Row Actions Dropdown**:
+  - [x] **Header Checkbox**: Select/Deselect all (respects current filter)
+  - [x] **Row Checkboxes**: Individual selection
+  - [x] **Row Click**: Open calendar details sheet (read-only preview)
+  - [x] **Row Actions Dropdown**:
     - View Details (Sheet) - All admins
     - Edit Calendar (Sheet) - Admin + Superadmin (name, color, guest permission)
     - Transfer Ownership (Sheet) - Admin + Superadmin
     - Delete Calendar (Dialog) - Superadmin only
-  - [ ] **Selection State**: Tracked in parent component (`page.tsx`)
-  - [ ] **Responsive Design**:
+  - [x] **Selection State**: Tracked in parent component (`page.tsx`)
+  - [x] **Responsive Design**:
     - Horizontal scrolling on mobile (via `table.tsx` overflow-x-auto)
     - Condensed columns on mobile (hide less important data)
     - Touch-friendly checkboxes and dropdowns
-  - [ ] **Empty State**: Passed as children when no data
-  - [ ] Permission hooks: `useCanEditCalendar()`, `useCanDeleteCalendar()`, `useCanTransferCalendar()`
+  - [x] **Empty State**: Passed as children when no data
+  - [x] Permission hooks: `useCanEditCalendar()`, `useCanDeleteCalendar()`, `useCanTransferCalendar()`
 
-- [ ] Create `components/admin/calendar-details-sheet.tsx`
+- [x] Create `components/admin/calendar-details-sheet.tsx`
 
-  - [ ] Full calendar information (read-only)
-  - [ ] Owner details (avatar, name, email) or "Orphaned" badge
-  - [ ] Statistics: Shifts, Notes, Presets, Shares, External Syncs
-  - [ ] Share list (users with permissions)
-  - [ ] External sync list (if any)
-  - [ ] Creation/update timestamps
-  - [ ] Guest permission display
-  - [ ] Footer buttons:
+  - [x] Full calendar information (read-only)
+  - [x] Owner details (avatar, name, email) or "Orphaned" badge
+  - [x] Statistics: Shifts, Notes, Presets, Shares, External Syncs
+  - [x] Share list (users with permissions)
+  - [x] External sync list (if any)
+  - [x] Creation/update timestamps
+  - [x] Guest permission display
+  - [x] Footer buttons:
     - Edit Calendar (if has permission)
     - Transfer Ownership (if has permission)
     - Delete Calendar (if superadmin)
     - Close button
 
-- [ ] Create `components/admin/calendar-edit-sheet.tsx`
+- [x] Create `components/admin/calendar-edit-sheet.tsx`
 
-  - [ ] Edit calendar name (text input)
-  - [ ] Edit calendar color (color picker)
-  - [ ] Edit guest permission (dropdown: None, Read, Write)
-  - [ ] Show current owner (read-only)
-  - [ ] "Transfer Ownership" button → Opens transfer sheet
-  - [ ] Save button with loading state
-  - [ ] Cancel button (close sheet)
-  - [ ] Unsaved changes confirmation (via `useDirtyState` hook)
-  - [ ] Permission check: `useCanEditCalendar()`
+  - [x] Edit calendar name (text input)
+  - [x] Edit calendar color (color picker)
+  - [x] Edit guest permission (dropdown: None, Read, Write)
+  - [x] Show current owner (read-only)
+  - [x] "Transfer Ownership" button → Opens transfer sheet
+  - [x] Save button with loading state
+  - [x] Cancel button (close sheet)
+  - [x] Unsaved changes confirmation (via `useDirtyState` hook)
+  - [x] Permission check: `useCanEditCalendar()`
 
-- [ ] Create `components/admin/calendar-transfer-sheet.tsx`
+- [x] Create `components/admin/calendar-transfer-sheet.tsx`
 
-  - [ ] **Single Transfer Mode** (from row action):
+  - [x] **Single Transfer Mode** (from row action):
     - Calendar preview: Name, color, current owner
     - User search/select dropdown (autocomplete)
     - Transfer button with loading state
-  - [ ] **Bulk Transfer Mode** (from bulk actions):
+  - [x] **Bulk Transfer Mode** (from bulk actions):
     - Calendar list: Show all selected calendars (name, color, current owner)
     - Calendar count: "Transferring {count} calendar(s)"
     - User search/select dropdown (autocomplete)
     - Warning: "This will transfer ownership of {count} calendar(s) to {userName}"
     - Transfer button with loading state
-  - [ ] Cancel button (close sheet)
-  - [ ] Success toast: "Calendar(s) transferred to {userName}"
-  - [ ] Error handling with toast notifications (shows which calendars failed)
-  - [ ] Permission check: `useCanTransferCalendar()`
+  - [x] Cancel button (close sheet)
+  - [x] Success toast: "Calendar(s) transferred to {userName}"
+  - [x] Error handling with toast notifications (shows which calendars failed)
+  - [x] Permission check: `useCanTransferCalendar()`
 
-- [ ] Create `components/admin/calendar-delete-dialog.tsx`
+- [x] Create `components/admin/calendar-delete-dialog.tsx`
 
-  - [ ] **Single Delete Mode**:
+  - [x] **Single Delete Mode**:
     - Confirmation message: "Delete calendar {name}?"
     - Statistics display: X shifts, Y notes, Z presets will be deleted
     - Owner info (or "Orphaned")
     - Text input: Type calendar name to confirm
-  - [ ] **Bulk Delete Mode**:
+  - [x] **Bulk Delete Mode**:
     - Confirmation message: "Delete {count} calendar(s)?"
     - Total statistics: X shifts, Y notes, Z presets will be deleted
     - List of calendars (name, owner)
     - Text input: Type "DELETE" to confirm
-  - [ ] Warning: "This action cannot be undone. All data will be permanently deleted."
-  - [ ] Checkbox: "I understand this action is permanent"
-  - [ ] Confirm button (destructive style, disabled until confirmed)
-  - [ ] Cancel button
-  - [ ] Permission check: `useIsSuperAdmin()`
+  - [x] Warning: "This action cannot be undone. All data will be permanently deleted."
+  - [x] Checkbox: "I understand this action is permanent"
+  - [x] Confirm button (destructive style, disabled until confirmed)
+  - [x] Cancel button
+  - [x] Permission check: `useIsSuperAdmin()`
 
-- [ ] Create `hooks/useAdminCalendars.ts`
+- [x] Create `hooks/useAdminCalendars.ts`
 
-  - [ ] `fetchCalendars(filters, sort, pagination)` - List all calendars
-  - [ ] `fetchCalendarDetails(calendarId)` - Get calendar details
-  - [ ] `updateCalendar(calendarId, updates)` - Update calendar (name, color, guest permission)
-  - [ ] `transferCalendar(calendarId, newOwnerId)` - Transfer single calendar
-  - [ ] `bulkTransferCalendars(calendarIds, newOwnerId)` - Transfer multiple calendars
-  - [ ] `deleteCalendar(calendarId)` - Delete single calendar
-  - [ ] `bulkDeleteCalendars(calendarIds)` - Delete multiple calendars
-  - [ ] Error handling with toast notifications
-  - [ ] Loading states for each operation
+  - [x] `fetchCalendars(filters, sort, pagination)` - List all calendars
+  - [x] `fetchCalendarDetails(calendarId)` - Get calendar details
+  - [x] `updateCalendar(calendarId, updates)` - Update calendar (name, color, guest permission)
+  - [x] `transferCalendar(calendarId, newOwnerId)` - Transfer single calendar
+  - [x] `bulkTransferCalendars(calendarIds, newOwnerId)` - Transfer multiple calendars
+  - [x] `deleteCalendar(calendarId)` - Delete single calendar
+  - [x] `bulkDeleteCalendars(calendarIds)` - Delete multiple calendars
+  - [x] Error handling with toast notifications
+  - [x] Loading states for each operation
 
-- [ ] Add translations (en, de, it)
-  - [ ] `admin.calendars` - "Calendars"
-  - [ ] `admin.allCalendars` - "All Calendars"
-  - [ ] `admin.orphanedOnly` - "Orphaned Only"
-  - [ ] `admin.withOwner` - "With Owner"
-  - [ ] `admin.orphaned` - "Orphaned"
-  - [ ] `admin.orphanedBadge` - "Orphaned"
-  - [ ] `admin.orphanedCalendarsWarning` - "{count} orphaned calendar(s) need owner assignment"
-  - [ ] `admin.transferOwnership` - "Transfer Ownership"
-  - [ ] `admin.transferSelected` - "Transfer Selected"
-  - [ ] `admin.deleteSelected` - "Delete Selected"
-  - [ ] `admin.calendarDetails` - "Calendar Details"
-  - [ ] `admin.editCalendar` - "Edit Calendar"
-  - [ ] `admin.deleteCalendar` - "Delete Calendar"
-  - [ ] `admin.transferSuccess` - "Calendar(s) transferred successfully"
-  - [ ] `admin.deleteSuccess` - "Calendar(s) deleted successfully"
-  - [ ] `admin.calendarCount` - "{count} calendar(s) selected"
-  - [ ] All confirmation/warning messages
+- [x] Add translations (en, de, it)
+  - [x] `admin.calendars` - "Calendars"
+  - [x] `admin.allCalendars` - "All Calendars"
+  - [x] `admin.orphanedOnly` - "Orphaned Only"
+  - [x] `admin.withOwner` - "With Owner"
+  - [x] `admin.orphaned` - "Orphaned"
+  - [x] `admin.orphanedBadge` - "Orphaned"
+  - [x] `admin.orphanedCalendarsWarning` - "{count} orphaned calendar(s) need owner assignment"
+  - [x] `admin.transferOwnership` - "Transfer Ownership"
+  - [x] `admin.transferSelected` - "Transfer Selected"
+  - [x] `admin.deleteSelected` - "Delete Selected"
+  - [x] `admin.calendarDetails` - "Calendar Details"
+  - [x] `admin.editCalendar` - "Edit Calendar"
+  - [x] `admin.deleteCalendar` - "Delete Calendar"
+  - [x] `admin.transferSuccess` - "Calendar(s) transferred successfully"
+  - [x] `admin.deleteSuccess` - "Calendar(s) deleted successfully"
+  - [x] `admin.calendarCount` - "{count} calendar(s) selected"
+  - [x] All confirmation/warning messages
 
 **Implementation Notes**:
 
@@ -3005,7 +3007,35 @@ Both use lib/auth/admin.ts (same functions!)
 - ✅ **Efficient UX**: Admins can quickly filter to orphaned-only or scan entire list
 - ✅ **Bulk Operations**: Multi-select enables efficient mass operations
 - ✅ **Permission Separation**: Delete = Superadmin only, Transfer = Admin + Superadmin
-- ✅ **Audit Logging**: All operations logged with proper metadata
+- ✅ **Audit Logging**: All operations logged with proper metadata (via API routes)
+- ✅ **Mobile-Friendly**: Horizontal scrolling tables (consistent with app design)
+- ✅ **No Pagination**: All calendars loaded at once (consistent with User Management)
+- ✅ **Sorting in Table**: Uses client-side sorting like activity-logs pattern
+- ✅ **Color Display**: Calendar color shown as colored circle (consistent with app design)
+- ✅ **User Search**: Reuses AdminUser type and search from useAdminUsers hook
+- ✅ **Type Safety**: All TypeScript errors resolved, strict mode compliant
+- ✅ **Build Success**: Production build passes without errors or warnings
+- ✅ **Avatar Display**: Owner avatars with fallback to initials (matches User-Table pattern)
+- ✅ **Date Handling**: SQLite datetime strings converted to Date objects in API
+- ✅ **Field Names**: Consistent naming (shiftsCount, notesCount, presetsCount, sharesCount)
+
+**Files Created**:
+
+- `hooks/useAdminCalendars.ts` - Central calendar management hook (7 operations)
+- `components/admin/calendar-table.tsx` - Main table with badges, sorting, multi-select
+- `components/admin/calendar-details-sheet.tsx` - Read-only calendar details view
+- `components/admin/calendar-edit-sheet.tsx` - Edit calendar name/color/permissions
+- `components/admin/calendar-transfer-sheet.tsx` - Single/bulk ownership transfer with user search
+- `components/admin/calendar-delete-dialog.tsx` - Single/bulk delete confirmation
+- `app/admin/calendars/page.tsx` - Main calendar management page with filters
+
+**Files Modified**:
+
+- `components/admin/admin-sidebar.tsx` - Added "Calendars" navigation link
+- `hooks/useAdminAccess.ts` - Added calendar permission hooks
+- `messages/en.json` - Added 60+ admin.calendars.\* translation keys
+- `messages/de.json` - Added complete German translations
+- `messages/it.json` - Added complete Italian translations
 - ✅ **Mobile-Friendly**: Horizontal scrolling tables (consistent with app design)
 
 ### 9.6 Admin API - Audit Logs
@@ -3136,11 +3166,9 @@ Both use lib/auth/admin.ts (same functions!)
 
 **Future Enhancements (Post-MVP)**:
 
-- Full calendar management (transfer ownership, bulk operations)
 - IP ban system (deferred due to complexity with proxies/VPNs)
 - Advanced statistics with charts and graphs
 - Two-factor authentication for admin accounts
-- Password generation with secure random passwords
 
 ---
 

@@ -197,3 +197,36 @@ export function useUserPermissions(targetUser: User | null | undefined) {
     [user, targetUser]
   );
 }
+
+/**
+ * Hook to check if current admin can edit calendars
+ *
+ * @returns boolean - true if current admin can edit calendars
+ */
+export function useCanEditCalendar(): boolean {
+  const { user } = useAuth();
+  // Admin and Superadmin can edit calendars
+  return useMemo(() => isAdmin(user), [user]);
+}
+
+/**
+ * Hook to check if current admin can delete calendars
+ *
+ * @returns boolean - true if current admin can delete calendars
+ */
+export function useCanDeleteCalendar(): boolean {
+  const { user } = useAuth();
+  // Only Superadmin can delete calendars
+  return useMemo(() => isSuperAdmin(user), [user]);
+}
+
+/**
+ * Hook to check if current admin can transfer calendar ownership
+ *
+ * @returns boolean - true if current admin can transfer calendars
+ */
+export function useCanTransferCalendar(): boolean {
+  const { user } = useAuth();
+  // Admin and Superadmin can transfer calendars
+  return useMemo(() => isAdmin(user), [user]);
+}

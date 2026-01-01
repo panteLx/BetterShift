@@ -199,13 +199,23 @@ export default function AdminUsersPage() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {t("admin.userManagement")}
-          </h2>
-          <p className="text-muted-foreground mt-2">
-            {t("admin.userManagementDescription")}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">
+              {t("admin.userManagement")}
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              {t("admin.userManagementDescription")}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={isLoading ? "animate-spin" : ""} />
+          </Button>
         </div>
 
         {/* Filters */}
@@ -259,18 +269,6 @@ export default function AdminUsersPage() {
               <SelectItem value="banned">{t("admin.banned")}</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Refresh Button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={isLoading ? "animate-spin h-4 w-4" : "h-4 w-4"}
-            />
-          </Button>
         </div>
 
         {/* Results Count */}
