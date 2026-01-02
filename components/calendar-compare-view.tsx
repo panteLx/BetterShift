@@ -115,7 +115,7 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
     navigator.clipboard
       .writeText(url.toString())
       .then(() => {
-        toast.success(t("calendar.linkCopied"));
+        toast.success(t("common.copied", { item: t("calendar.compareMode") }));
       })
       .catch(() => {
         toast.error(t("common.error"));

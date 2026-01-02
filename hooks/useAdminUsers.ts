@@ -132,7 +132,9 @@ export function useAdminUsers() {
           if (response.status === 403) {
             throw new Error(t("admin.accessDenied"));
           }
-          throw new Error(t("admin.usersFetchError"));
+          throw new Error(
+            t("common.fetchError", { item: t("common.labels.users") })
+          );
         }
 
         const data = await response.json();
@@ -157,7 +159,9 @@ export function useAdminUsers() {
       } catch (error) {
         console.error("Failed to fetch users:", error);
         toast.error(
-          error instanceof Error ? error.message : t("admin.usersFetchError")
+          error instanceof Error
+            ? error.message
+            : t("common.fetchError", { item: t("common.labels.users") })
         );
         return null;
       } finally {
@@ -189,7 +193,9 @@ export function useAdminUsers() {
           if (response.status === 404) {
             throw new Error(t("admin.userNotFound"));
           }
-          throw new Error(t("admin.userDetailsFetchError"));
+          throw new Error(
+            t("common.fetchError", { item: t("admin.userDetails") })
+          );
         }
 
         const data = await response.json();
@@ -220,7 +226,7 @@ export function useAdminUsers() {
         toast.error(
           error instanceof Error
             ? error.message
-            : t("admin.userDetailsFetchError")
+            : t("common.fetchError", { item: t("admin.userDetails") })
         );
         return null;
       } finally {
@@ -256,15 +262,19 @@ export function useAdminUsers() {
           if (response.status === 404) {
             throw new Error(t("admin.userNotFound"));
           }
-          throw new Error(t("admin.userUpdateError"));
+          throw new Error(
+            t("common.updateError", { item: t("common.labels.user") })
+          );
         }
 
-        toast.success(t("admin.userUpdated"));
+        toast.success(t("common.updated", { item: t("common.labels.user") }));
         return true;
       } catch (error) {
         console.error("Failed to update user:", error);
         toast.error(
-          error instanceof Error ? error.message : t("admin.userUpdateError")
+          error instanceof Error
+            ? error.message
+            : t("common.updateError", { item: t("common.labels.user") })
         );
         return false;
       } finally {
@@ -304,15 +314,19 @@ export function useAdminUsers() {
           if (response.status === 404) {
             throw new Error(t("admin.userNotFound"));
           }
-          throw new Error(t("admin.userBanError"));
+          throw new Error(
+            t("common.banError", { item: t("common.labels.user") })
+          );
         }
 
-        toast.success(t("admin.userBanned"));
+        toast.success(t("common.banned", { item: t("common.labels.user") }));
         return true;
       } catch (error) {
         console.error("Failed to ban user:", error);
         toast.error(
-          error instanceof Error ? error.message : t("admin.userBanError")
+          error instanceof Error
+            ? error.message
+            : t("common.banError", { item: t("common.labels.user") })
         );
         return false;
       } finally {
@@ -344,15 +358,19 @@ export function useAdminUsers() {
           if (response.status === 404) {
             throw new Error(t("admin.userNotFound"));
           }
-          throw new Error(t("admin.userUnbanError"));
+          throw new Error(
+            t("common.unbanError", { item: t("common.labels.user") })
+          );
         }
 
-        toast.success(t("admin.userUnbanned"));
+        toast.success(t("common.unbanned", { item: t("common.labels.user") }));
         return true;
       } catch (error) {
         console.error("Failed to unban user:", error);
         toast.error(
-          error instanceof Error ? error.message : t("admin.userUnbanError")
+          error instanceof Error
+            ? error.message
+            : t("common.unbanError", { item: t("common.labels.user") })
         );
         return false;
       } finally {
@@ -384,15 +402,19 @@ export function useAdminUsers() {
           if (response.status === 404) {
             throw new Error(t("admin.userNotFound"));
           }
-          throw new Error(t("admin.userDeleteError"));
+          throw new Error(
+            t("common.deleteError", { item: t("common.labels.user") })
+          );
         }
 
-        toast.success(t("admin.userDeleted"));
+        toast.success(t("common.deleted", { item: t("common.labels.user") }));
         return true;
       } catch (error) {
         console.error("Failed to delete user:", error);
         toast.error(
-          error instanceof Error ? error.message : t("admin.userDeleteError")
+          error instanceof Error
+            ? error.message
+            : t("common.deleteError", { item: t("common.labels.user") })
         );
         return false;
       } finally {
@@ -425,15 +447,17 @@ export function useAdminUsers() {
           if (response.status === 404) {
             throw new Error(t("admin.userNotFound"));
           }
-          throw new Error(t("admin.passwordResetError"));
+          throw new Error(t("common.passwordResetError"));
         }
 
-        toast.success(t("admin.passwordReset"));
+        toast.success(t("common.passwordReset"));
         return true;
       } catch (error) {
         console.error("Failed to reset password:", error);
         toast.error(
-          error instanceof Error ? error.message : t("admin.passwordResetError")
+          error instanceof Error
+            ? error.message
+            : t("common.passwordResetError")
         );
         return false;
       } finally {

@@ -152,7 +152,9 @@ export function useAdminCalendars() {
         };
       } catch (error) {
         console.error("Failed to fetch calendars:", error);
-        toast.error(t("admin.calendars.fetchError"));
+        toast.error(
+          t("common.fetchError", { item: t("common.labels.calendar") })
+        );
         return null;
       } finally {
         setIsLoading(false);
@@ -193,7 +195,9 @@ export function useAdminCalendars() {
         };
       } catch (error) {
         console.error("Failed to fetch calendar details:", error);
-        toast.error(t("admin.calendars.detailsFetchError"));
+        toast.error(
+          t("common.fetchError", { item: t("admin.calendars.calendarDetails") })
+        );
         return null;
       } finally {
         setIsLoading(false);
@@ -223,11 +227,15 @@ export function useAdminCalendars() {
           throw new Error(error.error || "Failed to update calendar");
         }
 
-        toast.success(t("admin.calendars.calendarUpdated"));
+        toast.success(
+          t("common.updated", { item: t("common.labels.calendar") })
+        );
         return true;
       } catch (error) {
         console.error("Failed to update calendar:", error);
-        toast.error(t("admin.calendars.updateError"));
+        toast.error(
+          t("common.updateError", { item: t("common.labels.calendar") })
+        );
         return false;
       } finally {
         setIsLoading(false);
@@ -252,11 +260,15 @@ export function useAdminCalendars() {
           throw new Error(error.error || "Failed to delete calendar");
         }
 
-        toast.success(t("admin.calendars.calendarDeleted"));
+        toast.success(
+          t("common.deleted", { item: t("common.labels.calendar") })
+        );
         return true;
       } catch (error) {
         console.error("Failed to delete calendar:", error);
-        toast.error(t("admin.calendars.deleteError"));
+        toast.error(
+          t("common.deleteError", { item: t("common.labels.calendar") })
+        );
         return false;
       } finally {
         setIsLoading(false);
@@ -286,11 +298,15 @@ export function useAdminCalendars() {
           throw new Error(error.error || "Failed to transfer calendar");
         }
 
-        toast.success(t("admin.calendars.calendarTransferred"));
+        toast.success(
+          t("common.transferred", { item: t("common.labels.calendar") })
+        );
         return true;
       } catch (error) {
         console.error("Failed to transfer calendar:", error);
-        toast.error(t("admin.calendars.transferError"));
+        toast.error(
+          t("common.transferError", { item: t("common.labels.calendar") })
+        );
         return false;
       } finally {
         setIsLoading(false);
@@ -324,7 +340,9 @@ export function useAdminCalendars() {
         return true;
       } catch (error) {
         console.error("Failed to bulk delete calendars:", error);
-        toast.error(t("admin.calendars.bulkDeleteError"));
+        toast.error(
+          t("common.deleteError", { item: t("common.labels.calendar") })
+        );
         return false;
       } finally {
         setIsLoading(false);
@@ -360,7 +378,9 @@ export function useAdminCalendars() {
         return true;
       } catch (error) {
         console.error("Failed to bulk transfer calendars:", error);
-        toast.error(t("admin.calendars.bulkTransferError"));
+        toast.error(
+          t("common.transferError", { item: t("common.labels.calendar") })
+        );
         return false;
       } finally {
         setIsLoading(false);

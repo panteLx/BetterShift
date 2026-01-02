@@ -56,7 +56,7 @@ export function UserPasswordResetDialog({
 
   const copyPassword = () => {
     navigator.clipboard.writeText(password);
-    toast.success(t("admin.passwordCopied"));
+    toast.success(t("common.copied", { item: t("common.labels.password") }));
   };
 
   const handleConfirm = async () => {

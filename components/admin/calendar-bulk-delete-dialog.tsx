@@ -57,7 +57,7 @@ export function CalendarBulkDeleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t("admin.calendars.deleteSelected")}</DialogTitle>
+          <DialogTitle>{t("common.deleteSelected")}</DialogTitle>
           <DialogDescription>
             {t("admin.calendars.bulkDeleteConfirm", {
               count: calendars.length,

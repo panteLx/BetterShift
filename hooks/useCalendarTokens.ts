@@ -57,7 +57,7 @@ export function useCalendarTokens(calendarId: string | null) {
       const data = await response.json();
       setTokens(data);
     } catch {
-      const message = t("token.fetchError");
+      const message = t("common.fetchError", { item: t("token.accessLinks") });
       setError(message);
       toast.error(message);
     } finally {
@@ -90,12 +90,14 @@ export function useCalendarTokens(calendarId: string | null) {
         // Add to local state
         setTokens((prev) => [newToken, ...prev]);
 
-        toast.success(t("token.createSuccess"));
+        toast.success(t("common.created", { item: t("token.accessLinks") }));
 
         return newToken; // Includes full token!
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : t("token.createError")
+          err instanceof Error
+            ? err.message
+            : t("common.createError", { item: t("token.accessLinks") })
         );
         return null;
       }
@@ -132,12 +134,14 @@ export function useCalendarTokens(calendarId: string | null) {
           prev.map((token) => (token.id === tokenId ? updatedToken : token))
         );
 
-        toast.success(t("token.updateSuccess"));
+        toast.success(t("common.updated", { item: t("token.accessLinks") }));
 
         return true;
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : t("token.updateError")
+          err instanceof Error
+            ? err.message
+            : t("common.updateError", { item: t("token.accessLinks") })
         );
         return false;
       }
@@ -168,12 +172,14 @@ export function useCalendarTokens(calendarId: string | null) {
         // Remove from local state
         setTokens((prev) => prev.filter((token) => token.id !== tokenId));
 
-        toast.success(t("token.deleteSuccess"));
+        toast.success(t("common.revoked", { item: t("token.accessLinks") }));
 
         return true;
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : t("token.deleteError")
+          err instanceof Error
+            ? err.message
+            : t("common.revokeError", { item: t("token.accessLinks") })
         );
         return false;
       }
@@ -198,11 +204,11 @@ export function useCalendarTokens(calendarId: string | null) {
         const link = getShareLink(token);
         await navigator.clipboard.writeText(link);
 
-        toast.success(t("token.linkCopied"));
+        toast.success(t("common.copied", { item: t("share.share") }));
 
         return true;
       } catch {
-        toast.error(t("token.copyError"));
+        toast.error(t("common.copyError", { item: t("share.share") }));
         return false;
       }
     },

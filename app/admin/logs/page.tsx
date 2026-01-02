@@ -433,7 +433,7 @@ export default function AdminAuditLogsPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            {t("admin.deleteSelected")}
+            {t("common.deleteSelected")}
           </Button>
         </div>
       )}

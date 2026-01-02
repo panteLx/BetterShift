@@ -83,7 +83,7 @@ export function AuditLogDeleteDialog({
             <AlertTriangle className="h-5 w-5" />
             <DialogTitle>
               {deleteByIds
-                ? t("admin.deleteSelectedLogs")
+                ? t("common.deleteSelected")
                 : t("admin.deleteOldLogs")}
             </DialogTitle>
           </div>
@@ -182,7 +182,7 @@ export function AuditLogDeleteDialog({
             {isLoading
               ? t("common.loading")
               : deleteByIds
-              ? t("admin.deleteSelected")
+              ? t("common.deleteSelected")
               : t("admin.deleteOldLogs")}
           </Button>
         </DialogFooter>

@@ -332,7 +332,7 @@ export default function AdminCalendarsPage() {
                   className="text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {t("admin.calendars.deleteSelected")}
+                  {t("common.deleteSelected")}
                 </Button>
               )}
               <Button variant="ghost" size="sm" onClick={handleClearSelection}>

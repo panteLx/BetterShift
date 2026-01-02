@@ -99,7 +99,7 @@ export function AuditLogDetailsDialog({
     );
 
     navigator.clipboard.writeText(jsonString);
-    toast.success(t("admin.copiedToClipboard"));
+    toast.success(t("common.copied", { item: t("admin.metadata") }));
   };
 
   return (
