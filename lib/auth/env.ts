@@ -23,7 +23,9 @@ export const BETTER_AUTH_URL =
 // Default to BETTER_AUTH_URL if not explicitly configured
 export const BETTER_AUTH_TRUSTED_ORIGINS = process.env
   .BETTER_AUTH_TRUSTED_ORIGINS
-  ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",")
+  ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((origin) =>
+      origin.trim()
+    )
   : [BETTER_AUTH_URL]; // Default: Trust only the configured base URL
 
 // =============================================================================

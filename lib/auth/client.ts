@@ -14,11 +14,14 @@ import { ac, roles } from "@/lib/auth/access-control";
  * - Sign out
  * - User session management
  * - Registration
+ *
+ * IMPORTANT: baseURL should match the current origin to ensure cookies are sent.
+ * We use window.location.origin as fallback if __PUBLIC_CONFIG__ is not available.
  */
 export const authClient = createAuthClient({
   baseURL:
-    typeof window !== "undefined" && window.__PUBLIC_CONFIG__
-      ? window.__PUBLIC_CONFIG__.auth.url
+    typeof window !== "undefined"
+      ? window.__PUBLIC_CONFIG__?.auth?.url || window.location.origin
       : "",
   plugins: [
     genericOAuthClient(),

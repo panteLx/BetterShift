@@ -123,6 +123,10 @@ export const auth = betterAuth({
       secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
       httpOnly: true, // Prevent XSS attacks (already default, but explicit)
     },
+
+    crossSubDomainCookies: {
+      enabled: false,
+    },
   },
 
   // User registration settings
