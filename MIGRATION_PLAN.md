@@ -3124,115 +3124,131 @@ Both use lib/auth/admin.ts (same functions!)
 
 **Priority**: Medium (Important for transparency)
 
-- [ ] Create `app/api/admin/audit-logs/route.ts`
-  - [ ] **GET**: View all audit logs (admin and superadmin)
-    - Include: id, action, userId, actorId, metadata, createdAt
-    - Join with user table for user names
-    - Filters: action type, user, date range
-    - Sort by: createdAt (default: newest first)
-    - Pagination: 50 logs per page
+**Status**: ✅ **COMPLETED** (2. Januar 2026)
+
+- [x] Create `app/api/admin/audit-logs/route.ts`
+  - [x] **GET**: View all audit logs (admin and superadmin)
+    - Include: id, action, userId, metadata, ipAddress, userAgent, severity, isUserVisible, timestamp
+    - Join with user table for user names, emails, avatars
+    - Filters: action, userId, resourceType, resourceId, severity, search, startDate, endDate
+    - Sort by: timestamp, action, severity (default: timestamp desc)
+    - Pagination: 50 logs per page (max: 500)
     - Permission check: `requireAdmin(user)`
-  - [ ] **DELETE**: Delete old audit logs (superadmin only)
+  - [x] **DELETE**: Delete audit logs (superadmin only)
     - Query param: `before` (date) - Delete logs older than date
-    - Permission check: `requireSuperAdmin(user)`
+    - Request body: `{ logIds: string[] }` - Delete specific logs by IDs
+    - Permission check: Superadmin role check
     - Return: Number of deleted logs
-    - Audit log: `admin_audit_logs_deleted` (metadata: { deletedCount, before })
+    - Audit log: `admin.audit_log.delete_by_date` or `admin.audit_log.delete_by_ids`
+
+**Implementation Notes**:
+
+- ✅ **Dual Delete Methods**: Query-parameter (`?before=date`) AND body (`{ logIds: [...] }`) for flexible deletion
+- ✅ **Severity Filter**: Full support for filtering by `info`, `warning`, `error`, `critical`
+- ✅ **Metadata Parsing**: Automatic JSON parsing in API response (safe fallback to string)
+- ✅ **Actor Field**: Uses `userId` from audit logs (represents the user who performed the action)
+  - For admin actions on other users, metadata contains target user info (e.g., `bannedBy`, `targetUser`)
+- ✅ **Pagination Format**: Consistent with Users/Calendars API - `{ logs: [...], pagination: { total, limit, offset, hasMore } }`
+- ✅ **User Info Joins**: Left join with user table for name, email, avatar
+- ✅ **Date Handling**: SQLite timestamps converted to ISO strings in response
+- ✅ **Export Feature**: Intentionally not implemented (not required for MVP)
+- ✅ All lint checks passed
+- ✅ Hook created with full CRUD operations
+
+**Files Created**:
+
+- `app/api/admin/audit-logs/route.ts` - Audit logs API with GET and DELETE
+- `hooks/useAuditLogs.ts` - Hook for fetching and deleting logs
+
+**Files Modified**:
+
+- `lib/auth/admin.ts` - Already had `canViewAuditLogs()` and `canDeleteAuditLogs()` functions
 
 ### 9.6.1 Audit Logs Page
 
 **Priority**: Medium (Important for transparency and debugging)
 
-- [ ] Create `app/admin/logs/page.tsx`
-  - [ ] Fetch audit logs from API
-  - [ ] Display `AuditLogTable` component
-  - [ ] Comprehensive filters (collapsible filter panel):
-    - Action type: Multi-select dropdown (all admin*\*, calendar*\_, auth\_\_, sync*\*, security*\* events)
-    - User selector: Autocomplete search (actor who performed action)
-    - Target user: Autocomplete search (user affected by action)
-    - Date range: From/To date pickers
-    - Severity: Multi-select (info, warning, error, critical)
-    - Resource type: Multi-select (user, calendar, token, share, sync)
-    - "Apply Filters" and "Reset Filters" buttons
-  - [ ] Sort controls (Date, Action, User, Severity)
-  - [ ] Pagination controls (50 per page)
-  - [ ] Export button: "Export to CSV" (superadmin only)
-  - [ ] Bulk delete: "Delete Old Logs" (superadmin only)
-  - [ ] Live update indicator (shows new logs count)
-  - [ ] Loading state with fullscreen loader
-- [ ] Create `components/admin/audit-log-table.tsx`
-  - [ ] Data table with columns: Timestamp, Action, User, Actor, Details, IP Address
-  - [ ] Action badge with color coding (by category: User, Calendar, Token, Share)
-  - [ ] User link (opens user details sheet)
-  - [ ] Actor link (who performed the action)
-  - [ ] Details column: Formatted metadata (JSON viewer)
-  - [ ] Row click expands full details (collapsible)
-  - [ ] Empty state: "No audit logs found"
-- [ ] Create `components/admin/audit-log-details-dialog.tsx`
-  - [ ] Full log details: All fields
-  - [ ] Formatted metadata (pretty-printed JSON)
-  - [ ] User details: Name, Email, Role
-  - [ ] Actor details: Name, Email, Role
-  - [ ] Timestamp with timezone
-  - [ ] Copy button for raw JSON
-  - [ ] Close button
-- [ ] Create `components/admin/audit-log-delete-dialog.tsx`
-  - [ ] Confirmation message: "Delete old audit logs?"
-  - [ ] Date picker: "Delete logs older than"
-  - [ ] Preview: "This will delete approximately X logs"
-  - [ ] Warning: "This action cannot be undone"
-  - [ ] Checkbox: "I understand audit logs will be permanently deleted"
-  - [ ] Confirm button (destructive style)
-  - [ ] Cancel button
-  - [ ] Permission check: `useIsSuperAdmin()`
-- [ ] Create `hooks/useAuditLogs.ts`
-  - [ ] `fetchAuditLogs(filters, sort, pagination)` - List audit logs
-  - [ ] `deleteOldLogs(beforeDate)` - Delete logs (superadmin only)
-  - [ ] `exportLogs(filters)` - Export to CSV
-  - [ ] Error handling with toast notifications
-- [ ] Add translations for audit log actions (en, de, it)
-  - [ ] All `admin_*` action types
-  - [ ] Action categories
-  - [ ] Filter labels
-    - Return all logs including `isUserVisible = false` (admin-only logs)
-    - Include user details (name, email) via join
-    - Pagination: limit (default 50), offset
-    - Filters: action, userId, resourceType, severity, dateRange
-    - Sort: timestamp desc (newest first)
-    - Permission check: `requireAdmin(user)` + `canViewAuditLogs(user)`
-  - [ ] **DELETE**: Bulk delete audit logs (superadmin only)
+**Status**: ✅ **COMPLETED** (2. Januar 2026)
+
+- [x] Create `app/admin/logs/page.tsx`
+  - [x] Fetch audit logs from API
+  - [x] Display audit log table with expandable rows
+  - [x] Comprehensive filters (action type, severity, date range, search)
+  - [x] Sort controls (Date, Action, Severity)
+  - [x] Pagination controls (50 per page)
+  - [x] Manual refresh button
+  - [x] Bulk delete: "Delete Old Logs" (superadmin only)
+  - [x] Loading state with fullscreen loader
+- [x] Create `components/admin/audit-log-details-dialog.tsx`
+  - [x] Full log details: All fields
+  - [x] Formatted metadata (pretty-printed JSON)
+  - [x] User details: Name, Email, Avatar
+  - [x] Timestamp with timezone
+  - [x] Copy button for raw JSON
+  - [x] Close button
+- [x] Create `components/admin/audit-log-delete-dialog.tsx`
+  - [x] Confirmation message: "Delete old audit logs?"
+  - [x] Date picker: "Delete logs older than"
+  - [x] Preview: Explanation of what will be deleted
+  - [x] Warning: "This action cannot be undone"
+  - [x] Checkbox: "I understand audit logs will be permanently deleted"
+  - [x] Confirm button (destructive style)
+  - [x] Cancel button
+  - [x] Permission check: `useIsSuperAdmin()`
+- [x] Hooks: `hooks/useAuditLogs.ts` ✅ **COMPLETED**
+  - [x] `fetchAuditLogs(filters, sort, pagination)` - List audit logs
+  - [x] `deleteLogsByDate(beforeDate)` - Delete logs (superadmin only)
+  - [x] `deleteLogsByIds(logIds)` - Delete specific logs (superadmin only)
+  - [x] Error handling with toast notifications
+  - [x] ~~`exportLogs(filters)` - Export to CSV~~ (intentionally not implemented)
+- [x] Add translations for audit log actions (en, de, it)
+  - [x] All action types and categories
+  - [x] Filter labels and UI strings
+  - [x] Success/error messages
+
+**Implementation Notes**:
+
+- ✅ **Pattern from Activity Logs**: Follows same UX pattern as user activity logs
+  - Same table structure with expandable rows
+  - Same filter system (action type, severity, date range)
+  - Same badge color coding (Info=Blue, Warning=Yellow, Error=Orange, Critical=Red)
+  - Same pagination (50 per page)
+- ✅ **Action Badge Colors**:
+  - Admin Actions: Red (`admin.*`)
+  - Calendar Actions: Blue (`calendar*`)
+  - Auth Actions: Green (`auth*`)
+  - Security Actions: Orange (`security*`)
+- ✅ **No Export Feature**: Intentionally not implemented per user request
+- ✅ **Manual Refresh**: Refresh button instead of live SSE updates
+- ✅ **Real Pagination**: Server-side pagination with 50 logs per page (not client-side)
+- ✅ **Metadata Display**: Expandable rows show full metadata as formatted JSON
+- ✅ **User Display**: Avatar + name/email for actor, fallback to "System" for system actions
+- ✅ **Admin Sidebar**: Navigation link already existed, no changes needed
+- ✅ All lint checks passed
+- ✅ Full translations for all three languages (en, de, it)
+- ✅ Responsive design with horizontal scrolling table
+
+**Files Created**:
+
+- `app/admin/logs/page.tsx` - Main audit logs page with filters and pagination
+- `components/admin/audit-log-details-dialog.tsx` - Full log details dialog
+- `components/admin/audit-log-delete-dialog.tsx` - Delete old logs dialog
+
+**Files Modified**:
+
+- `messages/en.json` - Added 30+ audit log translation keys
+- `messages/de.json` - Added complete German translations
+- `messages/it.json` - Added complete Italian translations
+  - Return all logs including `isUserVisible = false` (admin-only logs)
+  - Include user details (name, email) via join
+  - Pagination: limit (default 50), offset
+  - Filters: action, userId, resourceType, severity, dateRange
+  - Sort: timestamp desc (newest first)
+  - Permission check: `requireAdmin(user)` + `canViewAuditLogs(user)`
+  - [x] **DELETE**: Bulk delete audit logs (superadmin only)
     - Body: `{ logIds: string[] }` or `{ beforeDate: string }`
     - Permission check: `requireSuperAdmin(user)` + `canDeleteAuditLogs(user)`
     - Audit log: `"admin.audit_log.delete"`, metadata: `{ count, deletedBy }`
-
-### 9.7 Testing & Verification
-
-**Priority**: High (Ensure everything works)
-
-- [ ] **Admin Access Control**
-  - [ ] Verify non-admin users cannot access `/admin` routes
-  - [ ] Verify redirect works correctly with error toast
-  - [ ] Verify unauthorized attempts are logged
-- [ ] **User Management**
-  - [ ] Test user list loading and pagination
-  - [ ] Test user edit (name, email, role changes)
-  - [ ] Test ban/unban functionality
-  - [ ] Test user deletion and calendar orphaning
-  - [ ] Verify admins cannot edit other admins/superadmins
-- [ ] **Orphaned Calendar Management**
-  - [ ] Test orphaned calendar listing
-  - [ ] Test calendar assignment (to self, to other user)
-  - [ ] Test bulk assignment and deletion
-  - [ ] Verify orphaned calendars disappear from list after assignment
-- [ ] **Audit Logs**
-  - [ ] Verify all admin actions are logged
-  - [ ] Test log filtering and search
-  - [ ] Test log export (CSV, JSON)
-  - [ ] Test log deletion (superadmin only)
-- [ ] **Permissions**
-  - [ ] Verify role-based feature visibility
-  - [ ] Test that admins cannot delete users or calendars
-  - [ ] Test that only superadmins can ban users
-  - [ ] Verify permission checks in all API routes
 
 **Security Considerations**:
 

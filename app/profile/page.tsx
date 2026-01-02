@@ -799,7 +799,7 @@ export default function ProfilePage() {
             title={t("auth.deleteAccount")}
             description={t("auth.deleteAccountConfirm")}
             confirmText={
-              isDeleting ? t("common.deleting") : t("auth.deleteAccount")
+              isDeleting ? t("common.loading") : t("auth.deleteAccount")
             }
             confirmDisabled={isDeleting || (hasPasswordAuth && !deletePassword)}
           >
