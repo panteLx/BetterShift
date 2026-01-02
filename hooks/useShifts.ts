@@ -77,7 +77,7 @@ export function useShifts(calendarId: string | undefined) {
           errorText
         );
         setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
-        toast.error(t("common.createError", { item: t("shift.title") }));
+        toast.error(t("common.createError", { item: t("shift.shift_one") }));
         return null;
       }
 
@@ -90,7 +90,7 @@ export function useShifts(calendarId: string | undefined) {
     } catch (error) {
       console.error("Failed to create shift:", error);
       setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
-      toast.error(t("common.createError", { item: t("shift.title") }));
+      toast.error(t("common.createError", { item: t("shift.shift_one") }));
       return null;
     }
   };
@@ -109,17 +109,17 @@ export function useShifts(calendarId: string | undefined) {
           `Failed to update shift: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("common.updateError", { item: t("shift.title") }));
+        toast.error(t("common.updateError", { item: t("shift.shift_one") }));
         return false;
       }
 
       const updatedShift = await response.json();
       setShifts((prev) => prev.map((s) => (s.id === id ? updatedShift : s)));
-      toast.success(t("common.updated", { item: t("shift.title") }));
+      toast.success(t("common.updated", { item: t("shift.shift_one") }));
       return true;
     } catch (error) {
       console.error("Failed to update shift:", error);
-      toast.error(t("common.updateError", { item: t("shift.title") }));
+      toast.error(t("common.updateError", { item: t("shift.shift_one") }));
       return false;
     }
   };
@@ -140,16 +140,16 @@ export function useShifts(calendarId: string | undefined) {
           `Failed to delete shift: ${response.status} ${response.statusText}`,
           errorText
         );
-        toast.error(t("common.deleteError", { item: t("shift.title") }));
+        toast.error(t("common.deleteError", { item: t("shift.shift_one") }));
         return false;
       }
 
       setShifts((prev) => prev.filter((s) => s.id !== id));
-      toast.success(t("common.deleted", { item: t("shift.title") }));
+      toast.success(t("common.deleted", { item: t("shift.shift_one") }));
       return true;
     } catch (error) {
       console.error("Failed to delete shift:", error);
-      toast.error(t("common.deleteError", { item: t("shift.title") }));
+      toast.error(t("common.deleteError", { item: t("shift.shift_one") }));
       return false;
     }
   };

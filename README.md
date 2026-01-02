@@ -207,8 +207,8 @@ $ npm run db:studio
 Run these commands before submitting a pull request:
 
 ```bash
-# Run all tests (lint + build with TypeScript check)
-$ npm test
+# Run all tests (i18n + lint + build with TypeScript check)
+$ npm run test
 
 # Full CI test suite (includes database migration test)
 $ npm run test:ci
@@ -216,13 +216,14 @@ $ npm run test:ci
 # Run individual checks
 $ npm run lint         # ESLint code quality check
 $ npm run build        # Next.js production build (includes TypeScript validation)
+$ npm run i18n         # i18n translation keys validation
 
 ```
 
 **Recommended Pre-Commit Workflow:**
 
 1. Run `npm test` to catch issues early
-2. Fix any TypeScript or linting errors
+2. Fix any TypeScript, linting, or i18n errors
 3. Ensure build completes successfully
 4. Commit and push your changes
 

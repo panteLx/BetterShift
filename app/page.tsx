@@ -755,7 +755,7 @@ function HomeContent() {
   if (isCompareMode) {
     // Show loader while loading compare data
     if (compareDataLoading) {
-      return <FullscreenLoader message={t("compare.loading")} />;
+      return <FullscreenLoader message={t("common.loading")} />;
     }
 
     return (
