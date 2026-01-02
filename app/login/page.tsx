@@ -272,7 +272,7 @@ export default function LoginPage() {
             <form onSubmit={handleEmailLogin} className="space-y-6">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Label htmlFor="email">{t("common.labels.email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -286,7 +286,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">{t("auth.password")}</Label>
+                <Label htmlFor="password">{t("common.labels.password")}</Label>
                 <Input
                   id="password"
                   type="password"

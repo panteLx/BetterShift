@@ -94,7 +94,7 @@ export function CalendarShareManagementSheet({
                   <span className="hidden sm:inline">
                     {t("share.userShares")}
                   </span>
-                  <span className="sm:hidden">{t("share.users")}</span>
+                  <span className="sm:hidden">{t("common.labels.users")}</span>
                 </TabsTrigger>
                 {showGuestTab && (
                   <TabsTrigger value="public" className="gap-2">

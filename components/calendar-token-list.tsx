@@ -135,12 +135,12 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("token.name")}</TableHead>
+                <TableHead>{t("common.labels.name")}</TableHead>
                 <TableHead>{t("token.token")}</TableHead>
-                <TableHead>{t("token.permission")}</TableHead>
+                <TableHead>{t("common.labels.permission")}</TableHead>
                 <TableHead>{t("token.expires")}</TableHead>
                 <TableHead>{t("token.usage")}</TableHead>
-                <TableHead>{t("token.status")}</TableHead>
+                <TableHead>{t("common.labels.status")}</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -165,8 +165,8 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
                   <TableCell>
                     <Badge variant="secondary">
                       {token.permission === "read"
-                        ? t("token.readOnly")
-                        : t("token.edit")}
+                        ? t("common.labels.permissions.read")
+                        : t("common.labels.permissions.write")}
                     </Badge>
                   </TableCell>
 
@@ -187,7 +187,7 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
                       </span>
                     ) : (
                       <span className="text-muted-foreground">
-                        {t("token.never")}
+                        {t("common.time.never")}
                       </span>
                     )}
                   </TableCell>
@@ -217,7 +217,9 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
                   {/* Status */}
                   <TableCell>
                     <Badge variant={token.isActive ? "default" : "secondary"}>
-                      {token.isActive ? t("token.active") : t("token.inactive")}
+                      {token.isActive
+                        ? t("common.status.active")
+                        : t("common.status.inactive")}
                     </Badge>
                   </TableCell>
 

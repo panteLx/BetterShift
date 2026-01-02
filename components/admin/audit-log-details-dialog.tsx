@@ -114,7 +114,7 @@ export function AuditLogDetailsDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.action")}
+                {t("common.labels.action")}
               </div>
               <Badge variant="outline" className={getActionColor(log.action)}>
                 {log.action}
@@ -122,7 +122,7 @@ export function AuditLogDetailsDialog({
             </div>
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.severity")}
+                {t("common.labels.severity")}
               </div>
               <Badge
                 variant="outline"
@@ -147,7 +147,7 @@ export function AuditLogDetailsDialog({
           {log.userId != null && (
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.user")}
+                {t("common.labels.user")}
               </div>
               <div className="flex items-center gap-3 p-3 border rounded-lg">
                 <Avatar className="h-10 w-10">
@@ -194,7 +194,7 @@ export function AuditLogDetailsDialog({
           {log.ipAddress != null && (
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.ipAddress")}
+                {t("common.labels.ipAddress")}
               </div>
               <div className="text-sm font-mono">{log.ipAddress}</div>
             </div>

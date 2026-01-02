@@ -135,7 +135,7 @@ export function CalendarTokenCreateDialog({
               {/* Name (Optional) */}
               <div className="space-y-2">
                 <Label htmlFor="token-name">
-                  {t("token.name")} {t("common.optional")}
+                  {t("common.labels.name")} {t("common.optional")}
                 </Label>
                 <Input
                   id="token-name"
@@ -149,7 +149,7 @@ export function CalendarTokenCreateDialog({
               {/* Permission */}
               <div className="space-y-2">
                 <Label htmlFor="token-permission">
-                  {t("token.permission")}
+                  {t("common.labels.permission")}
                 </Label>
                 <Select
                   value={permission}
@@ -162,10 +162,12 @@ export function CalendarTokenCreateDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="read">
-                      {t("token.readOnly")} - {t("token.readOnlyDescription")}
+                      {t("common.labels.permissions.read")} -{" "}
+                      {t("token.readOnlyDescription")}
                     </SelectItem>
                     <SelectItem value="write">
-                      {t("token.edit")} - {t("token.editDescription")}
+                      {t("common.labels.permissions.write")} -{" "}
+                      {t("token.editDescription")}
                     </SelectItem>
                   </SelectContent>
                 </Select>

@@ -105,19 +105,19 @@ export function CalendarDetailsSheet({
     if (permission === "none") {
       return (
         <Badge variant="secondary" className="text-xs">
-          {t("admin.calendars.guestNoneDesc")}
+          {t("common.labels.permissions.none")}
         </Badge>
       );
     } else if (permission === "read") {
       return (
         <Badge variant="outline" className="text-xs">
-          {t("admin.calendars.guestReadDesc")}
+          {t("common.labels.permissions.read")}
         </Badge>
       );
     } else {
       return (
         <Badge variant="default" className="text-xs">
-          {t("admin.calendars.guestWriteDesc")}
+          {t("common.labels.permissions.write")}
         </Badge>
       );
     }
@@ -157,7 +157,7 @@ export function CalendarDetailsSheet({
               </div>
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>
-                  {t("admin.calendars.created")}{" "}
+                  {t("common.stats.created")}{" "}
                   {format(calendarDetails.createdAt, "PP", {
                     locale: dateLocale,
                   })}
@@ -213,14 +213,14 @@ export function CalendarDetailsSheet({
           {/* Statistics */}
           <div>
             <h4 className="text-sm font-medium mb-3">
-              {t("admin.calendars.statistics")}
+              {t("common.stats.statistics")}
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg border bg-muted/20">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {t("admin.calendars.shifts")}
+                    {t("common.labels.shifts")}
                   </span>
                 </div>
                 <p className="text-xl font-semibold">
@@ -231,7 +231,7 @@ export function CalendarDetailsSheet({
                 <div className="flex items-center gap-2 mb-1">
                   <StickyNote className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {t("admin.calendars.notes")}
+                    {t("common.labels.notes")}
                   </span>
                 </div>
                 <p className="text-xl font-semibold">
@@ -242,7 +242,7 @@ export function CalendarDetailsSheet({
                 <div className="flex items-center gap-2 mb-1">
                   <Bookmark className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {t("admin.calendars.presets")}
+                    {t("common.labels.presets")}
                   </span>
                 </div>
                 <p className="text-xl font-semibold">
@@ -253,7 +253,7 @@ export function CalendarDetailsSheet({
                 <div className="flex items-center gap-2 mb-1">
                   <Share2 className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {t("admin.calendars.shares")}
+                    {t("common.labels.shares")}
                   </span>
                 </div>
                 <p className="text-xl font-semibold">
@@ -262,7 +262,7 @@ export function CalendarDetailsSheet({
                 <p className="text-xs text-muted-foreground mt-1">
                   {calendarDetails.shares.length}{" "}
                   {t("admin.calendars.userShares")},{" "}
-                  {(calendarDetails.shareTokens?.length || 0)}{" "}
+                  {calendarDetails.shareTokens?.length || 0}{" "}
                   {t("admin.calendars.tokenShares")}
                 </p>
               </div>
@@ -302,11 +302,7 @@ export function CalendarDetailsSheet({
                         </p>
                       </div>
                       <Badge variant="secondary" className="text-xs">
-                        {t(
-                          `admin.calendars.permission${share.permission
-                            .charAt(0)
-                            .toUpperCase()}${share.permission.slice(1)}`
-                        )}
+                        {t(`common.labels.permissions.${share.permission}`)}
                       </Badge>
                     </div>
                   ))}
@@ -337,18 +333,14 @@ export function CalendarDetailsSheet({
                             {token.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {t("admin.calendars.created")}{" "}
+                            {t("common.stats.created")}{" "}
                             {format(token.createdAt, "PP", {
                               locale: dateLocale,
                             })}
                           </p>
                         </div>
                         <Badge variant="secondary" className="text-xs">
-                          {t(
-                            `admin.calendars.permission${token.permission
-                              .charAt(0)
-                              .toUpperCase()}${token.permission.slice(1)}`
-                          )}
+                          {t(`common.labels.permissions.${token.permission}`)}
                         </Badge>
                       </div>
                     ))}

@@ -774,7 +774,7 @@ export function ExternalSyncManageSheet({
                 </h3>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sync-name">{t("form.nameLabel")}</Label>
+                  <Label htmlFor="sync-name">{t("common.labels.name")}</Label>
                   <Input
                     id="sync-name"
                     type="text"

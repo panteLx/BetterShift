@@ -194,7 +194,7 @@ export function CalendarShareUserSearch({
               searchResults.length === 0 &&
               !searchLoading && (
                 <p className="text-sm text-muted-foreground">
-                  {t("share.noUsersFound")}
+                  {t("common.empty.noUsersFound")}
                 </p>
               )}
           </div>
@@ -230,7 +230,7 @@ export function CalendarShareUserSearch({
 
           {/* Permission Selection */}
           <div className="space-y-2">
-            <Label htmlFor="permission">{t("share.permission")}</Label>
+            <Label htmlFor="permission">{t("common.labels.permission")}</Label>
             <Select
               value={permission}
               onValueChange={(value) =>
@@ -244,20 +244,14 @@ export function CalendarShareUserSearch({
                 <SelectItem value="read">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">
-                      {t("share.permissionRead")}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {t("share.permissionReadDesc")}
+                      {t("common.labels.permissions.read")}
                     </span>
                   </div>
                 </SelectItem>
                 <SelectItem value="write">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">
-                      {t("share.permissionWrite")}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {t("share.permissionWriteDesc")}
+                      {t("common.labels.permissions.write")}
                     </span>
                   </div>
                 </SelectItem>
@@ -265,10 +259,7 @@ export function CalendarShareUserSearch({
                   <SelectItem value="admin">
                     <div className="flex flex-col items-start">
                       <span className="font-medium">
-                        {t("share.permissionAdmin")}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {t("share.permissionAdminDesc")}
+                        {t("common.labels.permissions.admin")}
                       </span>
                     </div>
                   </SelectItem>

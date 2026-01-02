@@ -58,17 +58,17 @@ export default function RegisterPage() {
     }
 
     if (!password) {
-      toast.error(t("auth.passwordRequired"));
+      toast.error(t("validation.passwordRequired"));
       return;
     }
 
     if (password.length < 8) {
-      toast.error(t("auth.passwordTooShort"));
+      toast.error(t("validation.passwordTooShort"));
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error(t("auth.passwordsNoMatch"));
+      toast.error(t("validation.passwordsNoMatch"));
       return;
     }
 
@@ -178,7 +178,7 @@ export default function RegisterPage() {
             <form onSubmit={handleRegister} className="space-y-6">
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">{t("auth.name")}</Label>
+                <Label htmlFor="name">{t("common.labels.name")}</Label>
                 <Input
                   id="name"
                   type="text"
@@ -192,7 +192,7 @@ export default function RegisterPage() {
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Label htmlFor="email">{t("common.labels.email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -206,7 +206,7 @@ export default function RegisterPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">{t("auth.password")}</Label>
+                <Label htmlFor="password">{t("common.labels.password")}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -218,19 +218,19 @@ export default function RegisterPage() {
                   minLength={8}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t("auth.passwordTooShort")}
+                  {t("validation.passwordTooShort")}
                 </p>
               </div>
 
               {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">
-                  {t("auth.confirmPassword")}
+                  {t("common.labels.confirmPassword")}
                 </Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder={t("auth.confirmPassword")}
+                  placeholder={t("common.labels.confirmPassword")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={isLoading}

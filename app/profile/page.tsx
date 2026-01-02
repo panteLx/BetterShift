@@ -244,17 +244,17 @@ export default function ProfilePage() {
     e.preventDefault();
 
     if (!currentPassword || !newPassword) {
-      toast.error(t("auth.passwordRequired"));
+      toast.error(t("validation.passwordRequired"));
       return;
     }
 
     if (newPassword.length < 8) {
-      toast.error(t("auth.passwordTooShort"));
+      toast.error(t("validation.passwordTooShort"));
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      toast.error(t("auth.passwordsNoMatch"));
+      toast.error(t("validation.passwordsNoMatch"));
       return;
     }
 
@@ -461,11 +461,11 @@ export default function ProfilePage() {
                   )}
                   <div className="flex-1">
                     <div className="mb-3">
-                      <Label>{t("auth.name")}</Label>
+                      <Label>{t("common.labels.name")}</Label>
                       <p className="mt-1 text-sm">{user?.name || "—"}</p>
                     </div>
                     <div>
-                      <Label>{t("auth.email")}</Label>
+                      <Label>{t("common.labels.email")}</Label>
                       <p className="mt-1 text-sm">{user?.email || "—"}</p>
                     </div>
                   </div>
@@ -515,7 +515,9 @@ export default function ProfilePage() {
 
                     {/* Name */}
                     <div className="space-y-2">
-                      <Label htmlFor="editName">{t("auth.name")}</Label>
+                      <Label htmlFor="editName">
+                        {t("common.labels.name")}
+                      </Label>
                       <Input
                         id="editName"
                         type="text"
@@ -528,7 +530,9 @@ export default function ProfilePage() {
 
                     {/* Email */}
                     <div className="space-y-2">
-                      <Label htmlFor="editEmail">{t("auth.email")}</Label>
+                      <Label htmlFor="editEmail">
+                        {t("common.labels.email")}
+                      </Label>
                       <Input
                         id="editEmail"
                         type="email"
@@ -582,7 +586,7 @@ export default function ProfilePage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="newPassword">
-                        {t("auth.newPassword")}
+                        {t("common.labels.newPassword")}
                       </Label>
                       <Input
                         id="newPassword"
@@ -596,7 +600,7 @@ export default function ProfilePage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="confirmNewPassword">
-                        {t("auth.confirmPassword")}
+                        {t("common.labels.confirmPassword")}
                       </Label>
                       <Input
                         id="confirmNewPassword"
@@ -622,7 +626,7 @@ export default function ProfilePage() {
             <Card className="border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {t("auth.connectedAccounts")}
+                  {t("common.auth.connectedAccounts")}
                 </CardTitle>
                 <CardDescription>
                   {t("auth.connectedAccountsDescription")}
@@ -667,7 +671,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                      {t("auth.activeSessions")}
+                      {t("common.auth.activeSessions")}
                     </CardTitle>
                     <CardDescription>
                       {t("auth.activeSessionsDescription")}
@@ -723,11 +727,12 @@ export default function ProfilePage() {
                               </p>
                               {session.ipAddress && (
                                 <p className="truncate">
-                                  {t("auth.ipAddress")}: {session.ipAddress}
+                                  {t("common.labels.ipAddress")}:{" "}
+                                  {session.ipAddress}
                                 </p>
                               )}
                               <p>
-                                {t("auth.lastActive")}:{" "}
+                                {t("common.time.lastActive")}:{" "}
                                 {new Intl.DateTimeFormat(undefined, {
                                   dateStyle: "medium",
                                   timeStyle: "short",

@@ -89,14 +89,14 @@ export function UserDetailsSheet({
     return "?";
   };
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeClass = (role: string) => {
     switch (role) {
       case "superadmin":
-        return "destructive";
+        return "bg-red-500/10 text-red-500 border-red-500/20";
       case "admin":
-        return "default";
+        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
       default:
-        return "secondary";
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
     }
   };
 
@@ -127,15 +127,13 @@ export function UserDetailsSheet({
                 <h3 className="text-lg font-semibold truncate">
                   {userDetails.name}
                 </h3>
-                <Badge
-                  variant={getRoleBadgeVariant(userDetails.role || "user")}
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getRoleBadgeClass(
+                    userDetails.role || "user"
+                  )}`}
                 >
-                  {t(
-                    `admin.role${userDetails.role
-                      ?.charAt(0)
-                      .toUpperCase()}${userDetails.role?.slice(1)}`
-                  )}
-                </Badge>
+                  {t(`common.roles.${userDetails.role}`)}
+                </span>
                 {userDetails.banned && (
                   <Badge variant="destructive">{t("admin.banned")}</Badge>
                 )}
@@ -152,7 +150,7 @@ export function UserDetailsSheet({
                 </span>
                 {userDetails.lastActivity && (
                   <span>
-                    {t("admin.lastActive")}{" "}
+                    {t("common.time.lastActive")}{" "}
                     {formatDistanceToNow(userDetails.lastActivity, {
                       addSuffix: true,
                       locale: dateLocale,
@@ -223,7 +221,7 @@ export function UserDetailsSheet({
           {/* Statistics */}
           <div>
             <h4 className="text-sm font-medium mb-3">
-              {t("admin.statistics")}
+              {t("common.stats.statistics")}
             </h4>
             <div className="grid grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
@@ -244,7 +242,7 @@ export function UserDetailsSheet({
                     {userDetails.sharedCalendars.length}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {t("admin.sharedCalendars")}
+                    {t("common.labels.sharedCalendars")}
                   </p>
                 </div>
               </div>
@@ -255,7 +253,7 @@ export function UserDetailsSheet({
                     {userDetails.sessionsCount}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {t("admin.activeSessions")}
+                    {t("common.auth.activeSessions")}
                   </p>
                 </div>
               </div>
@@ -295,7 +293,7 @@ export function UserDetailsSheet({
               <Separator />
               <div>
                 <h4 className="text-sm font-medium mb-3">
-                  {t("admin.sharedCalendars")} (
+                  {t("common.labels.sharedCalendars")} (
                   {userDetails.sharedCalendars.length})
                 </h4>
                 <div className="space-y-2">
@@ -306,11 +304,7 @@ export function UserDetailsSheet({
                     >
                       <span className="text-sm truncate">{share.name}</span>
                       <Badge variant="outline" className="text-xs">
-                        {t(
-                          `share.permission${share.permission
-                            .charAt(0)
-                            .toUpperCase()}${share.permission.slice(1)}`
-                        )}
+                        {t(`common.labels.permissions.${share.permission}`)}
                       </Badge>
                     </div>
                   ))}
@@ -325,7 +319,8 @@ export function UserDetailsSheet({
               <Separator />
               <div>
                 <h4 className="text-sm font-medium mb-3">
-                  {t("admin.connectedAccounts")} ({userDetails.accounts.length})
+                  {t("common.auth.connectedAccounts")} (
+                  {userDetails.accounts.length})
                 </h4>
                 <div className="space-y-2">
                   {userDetails.accounts.map((account) => (

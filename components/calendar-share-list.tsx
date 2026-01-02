@@ -160,8 +160,8 @@ export function CalendarShareList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("share.user")}</TableHead>
-                  <TableHead>{t("share.permission")}</TableHead>
+                  <TableHead>{t("common.labels.user")}</TableHead>
+                  <TableHead>{t("common.labels.permission")}</TableHead>
                   <TableHead>{t("share.sharedBy")}</TableHead>
                   <TableHead>{t("share.sharedOn")}</TableHead>
                   {canManageShares && (
@@ -217,14 +217,14 @@ export function CalendarShareList({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="read">
-                              {t("share.permissionRead")}
+                              {t("common.labels.permissions.read")}
                             </SelectItem>
                             <SelectItem value="write">
-                              {t("share.permissionWrite")}
+                              {t("common.labels.permissions.write")}
                             </SelectItem>
                             {isOwner && (
                               <SelectItem value="admin">
-                                {t("share.permissionAdmin")}
+                                {t("common.labels.permissions.admin")}
                               </SelectItem>
                             )}
                           </SelectContent>
@@ -235,12 +235,7 @@ export function CalendarShareList({
                             share.permission
                           )}`}
                         >
-                          {t(
-                            `share.permission${
-                              share.permission.charAt(0).toUpperCase() +
-                              share.permission.slice(1)
-                            }`
-                          )}
+                          {t(`common.labels.permissions.${share.permission}`)}
                         </span>
                       )}
                     </TableCell>

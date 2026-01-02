@@ -75,13 +75,23 @@ export async function GET(
       .from(calendarsTable)
       .where(eq(calendarsTable.ownerId, targetUserId));
 
-    // Get share count
-    const [sharesCount] = await db
+    // Get shared calendars (with calendar name and permission)
+    const sharedCalendars = await db
       .select({
-        count: sql<number>`COUNT(*)`,
+        id: calendarSharesTable.id,
+        calendarId: calendarSharesTable.calendarId,
+        name: calendarsTable.name,
+        permission: calendarSharesTable.permission,
+        createdAt: calendarSharesTable.createdAt,
       })
       .from(calendarSharesTable)
+      .innerJoin(
+        calendarsTable,
+        eq(calendarSharesTable.calendarId, calendarsTable.id)
+      )
       .where(eq(calendarSharesTable.userId, targetUserId));
+
+    const sharesCount = sharedCalendars.length;
 
     // Get linked accounts
     const accounts = await db
@@ -116,7 +126,12 @@ export async function GET(
         updatedAt: targetUser.updatedAt,
       },
       calendars: ownedCalendars,
-      sharesCount: Number(sharesCount?.count || 0),
+      sharedCalendars: sharedCalendars.map((share) => ({
+        id: share.calendarId,
+        name: share.name,
+        permission: share.permission,
+      })),
+      sharesCount: sharesCount,
       accounts,
       sessionsCount: Number(sessionsCount?.count || 0),
     });

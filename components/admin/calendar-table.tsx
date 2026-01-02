@@ -178,15 +178,15 @@ function CalendarTableRow({
       <TableCell>
         {calendar.guestPermission === "none" ? (
           <Badge variant="secondary" className="text-xs">
-            {t("admin.calendars.guestNone")}
+            {t("common.labels.permissions.none")}
           </Badge>
         ) : calendar.guestPermission === "read" ? (
           <Badge variant="outline" className="text-xs">
-            {t("admin.calendars.guestRead")}
+            {t("common.labels.permissions.read")}
           </Badge>
         ) : (
           <Badge variant="default" className="text-xs">
-            {t("admin.calendars.guestWrite")}
+            {t("common.labels.permissions.write")}
           </Badge>
         )}
       </TableCell>
@@ -203,7 +203,7 @@ function CalendarTableRow({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onCalendarClick(calendar)}>
                 <Eye className="h-4 w-4 mr-2" />
-                {t("admin.calendars.viewDetails")}
+                {t("common.viewDetails")}
               </DropdownMenuItem>
               {canEdit && (
                 <>
@@ -328,7 +328,7 @@ export function CalendarTable({
               onClick={() => handleSort("name")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.calendars.name")}
+                {t("common.labels.name")}
                 {sortColumn === "name" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -356,7 +356,7 @@ export function CalendarTable({
               onClick={() => handleSort("createdAt")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.calendars.created")}
+                {t("common.stats.created")}
                 {sortColumn === "createdAt" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -370,7 +370,7 @@ export function CalendarTable({
               onClick={() => handleSort("shiftsCount")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.calendars.shifts")}
+                {t("common.labels.shifts")}
                 {sortColumn === "shiftsCount" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -384,7 +384,7 @@ export function CalendarTable({
               onClick={() => handleSort("sharesCount")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.calendars.shares")}
+                {t("common.labels.shares")}
                 {sortColumn === "sharesCount" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />

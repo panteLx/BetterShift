@@ -242,7 +242,7 @@ export default function ActivityLogPage() {
                   </SelectItem>
                   <SelectItem value="auth">{t("activityLog.auth")}</SelectItem>
                   <SelectItem value="calendar">
-                    {t("activityLog.calendar")}
+                    {t("common.labels.calendar")}
                   </SelectItem>
                   <SelectItem value="sync">{t("activityLog.sync")}</SelectItem>
                   <SelectItem value="security">
@@ -264,21 +264,25 @@ export default function ActivityLogPage() {
                 }
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder={t("activityLog.allSeverities")} />
+                  <SelectValue
+                    placeholder={t("common.filters.allSeverities")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
-                    {t("activityLog.allSeverities")}
+                    {t("common.filters.allSeverities")}
                   </SelectItem>
-                  <SelectItem value="info">{t("activityLog.info")}</SelectItem>
+                  <SelectItem value="info">
+                    {t("common.severity.info")}
+                  </SelectItem>
                   <SelectItem value="warning">
-                    {t("activityLog.warning")}
+                    {t("common.severity.warning")}
                   </SelectItem>
                   <SelectItem value="error">
-                    {t("activityLog.error")}
+                    {t("common.severity.error")}
                   </SelectItem>
                   <SelectItem value="critical">
-                    {t("activityLog.critical")}
+                    {t("common.severity.critical")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -289,14 +293,14 @@ export default function ActivityLogPage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  placeholder={t("activityLog.startDate")}
+                  placeholder={t("common.labels.startDate")}
                   className="w-full sm:w-[150px]"
                 />
                 <Input
                   type="date"
                   value={endDate}
                   onChange={(e) => handleEndDateChange(e.target.value)}
-                  placeholder={t("activityLog.endDate")}
+                  placeholder={t("common.labels.endDate")}
                   className="w-full sm:w-[150px]"
                 />
               </div>
@@ -326,7 +330,7 @@ export default function ActivityLogPage() {
                     setEndDate("");
                   }}
                 >
-                  {t("activityLog.clearFilters")}
+                  {t("common.filters.clearFilters")}
                 </Button>
               )}
             </div>
@@ -391,7 +395,7 @@ export default function ActivityLogPage() {
                       onClick={() => handleSort("timestamp")}
                     >
                       <div className="flex items-center gap-2">
-                        {t("activityLog.time")}
+                        {t("common.labels.time")}
                         {sortColumn === "timestamp" &&
                           (sortDirection === "asc" ? (
                             <ChevronUp className="h-4 w-4" />
@@ -414,14 +418,14 @@ export default function ActivityLogPage() {
                           ))}
                       </div>
                     </TableHead>
-                    <TableHead>{t("activityLog.action")}</TableHead>
+                    <TableHead>{t("common.labels.action")}</TableHead>
                     <TableHead>{t("activityLog.resource")}</TableHead>
                     <TableHead
                       className="cursor-pointer hover:bg-muted/80 transition-colors"
                       onClick={() => handleSort("severity")}
                     >
                       <div className="flex items-center gap-2">
-                        {t("activityLog.severity")}
+                        {t("common.labels.severity")}
                         {sortColumn === "severity" &&
                           (sortDirection === "asc" ? (
                             <ChevronUp className="h-4 w-4" />
@@ -500,7 +504,7 @@ export default function ActivityLogPage() {
                               getSeverityColor(log.severity)
                             )}
                           >
-                            {t(`activityLog.${log.severity}`)}
+                            {t(`common.severity.${log.severity}`)}
                           </Badge>
                         </TableCell>
                       </TableRow>

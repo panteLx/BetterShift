@@ -40,7 +40,7 @@ export function GuestPermissionSelector({
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
                 <span className="font-semibold text-sm">
-                  {t("share.publicPermissionNone")}
+                  {t("common.labels.permissions.none")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">
@@ -65,7 +65,7 @@ export function GuestPermissionSelector({
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-blue-500 shrink-0" />
                 <span className="font-semibold text-sm">
-                  {t("share.publicPermissionRead")}
+                  {t("common.labels.permissions.read")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">
@@ -90,7 +90,7 @@ export function GuestPermissionSelector({
               <div className="flex items-center gap-2">
                 <Edit className="h-4 w-4 text-green-500 shrink-0" />
                 <span className="font-semibold text-sm">
-                  {t("share.publicPermissionWrite")}
+                  {t("common.labels.permissions.write")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">

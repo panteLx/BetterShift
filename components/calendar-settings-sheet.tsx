@@ -157,7 +157,7 @@ export function CalendarSettingsSheet({
                 className="text-sm font-medium flex items-center gap-2"
               >
                 <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-                {t("form.nameLabel")}
+                {t("common.labels.name")}
               </Label>
               <Input
                 id="calendarName"

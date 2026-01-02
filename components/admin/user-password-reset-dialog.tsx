@@ -121,7 +121,7 @@ export function UserPasswordResetDialog({
           {/* New Password */}
           <div className="space-y-2">
             <Label htmlFor="password">
-              {t("admin.newPassword")}{" "}
+              {t("common.labels.newPassword")}{" "}
               <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
@@ -147,7 +147,7 @@ export function UserPasswordResetDialog({
             </div>
             {password && password.length < 8 && (
               <p className="text-xs text-destructive">
-                {t("admin.passwordMinLength")}
+                {t("validation.passwordTooShort")}
               </p>
             )}
           </div>
@@ -155,7 +155,7 @@ export function UserPasswordResetDialog({
           {/* Confirm Password */}
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">
-              {t("admin.confirmPassword")}{" "}
+              {t("common.labels.confirmPassword")}{" "}
               <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
@@ -181,7 +181,7 @@ export function UserPasswordResetDialog({
             </div>
             {confirmPassword && !passwordsMatch && (
               <p className="text-xs text-destructive">
-                {t("admin.passwordsDoNotMatch")}
+                {t("validation.passwordsNoMatch")}
               </p>
             )}
           </div>

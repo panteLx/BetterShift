@@ -115,16 +115,30 @@ function isDynamicKey(key: string): boolean {
 /**
  * Extract static prefix and original pattern from a dynamic key
  * Example: "language.${locale}" -> { prefix: "language", pattern: "language.${locale}" }
+ * Example: "admin.role${role}" -> { prefix: "admin.role", pattern: "admin.role${role}" }
  */
 function extractDynamicKeyInfo(key: string): {
   prefix: string;
   pattern: string;
 } | null {
-  const match = key.match(/^([^$]+)\.\$\{/);
-  if (!match) return null;
+  // Find the position of the first ${
+  const dollarIndex = key.indexOf("${");
+  if (dollarIndex === -1) return null;
+
+  // Get everything before ${ - this is our prefix
+  // For "admin.role${...}", beforeDollar = "admin.role"
+  // For "language.${...}", beforeDollar = "language"
+  const beforeDollar = key.substring(0, dollarIndex);
+
+  // The prefix is everything before ${, which represents the static part
+  // This allows matching keys like:
+  // - "admin.role" + "User" = "admin.roleUser"
+  // - "admin.role" + "Admin" = "admin.roleAdmin"
+  // - "language" + ".de" = "language.de"
+  const prefix = beforeDollar;
 
   return {
-    prefix: match[1],
+    prefix,
     pattern: key,
   };
 }
@@ -143,30 +157,41 @@ const dynamicPatterns = new Map<string, string>();
 function extractUsedKeys(content: string): Set<string> {
   const keys = new Set<string>();
 
-  // Match t("key"), t('key'), t(`key`)
+  // Match t("key"), t('key')
   // Also handles t.rich(), t.raw(), etc.
-  const patterns = [
-    /\bt(?:\.\w+)?\(\s*["'`]([^"'`]+)["'`]/g, // t("key") or t.rich("key")
-    /\bt\s*\(\s*["'`]([^"'`]+)["'`]/g, // t ("key") with space
+  const stringPatterns = [
+    /\bt(?:\.\w+)?\s*\(\s*["']([^"']+)["']/g, // t("key") or t.rich("key")
   ];
 
-  for (const pattern of patterns) {
+  for (const pattern of stringPatterns) {
     let match;
     while ((match = pattern.exec(content)) !== null) {
       const key = match[1];
+      keys.add(key);
+    }
+  }
 
-      // If it's a dynamic key with template syntax
-      if (isDynamicKey(key)) {
-        const info = extractDynamicKeyInfo(key);
-        if (info) {
-          // Store the original pattern for later display
-          dynamicPatterns.set(info.prefix, info.pattern);
-          // Store the prefix as a marker
-          keys.add(`${info.prefix}.*`);
-        }
-      } else {
-        keys.add(key);
+  // Special handling for template literals: t(`key`) and t(`key${var}`)
+  // Use 's' flag to match across newlines (dotall mode)
+  // Match opening backtick, capture everything until closing backtick
+  const templatePattern = /\bt(?:\.\w+)?\s*\(\s*`([^`]+)`/gs;
+  let templateMatch;
+  while ((templateMatch = templatePattern.exec(content)) !== null) {
+    // Normalize whitespace in the captured template string
+    const fullTemplate = templateMatch[1].replace(/\s+/g, " ").trim();
+
+    // Check if it contains ${...} template expressions
+    if (fullTemplate.includes("${")) {
+      const info = extractDynamicKeyInfo(fullTemplate);
+      if (info) {
+        // Store the original pattern for later display
+        dynamicPatterns.set(info.prefix, fullTemplate);
+        // Store the prefix as a marker
+        keys.add(`${info.prefix}.*`);
       }
+    } else {
+      // Static template literal (no ${})
+      keys.add(fullTemplate);
     }
   }
 
@@ -194,7 +219,7 @@ function findUsedKeys(files: string[]): Set<string> {
 /**
  * Check if a key or any of its parent keys are used
  * Example: If "common" is used, then "common.save" is considered used too
- * Also handles wildcard patterns like "language.*"
+ * Also handles wildcard patterns like "admin.role.*" matching "admin.roleUser"
  */
 function isKeyOrParentUsed(key: string, usedKeys: Set<string>): boolean {
   // Check exact match
@@ -203,11 +228,23 @@ function isKeyOrParentUsed(key: string, usedKeys: Set<string>): boolean {
   }
 
   // Check if any wildcard pattern matches
+  // Wildcard patterns like "admin.role.*" should match keys like "admin.roleUser"
+  // BUT NOT "admin.role" itself or "admin.roleSettings.foo"
   for (const usedKey of usedKeys) {
     if (usedKey.endsWith(".*")) {
-      const prefix = usedKey.slice(0, -2); // Remove ".*"
-      if (key.startsWith(prefix + ".")) {
-        return true;
+      const prefix = usedKey.slice(0, -2); // Remove ".*" -> "admin.role"
+
+      // Check if key starts with prefix + "."
+      if (key.startsWith(prefix)) {
+        // Get the part after the prefix
+        const afterPrefix = key.substring(prefix.length);
+
+        // Only match if:
+        // 1. There's exactly one more segment (e.g., "admin.role" + "User" = "admin.roleUser")
+        // 2. No dots in the remaining part (not "admin.roleSettings.foo")
+        if (afterPrefix.length > 0 && !afterPrefix.includes(".")) {
+          return true;
+        }
       }
     }
   }
@@ -290,9 +327,21 @@ function findMissingKeys(
       const originalPattern = dynamicPatterns.get(prefix);
 
       // Find all keys that match this prefix
-      const matchingKeys = allKeys.filter((key) =>
-        key.startsWith(prefix + ".")
-      );
+      // Two possible patterns:
+      // 1. prefix + "." + something (e.g., "language." + "de" = "language.de")
+      // 2. prefix + something (e.g., "admin.role" + "User" = "admin.roleUser")
+      const matchingKeys = allKeys.filter((key) => {
+        if (key.startsWith(prefix + ".")) {
+          return true; // Pattern 1: language.${locale} -> language.de
+        }
+        if (key.startsWith(prefix) && key.length > prefix.length) {
+          const afterPrefix = key.substring(prefix.length);
+          // Check if there's no dot in the remaining part
+          // This catches: admin.roleUser but not admin.role.something
+          return !afterPrefix.includes(".");
+        }
+        return false;
+      });
 
       if (matchingKeys.length === 0) {
         // No keys found with this prefix at all
@@ -325,7 +374,7 @@ function main() {
   // Get all translation keys
   console.log("📖 Reading translation keys from messages/de.json...");
   const allKeys = getAllTranslationKeys();
-  console.log(`   Found ${allKeys.length + 2} translation keys\n`); // +2 for dynamic patterns in language switcher
+  console.log(`   Found ${allKeys.length} translation keys\n`);
 
   // Get all files to search
   console.log("📁 Finding source files...");
@@ -461,7 +510,7 @@ function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("📊 SUMMARY");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-  console.log(`   Total keys in de.json: ${allKeys.length + 2}`); // +2 for dynamic patterns in language switcher
+  console.log(`   Total keys in de.json: ${allKeys.length}`);
   console.log(`   Keys used in code: ${usedKeys.size}`);
   console.log(`   Unused keys: ${unusedKeys.length}`);
   console.log(`   Missing keys: ${missingKeys.length}`);

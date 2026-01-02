@@ -211,7 +211,7 @@ export function CalendarSelector({
                           <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 flex-shrink-0" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{t("share.permissionAdmin")}</p>
+                          <p>{t("common.labels.permissions.admin")}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -222,7 +222,7 @@ export function CalendarSelector({
                           <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{t("guest.readOnlyAccess")}</p>
+                          <p>{t("common.labels.permissions.read")}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

@@ -347,14 +347,18 @@ export default function AdminAuditLogsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("admin.allSeverities")}</SelectItem>
-              <SelectItem value="info">{t("admin.severityInfo")}</SelectItem>
-              <SelectItem value="warning">
-                {t("admin.severityWarning")}
+              <SelectItem value="all">
+                {t("common.filters.allSeverities")}
               </SelectItem>
-              <SelectItem value="error">{t("admin.severityError")}</SelectItem>
+              <SelectItem value="info">{t("common.severity.info")}</SelectItem>
+              <SelectItem value="warning">
+                {t("common.severity.warning")}
+              </SelectItem>
+              <SelectItem value="error">
+                {t("common.severity.error")}
+              </SelectItem>
               <SelectItem value="critical">
-                {t("admin.severityCritical")}
+                {t("common.severity.critical")}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -364,7 +368,7 @@ export default function AdminAuditLogsPage() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <label className="text-sm font-medium mb-2 block">
-              {t("admin.startDate")}
+              {t("common.labels.startDate")}
             </label>
             <Input
               type="date"
@@ -375,7 +379,7 @@ export default function AdminAuditLogsPage() {
 
           <div className="flex-1">
             <label className="text-sm font-medium mb-2 block">
-              {t("admin.endDate")}
+              {t("common.labels.endDate")}
             </label>
             <Input
               type="date"
@@ -393,7 +397,7 @@ export default function AdminAuditLogsPage() {
             <div className="flex items-end">
               <Button variant="outline" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-2" />
-                {t("admin.clearFilters")}
+                {t("common.filters.clearFilters")}
               </Button>
             </div>
           )}
@@ -468,7 +472,7 @@ export default function AdminAuditLogsPage() {
                   onClick={() => handleSort("action")}
                 >
                   <div className="flex items-center gap-2">
-                    {t("admin.action")}
+                    {t("common.labels.action")}
                     {sortColumn === "action" &&
                       (sortDirection === "asc" ? (
                         <ChevronUp className="h-4 w-4" />
@@ -482,7 +486,7 @@ export default function AdminAuditLogsPage() {
                   onClick={() => handleSort("user")}
                 >
                   <div className="flex items-center gap-2">
-                    {t("admin.user")}
+                    {t("common.labels.user")}
                     {sortColumn === "user" &&
                       (sortDirection === "asc" ? (
                         <ChevronUp className="h-4 w-4" />
@@ -496,7 +500,7 @@ export default function AdminAuditLogsPage() {
                   onClick={() => handleSort("severity")}
                 >
                   <div className="flex items-center gap-2">
-                    {t("admin.severity")}
+                    {t("common.labels.severity")}
                     {sortColumn === "severity" &&
                       (sortDirection === "asc" ? (
                         <ChevronUp className="h-4 w-4" />
@@ -510,7 +514,7 @@ export default function AdminAuditLogsPage() {
                   onClick={() => handleSort("ipAddress")}
                 >
                   <div className="flex items-center gap-2">
-                    {t("admin.ipAddress")}
+                    {t("common.labels.ipAddress")}
                     {sortColumn === "ipAddress" &&
                       (sortDirection === "asc" ? (
                         <ChevronUp className="h-4 w-4" />
@@ -614,7 +618,7 @@ export default function AdminAuditLogsPage() {
                             setShowDetailsDialog(true);
                           }}
                         >
-                          {t("admin.viewDetails")}
+                          {t("common.viewDetails")}
                         </Button>
                       </TableCell>
                     </TableRow>

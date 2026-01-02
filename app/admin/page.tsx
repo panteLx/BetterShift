@@ -106,7 +106,7 @@ export default function AdminDashboardPage() {
                 size="sm"
                 onClick={() => router.push("/admin/logs")}
               >
-                {t("admin.viewAll")}
+                {t("common.viewAll")}
               </Button>
             </div>
             <CardDescription>

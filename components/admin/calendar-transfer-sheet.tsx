@@ -272,11 +272,7 @@ export function CalendarTransferSheet({
                     variant="outline"
                     className={getRoleBadgeClass(user.role)}
                   >
-                    {t(
-                      `admin.role${user.role
-                        ?.charAt(0)
-                        .toUpperCase()}${user.role?.slice(1)}`
-                    )}
+                    {t(`common.roles.${user.role}`)}
                   </Badge>
                 </button>
               ))}
@@ -289,7 +285,7 @@ export function CalendarTransferSheet({
             searchResults.length === 0 &&
             !searchLoading && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                {t("admin.calendars.noUsersFound")}
+                {t("common.empty.noUsersFound")}
               </p>
             )}
 
@@ -329,11 +325,7 @@ export function CalendarTransferSheet({
                 variant="outline"
                 className={getRoleBadgeClass(selectedUser.role)}
               >
-                {t(
-                  `admin.role${selectedUser.role
-                    ?.charAt(0)
-                    .toUpperCase()}${selectedUser.role?.slice(1)}`
-                )}
+                {t(`common.roles.${selectedUser.role}`)}
               </Badge>
             </div>
           </div>

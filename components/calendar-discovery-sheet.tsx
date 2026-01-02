@@ -124,7 +124,7 @@ export function CalendarDiscoverySheet({
                     className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-700"
                   >
                     <Users className="h-3 w-3" />
-                    <span>{t("share.permissionAdmin")}</span>
+                    <span>{t("common.labels.permissions.admin")}</span>
                   </Badge>
                 ) : isReadOnly ? (
                   <Badge
@@ -132,7 +132,7 @@ export function CalendarDiscoverySheet({
                     className="flex items-center gap-1 text-xs"
                   >
                     <Eye className="h-3 w-3" />
-                    <span>{t("share.publicPermissionRead")}</span>
+                    <span>{t("common.labels.permissions.read")}</span>
                   </Badge>
                 ) : (
                   <Badge
@@ -140,7 +140,7 @@ export function CalendarDiscoverySheet({
                     className="flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700"
                   >
                     <Edit className="h-3 w-3" />
-                    <span>{t("share.publicPermissionWrite")}</span>
+                    <span>{t("common.labels.permissions.write")}</span>
                   </Badge>
                 )}
               </div>
@@ -229,7 +229,7 @@ export function CalendarDiscoverySheet({
                     className="flex items-center gap-1 text-xs"
                   >
                     <Users className="h-3 w-3" />
-                    <span>{t("share.permissionAdmin")}</span>
+                    <span>{t("common.labels.permissions.admin")}</span>
                   </Badge>
                 ) : isReadOnly ? (
                   <Badge
@@ -237,7 +237,7 @@ export function CalendarDiscoverySheet({
                     className="flex items-center gap-1 text-xs"
                   >
                     <Eye className="h-3 w-3" />
-                    <span>{t("share.publicPermissionRead")}</span>
+                    <span>{t("common.labels.permissions.read")}</span>
                   </Badge>
                 ) : (
                   <Badge
@@ -245,7 +245,7 @@ export function CalendarDiscoverySheet({
                     className="flex items-center gap-1 text-xs"
                   >
                     <Edit className="h-3 w-3" />
-                    <span>{t("share.publicPermissionWrite")}</span>
+                    <span>{t("common.labels.permissions.write")}</span>
                   </Badge>
                 )}
               </div>

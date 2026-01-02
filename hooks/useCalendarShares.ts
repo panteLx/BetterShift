@@ -49,7 +49,7 @@ export function useCalendarShares(calendarId: string) {
       setShares(data);
     } catch (error) {
       console.error("Failed to fetch shares:", error);
-      toast.error(t("common.fetchError", { item: t("share.shares") }));
+      toast.error(t("common.fetchError", { item: t("common.labels.shares") }));
     } finally {
       setLoading(false);
     }
@@ -166,7 +166,7 @@ export function useCalendarShares(calendarId: string) {
         setSearchResults(data);
       } catch (error) {
         console.error("Failed to search users:", error);
-        toast.error(t("common.fetchError", { item: t("share.users") }));
+        toast.error(t("common.fetchError", { item: t("common.labels.users") }));
       } finally {
         setSearchLoading(false);
       }

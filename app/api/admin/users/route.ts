@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { user, calendars, session } from "@/lib/db/schema";
+import { user, calendars, session, calendarShares } from "@/lib/db/schema";
 import { sql, eq, desc, and, or } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin";
 import {
@@ -111,6 +111,14 @@ export async function GET(request: NextRequest) {
           .from(calendars)
           .where(eq(calendars.ownerId, u.id));
 
+        // Count shared calendars (via calendarShares)
+        const [sharesCount] = await db
+          .select({
+            count: sql<number>`COUNT(*)`,
+          })
+          .from(calendarShares)
+          .where(eq(calendarShares.userId, u.id));
+
         // Get last session (most recent activity)
         const [lastSession] = await db
           .select({
@@ -126,6 +134,7 @@ export async function GET(request: NextRequest) {
           role: u.role || "user",
           banned: u.banned || false,
           calendarCount: Number(calendarCount?.count || 0),
+          sharesCount: Number(sharesCount?.count || 0),
           lastActivity: lastSession?.updatedAt || null,
         };
       })

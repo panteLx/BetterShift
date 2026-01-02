@@ -81,7 +81,8 @@ export function UserEditSheet({
         {/* Name */}
         <div className="space-y-2">
           <Label htmlFor="name">
-            {t("form.nameLabel")} <span className="text-destructive">*</span>
+            {t("common.labels.name")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           <Input
             id="name"
@@ -94,7 +95,8 @@ export function UserEditSheet({
         {/* Email */}
         <div className="space-y-2">
           <Label htmlFor="email">
-            {t("auth.email")} <span className="text-destructive">*</span>
+            {t("common.labels.email")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           <Input
             id="email"
@@ -114,10 +116,10 @@ export function UserEditSheet({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">{t("admin.roleUser")}</SelectItem>
-                <SelectItem value="admin">{t("admin.roleAdmin")}</SelectItem>
+                <SelectItem value="user">{t("common.roles.user")}</SelectItem>
+                <SelectItem value="admin">{t("common.roles.admin")}</SelectItem>
                 <SelectItem value="superadmin">
-                  {t("admin.roleSuperadmin")}
+                  {t("common.roles.superadmin")}
                 </SelectItem>
               </SelectContent>
             </Select>

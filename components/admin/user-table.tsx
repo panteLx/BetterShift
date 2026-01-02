@@ -65,7 +65,8 @@ type SortColumn =
   | "status"
   | "createdAt"
   | "lastActivity"
-  | "calendarCount";
+  | "calendarCount"
+  | "sharesCount";
 type SortDirection = "asc" | "desc";
 
 function UserTableRow({
@@ -144,11 +145,7 @@ function UserTableRow({
         <span
           className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getRoleBadgeClass()}`}
         >
-          {t(
-            `admin.role${user.role?.charAt(0).toUpperCase()}${user.role?.slice(
-              1
-            )}`
-          )}
+          {t(`common.roles.${user.role}`)}
         </span>
       </TableCell>
 
@@ -185,7 +182,7 @@ function UserTableRow({
             </Tooltip>
           </TooltipProvider>
         ) : (
-          <Badge variant="secondary">{t("admin.active")}</Badge>
+          <Badge variant="secondary">{t("common.status.active")}</Badge>
         )}
       </TableCell>
 
@@ -215,6 +212,11 @@ function UserTableRow({
       {/* Calendar Count */}
       <TableCell>
         <span className="text-sm">{user.calendarCount}</span>
+      </TableCell>
+
+      {/* Shares Count */}
+      <TableCell>
+        <span className="text-sm">{user.sharesCount}</span>
       </TableCell>
 
       {/* Actions */}
@@ -321,6 +323,9 @@ export function UserTable({
       case "calendarCount":
         comparison = a.calendarCount - b.calendarCount;
         break;
+      case "sharesCount":
+        comparison = a.sharesCount - b.sharesCount;
+        break;
     }
 
     return sortDirection === "asc" ? comparison : -comparison;
@@ -346,7 +351,7 @@ export function UserTable({
               onClick={() => handleSort("name")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.user")}
+                {t("common.labels.user")}
                 {sortColumn === "name" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -374,7 +379,7 @@ export function UserTable({
               onClick={() => handleSort("status")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.status")}
+                {t("common.labels.status")}
                 {sortColumn === "status" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -388,7 +393,7 @@ export function UserTable({
               onClick={() => handleSort("createdAt")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.created")}
+                {t("common.stats.created")}
                 {sortColumn === "createdAt" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -402,7 +407,7 @@ export function UserTable({
               onClick={() => handleSort("lastActivity")}
             >
               <div className="flex items-center gap-2">
-                {t("admin.lastActivity")}
+                {t("common.time.lastActive")}
                 {sortColumn === "lastActivity" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="h-4 w-4" />
@@ -425,15 +430,29 @@ export function UserTable({
                   ))}
               </div>
             </TableHead>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={() => handleSort("sharesCount")}
+            >
+              <div className="flex items-center gap-2">
+                {t("common.labels.shares")}
+                {sortColumn === "sharesCount" &&
+                  (sortDirection === "asc" ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  ))}
+              </div>
+            </TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8">
+              <TableCell colSpan={8} className="text-center py-8">
                 <p className="text-sm text-muted-foreground">
-                  {t("admin.noUsersFound")}
+                  {t("common.empty.noUsersFound")}
                 </p>
               </TableCell>
             </TableRow>

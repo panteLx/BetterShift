@@ -62,8 +62,8 @@ export function CalendarTokenBadge({
               )}
               <p className="text-xs">
                 {permission === "read"
-                  ? t("token.readOnlyAccess")
-                  : t("token.editAccess")}
+                  ? t("common.labels.permissions.read")
+                  : t("common.labels.permissions.write")}
               </p>
             </div>
           </TooltipContent>
@@ -79,12 +79,12 @@ export function CalendarTokenBadge({
       {permission === "read" ? (
         <>
           <Eye className="h-3.5 w-3.5" />
-          <span>{t("token.readOnly")}</span>
+          <span>{t("common.labels.permissions.read")}</span>
         </>
       ) : (
         <>
           <Edit className="h-3.5 w-3.5" />
-          <span>{t("token.edit")}</span>
+          <span>{t("common.labels.permissions.write")}</span>
         </>
       )}
       {tokenName && (

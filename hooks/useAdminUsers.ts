@@ -10,6 +10,7 @@ import type { User } from "@/lib/auth";
  */
 export interface AdminUser extends User {
   calendarCount: number;
+  sharesCount: number;
   lastActivity: Date | null;
   banned: boolean;
   banReason: string | null;
@@ -205,7 +206,7 @@ export function useAdminUsers() {
             ? new Date(data.user.banExpires as string)
             : null,
           ownedCalendars: data.calendars || [],
-          sharedCalendars: [], // Not included in API response yet
+          sharedCalendars: data.sharedCalendars || [],
           sharesCount: data.sharesCount,
           calendarCount: (data.calendars?.length || 0) + data.sharesCount,
           accounts: data.accounts.map((account: Record<string, unknown>) => ({

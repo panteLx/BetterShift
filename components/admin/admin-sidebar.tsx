@@ -179,8 +179,11 @@ export function AdminSidebar({
                     </Badge>
                   )}
                   {!isSuperAdmin && (
-                    <Badge variant="secondary" className="text-xs mt-1">
-                      {t("admin.adminBadge")}
+                    <Badge
+                      variant="secondary"
+                      className="text-xs mt-1 bg-orange-500/10 text-orange-500 border-orange-500/20"
+                    >
+                      {t("common.roles.admin")}
                     </Badge>
                   )}
                 </div>

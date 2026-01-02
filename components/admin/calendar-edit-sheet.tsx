@@ -100,7 +100,8 @@ export function CalendarEditSheet({
         {/* Calendar Name */}
         <div className="space-y-2">
           <Label htmlFor="name">
-            {t("form.nameLabel")} <span className="text-destructive">*</span>
+            {t("common.labels.name")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           <Input
             id="name"
@@ -134,13 +135,13 @@ export function CalendarEditSheet({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">
-                {t("admin.calendars.guestNone")}
+                {t("common.labels.permissions.none")}
               </SelectItem>
               <SelectItem value="read">
-                {t("admin.calendars.guestRead")}
+                {t("common.labels.permissions.read")}
               </SelectItem>
               <SelectItem value="write">
-                {t("admin.calendars.guestWrite")}
+                {t("common.labels.permissions.write")}
               </SelectItem>
             </SelectContent>
           </Select>

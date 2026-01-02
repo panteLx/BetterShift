@@ -245,10 +245,10 @@ export default function AdminUsersPage() {
             <SelectContent>
               <SelectItem value="all">{t("admin.allRoles")}</SelectItem>
               <SelectItem value="superadmin">
-                {t("admin.roleSuperadmin")}
+                {t("common.roles.superadmin")}
               </SelectItem>
-              <SelectItem value="admin">{t("admin.roleAdmin")}</SelectItem>
-              <SelectItem value="user">{t("admin.roleUser")}</SelectItem>
+              <SelectItem value="admin">{t("common.roles.admin")}</SelectItem>
+              <SelectItem value="user">{t("common.roles.user")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -265,7 +265,9 @@ export default function AdminUsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("admin.allStatuses")}</SelectItem>
-              <SelectItem value="active">{t("admin.active")}</SelectItem>
+              <SelectItem value="active">
+                {t("common.status.active")}
+              </SelectItem>
               <SelectItem value="banned">{t("admin.banned")}</SelectItem>
             </SelectContent>
           </Select>
