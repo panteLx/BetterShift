@@ -20,32 +20,44 @@ import { toast } from "sonner";
 interface AuditLogDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  selectedLogIds?: string[];
   onSuccess?: () => void;
 }
 
 export function AuditLogDeleteDialog({
   open,
   onOpenChange,
+  selectedLogIds = [],
   onSuccess,
 }: AuditLogDeleteDialogProps) {
   const t = useTranslations();
-  const { deleteLogsByDate, isLoading } = useAuditLogs();
+  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAuditLogs();
 
   const [beforeDate, setBeforeDate] = useState("");
   const [confirmed, setConfirmed] = useState(false);
 
-  const handleDelete = async () => {
-    if (!beforeDate) {
-      toast.error(t("admin.pleaseSelectDate"));
-      return;
-    }
+  // Determine mode: by IDs (if provided) or by date
+  const deleteByIds = selectedLogIds.length > 0;
 
+  const handleDelete = async () => {
     if (!confirmed) {
       toast.error(t("admin.pleaseConfirmDeletion"));
       return;
     }
 
-    const success = await deleteLogsByDate(beforeDate);
+    let success = false;
+
+    if (deleteByIds) {
+      // Delete by IDs
+      success = await deleteLogsByIds(selectedLogIds);
+    } else {
+      // Delete by date
+      if (!beforeDate) {
+        toast.error(t("admin.pleaseSelectDate"));
+        return;
+      }
+      success = await deleteLogsByDate(beforeDate);
+    }
 
     if (success) {
       onOpenChange(false);
@@ -69,38 +81,61 @@ export function AuditLogDeleteDialog({
         <DialogHeader>
           <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            <DialogTitle>{t("admin.deleteOldLogs")}</DialogTitle>
+            <DialogTitle>
+              {deleteByIds
+                ? t("admin.deleteSelectedLogs")
+                : t("admin.deleteOldLogs")}
+            </DialogTitle>
           </div>
           <DialogDescription className="pt-2">
-            {t("admin.deleteLogsDescription")}
+            {deleteByIds
+              ? t("admin.deleteSelectedLogsDescription", {
+                  count: selectedLogIds.length,
+                })
+              : t("admin.deleteLogsDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Date Picker */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              {t("admin.deleteLogsBefore")}
-            </label>
-            <Input
-              type="date"
-              value={beforeDate}
-              onChange={(e) => setBeforeDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-              disabled={isLoading}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("admin.deleteLogsBeforeHint")}
-            </p>
-          </div>
+          {!deleteByIds && (
+            <>
+              {/* Date Picker */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {t("admin.deleteLogsBefore")}
+                </label>
+                <Input
+                  type="date"
+                  value={beforeDate}
+                  onChange={(e) => setBeforeDate(e.target.value)}
+                  max={new Date().toISOString().split("T")[0]}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("admin.deleteLogsBeforeHint")}
+                </p>
+              </div>
 
-          {/* Preview */}
-          {beforeDate && (
+              {/* Preview */}
+              {beforeDate && (
+                <div className="p-3 bg-muted rounded-lg text-sm">
+                  <div className="font-medium mb-1">{t("admin.preview")}:</div>
+                  <div className="text-muted-foreground">
+                    {t("admin.willDeleteLogsOlderThan", {
+                      date: new Date(beforeDate).toLocaleDateString(),
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {deleteByIds && (
             <div className="p-3 bg-muted rounded-lg text-sm">
               <div className="font-medium mb-1">{t("admin.preview")}:</div>
               <div className="text-muted-foreground">
-                {t("admin.willDeleteLogsOlderThan", {
-                  date: new Date(beforeDate).toLocaleDateString(),
+                {t("admin.willDeleteSelectedLogs", {
+                  count: selectedLogIds.length,
                 })}
               </div>
             </div>
@@ -141,10 +176,14 @@ export function AuditLogDeleteDialog({
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isLoading || !beforeDate || !confirmed}
+            disabled={isLoading || (!deleteByIds && !beforeDate) || !confirmed}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            {isLoading ? t("common.loading") : t("admin.deleteOldLogs")}
+            {isLoading
+              ? t("common.loading")
+              : deleteByIds
+              ? t("admin.deleteSelected")
+              : t("admin.deleteOldLogs")}
           </Button>
         </DialogFooter>
       </DialogContent>

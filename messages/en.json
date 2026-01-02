@@ -986,6 +986,12 @@
     "unknownUser": "Unknown User",
     "systemAction": "System",
     "copiedToClipboard": "Copied to clipboard",
-    "of": "of"
+    "of": "of",
+    "selectedLogs": "{count} selected",
+    "clearSelection": "Clear Selection",
+    "deleteSelected": "Delete Selected",
+    "deleteSelectedLogs": "Delete Selected Logs",
+    "deleteSelectedLogsDescription": "Delete {count, plural, one {# selected log} other {# selected logs}}. This action cannot be undone.",
+    "willDeleteSelectedLogs": "{count, plural, one {# log} other {# logs}} will be permanently deleted"
   }
 }

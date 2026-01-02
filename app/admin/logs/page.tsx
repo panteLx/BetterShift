@@ -6,6 +6,7 @@ import { useAuditLogs, type AuditLog } from "@/hooks/useAuditLogs";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -76,6 +77,7 @@ export default function AdminAuditLogsPage() {
   // UI State
   const [isPending, startTransition] = useTransition();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
   const [sortColumn, setSortColumn] = useState<
     "timestamp" | "action" | "severity" | "user" | "ipAddress" | null
   >("timestamp");
@@ -239,6 +241,30 @@ export default function AdminAuditLogsPage() {
     setPage(0);
   };
 
+  // Checkbox selection handlers
+  const toggleLogSelection = (logId: string) => {
+    setSelectedLogIds((prev) =>
+      prev.includes(logId)
+        ? prev.filter((id) => id !== logId)
+        : [...prev, logId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedLogIds.length === logs.length) {
+      setSelectedLogIds([]);
+    } else {
+      setSelectedLogIds(logs.map((log) => log.id));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedLogIds([]);
+  };
+
+  const isAllSelected =
+    logs.length > 0 && selectedLogIds.length === logs.length;
+
   if (isLoading && !isPending) {
     return <FullscreenLoader />;
   }
@@ -385,12 +411,43 @@ export default function AdminAuditLogsPage() {
         </p>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedLogIds.length > 0 && isSuperAdmin && (
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {t("admin.selectedLogs", { count: selectedLogIds.length })}
+            </span>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="h-4 w-4 mr-2" />
+              {t("admin.clearSelection")}
+            </Button>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {t("admin.deleteSelected")}
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-md border bg-card">
         <div className={isPending ? "opacity-50 pointer-events-none" : ""}>
           <Table>
             <TableHeader>
               <TableRow>
+                {isSuperAdmin && (
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="w-[50px]"></TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -469,7 +526,7 @@ export default function AdminAuditLogsPage() {
               {logs.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={isSuperAdmin ? 8 : 7}
                     className="text-center py-8 text-muted-foreground"
                   >
                     {isPending ? t("common.loading") : t("admin.noLogsFound")}
@@ -482,6 +539,14 @@ export default function AdminAuditLogsPage() {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => toggleRow(log.id)}
                     >
+                      {isSuperAdmin && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedLogIds.includes(log.id)}
+                            onCheckedChange={() => toggleLogSelection(log.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         {expandedRows.has(log.id) ? (
                           <ChevronDown className="h-4 w-4" />
@@ -555,7 +620,10 @@ export default function AdminAuditLogsPage() {
                     </TableRow>
                     {expandedRows.has(log.id) && (
                       <TableRow>
-                        <TableCell colSpan={7} className="bg-muted/50">
+                        <TableCell
+                          colSpan={isSuperAdmin ? 8 : 7}
+                          className="bg-muted/50"
+                        >
                           <div className="p-4 space-y-2">
                             <div className="text-sm font-medium">
                               {t("admin.metadata")}:
@@ -625,8 +693,10 @@ export default function AdminAuditLogsPage() {
       <AuditLogDeleteDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
+        selectedLogIds={selectedLogIds}
         onSuccess={() => {
           setPage(0);
+          clearSelection();
           loadLogs();
         }}
       />

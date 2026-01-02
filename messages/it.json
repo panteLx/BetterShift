@@ -986,6 +986,12 @@
     "unknownUser": "Utente Sconosciuto",
     "systemAction": "Sistema",
     "copiedToClipboard": "Copiato negli appunti",
-    "of": "di"
+    "of": "di",
+    "selectedLogs": "{count} selezionati",
+    "clearSelection": "Cancella Selezione",
+    "deleteSelected": "Elimina Selezionati",
+    "deleteSelectedLogs": "Elimina Log Selezionati",
+    "deleteSelectedLogsDescription": "Elimina {count, plural, one {# log selezionato} other {# log selezionati}}. Questa azione non può essere annullata.",
+    "willDeleteSelectedLogs": "{count, plural, one {# log} other {# log}} verranno eliminati permanentemente"
   }
 }

@@ -986,6 +986,12 @@
     "unknownUser": "Unbekannter Benutzer",
     "systemAction": "System",
     "copiedToClipboard": "In Zwischenablage kopiert",
-    "of": "von"
+    "of": "von",
+    "selectedLogs": "{count} ausgewählt",
+    "clearSelection": "Auswahl aufheben",
+    "deleteSelected": "Ausgewählte löschen",
+    "deleteSelectedLogs": "Ausgewählte Protokolle löschen",
+    "deleteSelectedLogsDescription": "{count, plural, one {# ausgewähltes Protokoll} other {# ausgewählte Protokolle}} löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "willDeleteSelectedLogs": "{count, plural, one {# Protokoll} other {# Protokolle}} werden dauerhaft gelöscht"
   }
 }
