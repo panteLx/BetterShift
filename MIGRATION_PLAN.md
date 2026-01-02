@@ -3330,22 +3330,9 @@ Both use lib/auth/admin.ts (same functions!)
 
 **Goal**: Reduce duplication and improve maintainability of i18n translation keys.
 
-### 11.1 Audit Current Translation Usage
+**Information**: We should use our test script to analyze current translation files (`en.json`, `de.json`, `it.json`) and identify duplicate or similar strings used across multiple components. The aim is to create a more modular and reusable key structure. Script: `scripts/i18n-checks.ts`
 
-- [ ] **Scan Active Usage**
-
-  - [ ] Analyze all components for `useTranslations()` and `t()` calls
-  - [ ] Generate comprehensive report of all actively used translation keys
-  - [ ] Create automated script to extract all `t('key.path')` references from codebase
-  - [ ] Document usage frequency per key (which keys are used most often)
-
-- [ ] **Identify Dead Keys**
-  - [ ] Cross-reference used keys against all keys in `en.json`, `de.json`, `it.json`
-  - [ ] Create list of unused/obsolete translation keys
-  - [ ] Verify keys are truly unused (check for dynamic key construction)
-  - [ ] Remove dead keys from all three language files
-
-### 11.2 Restructure Translation Architecture
+### 11.1 Restructure Translation Architecture
 
 - [ ] **Identify Duplication Patterns**
 
@@ -3370,14 +3357,13 @@ Both use lib/auth/admin.ts (same functions!)
   - [ ] Keep domain-specific keys in their sections (shift.allDay, preset.secondary)
   - [ ] Use interpolation for dynamic content: `t('common.deleteConfirm', { item: t('shift.title') })`
 
-### 11.3 Implementation
+### 11.2 Implementation
 
 - [ ] **Update Translation Files**
 
-  - [ ] Create new shared sections in `en.json` (master template)
-  - [ ] Copy structure to `de.json` and `it.json`
+  - [ ] Create new shared sections in `de.json` (master template)
+  - [ ] Copy structure to `en.json` and `it.json`
   - [ ] Migrate existing translations to new structure
-  - [ ] Keep legacy keys temporarily for backwards compatibility
 
 - [ ] **Refactor Components** (Phased Approach)
 
@@ -3392,7 +3378,7 @@ Both use lib/auth/admin.ts (same functions!)
   - [ ] Remove obsolete keys from all language files
   - [ ] Run build test to ensure no broken translations
 
-### 11.4 Documentation & Guidelines
+### 11.3 Documentation & Guidelines
 
 - [ ] **Translation Style Guide**
 
@@ -3406,26 +3392,6 @@ Both use lib/auth/admin.ts (same functions!)
   - [ ] Interpolation patterns and best practices
   - [ ] Pluralization rules (if needed)
 
-- [ ] **Developer Workflow**
-  - [ ] Add pre-commit hook to validate translation key usage
-  - [ ] Create script to check for missing translations across languages
-  - [ ] Document process for adding new translations
-  - [ ] Set up CI check for translation file consistency
-
-### 11.5 Tooling & Automation
-
-- [ ] **Install & Configure Tools**
-
-  - [ ] `i18n-unused` - Detect unused translation keys
-  - [ ] `eslint-plugin-i18n-json` - Lint translation JSON files
-  - [ ] Custom script: `npm run i18n:check` - Validate all translations present in all languages
-
-- [ ] **Create Utility Scripts**
-  - [ ] `scripts/i18n-audit.js` - Generate usage report
-  - [ ] `scripts/i18n-find-duplicates.js` - Find duplicate translations across keys
-  - [ ] `scripts/i18n-sync.js` - Ensure all languages have same keys
-  - [ ] `scripts/i18n-stats.js` - Show translation coverage statistics
-
 ### Benefits
 
 - ✅ **Smaller bundle size** - Fewer unique strings to include
@@ -3438,12 +3404,11 @@ Both use lib/auth/admin.ts (same functions!)
 ### Success Metrics
 
 - [ ] **Target**: Reduce total unique translation keys by **40-50%**
-  - Current estimate: ~580 keys across all sections
-  - Target: ~290-350 keys after consolidation
+  - Current estimate: ~775 keys across all sections
+  - Target: ~350-400 keys after consolidation
 - [ ] **Zero unused keys** - All keys in files are actively used
 - [ ] **100% coverage** - All languages have identical key structures
 - [ ] **Build passing** - No missing translation errors
-- [ ] **Documentation complete** - Style guide published for contributors
 
 ---
 
