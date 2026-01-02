@@ -78,5 +78,5 @@ public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 
-# scripts (local testing scripts)
-test-changelog.sh
+# Local scripts
+.LOCAL
