@@ -17,6 +17,7 @@ import {
   canChangeUserRole,
 } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limiter";
 import { auth } from "@/lib/auth";
 import {
   getValidatedAdminUser,
@@ -139,6 +140,14 @@ export async function PATCH(
     if (isErrorResponse(currentUser)) return currentUser;
 
     requireAdmin(currentUser);
+
+    // Rate limiting: admin-user-mutations
+    const rateLimitResponse = rateLimit(
+      request,
+      currentUser.id,
+      "admin-user-mutations"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     const targetUser = await getValidatedTargetUser(targetUserId);
     if (isErrorResponse(targetUser)) return targetUser;
@@ -279,6 +288,14 @@ export async function DELETE(
     if (isErrorResponse(currentUser)) return currentUser;
 
     requireSuperAdmin(currentUser);
+
+    // Rate limiting: admin-user-mutations
+    const rateLimitResponse = rateLimit(
+      request,
+      currentUser.id,
+      "admin-user-mutations"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     const targetUser = await getValidatedTargetUser(targetUserId);
     if (isErrorResponse(targetUser)) return targetUser;

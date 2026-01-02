@@ -14,6 +14,7 @@ import {
 import { inArray, sql } from "drizzle-orm";
 import { requireSuperAdmin, canDeleteCalendar } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limiter";
 import {
   getValidatedAdminUser,
   isErrorResponse,
@@ -38,6 +39,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (isErrorResponse(currentUser)) return currentUser;
 
     requireSuperAdmin(currentUser);
+
+    // Rate limiting: admin-bulk-operations (strictest limit)
+    const rateLimitResponse = rateLimit(
+      request,
+      currentUser.id,
+      "admin-bulk-operations"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     if (!canDeleteCalendar(currentUser)) {
       return NextResponse.json(

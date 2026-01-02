@@ -116,6 +116,40 @@ const config = {
       parseInt(process.env.RATE_LIMIT_TOKEN_CREATION_WINDOW || "3600", 10) *
       1000, // 1 hour
   },
+  // Admin Panel
+  adminUserMutations: {
+    requests: parseInt(process.env.RATE_LIMIT_ADMIN_USER_MUTATIONS || "10", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_ADMIN_USER_MUTATIONS_WINDOW || "60", 10) *
+      1000, // 1 minute
+  },
+  adminPasswordReset: {
+    requests: parseInt(process.env.RATE_LIMIT_ADMIN_PASSWORD_RESET || "5", 10),
+    windowMs:
+      parseInt(
+        process.env.RATE_LIMIT_ADMIN_PASSWORD_RESET_WINDOW || "300",
+        10
+      ) * 1000, // 5 minutes
+  },
+  adminBulkOperations: {
+    requests: parseInt(process.env.RATE_LIMIT_ADMIN_BULK_OPERATIONS || "3", 10),
+    windowMs:
+      parseInt(
+        process.env.RATE_LIMIT_ADMIN_BULK_OPERATIONS_WINDOW || "300",
+        10
+      ) * 1000, // 5 minutes
+  },
+  adminCalendarMutations: {
+    requests: parseInt(
+      process.env.RATE_LIMIT_ADMIN_CALENDAR_MUTATIONS || "10",
+      10
+    ),
+    windowMs:
+      parseInt(
+        process.env.RATE_LIMIT_ADMIN_CALENDAR_MUTATIONS_WINDOW || "60",
+        10
+      ) * 1000, // 1 minute
+  },
 };
 
 // =============================================================================
@@ -286,7 +320,11 @@ export function rateLimit(
     | "external-sync"
     | "export-pdf"
     | "token-validation"
-    | "token-creation" = "auth",
+    | "token-creation"
+    | "admin-user-mutations"
+    | "admin-password-reset"
+    | "admin-bulk-operations"
+    | "admin-calendar-mutations" = "auth",
   resourceId?: string
 ): NextResponse | null {
   // Special handling for resource-based limits (e.g., token-creation per calendar)
@@ -334,6 +372,18 @@ export function rateLimit(
       break;
     case "token-creation":
       options = config.tokenCreation;
+      break;
+    case "admin-user-mutations":
+      options = config.adminUserMutations;
+      break;
+    case "admin-password-reset":
+      options = config.adminPasswordReset;
+      break;
+    case "admin-bulk-operations":
+      options = config.adminBulkOperations;
+      break;
+    case "admin-calendar-mutations":
+      options = config.adminCalendarMutations;
       break;
   }
 

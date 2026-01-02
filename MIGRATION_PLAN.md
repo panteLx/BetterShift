@@ -1248,7 +1248,89 @@ But NOT calendars with `guestPermission != "none"` (public calendars) unless exp
   - [x] Updated `lib/auth.ts`:
     - `useSecureCookies` now based on HTTPS detection (`BETTER_AUTH_URL.startsWith("https://")`)
     - Explicit `defaultCookieAttributes` for defense in depth
-    - `sameSite: "lax"`, `secure: true` (HTTPS), `httpOnly: true`
+
+### 4.5 Admin Panel Rate Limiting
+
+**Priority**: High (Before Production)
+
+**Goal**: Protect admin API endpoints from abuse and brute-force attacks using the existing rate limiting system.
+
+**Architecture**: Per-admin-user rate limiting (each admin has their own rate limit bucket).
+
+**Status**: ✅ **COMPLETED** (2. Januar 2026)
+
+**Summary**: Implemented 4 rate limit categories for admin operations:
+
+- `admin-user-mutations` (10/min) - Ban/unban/delete/edit users
+- `admin-password-reset` (5/5min) - Password resets (stricter)
+- `admin-bulk-operations` (3/5min) - Bulk calendar operations (strictest)
+- `admin-calendar-mutations` (10/min) - Calendar delete/transfer/edit
+
+All admin endpoints now protected with appropriate rate limits. GET endpoints (stats, lists) remain unlimited, consistent with app architecture.
+
+#### 4.5.1 Rate Limiter Configuration
+
+- [x] Add admin rate limit configurations to `lib/rate-limiter.ts`:
+  - `adminUserMutations` (10 req/60s) - User ban/unban/delete/edit
+  - `adminPasswordReset` (5 req/300s) - Password reset (stricter)
+  - `adminBulkOperations` (3 req/300s) - Bulk operations (strictest)
+  - `adminCalendarMutations` (10 req/60s) - Calendar mutations
+- [x] Add new rate limit types to `rateLimit()` function signature
+- [x] Add switch cases for new admin rate limit types
+- [x] Update TypeScript types for new rate limit types
+
+#### 4.5.2 Environment Variables
+
+- [x] Update `.env.example` with admin rate limit variables
+
+#### 4.5.3 Apply Rate Limiting to Admin Endpoints
+
+**User Management Endpoints:**
+
+- [x] `app/api/admin/users/[id]/ban/route.ts` (POST)
+  - Apply `"admin-user-mutations"` rate limit
+  - Check after admin validation, before ban logic
+- [x] `app/api/admin/users/[id]/unban/route.ts` (POST)
+  - Apply `"admin-user-mutations"` rate limit
+  - Check after admin validation, before unban logic
+- [x] `app/api/admin/users/[id]/route.ts` (DELETE, PATCH)
+  - Apply `"admin-user-mutations"` rate limit
+  - Check after admin validation, before mutation logic
+- [x] `app/api/admin/users/[id]/password/route.ts` (POST)
+  - Apply `"admin-password-reset"` rate limit (stricter)
+  - Check after admin validation, before password reset
+
+**Calendar Management Endpoints:**
+
+- [x] `app/api/admin/calendars/[id]/route.ts` (DELETE, PATCH)
+  - Apply `"admin-calendar-mutations"` rate limit
+  - Check after admin validation, before mutation logic
+- [x] `app/api/admin/calendars/[id]/transfer/route.ts` (POST)
+  - Apply `"admin-calendar-mutations"` rate limit
+  - Check after admin validation, before transfer logic
+- [x] `app/api/admin/calendars/bulk-delete/route.ts` (POST)
+  - Apply `"admin-bulk-operations"` rate limit (strictest)
+  - Check after admin validation, before bulk delete
+- [x] `app/api/admin/calendars/bulk-transfer/route.ts` (POST)
+  - Apply `"admin-bulk-operations"` rate limit (strictest)
+  - Check after admin validation, before bulk transfer
+
+**Implementation Notes:**
+
+- **No rate limiting for GET endpoints**: Admin stats, user lists, calendar lists, audit logs (consistent with rest of app)
+- **Rate limits are per admin user**: Uses `userId` from session (not IP-based)
+- **Audit logging is automatic**: `rateLimit()` function already logs to audit logs
+- **Prevents abuse**: Protects against compromised admin accounts or malicious admins
+- **Graceful degradation**: Rate limit headers allow clients to implement retry logic
+- **User-visible**: Rate limit events appear in admin's activity log (transparency)
+
+**Rationale for Limits:**
+
+- **User Mutations** (10/min): Allows batch operations but prevents rapid-fire abuse
+- **Password Reset** (5/5min): Very sensitive operation, stricter limit
+- **Bulk Operations** (3/5min): High-impact operations, strictest limit
+- **Calendar Mutations** (10/min): Similar to user mutations, reasonable for admin work
+  - `sameSite: "lax"`, `secure: true` (HTTPS), `httpOnly: true`
 
 **Implementation Notes**:
 

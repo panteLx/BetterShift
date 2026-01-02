@@ -7,6 +7,7 @@ import {
 import { eq, inArray } from "drizzle-orm";
 import { requireAdmin, canTransferCalendar } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limiter";
 import {
   getValidatedAdminUser,
   isErrorResponse,
@@ -32,6 +33,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (isErrorResponse(currentUser)) return currentUser;
 
     requireAdmin(currentUser);
+
+    // Rate limiting: admin-bulk-operations (strictest limit)
+    const rateLimitResponse = rateLimit(
+      request,
+      currentUser.id,
+      "admin-bulk-operations"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     if (!canTransferCalendar(currentUser)) {
       return NextResponse.json(

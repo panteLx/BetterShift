@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, canResetPassword } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
+import { rateLimit } from "@/lib/rate-limiter";
 import { auth } from "@/lib/auth";
 import {
   getValidatedAdminUser,
@@ -40,6 +41,14 @@ export async function POST(
     if (isErrorResponse(currentUser)) return currentUser;
 
     requireAdmin(currentUser);
+
+    // Rate limiting: admin-password-reset (stricter limit)
+    const rateLimitResponse = rateLimit(
+      request,
+      currentUser.id,
+      "admin-password-reset"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     const targetUser = await getValidatedTargetUser(targetUserId);
     if (isErrorResponse(targetUser)) return targetUser;

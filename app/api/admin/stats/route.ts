@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     const recentActivity = Number(recentActivityResult?.count || 0);
 
-    // 7. Recent audit logs preview (last 5 entries, admin-only logs)
+    // 7. Recent audit logs preview (last 5 entries, admin-only logs + security events)
     const recentLogs = await db
       .select({
         id: auditLogs.id,
@@ -153,10 +153,7 @@ export async function GET(request: NextRequest) {
       })
       .from(auditLogs)
       .where(
-        and(
-          eq(auditLogs.isUserVisible, false),
-          sql`${auditLogs.action} LIKE 'admin.%'` // Only admin actions (e.g., admin.user.ban, admin.calendar.delete)
-        )
+        sql`(${auditLogs.action} LIKE 'admin.%' OR ${auditLogs.action} LIKE 'security.%')` // Admin actions + security events (rate limits, etc.) - both user-visible and admin-only
       )
       .orderBy(sql`${auditLogs.timestamp} DESC`)
       .limit(5);
