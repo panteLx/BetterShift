@@ -478,6 +478,8 @@
     "loginError": "Sign in failed",
     "accountBanned": "Account Banned",
     "continueAsGuest": "Continue as Guest",
+    "registrationDisabled": "Registration Disabled",
+    "registrationDisabledDescription": "New user registration is currently disabled. Please contact an administrator if you need an account.",
     "registerSuccess": "Account created successfully",
     "registerError": "Registration failed",
     "logoutSuccess": "Signed out successfully",

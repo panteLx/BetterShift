@@ -181,7 +181,7 @@ function extractUsedKeys(content: string): Set<string> {
     const fullTemplate = templateMatch[1].replace(/\s+/g, " ").trim();
 
     // Check if it contains ${...} template expressions
-    if (fullTemplate.includes("${")) {
+    if (isDynamicKey(fullTemplate)) {
       const info = extractDynamicKeyInfo(fullTemplate);
       if (info) {
         // Store the original pattern for later display
@@ -384,7 +384,11 @@ function main() {
   // Find used keys
   console.log("🔎 Searching for translation key usage...");
   const usedKeys = findUsedKeys(files);
-  console.log(`   Found ${usedKeys.size} unique keys used in code\n`);
+  const staticKeys = Array.from(usedKeys).filter((k) => !k.endsWith(".*"));
+  const wildcardPatterns = Array.from(usedKeys).filter((k) => k.endsWith(".*"));
+  console.log(
+    `   Found ${staticKeys.length} static keys + ${wildcardPatterns.length} dynamic patterns\n`
+  );
 
   // 1. Find unused keys
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -511,7 +515,8 @@ function main() {
   console.log("📊 SUMMARY");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   console.log(`   Total keys in de.json: ${allKeys.length}`);
-  console.log(`   Keys used in code: ${usedKeys.size}`);
+  console.log(`   Static keys used in code: ${staticKeys.length}`);
+  console.log(`   Dynamic patterns (wildcards): ${wildcardPatterns.length}`);
   console.log(`   Unused keys: ${unusedKeys.length}`);
   console.log(`   Missing keys: ${missingKeys.length}`);
   console.log(

@@ -23,6 +23,7 @@ import {
   SESSION_UPDATE_AGE,
   BETTER_AUTH_TRUSTED_ORIGINS,
   BETTER_AUTH_URL,
+  ALLOW_USER_REGISTRATION,
 } from "@/lib/auth/env";
 
 export const auth = betterAuth({
@@ -39,6 +40,7 @@ export const auth = betterAuth({
 
   // Email and Password authentication
   emailAndPassword: {
+    disableSignUp: !ALLOW_USER_REGISTRATION,
     enabled: true,
   },
 
@@ -132,6 +134,25 @@ export const auth = betterAuth({
     },
     deleteUser: {
       enabled: true,
+    },
+  },
+
+  // Database hooks for user creation control
+  databaseHooks: {
+    user: {
+      create: {
+        before: async () => {
+          // Block OAuth/OIDC registration when ALLOW_USER_REGISTRATION is false
+          // This hook runs for ALL user creation attempts (email + OAuth/OIDC)
+          // Email registration is already blocked by disableSignUp config
+          if (!ALLOW_USER_REGISTRATION) {
+            throw new Error(
+              "Registration is currently disabled. Please contact an administrator."
+            );
+          }
+          // Return void to allow creation
+        },
+      },
     },
   },
 

@@ -478,6 +478,8 @@
     "loginSuccess": "Accesso effettuato con successo",
     "loginError": "Accesso fallito",
     "accountBanned": "Account bannato",
+    "registrationDisabled": "Registrazione disabilitata",
+    "registrationDisabledDescription": "La registrazione di nuovi utenti è attualmente disabilitata. Contatta un amministratore se hai bisogno di un account.",
     "registerSuccess": "Account creato con successo",
     "registerError": "Registrazione fallita",
     "logoutSuccess": "Disconnesso con successo",

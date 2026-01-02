@@ -257,6 +257,23 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Registration Disabled Info Banner */}
+          {!allowRegistration && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-foreground">
+                    {t("auth.registrationDisabled")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("auth.registrationDisabledDescription")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
