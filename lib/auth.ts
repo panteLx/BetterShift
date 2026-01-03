@@ -113,18 +113,20 @@ export const auth = betterAuth({
 
   // Advanced settings
   advanced: {
-    // FORCE secure cookies ON for reverse proxy scenarios
-    // Even if Better Auth sees http:// internally, we force HTTPS cookie behavior
-    // because Caddy terminates TLS and we're always accessed via HTTPS externally
-    useSecureCookies: true,
+    // Trust proxy headers (X-Forwarded-Proto, X-Forwarded-Host)
+    // CRITICAL for reverse proxy setups (Caddy, Nginx, etc.)
+    // This allows Better Auth to detect HTTPS from the proxy headers
+    trustedProxyHeaders: true,
 
-    // Default cookie attributes
+    // Secure cookies: Use HTTPS detection instead of just NODE_ENV
+    // Better Auth will automatically add __Secure- prefix when enabled
+    useSecureCookies: BETTER_AUTH_URL.startsWith("https://"),
+
+    // Default cookie attributes (defense in depth)
     defaultCookieAttributes: {
-      // SameSite=None required for OAuth redirects (GitHub, Google, etc.)
-      sameSite: "none",
-      // FORCE secure=true regardless of protocol Better Auth detects
-      secure: true,
-      httpOnly: true,
+      sameSite: "lax", // CSRF protection (already default, but explicit)
+      secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
+      httpOnly: true, // Prevent XSS attacks (already default, but explicit)
     },
 
     crossSubDomainCookies: {
