@@ -113,27 +113,15 @@ export const auth = betterAuth({
 
   // Advanced settings
   advanced: {
-    // Trust proxy headers (X-Forwarded-Proto, X-Forwarded-Host)
-    // CRITICAL for reverse proxy setups (Caddy, Nginx, etc.)
-    // This allows Better Auth to detect HTTPS from the proxy headers
-    trustedProxyHeaders: true,
-
     // Secure cookies: Use HTTPS detection instead of just NODE_ENV
     // Better Auth will automatically add __Secure- prefix when enabled
     useSecureCookies: BETTER_AUTH_URL.startsWith("https://"),
 
     // Default cookie attributes (defense in depth)
     defaultCookieAttributes: {
-      // For same-domain reverse proxy, keep SameSite=Lax
-      // The reverse proxy forwards requests to the same domain (bs.ssx.si)
-      // so cookies should work without SameSite=None
       sameSite: "lax",
       secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
       httpOnly: true, // Prevent XSS attacks (already default, but explicit)
-    },
-
-    crossSubDomainCookies: {
-      enabled: false,
     },
   },
 
