@@ -125,7 +125,10 @@ export async function proxy(request: NextRequest) {
   // =====================================================
   if (pathname.startsWith("/admin")) {
     // Admin panel requires authentication (no guest access)
-    const sessionToken = request.cookies.get("better-auth.session_token");
+    // Check both secure and non-secure cookie names
+    const sessionToken =
+      request.cookies.get("__Secure-better-auth.session_token") ||
+      request.cookies.get("better-auth.session_token");
 
     if (!sessionToken) {
       // Not authenticated - redirect to login
@@ -178,7 +181,10 @@ export async function proxy(request: NextRequest) {
   }
 
   // Check for session cookie (Better Auth uses "better-auth.session_token")
-  const sessionToken = request.cookies.get("better-auth.session_token");
+  // When useSecureCookies is enabled, it adds __Secure- prefix
+  const sessionToken =
+    request.cookies.get("__Secure-better-auth.session_token") ||
+    request.cookies.get("better-auth.session_token");
 
   // If no session token, check guest access
   if (!sessionToken) {
