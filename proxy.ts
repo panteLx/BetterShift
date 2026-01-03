@@ -107,6 +107,7 @@ export async function proxy(request: NextRequest) {
     "/api/auth", // Better Auth API routes
     "/api/version", // Version info (always public)
     "/api/releases", // Changelog/releases (always public)
+    "/api/debug", // Debug endpoints (REMOVE IN PRODUCTION!)
   ];
 
   // Check if the current route is public
