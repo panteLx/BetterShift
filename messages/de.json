@@ -324,7 +324,10 @@
   },
   "sync": {
     "reconnected": "Verbindung wiederhergestellt",
-    "disconnected": "Verbindung zum Server verloren"
+    "disconnected": "Verbindung zum Server verloren",
+    "offline": "Keine Internetverbindung",
+    "refreshing": "Daten werden aktualisiert...",
+    "resyncing": "Daten werden synchronisiert..."
   },
   "onboarding": {
     "welcome": "Willkommen bei BetterShift",
