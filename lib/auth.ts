@@ -1,7 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth, admin } from "better-auth/plugins";
-import { createAuthMiddleware } from "better-auth/api";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { auditLogPlugin } from "@/lib/auth/audit-plugin";
@@ -152,40 +151,20 @@ export const auth = betterAuth({
           }
           // Return void to allow creation
         },
+        after: async (user) => {
+          // Auto-promote first user to superadmin
+          // This hook runs immediately after user creation for ALL registration methods:
+          // - Email/password registration
+          // - OAuth (Google, GitHub, Discord)
+          // - Custom OIDC
+          if (user?.id) {
+            handleFirstUserPromotion(user.id).catch((error) => {
+              console.error("Failed to promote first user:", error);
+            });
+          }
+        },
       },
     },
-  },
-
-  // Hooks for custom logic
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      // Auto-promote first user to superadmin
-      // This runs for both email registration (/sign-up/email) and OAuth/OIDC callbacks
-      const newSession = ctx.context.newSession;
-
-      if (newSession?.user?.id) {
-        // Check if this is a new user registration
-        // For email: /sign-up/email path
-        // For OAuth/OIDC: /callback/* path with newly created user (check createdAt timestamp)
-        const isEmailSignup = ctx.path.startsWith("/sign-up");
-
-        let isOAuthCallback = false;
-        if (ctx.path.startsWith("/callback/")) {
-          // Check if user was just created (within last 5 seconds)
-          const userCreatedAt = new Date(newSession.user.createdAt);
-          const now = new Date();
-          const timeDiff = now.getTime() - userCreatedAt.getTime();
-          isOAuthCallback = timeDiff < 5000;
-        }
-
-        if (isEmailSignup || isOAuthCallback) {
-          // Non-blocking promotion (don't wait for it)
-          handleFirstUserPromotion(newSession.user.id).catch((error) => {
-            console.error("Failed to promote first user:", error);
-          });
-        }
-      }
-    }),
   },
 
   // Trust host for deployment
