@@ -124,10 +124,10 @@ export const auth = betterAuth({
 
     // Default cookie attributes (defense in depth)
     defaultCookieAttributes: {
-      // SameSite MUST be "none" for reverse proxy setups with HTTPS
-      // "lax" would block cookies on cross-site POST requests (like login redirects)
-      // This requires secure: true (HTTPS only)
-      sameSite: BETTER_AUTH_URL.startsWith("https://") ? "none" : "lax",
+      // For same-domain reverse proxy, keep SameSite=Lax
+      // The reverse proxy forwards requests to the same domain (bs.ssx.si)
+      // so cookies should work without SameSite=None
+      sameSite: "lax",
       secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
       httpOnly: true, // Prevent XSS attacks (already default, but explicit)
     },
