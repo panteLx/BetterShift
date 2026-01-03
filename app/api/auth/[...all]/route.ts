@@ -4,42 +4,15 @@ import { NextRequest } from "next/server";
 import { rateLimit } from "@/lib/rate-limiter";
 
 /**
- * Better Auth API route handler with rate limiting and proxy support
+ * Better Auth API route handler with rate limiting
  *
- * CRITICAL: Behind reverse proxy (Caddy), Better Auth sees internal HTTP requests
- * (http://bettershift:3000) instead of external HTTPS (https://bs.ssx.si).
- * This causes cookies to NOT be set because `secure: true` requires HTTPS.
- *
- * Solution: Read X-Forwarded-Proto/Host headers from Caddy and reconstruct the
- * external HTTPS URL so Better Auth sets cookies correctly.
+ * Note: Audit logging is handled by the auditLogPlugin in lib/auth/audit-plugin.ts
+ * Note: Registration restrictions are handled by Better Auth's disableSignUp config
  */
 
 const handlers = toNextJsHandler(auth);
 
-/**
- * Fix request URL for reverse proxy scenarios
- * Better Auth uses req.url to determine if connection is secure
- */
-function fixProxyUrl(req: NextRequest): NextRequest {
-  const forwardedProto = req.headers.get("x-forwarded-proto");
-  const forwardedHost = req.headers.get("x-forwarded-host");
-
-  // Only fix if we have proxy headers indicating HTTPS
-  if (forwardedProto === "https" && forwardedHost) {
-    const url = new URL(req.url);
-
-    // Reconstruct external HTTPS URL
-    url.protocol = "https:";
-    url.host = forwardedHost;
-
-    // Create new request with corrected URL
-    return new NextRequest(url, req);
-  }
-
-  return req;
-}
-
-// Wrap POST handler for rate limiting and proxy support
+// Wrap POST handler for rate limiting
 const originalPost = handlers.POST;
 
 export const POST = async (req: NextRequest) => {
@@ -47,27 +20,22 @@ export const POST = async (req: NextRequest) => {
   const pathname = url.pathname;
 
   // Rate limiting for auth endpoints
+  // Apply different limits for login vs registration
   const isOAuthCallback =
     pathname.includes("/callback/") || pathname.endsWith("/sign-in/social");
   const isRegister =
     pathname.endsWith("/sign-up/email") || pathname.includes("/register");
 
   if (!isOAuthCallback) {
+    // Stricter rate limit for registration (3 per 10 min) vs login (5 per 1 min)
     const rateLimitType = isRegister ? "register" : "auth";
     const rateLimitResponse = rateLimit(req, null, rateLimitType);
     if (rateLimitResponse) return rateLimitResponse;
   }
 
-  // Fix URL for reverse proxy before Better Auth sees it
-  const fixedReq = fixProxyUrl(req);
-
-  return await originalPost(fixedReq);
+  // Call original Better Auth handler (audit logging handled by plugin)
+  return await originalPost(req);
 };
 
-// Wrap GET handler for proxy support
-const originalGet = handlers.GET;
-
-export const GET = async (req: NextRequest) => {
-  const fixedReq = fixProxyUrl(req);
-  return await originalGet(fixedReq);
-};
+// Export GET handler as-is
+export const GET = handlers.GET;
