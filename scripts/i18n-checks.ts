@@ -152,6 +152,7 @@ const dynamicPatterns = new Map<string, string>();
  * Extract translation key usage patterns from file content
  * Matches: t("key"), t('key'), t(`key`)
  * Also matches: t("key", ...), t.rich("key"), etc.
+ * Also matches: tRef.current("key") and similar ref patterns
  * Handles both static keys and dynamic template patterns
  */
 function extractUsedKeys(content: string): Set<string> {
@@ -159,8 +160,10 @@ function extractUsedKeys(content: string): Set<string> {
 
   // Match t("key"), t('key')
   // Also handles t.rich(), t.raw(), etc.
+  // Also handles tRef.current("key"), translationRef.current("key"), etc.
   const stringPatterns = [
     /\bt(?:\.\w+)?\s*\(\s*["']([^"']+)["']/g, // t("key") or t.rich("key")
+    /\w+Ref\.current\s*\(\s*["']([^"']+)["']/g, // tRef.current("key")
   ];
 
   for (const pattern of stringPatterns) {
@@ -172,26 +175,33 @@ function extractUsedKeys(content: string): Set<string> {
   }
 
   // Special handling for template literals: t(`key`) and t(`key${var}`)
+  // Also handles tRef.current(`key`)
   // Use 's' flag to match across newlines (dotall mode)
   // Match opening backtick, capture everything until closing backtick
-  const templatePattern = /\bt(?:\.\w+)?\s*\(\s*`([^`]+)`/gs;
-  let templateMatch;
-  while ((templateMatch = templatePattern.exec(content)) !== null) {
-    // Normalize whitespace in the captured template string
-    const fullTemplate = templateMatch[1].replace(/\s+/g, " ").trim();
+  const templatePatterns = [
+    /\bt(?:\.\w+)?\s*\(\s*`([^`]+)`/gs, // t(`key`)
+    /\w+Ref\.current\s*\(\s*`([^`]+)`/gs, // tRef.current(`key`)
+  ];
 
-    // Check if it contains ${...} template expressions
-    if (isDynamicKey(fullTemplate)) {
-      const info = extractDynamicKeyInfo(fullTemplate);
-      if (info) {
-        // Store the original pattern for later display
-        dynamicPatterns.set(info.prefix, fullTemplate);
-        // Store the prefix as a marker
-        keys.add(`${info.prefix}.*`);
+  for (const templatePattern of templatePatterns) {
+    let templateMatch;
+    while ((templateMatch = templatePattern.exec(content)) !== null) {
+      // Normalize whitespace in the captured template string
+      const fullTemplate = templateMatch[1].replace(/\s+/g, " ").trim();
+
+      // Check if it contains ${...} template expressions
+      if (isDynamicKey(fullTemplate)) {
+        const info = extractDynamicKeyInfo(fullTemplate);
+        if (info) {
+          // Store the original pattern for later display
+          dynamicPatterns.set(info.prefix, fullTemplate);
+          // Store the prefix as a marker
+          keys.add(`${info.prefix}.*`);
+        }
+      } else {
+        // Static template literal (no ${})
+        keys.add(fullTemplate);
       }
-    } else {
-      // Static template literal (no ${})
-      keys.add(fullTemplate);
     }
   }
 

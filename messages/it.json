@@ -324,7 +324,10 @@
   },
   "sync": {
     "reconnected": "Connessione ripristinata",
-    "disconnected": "Connessione al server persa"
+    "disconnected": "Connessione al server persa",
+    "offline": "Nessuna connessione internet",
+    "refreshing": "Aggiornamento dati...",
+    "resyncing": "Sincronizzazione dati..."
   },
   "onboarding": {
     "welcome": "Benvenuto in BetterShift",
