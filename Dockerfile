@@ -77,9 +77,9 @@ RUN echo "$VERSION" > /app/.version
 # Expose port
 EXPOSE 3000
 
-# Health check
+# Health check using dedicated health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000', (r) => {r.resume(); r.on('end', () => process.exit(r.statusCode === 200 ? 0 : 1))}).on('error', () => process.exit(1))"
+    CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {let d='';r.on('data',c=>d+=c);r.on('end',()=>process.exit(r.statusCode===200?0:1))}).on('error',()=>process.exit(1))"
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
