@@ -32,26 +32,45 @@ const HEALTH_CHECK_TIMEOUT = 2000; // 2 seconds
  * without calling API routes. Avoids middleware recursion and internal fetch issues.
  */
 async function checkHealthInternal(): Promise<"healthy" | "unhealthy"> {
-  try {
-    // Direct database probe with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      HEALTH_CHECK_TIMEOUT
-    );
+  let timeoutId: NodeJS.Timeout | null = null;
 
-    await db
+  try {
+    // Create a timeout promise that rejects after HEALTH_CHECK_TIMEOUT
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error("Database health check timeout"));
+      }, HEALTH_CHECK_TIMEOUT);
+    });
+
+    // Create the database query promise
+    const dbPromise = db
       .select({ count: sql<number>`count(*)` })
       .from(user)
       .limit(1);
 
-    clearTimeout(timeoutId);
+    // Race the query against the timeout
+    await Promise.race([dbPromise, timeoutPromise]);
+
+    // Query succeeded before timeout
+    if (timeoutId) clearTimeout(timeoutId);
     return "healthy";
   } catch (error) {
-    console.error(
-      "[Middleware] Health check failed:",
-      error instanceof Error ? error.message : String(error)
-    );
+    // Clear timeout if it exists
+    if (timeoutId) clearTimeout(timeoutId);
+
+    // Log specific message for timeout vs other errors
+    if (error instanceof Error && error.message.includes("timeout")) {
+      console.error(
+        "[Middleware] Health check timed out after",
+        HEALTH_CHECK_TIMEOUT,
+        "ms"
+      );
+    } else {
+      console.error(
+        "[Middleware] Health check failed:",
+        error instanceof Error ? error.message : String(error)
+      );
+    }
     return "unhealthy";
   }
 }
@@ -150,9 +169,9 @@ export async function proxy(request: NextRequest) {
 
       if (status === "unhealthy") {
         // System is definitively unhealthy - redirect to error page
-        const errorUrl = new URL("/system-unavailable", request.url);
-        errorUrl.searchParams.set("error", "system_unavailable");
-        return NextResponse.redirect(errorUrl);
+        return NextResponse.redirect(
+          new URL("/system-unavailable", request.url)
+        );
       }
     } catch (error) {
       // Health check middleware error (not a system health issue)

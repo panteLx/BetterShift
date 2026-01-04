@@ -506,7 +506,7 @@
   },
   "system": {
     "unavailable": "Sistema non disponibile",
-    "unavailableDescription": "Il sistema è attualmente non disponibile. Riprova più tardi o contatta un amministratore.",
+    "unavailableDescription": "Il sistema è attualmente non disponibile a causa di un errore critico. Riprova più tardi o contatta un amministratore.",
     "unavailableRetry": "Aggiorna questa pagina per riprovare o torna più tardi."
   },
   "guest": {

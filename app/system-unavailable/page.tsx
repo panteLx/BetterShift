@@ -4,16 +4,8 @@ import { AppFooter } from "@/components/app-footer";
 import { AuthHeader } from "@/components/auth-header";
 import { getVersionInfo } from "@/lib/version";
 
-interface SystemUnavailablePageProps {
-  searchParams: Promise<{ error?: string }>;
-}
-
-export default async function SystemUnavailablePage({
-  searchParams,
-}: SystemUnavailablePageProps) {
+export default async function SystemUnavailablePage() {
   const t = await getTranslations();
-  const params = await searchParams;
-  const errorMessage = params.error || t("system.unavailable");
   const versionInfo = await getVersionInfo();
 
   return (
@@ -30,9 +22,6 @@ export default async function SystemUnavailablePage({
                 <h1 className="text-3xl font-semibold text-destructive">
                   {t("system.unavailable")}
                 </h1>
-                <p className="text-base text-foreground leading-relaxed">
-                  {errorMessage}
-                </p>
                 <p className="text-sm text-muted-foreground mt-4">
                   {t("system.unavailableDescription")}
                 </p>
