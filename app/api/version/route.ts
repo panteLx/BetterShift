@@ -139,7 +139,10 @@ export async function GET() {
 
   const response: VersionResponse = {
     version: buildInfo.version,
-    commitHash: buildInfo.commitSha.substring(0, 7), // Short commit hash
+    commitHash:
+      buildInfo.commitSha.length >= 7
+        ? buildInfo.commitSha.substring(0, 7)
+        : buildInfo.commitSha, // Return full string if shorter than 7 chars (e.g., "dev", "unknown")
     buildDate: buildInfo.buildDate,
     githubUrl,
     isDev,

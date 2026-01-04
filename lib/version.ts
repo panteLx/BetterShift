@@ -23,7 +23,13 @@ async function getDockerBuildInfo(): Promise<BuildInfo | null> {
 
     // Read and parse build info
     const content = await readFile(buildInfoPath, "utf-8");
-    const info = JSON.parse(content);
+    let info;
+    try {
+      info = JSON.parse(content);
+    } catch (parseError) {
+      console.error("Failed to parse .build-info.json:", parseError);
+      return null;
+    }
 
     return {
       version: info.version || "unknown",
@@ -31,8 +37,9 @@ async function getDockerBuildInfo(): Promise<BuildInfo | null> {
       commitSha: info.commitSha || "unknown",
       commitRef: info.commitRef || "unknown",
     };
-  } catch {
-    // File doesn't exist or can't be read
+  } catch (error) {
+    // File doesn't exist or can't be read (non-parsing errors)
+    console.error("Failed to read .build-info.json:", error);
     return null;
   }
 }

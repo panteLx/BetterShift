@@ -39,6 +39,10 @@ jobs:
             type=raw,value=dev,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=ref,event=pr,prefix=pr-
 
+      - name: Capture build timestamp
+        id: timestamp
+        run: echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -50,6 +54,6 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VERSION=dev
-            BUILD_DATE=${{ github.event.repository.updated_at }}
+            BUILD_DATE=${{ steps.timestamp.outputs.BUILD_DATE }}
             COMMIT_SHA=${{ github.sha }}
             COMMIT_REF=${{ github.ref_name }}

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -15,10 +16,30 @@ import { Badge } from "@/components/ui/badge";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { StatsCardsGrid } from "@/components/admin/stats-cards";
 import { useAdminStats } from "@/hooks/useAdminStats";
-import { FolderOpen, RefreshCw } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import {
+  FolderOpen,
+  RefreshCw,
+  Info,
+  ExternalLink,
+  GitCommit,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
 import { useLocale } from "next-intl";
+
+interface VersionInfo {
+  version: string;
+  commitHash: string;
+  buildDate: string;
+  githubUrl: string;
+  isDev: boolean;
+  latestVersion?: string;
+  latestUrl?: string;
+  hasUpdate?: boolean;
+}
 
 /**
  * Admin Dashboard Page
@@ -32,9 +53,29 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
 
-  const { stats, isLoading, refetch } = useAdminStats();
+  const { stats, isLoading: isLoadingStats, refetch } = useAdminStats();
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+  const [isLoadingVersion, setIsLoadingVersion] = useState(true);
 
-  if (isLoading && !stats) {
+  // Fetch version info
+  useEffect(() => {
+    fetchVersionInfo();
+  }, []);
+
+  const fetchVersionInfo = async () => {
+    try {
+      const response = await fetch("/api/version");
+      if (!response.ok) return;
+      const data = await response.json();
+      setVersionInfo(data);
+    } catch (error) {
+      console.error("Failed to fetch version info:", error);
+    } finally {
+      setIsLoadingVersion(false);
+    }
+  };
+
+  if (isLoadingStats && !stats) {
     return <FullscreenLoader />;
   }
 
@@ -56,11 +97,149 @@ export default function AdminDashboardPage() {
           variant="outline"
           size="icon"
           onClick={() => refetch()}
-          disabled={isLoading}
+          disabled={isLoadingStats}
         >
-          <RefreshCw className={isLoading ? "animate-spin" : ""} />
+          <RefreshCw className={isLoadingStats ? "animate-spin" : ""} />
         </Button>
       </div>
+
+      {/* System Information */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div>
+                <CardTitle className="pb-3">
+                  {t("admin.systemInfo.title")}
+                </CardTitle>
+                <CardDescription>
+                  {t("admin.systemInfo.description")}
+                </CardDescription>
+              </div>
+            </div>
+            {versionInfo?.hasUpdate && !versionInfo.isDev && (
+              <Badge variant="default" className="gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {t("admin.systemInfo.updateAvailable")}
+              </Badge>
+            )}
+            {versionInfo && !versionInfo.hasUpdate && !versionInfo.isDev && (
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle className="h-3 w-3" />
+                {t("admin.systemInfo.upToDate")}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingVersion ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+              {t("common.loading")}
+            </div>
+          ) : versionInfo ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Version */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Info className="h-4 w-4" />
+                  {t("admin.systemInfo.version")}
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="text-lg font-semibold font-mono">
+                    {versionInfo.version}
+                  </code>
+                  {versionInfo.isDev && (
+                    <Badge variant="outline">
+                      {t("admin.systemInfo.development")}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Build Date */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CalendarIcon className="h-4 w-4" />
+                  {t("admin.systemInfo.buildDate")}
+                </div>
+                <div className="text-lg font-semibold">
+                  {versionInfo.buildDate !== "dev" &&
+                  versionInfo.buildDate !== "unknown"
+                    ? format(new Date(versionInfo.buildDate), "PPp", {
+                        locale: dateLocale,
+                      })
+                    : t("admin.systemInfo.unknown")}
+                </div>
+              </div>
+
+              {/* Commit Hash */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <GitCommit className="h-4 w-4" />
+                  {t("admin.systemInfo.commitHash")}
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                    {versionInfo.commitHash}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1"
+                    asChild
+                  >
+                    <a
+                      href={versionInfo.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {t("admin.systemInfo.viewOnGitHub")}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Latest Version (if available) */}
+              {versionInfo.latestVersion && !versionInfo.isDev && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Info className="h-4 w-4" />
+                    {t("admin.systemInfo.latestVersion")}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="text-lg font-semibold font-mono">
+                      {versionInfo.latestVersion}
+                    </code>
+                    {versionInfo.latestUrl && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1"
+                        asChild
+                      >
+                        <a
+                          href={versionInfo.latestUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {t("admin.systemInfo.viewRelease")}
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {t("admin.systemInfo.unknown")}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Orphaned Calendars Warning */}
       {hasOrphanedCalendars && (
@@ -93,7 +272,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Stats Cards */}
-      <StatsCardsGrid stats={stats} isLoading={isLoading} />
+      <StatsCardsGrid stats={stats} isLoading={isLoadingStats} />
 
       {/* Recent Activity Preview */}
       {stats?.activity.logs && stats.activity.logs.length > 0 && (

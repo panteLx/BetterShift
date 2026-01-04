@@ -74,8 +74,8 @@ COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 # Copy production dependencies
 COPY --from=prod-deps /app/node_modules ./node_modules
 
-# Write build metadata to JSON file
-RUN echo "{\"version\":\"$VERSION\",\"buildDate\":\"$BUILD_DATE\",\"commitSha\":\"$COMMIT_SHA\",\"commitRef\":\"$COMMIT_REF\"}" > /app/.build-info.json
+# Write build metadata
+RUN node -e "const fs=require('fs');fs.writeFileSync('/app/.build-info.json',JSON.stringify({version:process.env.VERSION||'',buildDate:process.env.BUILD_DATE||'',commitSha:process.env.COMMIT_SHA||'',commitRef:process.env.COMMIT_REF||''}));"
 
 # Expose port
 EXPOSE 3000
