@@ -1,61 +1,97 @@
-import { readFileSync, existsSync } from "fs";
+import { readFile, access } from "fs/promises";
 import { join } from "path";
 
-let cachedDockerVersion: string | null = null;
-let cachedPackageVersion = "";
+let cachedVersion: string | null = null;
+let versionLoadPromise: Promise<string> | null = null;
 
 /**
  * Get version from Docker .version file
  */
-function getDockerVersion(): string | null {
-  if (cachedDockerVersion !== null) {
-    return cachedDockerVersion;
-  }
-
+async function getDockerVersion(): Promise<string | null> {
   try {
     const versionFilePath = join(process.cwd(), ".version");
-    if (existsSync(versionFilePath)) {
-      // Remove 'v' prefix for consistent version comparison
-      cachedDockerVersion = readFileSync(versionFilePath, "utf-8")
-        .trim()
-        .replace(/^v/, "");
-      return cachedDockerVersion;
-    }
+
+    // Check if file exists
+    await access(versionFilePath);
+
+    // Read and parse version
+    const content = await readFile(versionFilePath, "utf-8");
+    // Remove 'v' prefix for consistent version comparison
+    return content.trim().replace(/^v/, "");
   } catch {
     // File doesn't exist or can't be read
+    return null;
   }
-
-  cachedDockerVersion = null;
-  return null;
 }
 
 /**
  * Get version from package.json
  */
-function getPackageVersion(): string {
-  if (cachedPackageVersion) {
-    return cachedPackageVersion;
-  }
-
+async function getPackageVersion(): Promise<string> {
   try {
     const packageJsonPath = join(process.cwd(), "package.json");
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-    cachedPackageVersion = packageJson.version || "unknown";
-    return cachedPackageVersion;
+    const content = await readFile(packageJsonPath, "utf-8");
+    const packageJson = JSON.parse(content);
+    return packageJson.version || "unknown";
   } catch (error) {
     console.error("Failed to read package.json version:", error);
-    cachedPackageVersion = "unknown";
     return "unknown";
   }
 }
 
 /**
- * Get current application version
+ * Load version from filesystem
  * Tries Docker .version file first, then package.json
  */
-export function getCurrentVersion(): string {
-  const dockerVersion = getDockerVersion();
-  return dockerVersion || getPackageVersion();
+async function loadVersion(): Promise<string> {
+  const dockerVersion = await getDockerVersion();
+  if (dockerVersion) {
+    return dockerVersion;
+  }
+  return getPackageVersion();
+}
+
+/**
+ * Initialize version cache during server startup
+ * This should be called from instrumentation.ts register() hook
+ */
+export async function initializeVersion(): Promise<void> {
+  if (cachedVersion === null && versionLoadPromise === null) {
+    versionLoadPromise = loadVersion();
+    cachedVersion = await versionLoadPromise;
+    versionLoadPromise = null;
+  }
+}
+
+/**
+ * Get current application version (async)
+ * Returns cached version if available, otherwise loads it
+ */
+export async function getCurrentVersion(): Promise<string> {
+  if (cachedVersion !== null) {
+    return cachedVersion;
+  }
+
+  // If another call is already loading the version, wait for it
+  if (versionLoadPromise !== null) {
+    return versionLoadPromise;
+  }
+
+  // Load version and cache it
+  versionLoadPromise = loadVersion();
+  cachedVersion = await versionLoadPromise;
+  versionLoadPromise = null;
+
+  return cachedVersion;
+}
+
+/**
+ * Get current application version (sync - for backwards compatibility)
+ * Returns cached version if available, otherwise returns "loading..."
+ * @deprecated Use getCurrentVersion() async function instead
+ */
+export function getCurrentVersionSync(): string {
+  return cachedVersion || "loading...";
 }
 
 /**
@@ -80,11 +116,11 @@ export function buildGitHubUrl(version: string): string {
 /**
  * Get version info for UI components (like AppFooter)
  */
-export function getVersionInfo(): {
+export async function getVersionInfo(): Promise<{
   version: string;
   githubUrl: string;
-} {
-  const version = getCurrentVersion();
+}> {
+  const version = await getCurrentVersion();
   const githubUrl = buildGitHubUrl(version);
 
   return {

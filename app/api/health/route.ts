@@ -27,7 +27,7 @@ export async function GET() {
   const health: HealthStatus = {
     status: "healthy",
     timestamp: new Date().toISOString(),
-    version: getCurrentVersion(),
+    version: await getCurrentVersion(),
     checks: {
       database: {
         status: "ok",

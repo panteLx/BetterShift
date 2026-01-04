@@ -14,7 +14,7 @@ export default async function SystemUnavailablePage({
   const t = await getTranslations();
   const params = await searchParams;
   const errorMessage = params.error || t("system.unavailable");
-  const versionInfo = getVersionInfo();
+  const versionInfo = await getVersionInfo();
 
   return (
     <div className="flex flex-col min-h-screen">

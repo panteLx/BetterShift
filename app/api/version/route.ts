@@ -175,7 +175,7 @@ export async function GET() {
   }
 
   // Get current version
-  const version = getCurrentVersion();
+  const version = await getCurrentVersion();
   const commitHash = await fetchCommitHash();
 
   cachedVersion = {

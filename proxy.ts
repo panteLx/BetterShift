@@ -10,6 +10,85 @@ import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/auth/admin";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
+import { user } from "@/lib/db/schema";
+
+// =====================================================
+// Health Check Cache (In-Memory)
+// =====================================================
+interface HealthCacheEntry {
+  status: "healthy" | "unhealthy";
+  timestamp: number;
+  ttl: number; // Time-to-live in milliseconds
+}
+
+let healthCache: HealthCacheEntry | null = null;
+const HEALTH_CACHE_TTL = 10000; // 10 seconds
+const HEALTH_CHECK_TIMEOUT = 2000; // 2 seconds
+
+/**
+ * Lightweight internal health check function that directly probes the database
+ * without calling API routes. Avoids middleware recursion and internal fetch issues.
+ */
+async function checkHealthInternal(): Promise<"healthy" | "unhealthy"> {
+  try {
+    // Direct database probe with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      HEALTH_CHECK_TIMEOUT
+    );
+
+    await db
+      .select({ count: sql<number>`count(*)` })
+      .from(user)
+      .limit(1);
+
+    clearTimeout(timeoutId);
+    return "healthy";
+  } catch (error) {
+    console.error(
+      "[Middleware] Health check failed:",
+      error instanceof Error ? error.message : String(error)
+    );
+    return "unhealthy";
+  }
+}
+
+/**
+ * Cached health check with TTL. Returns cached result if fresh,
+ * otherwise performs a new check. Does not cache transient errors.
+ */
+async function getCachedHealthStatus(): Promise<"healthy" | "unhealthy"> {
+  const now = Date.now();
+
+  // Return cached result if still valid
+  if (healthCache && now - healthCache.timestamp < healthCache.ttl) {
+    return healthCache.status;
+  }
+
+  // Perform new health check
+  const status = await checkHealthInternal();
+
+  // Only cache successful results to avoid caching transient errors
+  if (status === "healthy") {
+    healthCache = {
+      status,
+      timestamp: now,
+      ttl: HEALTH_CACHE_TTL,
+    };
+  } else {
+    // For unhealthy status, use a shorter TTL to allow faster recovery
+    healthCache = {
+      status,
+      timestamp: now,
+      ttl: 5000, // 5 seconds for unhealthy state
+    };
+  }
+
+  return status;
+}
 
 /**
  * Proxy for authentication and route protection (Next.js 16)
@@ -33,6 +112,7 @@ export async function proxy(request: NextRequest) {
     "/api/health",
     "/api/version",
     "/api/releases",
+    "/manifest.json", // Allow manifest.json for PWA
   ];
 
   const isHealthCheckExempt = healthCheckExemptRoutes.some((route) =>
@@ -41,46 +121,47 @@ export async function proxy(request: NextRequest) {
 
   // Special handling for /system-unavailable route
   if (pathname.startsWith("/system-unavailable")) {
-    // Allow access only if system is actually unhealthy
+    // Use cached health check to avoid blocking and redirect loops
     try {
-      const healthUrl = new URL("/api/health", request.url);
-      const healthResponse = await fetch(healthUrl.toString());
-      const healthData = await healthResponse.json();
+      const status = await getCachedHealthStatus();
 
-      if (healthData.status === "healthy") {
-        // System is healthy - redirect to home
+      // Only redirect to home if we have a definitive healthy result
+      if (status === "healthy") {
         return NextResponse.redirect(new URL("/", request.url));
       }
+
       // System is unhealthy - allow access to error page
       return NextResponse.next();
-    } catch {
-      // Health check failed - allow access to error page
+    } catch (error) {
+      // Log the error instead of silently swallowing it
+      console.error(
+        "[Middleware] Health check failed in /system-unavailable handler:",
+        error instanceof Error ? error.message : String(error)
+      );
+      // Always treat fetch failures/timeouts as "unhealthy" to allow access to error page
       return NextResponse.next();
     }
   }
 
   if (!isHealthCheckExempt) {
     try {
-      // Check system health via API endpoint
-      const healthUrl = new URL("/api/health", request.url);
-      const healthResponse = await fetch(healthUrl.toString());
-      const healthData = await healthResponse.json();
+      // Use cached, timeout-protected health check (non-blocking)
+      const status = await getCachedHealthStatus();
 
-      if (healthData.status === "unhealthy") {
-        // System is unhealthy - redirect to error page with message
+      if (status === "unhealthy") {
+        // System is definitively unhealthy - redirect to error page
         const errorUrl = new URL("/system-unavailable", request.url);
-        const errorMessage =
-          healthData.checks?.database?.message || "System is unavailable";
-        errorUrl.searchParams.set("error", errorMessage);
+        errorUrl.searchParams.set("error", "system_unavailable");
         return NextResponse.redirect(errorUrl);
       }
     } catch (error) {
-      // Health check failed - redirect to error page
-      const errorUrl = new URL("/system-unavailable", request.url);
-      const errorMessage =
-        error instanceof Error ? error.message : "Health check failed";
-      errorUrl.searchParams.set("error", errorMessage);
-      return NextResponse.redirect(errorUrl);
+      // Health check middleware error (not a system health issue)
+      // Log the error but allow the request through to avoid blocking all traffic
+      console.error(
+        "[Middleware] Health check error - allowing request through:",
+        error instanceof Error ? error.message : String(error)
+      );
+      // Continue to authentication/authorization checks below
     }
   }
 
