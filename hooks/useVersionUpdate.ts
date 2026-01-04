@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 interface VersionInfo {
   version: string;
   commitHash: string;
+  buildDate: string;
   githubUrl: string;
   isDev: boolean;
   latestVersion?: string;

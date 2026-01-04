@@ -645,6 +645,20 @@
       "last7Days": "Last 7 days",
       "needsAttention": "Needs Attention"
     },
+    "systemInfo": {
+      "title": "System Information",
+      "description": "Current system version and build details",
+      "version": "Version",
+      "buildDate": "Build Date",
+      "commitHash": "Commit Hash",
+      "latestVersion": "Latest Version",
+      "updateAvailable": "Update Available",
+      "upToDate": "Up to Date",
+      "viewOnGitHub": "View on GitHub",
+      "viewRelease": "View Release",
+      "development": "Development",
+      "unknown": "Unknown"
+    },
     "dashboardDescription": "Welcome to the BetterShift Admin Panel",
     "orphanedCalendarsWarning": "Orphaned Calendars Detected",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",

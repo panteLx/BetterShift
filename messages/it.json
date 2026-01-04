@@ -645,6 +645,20 @@
       "last7Days": "Ultimi 7 giorni",
       "needsAttention": "Richiede Attenzione"
     },
+    "systemInfo": {
+      "title": "Informazioni di sistema",
+      "description": "Versione corrente del sistema e dettagli di build",
+      "version": "Versione",
+      "buildDate": "Data di build",
+      "commitHash": "Hash commit",
+      "latestVersion": "Versione più recente",
+      "updateAvailable": "Aggiornamento disponibile",
+      "upToDate": "Aggiornato",
+      "viewOnGitHub": "Visualizza su GitHub",
+      "viewRelease": "Visualizza release",
+      "development": "Sviluppo",
+      "unknown": "Sconosciuto"
+    },
     "dashboardDescription": "Benvenuto nel Pannello Admin di BetterShift",
     "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
