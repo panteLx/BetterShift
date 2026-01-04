@@ -50,8 +50,11 @@ FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat dumb-init
 WORKDIR /app
 
-# Get VERSION from builder stage
+# Build-time metadata (passed from GitHub Actions)
 ARG VERSION=dev
+ARG BUILD_DATE=unknown
+ARG COMMIT_SHA=unknown
+ARG COMMIT_REF=unknown
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -71,8 +74,8 @@ COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 # Copy production dependencies
 COPY --from=prod-deps /app/node_modules ./node_modules
 
-# Write VERSION to file
-RUN echo "$VERSION" > /app/.version
+# Write build metadata to JSON file
+RUN echo "{\"version\":\"$VERSION\",\"buildDate\":\"$BUILD_DATE\",\"commitSha\":\"$COMMIT_SHA\",\"commitRef\":\"$COMMIT_REF\"}" > /app/.build-info.json
 
 # Expose port
 EXPOSE 3000

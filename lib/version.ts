@@ -1,23 +1,36 @@
 import { readFile, access } from "fs/promises";
 import { join } from "path";
 
-let cachedVersion: string | null = null;
-let versionLoadPromise: Promise<string> | null = null;
+export interface BuildInfo {
+  version: string;
+  buildDate: string;
+  commitSha: string;
+  commitRef: string;
+}
+
+let cachedBuildInfo: BuildInfo | null = null;
+let buildInfoLoadPromise: Promise<BuildInfo> | null = null;
 
 /**
- * Get version from Docker .version file
+ * Get build info from Docker .build-info.json file
  */
-async function getDockerVersion(): Promise<string | null> {
+async function getDockerBuildInfo(): Promise<BuildInfo | null> {
   try {
-    const versionFilePath = join(process.cwd(), ".version");
+    const buildInfoPath = join(process.cwd(), ".build-info.json");
 
     // Check if file exists
-    await access(versionFilePath);
+    await access(buildInfoPath);
 
-    // Read and parse version
-    const content = await readFile(versionFilePath, "utf-8");
-    // Remove 'v' prefix for consistent version comparison
-    return content.trim().replace(/^v/, "");
+    // Read and parse build info
+    const content = await readFile(buildInfoPath, "utf-8");
+    const info = JSON.parse(content);
+
+    return {
+      version: info.version || "unknown",
+      buildDate: info.buildDate || "unknown",
+      commitSha: info.commitSha || "unknown",
+      commitRef: info.commitRef || "unknown",
+    };
   } catch {
     // File doesn't exist or can't be read
     return null;
@@ -25,7 +38,7 @@ async function getDockerVersion(): Promise<string | null> {
 }
 
 /**
- * Get version from package.json
+ * Get version from package.json (fallback for dev mode)
  */
 async function getPackageVersion(): Promise<string> {
   try {
@@ -40,27 +53,57 @@ async function getPackageVersion(): Promise<string> {
 }
 
 /**
- * Load version from filesystem
- * Tries Docker .version file first, then package.json
+ * Load build info from filesystem
+ * Tries Docker .build-info.json first, then falls back to package.json
  */
-async function loadVersion(): Promise<string> {
-  const dockerVersion = await getDockerVersion();
-  if (dockerVersion) {
-    return dockerVersion;
+async function loadBuildInfo(): Promise<BuildInfo> {
+  const dockerBuildInfo = await getDockerBuildInfo();
+  if (dockerBuildInfo) {
+    return dockerBuildInfo;
   }
-  return getPackageVersion();
+
+  // Fallback for local development (not running in Docker)
+  const packageVersion = await getPackageVersion();
+  return {
+    version: packageVersion,
+    buildDate: "dev",
+    commitSha: "dev",
+    commitRef: "dev",
+  };
 }
 
 /**
- * Initialize version cache during server startup
+ * Initialize build info cache during server startup
  * This should be called from instrumentation.ts register() hook
  */
 export async function initializeVersion(): Promise<void> {
-  if (cachedVersion === null && versionLoadPromise === null) {
-    versionLoadPromise = loadVersion();
-    cachedVersion = await versionLoadPromise;
-    versionLoadPromise = null;
+  if (cachedBuildInfo === null && buildInfoLoadPromise === null) {
+    buildInfoLoadPromise = loadBuildInfo();
+    cachedBuildInfo = await buildInfoLoadPromise;
+    buildInfoLoadPromise = null;
   }
+}
+
+/**
+ * Get current application build info (async)
+ * Returns cached build info if available, otherwise loads it
+ */
+export async function getBuildInfo(): Promise<BuildInfo> {
+  if (cachedBuildInfo !== null) {
+    return cachedBuildInfo;
+  }
+
+  // If another call is already loading the build info, wait for it
+  if (buildInfoLoadPromise !== null) {
+    return buildInfoLoadPromise;
+  }
+
+  // Load build info and cache it
+  buildInfoLoadPromise = loadBuildInfo();
+  cachedBuildInfo = await buildInfoLoadPromise;
+  buildInfoLoadPromise = null;
+
+  return cachedBuildInfo;
 }
 
 /**
@@ -68,21 +111,8 @@ export async function initializeVersion(): Promise<void> {
  * Returns cached version if available, otherwise loads it
  */
 export async function getCurrentVersion(): Promise<string> {
-  if (cachedVersion !== null) {
-    return cachedVersion;
-  }
-
-  // If another call is already loading the version, wait for it
-  if (versionLoadPromise !== null) {
-    return versionLoadPromise;
-  }
-
-  // Load version and cache it
-  versionLoadPromise = loadVersion();
-  cachedVersion = await versionLoadPromise;
-  versionLoadPromise = null;
-
-  return cachedVersion;
+  const buildInfo = await getBuildInfo();
+  return buildInfo.version;
 }
 
 /**
@@ -91,13 +121,13 @@ export async function getCurrentVersion(): Promise<string> {
  * @deprecated Use getCurrentVersion() async function instead
  */
 export function getCurrentVersionSync(): string {
-  return cachedVersion || "loading...";
+  return cachedBuildInfo?.version || "loading...";
 }
 
 /**
  * Build GitHub URL for a version
  */
-export function buildGitHubUrl(version: string): string {
+export function buildGitHubUrl(version: string, commitSha?: string): string {
   const repoOwner = process.env.GITHUB_REPO_OWNER || "panteLx";
   const repoName = process.env.GITHUB_REPO_NAME || "BetterShift";
   const baseUrl = `https://github.com/${repoOwner}/${repoName}`;
@@ -107,6 +137,11 @@ export function buildGitHubUrl(version: string): string {
   if (semverPattern.test(version)) {
     const tag = version.startsWith("v") ? version : `v${version}`;
     return `${baseUrl}/releases/tag/${tag}`;
+  }
+
+  // For dev builds, link to commit if available
+  if (commitSha && commitSha !== "unknown" && commitSha !== "dev") {
+    return `${baseUrl}/commit/${commitSha}`;
   }
 
   // Otherwise link to main repo
@@ -120,11 +155,11 @@ export async function getVersionInfo(): Promise<{
   version: string;
   githubUrl: string;
 }> {
-  const version = await getCurrentVersion();
-  const githubUrl = buildGitHubUrl(version);
+  const buildInfo = await getBuildInfo();
+  const githubUrl = buildGitHubUrl(buildInfo.version, buildInfo.commitSha);
 
   return {
-    version,
+    version: buildInfo.version,
     githubUrl,
   };
 }
