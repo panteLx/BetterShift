@@ -125,18 +125,13 @@ export async function GET(request: NextRequest) {
 
     const totalShifts = Number(totalShiftsResult?.count || 0);
 
-    // 6. Recent activity count (last 7 days) - user-visible audit logs only
+    // 6. Recent activity count (last 7 days)
     const [recentActivityResult] = await db
       .select({
         count: sql<number>`COUNT(*)`,
       })
       .from(auditLogs)
-      .where(
-        and(
-          eq(auditLogs.isUserVisible, true),
-          gte(auditLogs.timestamp, sevenDaysAgo)
-        )
-      );
+      .where(and(gte(auditLogs.timestamp, sevenDaysAgo)));
 
     const recentActivity = Number(recentActivityResult?.count || 0);
 

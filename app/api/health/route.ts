@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
-import { readFile } from "fs/promises";
-import { join } from "path";
+import { user } from "@/lib/db/schema";
+import { getCurrentVersion } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +22,12 @@ interface HealthStatus {
   };
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = Date.now();
   const health: HealthStatus = {
     status: "healthy",
     timestamp: new Date().toISOString(),
-    version: "unknown",
+    version: getCurrentVersion(),
     checks: {
       database: {
         status: "ok",
@@ -39,19 +39,13 @@ export async function GET(request: NextRequest) {
     },
   };
 
-  // Check version
+  // Check database connection and schema
   try {
-    const versionPath = join(process.cwd(), ".version");
-    const version = await readFile(versionPath, "utf-8");
-    health.version = version.trim();
-  } catch (error) {
-    // Version file might not exist in dev mode
-    health.version = process.env.NODE_ENV === "production" ? "unknown" : "dev";
-  }
-
-  // Check database connection
-  try {
-    db.run(sql`SELECT 1`);
+    // Query an actual table to verify schema exists
+    await db
+      .select({ count: sql<number>`count(*)` })
+      .from(user)
+      .limit(1);
     health.checks.database.status = "ok";
   } catch (error) {
     health.status = "unhealthy";

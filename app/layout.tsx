@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BetterShift - Shift Schedule Manager",
-  description: "Manage your work shifts with ease",
+  title: "BetterShift",
+  description: "Your favorite shift management application!",
   applicationName: "BetterShift",
   manifest: "/manifest.json",
   appleWebApp: {

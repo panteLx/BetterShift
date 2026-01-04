@@ -504,6 +504,11 @@
     "sessionsRevokedCount": "Von {count} Gerät(en) abgemeldet",
     "accountBanned": "Konto gesperrt"
   },
+  "system": {
+    "unavailable": "System nicht verfügbar",
+    "unavailableDescription": "Das System ist derzeit nicht verfügbar. Bitte versuche es später erneut oder kontaktiere einen Administrator.",
+    "unavailableRetry": "Bitte aktualisiere diese Seite, um es erneut zu versuchen, oder schaue später wieder vorbei."
+  },
   "guest": {
     "viewingAsGuest": "Du betrachtest als Gast",
     "bannerMessage": "Du betrachtest diesen Kalender als Gast. Melde dich an für vollen Zugriff.",
@@ -631,7 +636,7 @@
       "orphanedCalendars": "Verwaiste Kalender",
       "totalShifts": "Schichten gesamt",
       "activeShares": "Aktive Freigaben",
-      "recentActivity": "Letzte Admin Aktivitäten",
+      "recentActivity": "Letzte Aktivitäten",
       "usersByRole": "{superadmin} Superadmin, {admin} Admin, {user} Benutzer",
       "calendarsDescription": "Kalender mit Besitzern",
       "orphanedDescription": "Kalender ohne Besitzer",
@@ -644,7 +649,7 @@
     "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weise diese(n) Benutzern zu.",
     "manageOrphanedCalendars": "Verwaiste Kalender verwalten",
-    "recentActivityDescription": "Neueste Admin-Aktivitätsprotokolle",
+    "recentActivityDescription": "Admin- und sicherheitsrelevante Aktivitätsprotokolle",
     "statsFetchError": "Fehler beim Laden der Statistiken",
     "userManagement": "Benutzerverwaltung",
     "userManagementDescription": "Benutzerkonten und Berechtigungen verwalten",

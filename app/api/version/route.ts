@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { getCurrentVersion } from "@/lib/version";
 
 /**
  * Cache Strategy: 15 minutes unified across all version/release endpoints
@@ -24,9 +23,6 @@ let cachedLatestRelease: {
 } | null = null;
 let cachedLatestReleaseExpiresAt = 0;
 
-let cachedDockerVersion: string | null = null;
-let cachedPackageVersion = "";
-
 // Unified cache duration: 15 minutes
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 const CACHE_SECONDS = 15 * 60; // 15 minutes
@@ -35,45 +31,6 @@ const GITHUB_REPO_OWNER = process.env.GITHUB_REPO_OWNER || "panteLx";
 const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME || "BetterShift";
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
-function getDockerVersion(): string | null {
-  if (cachedDockerVersion !== null) {
-    return cachedDockerVersion;
-  }
-
-  try {
-    const versionFilePath = join(process.cwd(), ".version");
-    if (existsSync(versionFilePath)) {
-      // Remove 'v' prefix for consistent version comparison
-      cachedDockerVersion = readFileSync(versionFilePath, "utf-8")
-        .trim()
-        .replace(/^v/, "");
-      return cachedDockerVersion;
-    }
-  } catch {
-    console.log("No .version file found, not running in Docker");
-  }
-
-  cachedDockerVersion = null;
-  return null;
-}
-
-function getPackageVersion(): string {
-  if (cachedPackageVersion) {
-    return cachedPackageVersion;
-  }
-
-  try {
-    const packageJsonPath = join(process.cwd(), "package.json");
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-    cachedPackageVersion = packageJson.version || "unknown";
-    return cachedPackageVersion;
-  } catch (error) {
-    console.error("Failed to read package.json version:", error);
-    cachedPackageVersion = "unknown";
-    return "unknown";
-  }
-}
 
 async function fetchCommitHash(): Promise<string> {
   try {
@@ -217,9 +174,8 @@ export async function GET() {
     );
   }
 
-  // Try to get version from Docker build arg first
-  const dockerVersion = getDockerVersion();
-  const version = dockerVersion || getPackageVersion();
+  // Get current version
+  const version = getCurrentVersion();
   const commitHash = await fetchCommitHash();
 
   cachedVersion = {

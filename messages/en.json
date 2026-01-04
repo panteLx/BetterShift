@@ -504,6 +504,11 @@
     "logoutAllDevices": "Logout from all other devices",
     "sessionsRevokedCount": "Logged out from {count} device(s)"
   },
+  "system": {
+    "unavailable": "System Unavailable",
+    "unavailableDescription": "The system is currently unavailable. Please try again later or contact an administrator.",
+    "unavailableRetry": "Please refresh this page to try again or check back later."
+  },
   "guest": {
     "viewingAsGuest": "You are viewing as guest",
     "bannerMessage": "You are viewing this calendar as a guest. Sign in for full access.",
@@ -631,7 +636,7 @@
       "orphanedCalendars": "Orphaned Calendars",
       "totalShifts": "Total Shifts",
       "activeShares": "Active Shares",
-      "recentActivity": "Recent Admin Activity",
+      "recentActivity": "Recent Activity",
       "usersByRole": "{superadmin} superadmin, {admin} admin, {user} users",
       "calendarsDescription": "Total calendars with owners",
       "orphanedDescription": "Calendars without an owner",
@@ -644,7 +649,7 @@
     "orphanedCalendarsWarning": "Orphaned Calendars Detected",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",
     "manageOrphanedCalendars": "Manage Orphaned Calendars",
-    "recentActivityDescription": "Latest admin activity logs",
+    "recentActivityDescription": "Latest admin- and security-related activity logs",
     "statsFetchError": "Failed to load statistics",
     "userManagement": "User Management",
     "userManagementDescription": "Manage user accounts and permissions",

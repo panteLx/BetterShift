@@ -1,7 +1,7 @@
 {
-  "name": "BetterShift - Shift Schedule Manager",
+  "name": "BetterShift",
   "short_name": "BetterShift",
-  "description": "Manage your work shifts with ease using BetterShift",
+  "description": "Your favorite shift management application!",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

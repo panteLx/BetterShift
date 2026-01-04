@@ -21,9 +21,68 @@ import { isAdmin } from "@/lib/auth/admin";
  * - Stores return URL for post-login redirect
  * - Supports guest access for viewing calendars
  * - Handles access token sharing (/share/token/xyz)
+ * - Blocks all routes when system is unhealthy (except health check, version, and release APIs)
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // =====================================================
+  // Health Check - Block all routes if system unhealthy
+  // =====================================================
+  const healthCheckExemptRoutes = [
+    "/api/health",
+    "/api/version",
+    "/api/releases",
+  ];
+
+  const isHealthCheckExempt = healthCheckExemptRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Special handling for /system-unavailable route
+  if (pathname.startsWith("/system-unavailable")) {
+    // Allow access only if system is actually unhealthy
+    try {
+      const healthUrl = new URL("/api/health", request.url);
+      const healthResponse = await fetch(healthUrl.toString());
+      const healthData = await healthResponse.json();
+
+      if (healthData.status === "healthy") {
+        // System is healthy - redirect to home
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+      // System is unhealthy - allow access to error page
+      return NextResponse.next();
+    } catch {
+      // Health check failed - allow access to error page
+      return NextResponse.next();
+    }
+  }
+
+  if (!isHealthCheckExempt) {
+    try {
+      // Check system health via API endpoint
+      const healthUrl = new URL("/api/health", request.url);
+      const healthResponse = await fetch(healthUrl.toString());
+      const healthData = await healthResponse.json();
+
+      if (healthData.status === "unhealthy") {
+        // System is unhealthy - redirect to error page with message
+        const errorUrl = new URL("/system-unavailable", request.url);
+        const errorMessage =
+          healthData.checks?.database?.message || "System is unavailable";
+        errorUrl.searchParams.set("error", errorMessage);
+        return NextResponse.redirect(errorUrl);
+      }
+    } catch (error) {
+      // Health check failed - redirect to error page
+      const errorUrl = new URL("/system-unavailable", request.url);
+      const errorMessage =
+        error instanceof Error ? error.message : "Health check failed";
+      errorUrl.searchParams.set("error", errorMessage);
+      return NextResponse.redirect(errorUrl);
+    }
+  }
 
   // =====================================================
   // Access Token Handling (/share/token/[token])

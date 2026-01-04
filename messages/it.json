@@ -504,6 +504,11 @@
     "logoutAllDevices": "Disconnetti da tutti gli altri dispositivi",
     "sessionsRevokedCount": "Disconnesso da {count} dispositivo/i"
   },
+  "system": {
+    "unavailable": "Sistema non disponibile",
+    "unavailableDescription": "Il sistema è attualmente non disponibile. Riprova più tardi o contatta un amministratore.",
+    "unavailableRetry": "Aggiorna questa pagina per riprovare o torna più tardi."
+  },
   "guest": {
     "viewingAsGuest": "Stai visualizzando come ospite",
     "bannerMessage": "Stai visualizzando questo calendario come ospite. Accedi per l'accesso completo.",
@@ -631,7 +636,7 @@
       "orphanedCalendars": "Calendari Orfani",
       "totalShifts": "Turni Totali",
       "activeShares": "Condivisioni Attive",
-      "recentActivity": "Attività Admin Recente",
+      "recentActivity": "Attività Recente",
       "usersByRole": "{superadmin} superadmin, {admin} admin, {user} utenti",
       "calendarsDescription": "Calendari con proprietari",
       "orphanedDescription": "Calendari senza proprietario",
@@ -644,7 +649,7 @@
     "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
     "manageOrphanedCalendars": "Gestisci Calendari Orfani",
-    "recentActivityDescription": "Log delle ultime attività admin",
+    "recentActivityDescription": "Log delle ultime attività admin e di sicurezza",
     "statsFetchError": "Impossibile caricare le statistiche",
     "userManagement": "Gestione Utenti",
     "userManagementDescription": "Gestisci account utente e permessi",
