@@ -1,4 +1,4 @@
-import { readFile, access } from "fs/promises";
+import { readFile } from "fs/promises";
 import { join } from "path";
 
 export interface BuildInfo {
@@ -18,9 +18,6 @@ async function getDockerBuildInfo(): Promise<BuildInfo | null> {
   try {
     const buildInfoPath = join(process.cwd(), ".build-info.json");
 
-    // Check if file exists
-    await access(buildInfoPath);
-
     // Read and parse build info
     const content = await readFile(buildInfoPath, "utf-8");
     let info;
@@ -37,8 +34,18 @@ async function getDockerBuildInfo(): Promise<BuildInfo | null> {
       commitSha: info.commitSha || "unknown",
       commitRef: info.commitRef || "unknown",
     };
-  } catch (error) {
-    // File doesn't exist or can't be read (non-parsing errors)
+  } catch (error: unknown) {
+    // File doesn't exist in dev mode - this is expected, silently return null
+    // But log other errors (permission denied, I/O errors, etc.)
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return null;
+    }
+
     console.error("Failed to read .build-info.json:", error);
     return null;
   }
