@@ -34,8 +34,19 @@ async function getDockerBuildInfo(): Promise<BuildInfo | null> {
       commitSha: info.commitSha || "unknown",
       commitRef: info.commitRef || "unknown",
     };
-  } catch {
+  } catch (error: unknown) {
     // File doesn't exist in dev mode - this is expected, silently return null
+    // But log other errors (permission denied, I/O errors, etc.)
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return null;
+    }
+
+    console.error("Failed to read .build-info.json:", error);
     return null;
   }
 }
