@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
+import { getServerTimezone } from "@/lib/date-utils";
 
 export async function GET(
   request: Request,
@@ -41,6 +42,9 @@ export async function GET(
       orderBy: (shifts, { asc }) => [asc(shifts.date)],
     });
 
+    // Get server timezone for proper time conversion
+    const serverTimezone = getServerTimezone();
+
     // Create iCalendar
     const cal = new ICAL.Component(["vcalendar", [], []]);
     cal.updatePropertyWithValue(
@@ -51,7 +55,7 @@ export async function GET(
     cal.updatePropertyWithValue("calscale", "GREGORIAN");
     cal.updatePropertyWithValue("method", "PUBLISH");
     cal.updatePropertyWithValue("x-wr-calname", calendar.name);
-    cal.updatePropertyWithValue("x-wr-timezone", "UTC");
+    cal.updatePropertyWithValue("x-wr-timezone", serverTimezone);
 
     // Add shifts as events
     for (const shift of calendarShifts) {
@@ -97,6 +101,7 @@ export async function GET(
         const [startHour, startMinute] = shift.startTime.split(":").map(Number);
         const [endHour, endMinute] = shift.endTime.split(":").map(Number);
 
+        // Create date objects in server timezone
         const startDateTime = new Date(shiftDate);
         startDateTime.setHours(startHour, startMinute, 0, 0);
 
@@ -108,8 +113,13 @@ export async function GET(
           endDateTime.setDate(endDateTime.getDate() + 1);
         }
 
-        event.startDate = ICAL.Time.fromJSDate(startDateTime, false);
-        event.endDate = ICAL.Time.fromJSDate(endDateTime, false);
+        // Convert to UTC for iCalendar standard compliance
+        // JavaScript Date objects are timezone-aware and will be correctly converted
+        const startIcalTime = ICAL.Time.fromJSDate(startDateTime, true);
+        const endIcalTime = ICAL.Time.fromJSDate(endDateTime, true);
+
+        event.startDate = startIcalTime;
+        event.endDate = endIcalTime;
       }
 
       // Set color (using X-APPLE-CALENDAR-COLOR for Apple Calendar compatibility)

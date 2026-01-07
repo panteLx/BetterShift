@@ -71,3 +71,30 @@ export function formatDuration(minutes: number): string {
   const mins = minutes % 60;
   return `${hours}:${String(mins).padStart(2, "0")}`;
 }
+
+/**
+ * Gets the server timezone from environment variable or system default
+ * Works in both Docker and non-Docker environments
+ * @returns Timezone string (e.g., "Europe/Berlin", "America/New_York")
+ */
+export function getServerTimezone(): string {
+  // Try to get from environment variable first (Docker or manual config)
+  const envTimezone = process.env.TZ;
+  if (envTimezone) {
+    return envTimezone;
+  }
+
+  // Fallback: Try to detect system timezone
+  // This works by checking the resolved timezone from Date
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (timezone) {
+      return timezone;
+    }
+  } catch (error) {
+    console.warn("Could not detect system timezone:", error);
+  }
+
+  // Last fallback: UTC
+  return "UTC";
+}
