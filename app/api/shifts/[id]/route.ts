@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // GET single shift
 export async function GET(
@@ -116,7 +117,7 @@ export async function PATCH(
     }
 
     const updateData: Partial<typeof shifts.$inferInsert> = {};
-    if (date) updateData.date = new Date(date);
+    if (date) updateData.date = parseLocalDate(date);
     if (startTime !== undefined) updateData.startTime = startTime;
     if (endTime !== undefined) updateData.endTime = endTime;
     if (title) updateData.title = title;

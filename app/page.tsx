@@ -16,9 +16,9 @@ import {
   Shift,
 } from "@/lib/db/schema";
 import { useCalendars } from "@/hooks/useCalendars";
-import { useShifts } from "@/hooks/useShifts";
+import { useShifts, normalizeShift } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
-import { useNotes } from "@/hooks/useNotes";
+import { useNotes, normalizeNote } from "@/hooks/useNotes";
 import { useSSEConnection } from "@/hooks/useSSEConnection";
 import { useViewSettings } from "@/hooks/useViewSettings";
 import { useShiftActions } from "@/hooks/useShiftActions";
@@ -37,7 +37,7 @@ import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
 import { DialogManager } from "@/components/dialog-manager";
 import { getCalendarDays } from "@/lib/calendar-utils";
-import { formatDateToLocal } from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -316,8 +316,8 @@ function HomeContent() {
               ]);
 
             dataMap.set(calendarId, {
-              shifts: shiftsData,
-              notes: notesData,
+              shifts: shiftsData.map(normalizeShift),
+              notes: notesData.map(normalizeNote),
               externalSyncs: syncsData,
               presets: presetsData,
               togglingDates: new Set<string>(),
@@ -411,39 +411,54 @@ function HomeContent() {
   };
 
   // Day interaction handlers
-  const handleDayClick = (date: Date) => {
-    shiftActions.handleAddShift(date, selectedPresetId);
+  const handleDayClick = (date: Date | string) => {
+    // Parse date to ensure it's a Date object
+    const targetDate =
+      typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? parseLocalDate(date)
+        : new Date(date);
+    shiftActions.handleAddShift(targetDate, selectedPresetId);
   };
 
-  const handleDayRightClick = (e: React.MouseEvent, date: Date) => {
+  const handleDayRightClick = (e: React.MouseEvent, date: Date | string) => {
     e.preventDefault();
+    // Parse date to ensure it's a Date object
+    const targetDate =
+      typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? parseLocalDate(date)
+        : new Date(date);
     // Get all notes/events for this date (including recurring)
-    const allDayNotes = findNotesForDate(notes, date);
+    const allDayNotes = findNotesForDate(notes, targetDate);
 
     // Always show list dialog when notes exist (to allow adding more)
     if (allDayNotes.length >= 1) {
-      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayDate(targetDate);
       dialogStates.setSelectedDayNotes(allDayNotes);
       dialogStates.setShowNotesListDialog(true);
     } else {
       // No notes - show note edit dialog to create new
-      noteActions.openNoteDialog(date, undefined);
+      noteActions.openNoteDialog(targetDate, undefined);
     }
   };
 
-  const handleNoteIconClick = (e: React.MouseEvent, date: Date) => {
+  const handleNoteIconClick = (e: React.MouseEvent, date: Date | string) => {
     e.stopPropagation();
+    // Parse date to ensure it's a Date object
+    const targetDate =
+      typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? parseLocalDate(date)
+        : new Date(date);
     // Get all notes/events for this date (including recurring)
-    const allDayNotes = findNotesForDate(notes, date);
+    const allDayNotes = findNotesForDate(notes, targetDate);
 
     // Always show list dialog when notes exist (to allow adding more)
     if (allDayNotes.length >= 1) {
-      dialogStates.setSelectedDayDate(date);
+      dialogStates.setSelectedDayDate(targetDate);
       dialogStates.setSelectedDayNotes(allDayNotes);
       dialogStates.setShowNotesListDialog(true);
     } else {
       // No notes - show note edit dialog to create new
-      noteActions.openNoteDialog(date, undefined);
+      noteActions.openNoteDialog(targetDate, undefined);
     }
   };
 
@@ -514,18 +529,27 @@ function HomeContent() {
   };
 
   // Compare mode interaction handlers
-  const handleCompareDayClick = async (calendarId: string, date: Date) => {
+  const handleCompareDayClick = async (
+    calendarId: string,
+    date: Date | string
+  ) => {
+    // Always parse date to ensure it's a Date object
+    const targetDate =
+      typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? parseLocalDate(date)
+        : new Date(date);
+
     if (!selectedPresetId) {
       // No preset selected, just show existing shifts if any
       const calendarData = compareCalendarData.get(calendarId);
       if (!calendarData) return;
 
       const dayShifts = calendarData.shifts.filter(
-        (shift) => shift.date && isSameDay(new Date(shift.date), date)
+        (shift) => shift.date && isSameDay(shift.date as Date, targetDate)
       );
 
       if (dayShifts.length > 0) {
-        dialogStates.setSelectedDayDate(date);
+        dialogStates.setSelectedDayDate(targetDate);
         dialogStates.setSelectedDayShifts(dayShifts);
         dialogStates.setShowDayShiftsDialog(true);
       }
@@ -539,7 +563,6 @@ function HomeContent() {
     const preset = calendarData.presets.find((p) => p.id === selectedPresetId);
     if (!preset) return;
 
-    const targetDate = new Date(date);
     const dateKey = formatDateToLocal(targetDate);
 
     // Check if already toggling
@@ -562,7 +585,7 @@ function HomeContent() {
       const existingShift = calendarData.shifts.find(
         (shift) =>
           shift.date &&
-          isSameDay(new Date(shift.date), targetDate) &&
+          isSameDay(shift.date as Date, targetDate) &&
           shift.title === preset.title &&
           shift.startTime === preset.startTime &&
           shift.endTime === preset.endTime
@@ -586,7 +609,10 @@ function HomeContent() {
             const updated = new Map(prev);
             const data = updated.get(calendarId);
             if (data) {
-              updated.set(calendarId, { ...data, shifts: shiftsData });
+              updated.set(calendarId, {
+                ...data,
+                shifts: shiftsData.map(normalizeShift),
+              });
             }
             return updated;
           });
@@ -623,7 +649,10 @@ function HomeContent() {
             const updated = new Map(prev);
             const data = updated.get(calendarId);
             if (data) {
-              updated.set(calendarId, { ...data, shifts: shiftsData });
+              updated.set(calendarId, {
+                ...data,
+                shifts: shiftsData.map(normalizeShift),
+              });
             }
             return updated;
           });
@@ -860,7 +889,7 @@ function HomeContent() {
                   updated.set(calendarId, {
                     ...data,
                     presets: presetsData,
-                    shifts: shiftsData,
+                    shifts: shiftsData.map(normalizeShift),
                   });
                 }
                 return updated;
@@ -904,7 +933,7 @@ function HomeContent() {
                   if (currentData) {
                     dataMap.set(calendarId, {
                       ...currentData,
-                      shifts: shiftsData,
+                      shifts: shiftsData.map(normalizeShift),
                     });
                   }
                 }

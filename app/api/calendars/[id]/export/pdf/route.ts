@@ -55,7 +55,7 @@ export async function GET(
     if (month) {
       const [filterYear, filterMonth] = month.split("-").map(Number);
       calendarShifts = calendarShifts.filter((shift) => {
-        const shiftDate = new Date(shift.date);
+        const shiftDate = shift.date as Date;
         return (
           shiftDate.getFullYear() === filterYear &&
           shiftDate.getMonth() + 1 === filterMonth
@@ -64,7 +64,7 @@ export async function GET(
     } else if (year) {
       const filterYear = parseInt(year);
       calendarShifts = calendarShifts.filter((shift) => {
-        const shiftDate = new Date(shift.date);
+        const shiftDate = shift.date as Date;
         return shiftDate.getFullYear() === filterYear;
       });
     }
@@ -113,7 +113,7 @@ export async function GET(
       // Group shifts by month
       const shiftsByMonth = new Map<string, typeof calendarShifts>();
       for (const shift of calendarShifts) {
-        const shiftDate = new Date(shift.date);
+        const shiftDate = shift.date as Date;
         const monthKey = `${shiftDate.getFullYear()}-${String(
           shiftDate.getMonth() + 1
         ).padStart(2, "0")}`;
@@ -150,7 +150,7 @@ export async function GET(
         for (const shift of monthShifts) {
           checkPageBreak(15);
 
-          const shiftDate = new Date(shift.date);
+          const shiftDate = shift.date as Date;
           const dateStr = shiftDate.toLocaleDateString(locale, {
             weekday: "short",
             day: "2-digit",

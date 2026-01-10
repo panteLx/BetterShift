@@ -3,6 +3,25 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { parseLocalDate } from "@/lib/date-utils";
+
+// Helper to convert API response timestamps to Date objects
+export function normalizeShift(
+  shift: Record<string, unknown>
+): ShiftWithCalendar {
+  const dateValue = shift.date as string | number | Date;
+  const parsedDate =
+    typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+      ? parseLocalDate(dateValue)
+      : new Date(dateValue);
+
+  return {
+    ...(shift as Omit<ShiftWithCalendar, "date" | "createdAt" | "updatedAt">),
+    date: parsedDate,
+    createdAt: new Date(shift.createdAt as string | number | Date),
+    updatedAt: new Date(shift.updatedAt as string | number | Date),
+  };
+}
 
 export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
@@ -26,7 +45,7 @@ export function useShifts(calendarId: string | undefined) {
           return;
         }
         const data = await response.json();
-        setShifts(data);
+        setShifts(data.map(normalizeShift));
         setHasLoadedOnce(true);
       } catch (error) {
         console.error("Failed to fetch shifts:", error);
@@ -46,7 +65,7 @@ export function useShifts(calendarId: string | undefined) {
     const tempId = `temp-${Date.now()}`;
     const optimisticShift: ShiftWithCalendar = {
       id: tempId,
-      date: new Date(formData.date),
+      date: parseLocalDate(formData.date),
       startTime: formData.startTime,
       endTime: formData.endTime,
       title: formData.title,
@@ -83,10 +102,10 @@ export function useShifts(calendarId: string | undefined) {
 
       const newShift = await response.json();
       setShifts((shifts) =>
-        shifts.map((s) => (s.id === tempId ? newShift : s))
+        shifts.map((s) => (s.id === tempId ? normalizeShift(newShift) : s))
       );
       toast.success(t("common.created", { item: t("shift.shift_one") }));
-      return newShift;
+      return normalizeShift(newShift);
     } catch (error) {
       console.error("Failed to create shift:", error);
       setShifts((shifts) => shifts.filter((s) => s.id !== tempId));

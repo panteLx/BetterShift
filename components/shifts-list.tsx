@@ -32,7 +32,7 @@ export function ShiftsList({
 
   const shiftsInMonth = shifts.filter((shift) => {
     if (!shift.date) return false;
-    const shiftDate = new Date(shift.date);
+    const shiftDate = shift.date as Date;
     return (
       shiftDate.getMonth() === currentDate.getMonth() &&
       shiftDate.getFullYear() === currentDate.getFullYear()
@@ -42,12 +42,12 @@ export function ShiftsList({
   const groupedShifts = shiftsInMonth
     .sort(
       (a, b) =>
-        (a.date ? new Date(a.date).getTime() : 0) -
-        (b.date ? new Date(b.date).getTime() : 0)
+        (a.date ? (a.date as Date).getTime() : 0) -
+        (b.date ? (b.date as Date).getTime() : 0)
     )
     .reduce((acc, shift) => {
       const dateKey = shift.date
-        ? format(new Date(shift.date), "yyyy-MM-dd")
+        ? format(shift.date as Date, "yyyy-MM-dd")
         : "unknown";
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(shift);
@@ -145,7 +145,7 @@ export function ShiftsList({
                             <div className="w-1 h-5 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
                             {dayShifts[0].date &&
                               format(
-                                new Date(dayShifts[0].date),
+                                dayShifts[0].date as Date,
                                 "EEEE, MMMM d, yyyy",
                                 { locale: dateLocale }
                               )}

@@ -5,6 +5,7 @@ import { eq, and, gte, lte } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -49,9 +50,19 @@ export async function GET(request: Request) {
       .where(eq(calendarNotes.calendarId, calendarId));
 
     if (date) {
-      const targetDate = new Date(date);
-      const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+      let targetDate;
+      try {
+        targetDate = parseLocalDate(date);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        );
+      }
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
 
       const result = await db
         .select()
@@ -129,11 +140,21 @@ export async function POST(request: Request) {
       );
     }
 
+    let parsedDate;
+    try {
+      parsedDate = parseLocalDate(date);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
     const [calendarNote] = await db
       .insert(calendarNotes)
       .values({
         calendarId,
-        date: new Date(date),
+        date: parsedDate,
         note,
         type: type || "note",
         color: color || null,

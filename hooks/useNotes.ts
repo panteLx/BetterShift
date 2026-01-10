@@ -1,8 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { CalendarNote } from "@/lib/db/schema";
-import { formatDateToLocal } from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { toast } from "sonner";
+
+// Helper to convert API response timestamps to Date objects
+export function normalizeNote(note: Record<string, unknown>): CalendarNote {
+  const dateValue = note.date as string | number | Date;
+  const parsedDate =
+    typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+      ? parseLocalDate(dateValue)
+      : new Date(dateValue);
+
+  return {
+    ...(note as Omit<CalendarNote, "date" | "createdAt" | "updatedAt">),
+    date: parsedDate,
+    createdAt: new Date(note.createdAt as string | number | Date),
+    updatedAt: new Date(note.updatedAt as string | number | Date),
+  };
+}
 
 export function useNotes(calendarId: string | undefined) {
   const t = useTranslations();
@@ -28,7 +44,7 @@ export function useNotes(calendarId: string | undefined) {
         return;
       }
       const data = await response.json();
-      setNotes(data);
+      setNotes(data.map(normalizeNote));
     } catch (error) {
       // Network errors or other exceptions - don't clear existing notes
       console.error("Failed to fetch notes:", error);

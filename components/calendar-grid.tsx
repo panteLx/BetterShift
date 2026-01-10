@@ -73,7 +73,7 @@ export function CalendarGrid({
 
   const getShiftsForDate = (date: Date) => {
     return shifts.filter(
-      (shift) => shift.date && isSameDay(new Date(shift.date), date)
+      (shift) => shift.date && isSameDay(shift.date as Date, date)
     );
   };
 
