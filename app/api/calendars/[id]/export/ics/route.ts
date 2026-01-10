@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
-import { getServerTimezone } from "@/lib/date-utils";
+import { getServerTimezone, formatDateToLocal } from "@/lib/date-utils";
 
 export async function GET(
   request: Request,
@@ -74,15 +74,13 @@ export async function GET(
       }
 
       // Set times
-      const shiftDate = new Date(shift.date);
+      // shift.date is already a Date object from Drizzle (mode: "timestamp")
+      const shiftDate = shift.date as Date;
 
       if (shift.isAllDay) {
         // All-day event (DTEND is exclusive per RFC 5545)
-        // Use local date methods to match how dates are stored in the database
-        const year = shiftDate.getFullYear();
-        const month = String(shiftDate.getMonth() + 1).padStart(2, "0");
-        const day = String(shiftDate.getDate()).padStart(2, "0");
-        const dateStr = `${year}-${month}-${day}`;
+        // Use formatDateToLocal to get YYYY-MM-DD format
+        const dateStr = formatDateToLocal(shiftDate);
 
         const startTime = ICAL.Time.fromDateString(dateStr);
         event.startDate = startTime;

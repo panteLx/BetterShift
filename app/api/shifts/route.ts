@@ -5,6 +5,7 @@ import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // GET shifts for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
       .leftJoin(externalSyncs, eq(shifts.externalSyncId, externalSyncs.id));
 
     if (date) {
-      const targetDate = new Date(date);
+      const targetDate = parseLocalDate(date);
       const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
       const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
       .values({
         calendarId,
         presetId: presetId || null,
-        date: new Date(date),
+        date: parseLocalDate(date),
         startTime: isAllDay ? "00:00" : startTime,
         endTime: isAllDay ? "23:59" : endTime,
         title,

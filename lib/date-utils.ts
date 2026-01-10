@@ -10,6 +10,21 @@ export function formatDateToLocal(date: Date): string {
 }
 
 /**
+ * Parses a YYYY-MM-DD date string as a local date (NOT UTC!)
+ * This fixes the timezone bug where "2025-01-15" was interpreted as UTC midnight
+ * @param dateString - Date string in YYYY-MM-DD format
+ * @returns Date object representing local midnight on that date
+ * @example
+ * parseLocalDate("2025-01-15") // → Wed Jan 15 2025 00:00:00 (local timezone)
+ * new Date("2025-01-15")       // → Tue Jan 14 2025 19:00:00 (UTC-5, WRONG!)
+ */
+export function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number);
+  // month is 0-indexed in Date constructor
+  return new Date(year, month - 1, day);
+}
+
+/**
  * Calculates the duration in minutes between two time strings
  * @param startTime - Time string in HH:MM format
  * @param endTime - Time string in HH:MM format

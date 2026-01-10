@@ -5,7 +5,7 @@ import { isSameDay } from "date-fns";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftPreset } from "@/lib/db/schema";
-import { formatDateToLocal } from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 
 interface UseShiftActionsProps {
   shifts: ShiftWithCalendar[];
@@ -70,13 +70,16 @@ export function useShiftActions({
   );
 
   const handleAddShift = useCallback(
-    async (date: Date, selectedPresetId: string | undefined) => {
+    async (date: Date | string, selectedPresetId: string | undefined) => {
       if (!selectedPresetId) return;
 
       const preset = presets.find((p) => p.id === selectedPresetId);
       if (!preset) return;
 
-      const targetDate = new Date(date);
+      const targetDate =
+        typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
+          ? parseLocalDate(date)
+          : new Date(date);
       const dateKey = formatDateToLocal(targetDate);
 
       if (togglingDatesRef.current.has(dateKey)) return;
@@ -87,7 +90,7 @@ export function useShiftActions({
         const existingShift = shifts.find(
           (shift) =>
             shift.date &&
-            isSameDay(new Date(shift.date), targetDate) &&
+            isSameDay(shift.date as Date, targetDate) &&
             shift.title === preset.title &&
             shift.startTime === preset.startTime &&
             shift.endTime === preset.endTime

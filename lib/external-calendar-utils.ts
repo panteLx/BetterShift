@@ -4,6 +4,7 @@
  */
 
 import ICAL from "ical.js";
+import { formatDateToLocal } from "./date-utils";
 
 export type CalendarSyncType = "icloud" | "google" | "custom";
 
@@ -114,14 +115,6 @@ export function isValidICSContent(icsContent: string): boolean {
   } catch {
     return false;
   }
-}
-
-/**
- * Backwards compatibility - validates iCloud URLs
- * @deprecated Use isValidCalendarUrl instead
- */
-export function isValidICloudUrl(url: string): boolean {
-  return isValidCalendarUrl(url, "icloud");
 }
 
 /**
@@ -387,8 +380,9 @@ export function needsUpdate(
   }
 ): boolean {
   // Compare date (convert to comparable format)
-  const existingDate = new Date(existing.date).toISOString().split("T")[0];
-  const newDate = new Date(newData.date).toISOString().split("T")[0];
+  // existing.date is a Date from Drizzle
+  const existingDate = formatDateToLocal(existing.date as Date);
+  const newDate = formatDateToLocal(newData.date);
   if (existingDate !== newDate) return true;
 
   // Compare time fields

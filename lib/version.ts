@@ -130,15 +130,6 @@ export async function getCurrentVersion(): Promise<string> {
 }
 
 /**
- * Get current application version (sync - for backwards compatibility)
- * Returns cached version if available, otherwise returns "loading..."
- * @deprecated Use getCurrentVersion() async function instead
- */
-export function getCurrentVersionSync(): string {
-  return cachedBuildInfo?.version || "loading...";
-}
-
-/**
  * Build GitHub URL for a version
  */
 export function buildGitHubUrl(version: string, commitSha?: string): string {
