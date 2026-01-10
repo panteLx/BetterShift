@@ -1,4 +1,5 @@
 import { CalendarNote } from "./db/schema";
+import { parseLocalDate } from "./date-utils";
 
 export function matchesRecurringEvent(
   eventDate: Date,
@@ -76,8 +77,13 @@ export function findEventsForDate(
 ): CalendarNote[] {
   return notes.filter((note) => {
     if (note.type !== "event" || !note.date) return false;
+    const dateValue = note.date;
     const noteDate =
-      note.date instanceof Date ? note.date : new Date(note.date);
+      dateValue instanceof Date
+        ? dateValue
+        : typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+        ? parseLocalDate(dateValue)
+        : new Date(dateValue);
 
     // Exact date match
     if (
@@ -105,9 +111,13 @@ export function findNotesForDate(
 ): CalendarNote[] {
   return notes.filter((note) => {
     if (!note.date) return false;
-    // Ensure noteDate is a Date object (handle both Date objects and string dates)
+    const dateValue = note.date;
     const noteDate =
-      note.date instanceof Date ? note.date : new Date(note.date);
+      dateValue instanceof Date
+        ? dateValue
+        : typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+        ? parseLocalDate(dateValue)
+        : new Date(dateValue);
 
     // Exact date match
     if (

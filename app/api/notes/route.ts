@@ -50,7 +50,15 @@ export async function GET(request: Request) {
       .where(eq(calendarNotes.calendarId, calendarId));
 
     if (date) {
-      const targetDate = parseLocalDate(date);
+      let targetDate;
+      try {
+        targetDate = parseLocalDate(date);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        );
+      }
       const startOfDay = new Date(targetDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(targetDate);
@@ -132,11 +140,21 @@ export async function POST(request: Request) {
       );
     }
 
+    let parsedDate;
+    try {
+      parsedDate = parseLocalDate(date);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
     const [calendarNote] = await db
       .insert(calendarNotes)
       .values({
         calendarId,
-        date: parseLocalDate(date),
+        date: parsedDate,
         note,
         type: type || "note",
         color: color || null,

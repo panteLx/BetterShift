@@ -72,7 +72,15 @@ export async function GET(request: Request) {
       .leftJoin(externalSyncs, eq(shifts.externalSyncId, externalSyncs.id));
 
     if (date) {
-      const targetDate = parseLocalDate(date);
+      let targetDate;
+      try {
+        targetDate = parseLocalDate(date);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        );
+      }
       const startOfDay = new Date(targetDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(targetDate);
@@ -155,12 +163,22 @@ export async function POST(request: Request) {
       );
     }
 
+    let parsedDate;
+    try {
+      parsedDate = parseLocalDate(date);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
     const [shift] = await db
       .insert(shifts)
       .values({
         calendarId,
         presetId: presetId || null,
-        date: parseLocalDate(date),
+        date: parsedDate,
         startTime: isAllDay ? "00:00" : startTime,
         endTime: isAllDay ? "23:59" : endTime,
         title,
