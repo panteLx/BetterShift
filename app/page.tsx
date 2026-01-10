@@ -16,7 +16,7 @@ import {
   Shift,
 } from "@/lib/db/schema";
 import { useCalendars } from "@/hooks/useCalendars";
-import { useShifts } from "@/hooks/useShifts";
+import { useShifts, normalizeShift } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
 import { useNotes, normalizeNote } from "@/hooks/useNotes";
 import { useSSEConnection } from "@/hooks/useSSEConnection";
@@ -41,22 +41,6 @@ import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-
-// Helper function to normalize dates from API responses
-function normalizeShift(shift: Record<string, unknown>): ShiftWithCalendar {
-  const dateValue = shift.date as string | number | Date;
-  const parsedDate =
-    typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-      ? parseLocalDate(dateValue)
-      : new Date(dateValue);
-
-  return {
-    ...(shift as Omit<ShiftWithCalendar, "date" | "createdAt" | "updatedAt">),
-    date: parsedDate,
-    createdAt: new Date(shift.createdAt as string | number | Date),
-    updatedAt: new Date(shift.updatedAt as string | number | Date),
-  };
-}
 
 function HomeContent() {
   const router = useRouter();

@@ -6,7 +6,9 @@ import { useTranslations } from "next-intl";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // Helper to convert API response timestamps to Date objects
-function normalizeShift(shift: Record<string, unknown>): ShiftWithCalendar {
+export function normalizeShift(
+  shift: Record<string, unknown>
+): ShiftWithCalendar {
   const dateValue = shift.date as string | number | Date;
   const parsedDate =
     typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)

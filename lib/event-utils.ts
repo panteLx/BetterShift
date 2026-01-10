@@ -76,7 +76,8 @@ export function findEventsForDate(
 ): CalendarNote[] {
   return notes.filter((note) => {
     if (note.type !== "event" || !note.date) return false;
-    const noteDate = note.date as Date;
+    const noteDate =
+      note.date instanceof Date ? note.date : new Date(note.date);
 
     // Exact date match
     if (
