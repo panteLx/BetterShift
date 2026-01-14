@@ -429,7 +429,13 @@
     "rangeYear": "Single Year",
     "monthLabel": "Select Month",
     "yearLabel": "Select Year",
-    "download": "Download"
+    "download": "Download",
+    "multiCalendar": "Export multiple calendars",
+    "multiCalendarHint": "Combine shifts from multiple calendars into one export file",
+    "selectCalendars": "Select Calendars",
+    "selectCalendarsDescription": "Choose which calendars to include in the export",
+    "selectedCount": "{count, plural, =0 {No calendars selected} =1 {1 calendar selected} other {# calendars selected}}",
+    "selectAtLeastOne": "Please select at least one calendar"
   },
   "update": {
     "available": "Update Available",

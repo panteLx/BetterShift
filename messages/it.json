@@ -429,7 +429,13 @@
     "rangeYear": "Singolo anno",
     "monthLabel": "Seleziona mese",
     "yearLabel": "Seleziona anno",
-    "download": "Scarica"
+    "download": "Scarica",
+    "multiCalendar": "Esporta più calendari",
+    "multiCalendarHint": "Combina i turni da più calendari in un unico file di esportazione",
+    "selectCalendars": "Seleziona Calendari",
+    "selectCalendarsDescription": "Scegli quali calendari includere nell'esportazione",
+    "selectedCount": "{count, plural, =0 {Nessun calendario selezionato} =1 {1 calendario selezionato} other {# calendari selezionati}}",
+    "selectAtLeastOne": "Seleziona almeno un calendario"
   },
   "update": {
     "available": "Aggiornamento disponibile",

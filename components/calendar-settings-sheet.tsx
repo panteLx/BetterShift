@@ -24,6 +24,7 @@ import { AlertTriangle, Trash2, Download, Cloud, Users } from "lucide-react";
 import { ExportDialog } from "@/components/export-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useDirtyState } from "@/hooks/useDirtyState";
+import { CalendarWithCount } from "@/lib/types";
 
 interface CalendarSettingsSheetProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface CalendarSettingsSheetProps {
   onSuccess: () => void;
   onDelete: () => void;
   onExternalSync?: () => void;
+  availableCalendars?: CalendarWithCount[];
 }
 
 interface FormState {
@@ -52,6 +54,7 @@ export function CalendarSettingsSheet({
   onSuccess,
   onDelete,
   onExternalSync,
+  availableCalendars = [],
 }: CalendarSettingsSheetProps) {
   const t = useTranslations();
   const { updateCalendar } = useCalendars();
@@ -316,6 +319,7 @@ export function CalendarSettingsSheet({
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
         calendarId={calendarId}
+        availableCalendars={availableCalendars}
         calendarName={calendarName}
       />
 

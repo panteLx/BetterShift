@@ -150,6 +150,7 @@ export function DialogManager(props: DialogManagerProps) {
             onSuccess={props.onCalendarSettingsSuccess}
             onDelete={props.onDeleteCalendar}
             onExternalSync={props.onExternalSyncFromSettings}
+            availableCalendars={props.calendars}
           />
 
           <ExternalSyncManageSheet
