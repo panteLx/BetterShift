@@ -88,8 +88,15 @@ export function ExportDialog({
   // Initialize or reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      // Pre-select current calendar for multi-calendar export
-      setSelectedCalendarIds([calendarId]);
+      // Set default selections when dialog opens
+      const today = new Date();
+      const defaultMonth = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const currentYear = today.getFullYear();
+      setSelectedMonth(defaultMonth);
+      setSelectedYear(currentYear.toString());
+      setSelectedCalendarIds([calendarId]); // Pre-select current calendar
     } else {
       // Reset state when dialog closes
       setExportFormat("ics");
@@ -260,13 +267,6 @@ export function ExportDialog({
                     >
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => {
-                          setSelectedCalendarIds((prev) =>
-                            prev.includes(calendar.id)
-                              ? prev.filter((id) => id !== calendar.id)
-                              : [...prev, calendar.id]
-                          );
-                        }}
                         className="pointer-events-none"
                       />
                       <div
