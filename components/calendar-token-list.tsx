@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   useCalendarTokens,
@@ -55,19 +55,16 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
 
-  const { tokens, fetchTokens, deleteToken, updateToken } =
-    useCalendarTokens(calendarId);
+  const { tokens, updateToken, deleteToken } = useCalendarTokens(calendarId);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tokenToDelete, setTokenToDelete] =
     useState<CalendarAccessToken | null>(null);
 
-  useEffect(() => {
-    if (calendarId) {
-      void fetchTokens();
-    }
-  }, [calendarId, fetchTokens]);
+  const handleToggleActive = async (token: CalendarAccessToken) => {
+    await updateToken(token.id, { isActive: !token.isActive });
+  };
 
   const handleDelete = async () => {
     if (!tokenToDelete) return;
@@ -77,12 +74,6 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
       setDeleteDialogOpen(false);
       setTokenToDelete(null);
     }
-  };
-
-  const handleToggleActive = async (token: CalendarAccessToken) => {
-    await updateToken(token.id, {
-      isActive: !token.isActive,
-    });
   };
 
   return (
@@ -273,7 +264,6 @@ export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         calendarId={calendarId}
-        onSuccess={fetchTokens}
       />
 
       {/* Delete Confirmation */}

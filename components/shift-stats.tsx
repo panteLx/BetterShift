@@ -91,7 +91,6 @@ const CustomTooltip = ({
 interface ShiftStatsProps {
   calendarId: string | undefined;
   currentDate: Date;
-  refreshTrigger?: number;
 }
 
 type ViewMode = "overview" | "pie" | "bar" | "radar";
@@ -111,11 +110,7 @@ const CHART_COLORS = [
   "#22c55e", // lime
 ];
 
-export function ShiftStats({
-  calendarId,
-  currentDate,
-  refreshTrigger,
-}: ShiftStatsProps) {
+export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
   const t = useTranslations();
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
@@ -126,7 +121,6 @@ export function ShiftStats({
     calendarId,
     currentDate,
     period,
-    refreshTrigger,
   });
 
   if (!calendarId) return null;

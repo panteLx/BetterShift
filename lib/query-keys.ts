@@ -55,4 +55,7 @@ export const queryKeys = {
   subscriptions: {
     all: ["subscriptions"] as const,
   },
+
+  // User Activity Logs
+  activityLogs: (filters?: object) => ["activity-logs", filters] as const,
 } as const;

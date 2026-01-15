@@ -621,7 +621,8 @@
     "allTypes": "Tutti i Tipi",
     "auth": "Autenticazione",
     "sync": "Sincronizzazione",
-    "security": "Sicurezza"
+    "security": "Sicurezza",
+    "calendar": "Calendario"
   },
   "admin": {
     "title": "Pannello Admin",

@@ -104,14 +104,9 @@ function HomeContent() {
     deleteNote: deleteNoteHook,
     refetchNotes,
   } = useNotes(isCompareMode ? compareNoteCalendarId : selectedCalendar);
-  const {
-    externalSyncs,
-    hasSyncErrors,
-    syncLogRefreshTrigger,
-    setSyncLogRefreshTrigger,
-    fetchExternalSyncs,
-    fetchSyncErrorStatus,
-  } = useExternalSync(selectedCalendar || null);
+  const { externalSyncs, hasSyncErrors } = useExternalSync(
+    selectedCalendar || null
+  );
 
   // View settings
   const viewSettings = useViewSettings();
@@ -272,11 +267,7 @@ function HomeContent() {
     onPresetUpdate: () => {},
     onNoteUpdate: refetchNotes,
     onCalendarUpdate: refetchCalendars,
-    onStatsRefresh: () => setStatsRefreshTrigger((prev) => prev + 1),
-    onSyncLogUpdate: () => {
-      fetchSyncErrorStatus();
-      setSyncLogRefreshTrigger((prev) => prev + 1);
-    },
+    onStatsRefresh: () => setStatsRefreshTrigger((prev: number) => prev + 1),
     isConnected,
     setIsConnected,
   });
@@ -392,9 +383,7 @@ function HomeContent() {
   const handleSyncComplete = () => {
     refetchShifts();
     refetchCalendars();
-    setStatsRefreshTrigger((prev) => prev + 1);
-    fetchExternalSyncs();
-    fetchSyncErrorStatus();
+    setStatsRefreshTrigger((prev: number) => prev + 1);
   };
 
   // Manual shift creation
@@ -961,14 +950,11 @@ function HomeContent() {
           }
           showExternalSyncDialog={dialogStates.showExternalSyncDialog}
           onExternalSyncDialogChange={dialogStates.setShowExternalSyncDialog}
-          syncErrorRefreshTrigger={syncLogRefreshTrigger}
           onSyncComplete={handleSyncComplete}
           showSyncNotificationDialog={dialogStates.showSyncNotificationDialog}
           onSyncNotificationDialogChange={
             dialogStates.setShowSyncNotificationDialog
           }
-          onErrorsMarkedRead={fetchSyncErrorStatus}
-          onSyncLogUpdate={() => setSyncLogRefreshTrigger((prev) => prev + 1)}
           showDayShiftsDialog={dialogStates.showDayShiftsDialog}
           onDayShiftsDialogChange={dialogStates.setShowDayShiftsDialog}
           selectedDayDate={dialogStates.selectedDayDate}
@@ -1052,14 +1038,11 @@ function HomeContent() {
           }
           showExternalSyncDialog={dialogStates.showExternalSyncDialog}
           onExternalSyncDialogChange={dialogStates.setShowExternalSyncDialog}
-          syncErrorRefreshTrigger={syncLogRefreshTrigger}
           onSyncComplete={handleSyncComplete}
           showSyncNotificationDialog={dialogStates.showSyncNotificationDialog}
           onSyncNotificationDialogChange={
             dialogStates.setShowSyncNotificationDialog
           }
-          onErrorsMarkedRead={fetchSyncErrorStatus}
-          onSyncLogUpdate={() => setSyncLogRefreshTrigger((prev) => prev + 1)}
           showDayShiftsDialog={dialogStates.showDayShiftsDialog}
           onDayShiftsDialogChange={dialogStates.setShowDayShiftsDialog}
           selectedDayDate={dialogStates.selectedDayDate}
@@ -1229,14 +1212,11 @@ function HomeContent() {
         }
         showExternalSyncDialog={dialogStates.showExternalSyncDialog}
         onExternalSyncDialogChange={dialogStates.setShowExternalSyncDialog}
-        syncErrorRefreshTrigger={syncLogRefreshTrigger}
         onSyncComplete={handleSyncComplete}
         showSyncNotificationDialog={dialogStates.showSyncNotificationDialog}
         onSyncNotificationDialogChange={
           dialogStates.setShowSyncNotificationDialog
         }
-        onErrorsMarkedRead={fetchSyncErrorStatus}
-        onSyncLogUpdate={() => setSyncLogRefreshTrigger((prev) => prev + 1)}
         showDayShiftsDialog={dialogStates.showDayShiftsDialog}
         onDayShiftsDialogChange={dialogStates.setShowDayShiftsDialog}
         selectedDayDate={dialogStates.selectedDayDate}

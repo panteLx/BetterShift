@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SyncLog } from "@/lib/db/schema";
+import { queryKeys } from "@/lib/query-keys";
 import {
   CheckCircle2,
   XCircle,
@@ -29,13 +31,25 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Fetch sync logs from API
+ */
+async function fetchSyncLogsApi(calendarId: string): Promise<SyncLog[]> {
+  const params = new URLSearchParams({ calendarId, limit: "20" });
+  const response = await fetch(`/api/sync-logs?${params}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch sync logs");
+  }
+
+  return await response.json();
+}
+
 interface SyncNotificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string | null;
   onErrorsMarkedRead?: () => void;
-  onSyncLogUpdate?: () => void;
-  syncLogRefreshTrigger?: number;
 }
 
 export function SyncNotificationDialog({
@@ -43,60 +57,77 @@ export function SyncNotificationDialog({
   onOpenChange,
   calendarId,
   onErrorsMarkedRead,
-  syncLogRefreshTrigger,
 }: SyncNotificationDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const [logs, setLogs] = useState<SyncLog[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "success" | "error">("all");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isMarkingRead, setIsMarkingRead] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const fetchLogs = useCallback(
-    async (showLoadingState = true) => {
-      if (!calendarId) return;
+  // Fetch sync logs with React Query polling
+  const { data: logs = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.externalSyncs.logs(calendarId!),
+    queryFn: () => fetchSyncLogsApi(calendarId!),
+    enabled: !!calendarId && open,
+    refetchInterval: 5000, // Poll every 5 seconds for live updates
+    refetchIntervalInBackground: false, // Only poll when dialog is open
+  });
 
-      if (showLoadingState) {
-        setLoading(true);
-      }
-      try {
-        const params = new URLSearchParams({ calendarId, limit: "20" });
-
-        const response = await fetch(`/api/sync-logs?${params}`);
-        if (response.ok) {
-          const data = await response.json();
-          setLogs(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch sync logs:", error);
-      } finally {
-        if (showLoadingState) {
-          setLoading(false);
-        }
+  // Delete all logs mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/sync-logs?calendarId=${calendarId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete sync logs");
       }
     },
-    [calendarId]
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.externalSyncs.logs(calendarId!),
+      });
+      toast.success(
+        t("common.deleted", { item: t("syncNotifications.title") })
+      );
+    },
+    onError: () => {
+      toast.error(
+        t("common.deleteError", { item: t("syncNotifications.title") })
+      );
+    },
+  });
 
-  useEffect(() => {
-    if (open && calendarId) {
-      fetchLogs();
-    }
-  }, [open, calendarId, fetchLogs]);
-
-  // Silent refresh when SSE triggers update (syncLogRefreshTrigger changes)
-  useEffect(() => {
-    if (
-      open &&
-      calendarId &&
-      syncLogRefreshTrigger &&
-      syncLogRefreshTrigger > 0
-    ) {
-      fetchLogs(false);
-    }
-  }, [open, calendarId, syncLogRefreshTrigger, fetchLogs]);
+  // Mark errors as read mutation
+  const markReadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(
+        `/api/sync-logs?calendarId=${calendarId}&action=markErrorsAsRead`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to mark errors as read");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.externalSyncs.logs(calendarId!),
+      });
+      toast.success(t("syncNotifications.markedAsRead"));
+      onErrorsMarkedRead?.();
+    },
+    onError: () => {
+      toast.error(
+        t("common.updateError", { item: t("syncNotifications.title") })
+      );
+    },
+  });
 
   const formatDateTime = (date: Date) => {
     return new Intl.DateTimeFormat(locale, {
@@ -128,71 +159,13 @@ export function SyncNotificationDialog({
     );
   };
 
-  const handleDeleteLogs = async () => {
-    if (!calendarId) return;
-
-    setIsDeleting(true);
+  const handleDeleteLogs = () => {
     setShowDeleteConfirm(false);
-
-    try {
-      const response = await fetch(`/api/sync-logs?calendarId=${calendarId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        setLogs([]);
-        toast.success(
-          t("common.deleted", { item: t("syncNotifications.title") })
-        );
-      } else {
-        toast.error(
-          t("common.deleteError", { item: t("syncNotifications.title") })
-        );
-      }
-    } catch (error) {
-      console.error("Failed to delete sync logs:", error);
-      toast.error(
-        t("common.deleteError", { item: t("syncNotifications.title") })
-      );
-    } finally {
-      setIsDeleting(false);
-    }
+    deleteMutation.mutate();
   };
 
-  const handleMarkErrorsAsRead = async () => {
-    if (!calendarId) return;
-
-    setIsMarkingRead(true);
-    try {
-      const response = await fetch(
-        `/api/sync-logs?calendarId=${calendarId}&action=markErrorsAsRead`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        }
-      );
-
-      if (response.ok) {
-        await fetchLogs();
-        toast.success(t("syncNotifications.markedAsRead"));
-        // Notify parent to refresh error status
-        onErrorsMarkedRead?.();
-      } else {
-        toast.error(
-          t("common.updateError", { item: t("syncNotifications.title") })
-        );
-      }
-    } catch (error) {
-      console.error("Failed to mark errors as read:", error);
-      toast.error(
-        t("common.updateError", { item: t("syncNotifications.title") })
-      );
-    } finally {
-      setIsMarkingRead(false);
-    }
+  const handleMarkErrorsAsRead = () => {
+    markReadMutation.mutate();
   };
 
   const filteredLogs = logs.filter((log) => {
@@ -237,7 +210,7 @@ export function SyncNotificationDialog({
                   variant="outline"
                   size="sm"
                   onClick={handleMarkErrorsAsRead}
-                  disabled={isMarkingRead}
+                  disabled={markReadMutation.isPending}
                 >
                   <CheckCheck className="h-4 w-4 mr-2" />
                   {t("syncNotifications.markAsRead")}
@@ -247,7 +220,7 @@ export function SyncNotificationDialog({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDeleteConfirm(true)}
-                disabled={isDeleting || logs.length === 0}
+                disabled={deleteMutation.isPending || logs.length === 0}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 {t("syncNotifications.deleteAll")}

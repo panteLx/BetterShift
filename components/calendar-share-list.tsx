@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { UserPlus, MoreVertical, Trash2, Shield } from "lucide-react";
@@ -51,17 +51,12 @@ export function CalendarShareList({
   const locale = useLocale();
   const { user: currentUser } = useAuth();
   const { isOwner } = useCalendarPermission(calendarId);
-  const { shares, fetchShares, updateShare, removeShare } =
-    useCalendarShares(calendarId);
+  const { shares, updateShare, removeShare } = useCalendarShares(calendarId);
 
   const [showAddUser, setShowAddUser] = useState(false);
   const [shareToDelete, setShareToDelete] = useState<CalendarShare | null>(
     null
   );
-
-  useEffect(() => {
-    fetchShares();
-  }, [fetchShares]);
 
   const getUserInitials = (share: CalendarShare) => {
     if (share.user.name) {
@@ -285,7 +280,6 @@ export function CalendarShareList({
         open={showAddUser}
         onOpenChange={setShowAddUser}
         calendarId={calendarId}
-        onSuccess={fetchShares}
       />
 
       {/* Remove Confirmation */}

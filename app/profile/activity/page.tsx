@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,7 +31,6 @@ import { AppFooter } from "@/components/app-footer";
 import {
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
   Trash2,
   Search,
   ChevronDown,
@@ -40,7 +39,6 @@ import {
 import { format } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 /**
  * Activity Log Page - Full-screen table view for user activity logs
@@ -61,32 +59,96 @@ export default function ActivityLogPage() {
   const router = useRouter();
   const { isLoading: authLoading, isAuthenticated } = useAuth();
   const versionInfo = useVersionInfo();
-  const {
-    logs,
-    total,
-    page,
-    limit,
-    hasMore,
-    loading,
-    error,
-    filters,
-    updateFilters,
-    clearFilters,
-    fetchLogs,
-    clearLogs,
-    goToNextPage,
-    goToPreviousPage,
-  } = useActivityLogs();
 
-  // UI State (must be defined before any early returns)
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  // Filter State (managed locally like admin audit log page)
+  const [page, setPage] = useState(0);
+  const limit = 50;
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // Sort State
   const [sortColumn, setSortColumn] = useState<
     "timestamp" | "type" | "severity" | null
   >("timestamp");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Build filters and pagination with useMemo (like admin audit log page)
+  const filters = useMemo(
+    () => ({
+      type:
+        typeFilter !== "all"
+          ? (typeFilter as "sync" | "auth" | "calendar" | "security")
+          : undefined,
+      severity:
+        severityFilter !== "all"
+          ? (severityFilter as "info" | "warning" | "error" | "critical")
+          : undefined,
+      search: debouncedSearch || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    }),
+    [typeFilter, severityFilter, debouncedSearch, startDate, endDate]
+  );
+
+  const pagination = useMemo(
+    () => ({
+      limit,
+      offset: page * limit,
+    }),
+    [page, limit]
+  );
+
+  // Use hook with filters and pagination
+  const { logs, total, isLoading, error, clearLogs } = useActivityLogs(
+    filters,
+    pagination
+  );
+
+  // Calculate pagination info
+  const hasMore = (page + 1) * limit < total;
+
+  // UI State (must be defined before any early returns)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+
+  // Handler functions that combine filter changes with page reset
+  const handleTypeFilterChange = (value: string) => {
+    setTypeFilter(value);
+    setPage(0);
+  };
+
+  const handleSeverityFilterChange = (value: string) => {
+    setSeverityFilter(value);
+    setPage(0);
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    setPage(0);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    setPage(0);
+  };
+
+  const handleDebouncedSearchChange = (value: string) => {
+    setDebouncedSearch(value);
+    setPage(0);
+  };
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleDebouncedSearchChange(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -95,8 +157,9 @@ export default function ActivityLogPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Show fullscreen loader during initial data fetch
-  if (authLoading || loading) {
+  // Show fullscreen loader only during initial auth check
+  // Don't show loader during data refetches to prevent UI flashing
+  if (authLoading) {
     return <FullscreenLoader />;
   }
 
@@ -179,28 +242,34 @@ export default function ActivityLogPage() {
     }
   };
 
-  // Handle date changes
-  const handleStartDateChange = (value: string) => {
-    setStartDate(value);
-    updateFilters({
-      startDate: value ? new Date(value) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    });
-  };
-
-  const handleEndDateChange = (value: string) => {
-    setEndDate(value);
-    updateFilters({
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: value ? new Date(value) : undefined,
-    });
-  };
-
   // Clear all logs with confirmation
   const handleClearAll = async () => {
     setClearDialogOpen(false);
     await clearLogs();
   };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setTypeFilter("all");
+    setSeverityFilter("all");
+    setSearchQuery("");
+    setDebouncedSearch("");
+    setStartDate("");
+    setEndDate("");
+    setPage(0);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters =
+    typeFilter !== "all" ||
+    severityFilter !== "all" ||
+    startDate ||
+    endDate ||
+    searchQuery;
+
+  // Pagination handlers
+  const goToNextPage = () => setPage((prev) => prev + 1);
+  const goToPreviousPage = () => setPage((prev) => Math.max(0, prev - 1));
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -209,30 +278,35 @@ export default function ActivityLogPage() {
       <div className="flex-1 bg-gradient-to-br from-background via-background to-primary/5">
         <main className="container py-4 sm:py-8 max-w-full sm:max-w-6xl mx-auto px-2 sm:px-4">
           {/* Header */}
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
-              {t("activityLog.title")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("activityLog.description")}
-            </p>
+          <div className="mb-6 sm:mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
+                {t("activityLog.title")}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {t("activityLog.description")}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setClearDialogOpen(true)}
+                disabled={total === 0}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">
+                  {t("activityLog.clearAll")}
+                </span>
+              </Button>
+            </div>
           </div>
 
           {/* Filters Bar */}
           <div className="mb-6 space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Type Filter */}
-              <Select
-                value={filters.type || "all"}
-                onValueChange={(value) =>
-                  updateFilters({
-                    type:
-                      value === "all"
-                        ? undefined
-                        : (value as "auth" | "calendar" | "sync" | "security"),
-                  })
-                }
-              >
+              <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder={t("activityLog.allTypes")} />
                 </SelectTrigger>
@@ -253,15 +327,8 @@ export default function ActivityLogPage() {
 
               {/* Severity Filter */}
               <Select
-                value={filters.severity || "all"}
-                onValueChange={(value) =>
-                  updateFilters({
-                    severity:
-                      value === "all"
-                        ? undefined
-                        : (value as "info" | "warning" | "error" | "critical"),
-                  })
-                }
+                value={severityFilter}
+                onValueChange={handleSeverityFilterChange}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue
@@ -310,75 +377,34 @@ export default function ActivityLogPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t("activityLog.searchPlaceholder")}
-                  value={filters.search || ""}
-                  onChange={(e) => updateFilters({ search: e.target.value })}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
                 />
               </div>
 
               {/* Clear Filters */}
-              {(filters.type ||
-                filters.severity ||
-                startDate ||
-                endDate ||
-                filters.search) && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    clearFilters();
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                >
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={clearFilters}>
                   {t("common.filters.clearFilters")}
                 </Button>
               )}
             </div>
 
-            {/* Actions Row */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                {t("activityLog.totalLogs", { count: total })}
-              </div>
-
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    await fetchLogs();
-                    toast.success(t("activityLog.refreshed"));
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">
-                    {t("activityLog.refresh")}
-                  </span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setClearDialogOpen(true)}
-                  disabled={total === 0}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">
-                    {t("activityLog.clearAll")}
-                  </span>
-                </Button>
-              </div>
+            {/* Stats */}
+            <div className="text-sm text-muted-foreground">
+              {t("activityLog.totalLogs", { count: total })}
             </div>
           </div>
 
           {/* Table */}
-          {loading && logs.length === 0 ? (
+          {isLoading && logs.length === 0 && !authLoading ? (
             <div className="text-center py-12 text-muted-foreground">
               {t("common.loading")}
             </div>
           ) : error ? (
             <div className="text-center py-12 text-red-500">
-              {t("common.error")}: {error}
+              {t("common.error")}: {error?.message || String(error)}
             </div>
           ) : logs.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">

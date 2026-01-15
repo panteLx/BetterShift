@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { queryKeys } from "@/lib/query-keys";
 
 type CalendarSource = "guest" | "shared";
 
@@ -38,195 +39,243 @@ type SubscriptionResponse = {
 };
 
 /**
- * Hook for managing calendar subscriptions and dismissals
+ * Fetch calendar subscriptions from API
+ */
+async function fetchSubscriptionsApi(): Promise<SubscriptionResponse> {
+  const response = await fetch("/api/calendars/subscriptions");
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch calendars");
+  }
+
+  return await response.json();
+}
+
+/**
+ * Subscribe to a calendar via API
+ */
+async function subscribeApi(calendarId: string): Promise<void> {
+  const response = await fetch("/api/calendars/subscriptions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ calendarId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to subscribe");
+  }
+}
+
+/**
+ * Dismiss/Unsubscribe from a calendar via API
+ */
+async function dismissApi(calendarId: string): Promise<void> {
+  const response = await fetch(`/api/calendars/subscriptions/${calendarId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to unsubscribe");
+  }
+}
+
+/**
+ * Calendar Subscriptions Hook
+ *
+ * Provides calendar subscription management with automatic polling.
+ * Uses React Query for automatic cache management and live updates.
+ *
+ * Features:
+ * - Fetch available and dismissed calendars
+ * - Subscribe to public calendars
+ * - Dismiss/unsubscribe from calendars
+ * - Optimistic updates for instant UI feedback
+ * - Automatic polling every 5 seconds
+ * - Automatic cache invalidation (no window events needed!)
+ *
+ * @returns Object with calendar subscription data and management functions
  */
 export function useCalendarSubscriptions() {
   const t = useTranslations();
-  const [availableCalendars, setAvailableCalendars] = useState<
-    AvailableCalendar[]
-  >([]);
-  const [dismissedCalendars, setDismissedCalendars] = useState<
-    DismissedCalendar[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchCalendars = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch subscriptions
+  const {
+    data,
+    isLoading: loading,
+    error: errorMessage,
+  } = useQuery({
+    queryKey: queryKeys.subscriptions.all,
+    queryFn: fetchSubscriptionsApi,
+  });
 
-    try {
-      const response = await fetch("/api/calendars/subscriptions");
+  const availableCalendars = data?.available ?? [];
+  const dismissedCalendars = data?.dismissed ?? [];
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch calendars");
-      }
+  // Subscribe mutation
+  const subscribeMutation = useMutation({
+    mutationFn: subscribeApi,
+    onMutate: async (calendarId) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.subscriptions.all,
+      });
+      const previous = queryClient.getQueryData(queryKeys.subscriptions.all);
 
-      const data: SubscriptionResponse = await response.json();
-      setAvailableCalendars(data.available);
-      setDismissedCalendars(data.dismissed);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load calendars";
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      // Optimistic update
+      queryClient.setQueryData(
+        queryKeys.subscriptions.all,
+        (old: SubscriptionResponse | undefined) => {
+          if (!old) return old;
 
-  useEffect(() => {
-    fetchCalendars();
-  }, [fetchCalendars]);
+          const dismissedCal = old.dismissed.find(
+            (cal) => cal.id === calendarId
+          );
+          const availableCal = old.available.find(
+            (cal) => cal.id === calendarId
+          );
 
-  /**
-   * Subscribe to a public calendar or re-subscribe to a dismissed calendar
-   */
-  const subscribe = useCallback(
-    async (calendarId: string, calendarName: string) => {
-      // Find calendar in either list
-      const dismissedCal = dismissedCalendars.find(
-        (cal) => cal.id === calendarId
-      );
-      const availableCal = availableCalendars.find(
-        (cal) => cal.id === calendarId
-      );
-
-      // Optimistic update: Remove from dismissed and add/update in available
-      if (dismissedCal) {
-        setDismissedCalendars((prev) =>
-          prev.filter((cal) => cal.id !== calendarId)
-        );
-        setAvailableCalendars((prev) => [
-          ...prev,
-          {
-            id: dismissedCal.id,
-            name: dismissedCal.name,
-            color: dismissedCal.color,
-            guestPermission: dismissedCal.permission,
-            permission: dismissedCal.permission, // Preserve original permission
-            owner: dismissedCal.owner,
-            source: dismissedCal.source,
-            isSubscribed: true,
-          },
-        ]);
-      } else if (availableCal) {
-        setAvailableCalendars((prev) =>
-          prev.map((cal) =>
-            cal.id === calendarId ? { ...cal, isSubscribed: true } : cal
-          )
-        );
-      }
-
-      try {
-        const response = await fetch("/api/calendars/subscriptions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ calendarId }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to subscribe");
-        }
-
-        toast.success(
-          t("calendar.subscriptionSuccess", { name: calendarName })
-        );
-
-        // Dispatch custom event to trigger calendar list refresh
-        window.dispatchEvent(
-          new CustomEvent("calendar-list-change", {
-            detail: { action: "subscribe", calendarId },
-          })
-        );
-
-        return true;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to subscribe";
-        toast.error(message);
-
-        // Revert optimistic update
-        await fetchCalendars();
-        return false;
-      }
-    },
-    [t, fetchCalendars, dismissedCalendars, availableCalendars]
-  );
-
-  /**
-   * Dismiss/Unsubscribe from a calendar
-   */
-  const dismiss = useCallback(
-    async (calendarId: string, calendarName: string) => {
-      // Find calendar in available list
-      const calendar = availableCalendars.find((cal) => cal.id === calendarId);
-
-      if (!calendar) return false;
-
-      // Optimistic update: Remove from available and add to dismissed
-      setAvailableCalendars((prev) =>
-        prev.filter((cal) => cal.id !== calendarId)
-      );
-
-      setDismissedCalendars((prev) => [
-        ...prev,
-        {
-          id: calendar.id,
-          name: calendar.name,
-          color: calendar.color,
-          permission: calendar.permission || calendar.guestPermission, // Use share permission if available, fallback to guest
-          owner: calendar.owner,
-          source: calendar.source,
-        },
-      ]);
-
-      try {
-        const response = await fetch(
-          `/api/calendars/subscriptions/${calendarId}`,
-          {
-            method: "DELETE",
+          if (dismissedCal) {
+            // Move from dismissed to available
+            return {
+              available: [
+                ...old.available,
+                {
+                  id: dismissedCal.id,
+                  name: dismissedCal.name,
+                  color: dismissedCal.color,
+                  guestPermission: dismissedCal.permission,
+                  permission: dismissedCal.permission,
+                  owner: dismissedCal.owner,
+                  source: dismissedCal.source,
+                  isSubscribed: true,
+                },
+              ],
+              dismissed: old.dismissed.filter((cal) => cal.id !== calendarId),
+            };
+          } else if (availableCal) {
+            // Mark as subscribed
+            return {
+              ...old,
+              available: old.available.map((cal) =>
+                cal.id === calendarId ? { ...cal, isSubscribed: true } : cal
+              ),
+            };
           }
-        );
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to unsubscribe");
+          return old;
         }
+      );
 
-        toast.success(t("calendar.unsubscribeSuccess", { name: calendarName }));
-
-        // Dispatch custom event to trigger calendar list refresh
-        window.dispatchEvent(
-          new CustomEvent("calendar-list-change", {
-            detail: { action: "dismiss", calendarId },
-          })
-        );
-
-        return true;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to unsubscribe";
-        toast.error(message);
-
-        // Revert optimistic update
-        await fetchCalendars();
-        return false;
-      }
+      return { previous };
     },
-    [t, fetchCalendars, availableCalendars]
-  );
+    onError: (err, calendarId, context) => {
+      queryClient.setQueryData(queryKeys.subscriptions.all, context?.previous);
+      toast.error(err instanceof Error ? err.message : "Failed to subscribe");
+    },
+    onSuccess: (_, calendarId) => {
+      const calendar = availableCalendars.find((cal) => cal.id === calendarId);
+      toast.success(
+        t("calendar.subscriptionSuccess", {
+          name: calendar?.name || "Calendar",
+        })
+      );
+    },
+    onSettled: () => {
+      // Invalidate both subscriptions and main calendar list
+      queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    },
+  });
+
+  // Dismiss mutation
+  const dismissMutation = useMutation({
+    mutationFn: dismissApi,
+    onMutate: async (calendarId) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.subscriptions.all,
+      });
+      const previous = queryClient.getQueryData(queryKeys.subscriptions.all);
+
+      // Optimistic update
+      queryClient.setQueryData(
+        queryKeys.subscriptions.all,
+        (old: SubscriptionResponse | undefined) => {
+          if (!old) return old;
+
+          const calendar = old.available.find((cal) => cal.id === calendarId);
+          if (!calendar) return old;
+
+          return {
+            available: old.available.filter((cal) => cal.id !== calendarId),
+            dismissed: [
+              ...old.dismissed,
+              {
+                id: calendar.id,
+                name: calendar.name,
+                color: calendar.color,
+                permission: calendar.permission || calendar.guestPermission,
+                owner: calendar.owner,
+                source: calendar.source,
+              },
+            ],
+          };
+        }
+      );
+
+      return { previous };
+    },
+    onError: (err, calendarId, context) => {
+      queryClient.setQueryData(queryKeys.subscriptions.all, context?.previous);
+      toast.error(err instanceof Error ? err.message : "Failed to unsubscribe");
+    },
+    onSuccess: (_, calendarId) => {
+      const calendar = availableCalendars.find((cal) => cal.id === calendarId);
+      toast.success(
+        t("calendar.unsubscribeSuccess", { name: calendar?.name || "Calendar" })
+      );
+    },
+    onSettled: () => {
+      // Invalidate both subscriptions and main calendar list
+      queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    },
+  });
 
   return {
     availableCalendars,
     dismissedCalendars,
     loading,
-    error,
-    subscribe,
-    dismiss,
-    refetch: fetchCalendars,
+    error: errorMessage,
+    subscribe: async (
+      calendarId: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _calendarName: string
+    ): Promise<boolean> => {
+      try {
+        await subscribeMutation.mutateAsync(calendarId);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    dismiss: async (
+      calendarId: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _calendarName: string
+    ): Promise<boolean> => {
+      try {
+        await dismissMutation.mutateAsync(calendarId);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all });
+    },
   };
 }

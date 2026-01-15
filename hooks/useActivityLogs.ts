@@ -1,215 +1,173 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import { queryKeys } from "@/lib/query-keys";
 
-// Unified activity log format (matches API response)
+/**
+ * Activity Log Types
+ */
 export interface UnifiedActivityLog {
   id: string;
   type: "sync" | "auth" | "calendar" | "security";
   action: string;
   timestamp: Date;
-  severity: string;
+  severity: "info" | "warning" | "error" | "critical";
   metadata: object | null;
   resourceType?: string;
   resourceId?: string;
 }
 
-interface ActivityLogsFilters {
+export interface ActivityLogsFilters {
   type?: "sync" | "auth" | "calendar" | "security";
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: string;
+  endDate?: string;
   severity?: "info" | "warning" | "error" | "critical";
   search?: string;
 }
 
-interface ActivityLogsResponse {
-  logs: UnifiedActivityLog[];
-  total: number;
-  page: number;
+export interface ActivityLogsPagination {
   limit: number;
-  hasMore: boolean;
+  offset: number;
 }
 
-export function useActivityLogs() {
-  const [logs, setLogs] = useState<UnifiedActivityLog[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<UnifiedActivityLog[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [limit] = useState(50); // Fixed page size
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export interface ActivityLogsResponse {
+  logs: UnifiedActivityLog[];
+  total: number;
+  limit: number;
+  offset: number;
+}
 
-  // Filters
-  const [filters, setFilters] = useState<ActivityLogsFilters>({});
+/**
+ * Fetch activity logs from API
+ */
+async function fetchActivityLogsApi(
+  filters: ActivityLogsFilters,
+  pagination: ActivityLogsPagination
+): Promise<ActivityLogsResponse> {
+  const params = new URLSearchParams();
 
-  // Fetch logs from API
-  const fetchLogs = useCallback(
-    async (pageNum = 0) => {
-      setLoading(true);
-      setError(null);
+  if (filters.type) params.set("type", filters.type);
+  if (filters.startDate) params.set("startDate", filters.startDate);
+  if (filters.endDate) params.set("endDate", filters.endDate);
+  if (filters.severity) params.set("severity", filters.severity);
+  if (filters.search) params.set("search", filters.search);
 
-      try {
-        const params = new URLSearchParams();
-        if (filters.type) params.set("type", filters.type);
-        if (filters.startDate)
-          params.set("startDate", filters.startDate.toISOString());
-        if (filters.endDate)
-          params.set("endDate", filters.endDate.toISOString());
-        params.set("page", pageNum.toString());
-        params.set("limit", limit.toString());
+  params.set("limit", pagination.limit.toString());
+  params.set("offset", pagination.offset.toString());
 
-        const response = await fetch(`/api/activity-logs?${params}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch activity logs");
-        }
-
-        const data: ActivityLogsResponse = await response.json();
-
-        // Parse timestamps
-        const parsedLogs = data.logs.map((log) => ({
-          ...log,
-          timestamp: new Date(log.timestamp),
-        }));
-
-        // Apply client-side filters (severity, search)
-        let filtered = parsedLogs;
-
-        if (filters.severity) {
-          filtered = filtered.filter(
-            (log) => log.severity === filters.severity
-          );
-        }
-
-        if (filters.search && filters.search.trim()) {
-          const searchLower = filters.search.toLowerCase();
-          filtered = filtered.filter(
-            (log) =>
-              log.action.toLowerCase().includes(searchLower) ||
-              (log.resourceType &&
-                log.resourceType.toLowerCase().includes(searchLower)) ||
-              (log.resourceId &&
-                log.resourceId.toLowerCase().includes(searchLower))
-          );
-        }
-
-        setLogs(parsedLogs);
-        setFilteredLogs(filtered);
-        setTotal(data.total);
-        setPage(pageNum);
-        setHasMore(data.hasMore);
-      } catch (err) {
-        console.error("Error fetching activity logs:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch activity logs"
-        );
-      } finally {
-        setLoading(false);
-      }
+  const response = await fetch(`/api/activity-logs?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
     },
-    [filters, limit]
-  );
+  });
 
-  // Clear all logs
-  const clearLogs = useCallback(async () => {
-    try {
-      const response = await fetch("/api/activity-logs", {
-        method: "DELETE",
-      });
+  if (!response.ok) {
+    throw new Error("Failed to fetch activity logs");
+  }
 
-      if (!response.ok) {
-        throw new Error("Failed to clear activity logs");
-      }
+  const data = await response.json();
 
+  // Parse date strings to Date objects
+  const logs = data.logs.map((log: Record<string, unknown>) => ({
+    ...log,
+    timestamp: new Date(log.timestamp as string),
+  }));
+
+  return {
+    logs,
+    total: data.total,
+    limit: data.limit,
+    offset: data.offset,
+  };
+}
+
+/**
+ * Clear all activity logs via API
+ */
+async function clearLogsApi(
+  t: ReturnType<typeof useTranslations>
+): Promise<void> {
+  const response = await fetch("/api/activity-logs", {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(t("common.deleteError", { item: "Activity logs" }));
+  }
+}
+
+/**
+ * Activity Logs Hook
+ *
+ * Provides user activity logs with automatic polling.
+ * Uses React Query for automatic cache management and live updates.
+ *
+ * Features:
+ * - Fetch activity logs with filtering and pagination
+ * - Clear all logs
+ * - Automatic polling every 5 seconds
+ * - Error handling with toast notifications
+ * - Automatic cache invalidation
+ *
+ * @param filters - Activity log filters (pass as memoized object)
+ * @param pagination - Pagination options (limit, offset) (pass as memoized object)
+ * @returns Object with activity log data and management functions
+ */
+export function useActivityLogs(
+  filters: ActivityLogsFilters = {},
+  pagination: ActivityLogsPagination = { limit: 50, offset: 0 }
+) {
+  const t = useTranslations();
+  const queryClient = useQueryClient();
+
+  // Fetch activity logs with polling
+  const {
+    data: logsData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.activityLogs({ filters, pagination }),
+    queryFn: () => fetchActivityLogsApi(filters, pagination),
+    refetchInterval: 5000, // Poll every 5 seconds
+    refetchIntervalInBackground: true, // Continue polling in background
+  });
+
+  // Clear logs mutation
+  const clearLogsMutation = useMutation({
+    mutationFn: () => clearLogsApi(t),
+    onSuccess: () => {
       toast.success("Activity logs cleared");
-      await fetchLogs(0); // Refresh logs
-    } catch (err) {
-      console.error("Error clearing logs:", err);
+      queryClient.invalidateQueries({ queryKey: ["activity-logs"] });
+    },
+    onError: (err) => {
       toast.error(
         err instanceof Error ? err.message : "Failed to clear activity logs"
       );
-    }
-  }, [fetchLogs]);
-
-  // Mark specific logs as read
-  // Update filters
-  const updateFilters = useCallback(
-    (newFilters: Partial<ActivityLogsFilters>) => {
-      setFilters((prev) => ({ ...prev, ...newFilters }));
-      setPage(0); // Reset to first page when filters change
     },
-    []
-  );
-
-  // Clear filters
-  const clearFilters = useCallback(() => {
-    setFilters({});
-    setPage(0);
-  }, []);
-
-  // Pagination
-  const goToNextPage = useCallback(() => {
-    if (hasMore) {
-      setPage((prev) => prev + 1);
-    }
-  }, [hasMore]);
-
-  const goToPreviousPage = useCallback(() => {
-    if (page > 0) {
-      setPage((prev) => prev - 1);
-    }
-  }, [page]);
-
-  // Initial fetch + fetch on filter/page change
-  useEffect(() => {
-    fetchLogs(page);
-  }, [page, filters.type, filters.startDate, filters.endDate, fetchLogs]); // Re-fetch on server-side filter changes
-
-  // Apply client-side filters when they change
-  useEffect(() => {
-    let filtered = logs;
-
-    if (filters.severity) {
-      filtered = filtered.filter((log) => log.severity === filters.severity);
-    }
-
-    if (filters.search && filters.search.trim()) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (log) =>
-          log.action.toLowerCase().includes(searchLower) ||
-          (log.resourceType &&
-            log.resourceType.toLowerCase().includes(searchLower)) ||
-          (log.resourceId && log.resourceId.toLowerCase().includes(searchLower))
-      );
-    }
-
-    setFilteredLogs(filtered);
-  }, [logs, filters.severity, filters.search]);
+  });
 
   return {
     // Data
-    logs: filteredLogs,
-    total,
-    page,
-    limit,
-    hasMore,
-    loading,
+    logs: logsData?.logs || [],
+    total: logsData?.total || 0,
+    limit: logsData?.limit || pagination.limit,
+    offset: logsData?.offset || pagination.offset,
+    isLoading,
     error,
 
-    // Filters
-    filters,
-    updateFilters,
-    clearFilters,
-
-    // Actions
-    fetchLogs: () => fetchLogs(page),
-    clearLogs,
-
-    // Pagination
-    goToNextPage,
-    goToPreviousPage,
+    // Functions
+    refetch,
+    clearLogs: async (): Promise<boolean> => {
+      try {
+        await clearLogsMutation.mutateAsync();
+        return true;
+      } catch {
+        return false;
+      }
+    },
   };
 }

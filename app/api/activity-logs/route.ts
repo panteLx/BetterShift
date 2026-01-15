@@ -39,9 +39,10 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type"); // e.g., "auth", "calendar", "sync", "security"
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
-  const page = parseInt(searchParams.get("page") || "0", 10);
+  const severity = searchParams.get("severity"); // e.g., "info", "warning", "error", "critical"
+  const search = searchParams.get("search"); // search text for action/metadata
   const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
-  const offset = page * limit;
+  const offset = parseInt(searchParams.get("offset") || "0", 10);
 
   try {
     // Fetch all logs and merge them before pagination
@@ -59,6 +60,11 @@ export async function GET(request: NextRequest) {
       // Filter by action type prefix (but exclude sync if type is specified)
       if (type && type !== "sync") {
         auditConditions.push(sql`${auditLogs.action} LIKE ${type + ".%"}`);
+      }
+
+      // Filter by severity
+      if (severity) {
+        auditConditions.push(eq(auditLogs.severity, severity));
       }
 
       // Filter by date range
@@ -159,20 +165,48 @@ export async function GET(request: NextRequest) {
     }
 
     // ============================================
-    // 3. Sort merged logs by timestamp (descending)
+    // 3. Apply severity filter after merging (sync logs derive severity from status)
     // ============================================
-    allLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    let filteredLogs = allLogs;
+    if (severity) {
+      filteredLogs = filteredLogs.filter((log) => log.severity === severity);
+    }
 
     // ============================================
-    // 4. Apply pagination to merged results
+    // 4. Apply search filter (search in action and metadata)
     // ============================================
-    const paginatedLogs = allLogs.slice(offset, offset + limit);
-    const total = allLogs.length;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredLogs = filteredLogs.filter((log) => {
+        // Search in action
+        if (log.action.toLowerCase().includes(searchLower)) return true;
+        // Search in metadata
+        if (log.metadata) {
+          const metadataStr = JSON.stringify(log.metadata).toLowerCase();
+          if (metadataStr.includes(searchLower)) return true;
+        }
+        // Search in resourceType or resourceId
+        if (log.resourceType?.toLowerCase().includes(searchLower)) return true;
+        if (log.resourceId?.toLowerCase().includes(searchLower)) return true;
+        return false;
+      });
+    }
+
+    // ============================================
+    // 5. Sort merged logs by timestamp (descending)
+    // ============================================
+    filteredLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    // ============================================
+    // 6. Apply pagination to filtered results
+    // ============================================
+    const paginatedLogs = filteredLogs.slice(offset, offset + limit);
+    const total = filteredLogs.length;
 
     return NextResponse.json({
       logs: paginatedLogs,
       total,
-      page,
+      offset,
       limit,
       hasMore: offset + paginatedLogs.length < total,
     });

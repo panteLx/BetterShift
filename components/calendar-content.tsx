@@ -123,7 +123,6 @@ export function CalendarContent(props: CalendarContentProps) {
         <ShiftStats
           calendarId={props.selectedCalendar || undefined}
           currentDate={props.currentDate}
-          refreshTrigger={props.statsRefreshTrigger}
         />
 
         <ShiftsList

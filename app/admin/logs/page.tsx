@@ -170,22 +170,40 @@ export default function AdminAuditLogsPage() {
     []
   );
 
+  // Handler functions that combine filter changes with page reset
+  const handleActionFilterChange = (value: string) => {
+    setActionFilter(value);
+    setPage(0);
+  };
+
+  const handleSeverityFilterChange = (value: string) => {
+    setSeverityFilter(value);
+    setPage(0);
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    setPage(0);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    setPage(0);
+  };
+
+  const handleDebouncedSearchChange = (value: string) => {
+    setDebouncedSearch(value);
+    setPage(0);
+  };
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
+      handleDebouncedSearchChange(searchQuery);
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  // Reset page to 0 when debounced search changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(0);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [debouncedSearch, actionFilter, severityFilter, startDate, endDate]);
 
   // Toggle row expansion
   const toggleRow = (logId: string) => {
@@ -307,7 +325,7 @@ export default function AdminAuditLogsPage() {
           </div>
 
           {/* Action Type Filter */}
-          <Select value={actionFilter} onValueChange={setActionFilter}>
+          <Select value={actionFilter} onValueChange={handleActionFilterChange}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
@@ -326,7 +344,10 @@ export default function AdminAuditLogsPage() {
           </Select>
 
           {/* Severity Filter */}
-          <Select value={severityFilter} onValueChange={setSeverityFilter}>
+          <Select
+            value={severityFilter}
+            onValueChange={handleSeverityFilterChange}
+          >
             <SelectTrigger className="w-full sm:w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
@@ -358,7 +379,7 @@ export default function AdminAuditLogsPage() {
             <Input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => handleStartDateChange(e.target.value)}
             />
           </div>
 
@@ -369,7 +390,7 @@ export default function AdminAuditLogsPage() {
             <Input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => handleEndDateChange(e.target.value)}
             />
           </div>
 

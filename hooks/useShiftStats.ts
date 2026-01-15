@@ -1,4 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 export interface ShiftStatsData {
   period: string;
@@ -20,62 +23,70 @@ interface UseShiftStatsOptions {
   calendarId: string | undefined;
   currentDate: Date;
   period: "week" | "month" | "year";
-  refreshTrigger?: number;
 }
 
+/**
+ * Fetch shift statistics from API
+ */
+async function fetchShiftStatsApi(
+  calendarId: string,
+  period: string,
+  currentDate: Date
+): Promise<ShiftStatsData> {
+  const params = new URLSearchParams({
+    calendarId,
+    period,
+    date: currentDate.toISOString(),
+  });
+
+  const response = await fetch(`/api/shifts/stats?${params}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch shift statistics");
+  }
+
+  return await response.json();
+}
+
+/**
+ * Shift Statistics Hook
+ *
+ * Provides shift statistics for a calendar with automatic polling.
+ * Uses React Query for automatic cache management and live updates.
+ *
+ * Features:
+ * - Automatic polling every 5 seconds
+ * - Statistics by calendar, period, and date
+ * - Manual refetch available if needed
+ *
+ * @param calendarId - Calendar ID to fetch stats for
+ * @param currentDate - Current date for stats calculation
+ * @param period - Time period (week, month, year)
+ * @returns Object with stats data and loading state
+ */
 export function useShiftStats({
   calendarId,
   currentDate,
   period,
-  refreshTrigger,
 }: UseShiftStatsOptions) {
-  const [stats, setStats] = useState<ShiftStatsData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const isInitialLoadRef = useRef(true);
-
-  const fetchStats = useCallback(
-    async (silent = false) => {
-      if (!calendarId) return;
-
-      if (!silent) {
-        setLoading(true);
-      }
-
-      try {
-        const params = new URLSearchParams({
-          calendarId,
-          period,
-          date: currentDate.toISOString(),
-        });
-
-        const response = await fetch(`/api/shifts/stats?${params}`);
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Failed to fetch shift statistics:", error);
-      } finally {
-        if (!silent) {
-          setLoading(false);
-        }
-      }
-    },
-    [calendarId, period, currentDate]
-  );
-
-  // Fetch stats when dependencies change
-  useEffect(() => {
-    if (calendarId) {
-      fetchStats(!isInitialLoadRef.current);
-      isInitialLoadRef.current = false;
-    }
-  }, [calendarId, refreshTrigger, fetchStats]);
+  const {
+    data: stats = null,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- currentDate is included via toISOString() in queryKey
+    queryKey: queryKeys.stats.shifts(
+      calendarId!,
+      period,
+      currentDate.toISOString()
+    ),
+    queryFn: () => fetchShiftStatsApi(calendarId!, period, currentDate),
+    enabled: !!calendarId,
+  });
 
   return {
     stats,
     loading,
-    refetch: fetchStats,
+    refetch,
   };
 }

@@ -1,6 +1,10 @@
-import { useState, useCallback } from "react";
+"use client";
+
+import { useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { queryKeys } from "@/lib/query-keys";
 
 export interface CalendarAccessToken {
   id: string;
@@ -22,170 +26,231 @@ export interface CreateTokenParams {
   expiresAt?: string | null;
 }
 
-export interface UpdateTokenParams {
-  name?: string;
-  permission?: "read" | "write";
-  expiresAt?: string | null;
-  isActive?: boolean;
+/**
+ * Fetch calendar access tokens from API
+ */
+async function fetchTokensApi(
+  calendarId: string
+): Promise<CalendarAccessToken[]> {
+  const response = await fetch(`/api/calendars/${calendarId}/tokens`);
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return await response.json();
 }
 
+/**
+ * Create a new access token via API
+ * Returns full token (only time it's visible!)
+ */
+async function createTokenApi(
+  calendarId: string,
+  params: CreateTokenParams
+): Promise<CalendarAccessToken> {
+  const response = await fetch(`/api/calendars/${calendarId}/tokens`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Update a token via API
+ */
+async function updateTokenApi(
+  calendarId: string,
+  tokenId: string,
+  updates: { isActive?: boolean }
+): Promise<CalendarAccessToken> {
+  const response = await fetch(
+    `/api/calendars/${calendarId}/tokens/${tokenId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Delete (revoke) a token via API
+ */
+async function deleteTokenApi(
+  calendarId: string,
+  tokenId: string
+): Promise<void> {
+  const response = await fetch(
+    `/api/calendars/${calendarId}/tokens/${tokenId}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+}
+
+/**
+ * Calendar Access Tokens Hook
+ *
+ * Provides calendar access token management with automatic polling.
+ * Uses React Query for automatic cache management and live updates.
+ *
+ * Features:
+ * - Fetch access tokens for a calendar
+ * - Create new tokens (returns full token only once!)
+ * - Delete (revoke) tokens
+ * - Optimistic updates for instant UI feedback
+ * - Automatic polling every 5 seconds
+ * - Helper functions for share links
+ *
+ * Note: Token update and regenerate are not supported in the UI.
+ *
+ * @param calendarId - Calendar ID to manage tokens for
+ * @returns Object with tokens data and management functions
+ */
 export function useCalendarTokens(calendarId: string | null) {
-  const [tokens, setTokens] = useState<CalendarAccessToken[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const t = useTranslations();
+  const queryClient = useQueryClient();
 
-  /**
-   * Fetch all tokens for calendar
-   */
-  const fetchTokens = useCallback(async () => {
-    if (!calendarId) {
-      setTokens([]);
-      return;
-    }
+  // Fetch tokens
+  const {
+    data: tokens = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.tokens.byCalendar(calendarId!),
+    queryFn: () => fetchTokensApi(calendarId!),
+    enabled: !!calendarId,
+  });
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/calendars/${calendarId}/tokens`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      setTokens(data);
-    } catch {
-      const message = t("common.fetchError", { item: t("token.accessLinks") });
-      setError(message);
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [calendarId, t]);
-
-  /**
-   * Create a new access token
-   * Returns full token (only time it's visible!)
-   */
-  const createToken = useCallback(
-    async (params: CreateTokenParams): Promise<CalendarAccessToken | null> => {
-      if (!calendarId) return null;
-
-      try {
-        const response = await fetch(`/api/calendars/${calendarId}/tokens`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `HTTP ${response.status}`);
-        }
-
-        const newToken = await response.json();
-
-        // Add to local state
-        setTokens((prev) => [newToken, ...prev]);
-
-        toast.success(t("common.created", { item: t("token.accessLinks") }));
-
-        return newToken; // Includes full token!
-      } catch (err) {
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : t("common.createError", { item: t("token.accessLinks") })
-        );
-        return null;
-      }
+  // Create token mutation (NO optimistic update - need real token!)
+  const createTokenMutation = useMutation({
+    mutationFn: (params: CreateTokenParams) =>
+      createTokenApi(calendarId!, params),
+    onSuccess: () => {
+      toast.success(t("common.created", { item: t("token.accessLinks") }));
+      // Invalidate to refetch and get updated list
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.tokens.byCalendar(calendarId!),
+      });
     },
-    [calendarId, t]
-  );
-
-  /**
-   * Update an existing token
-   */
-  const updateToken = useCallback(
-    async (tokenId: string, updates: UpdateTokenParams): Promise<boolean> => {
-      if (!calendarId) return false;
-
-      try {
-        const response = await fetch(
-          `/api/calendars/${calendarId}/tokens/${tokenId}`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updates),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `HTTP ${response.status}`);
-        }
-
-        const updatedToken = await response.json();
-
-        // Update local state
-        setTokens((prev) =>
-          prev.map((token) => (token.id === tokenId ? updatedToken : token))
-        );
-
-        toast.success(t("common.updated", { item: t("token.accessLinks") }));
-
-        return true;
-      } catch (err) {
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : t("common.updateError", { item: t("token.accessLinks") })
-        );
-        return false;
-      }
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.createError", { item: t("token.accessLinks") })
+      );
     },
-    [calendarId, t]
-  );
+  });
 
-  /**
-   * Delete (revoke) a token
-   */
-  const deleteToken = useCallback(
-    async (tokenId: string): Promise<boolean> => {
-      if (!calendarId) return false;
+  // Update token mutation
+  const updateTokenMutation = useMutation({
+    mutationFn: ({
+      tokenId,
+      updates,
+    }: {
+      tokenId: string;
+      updates: { isActive?: boolean };
+    }) => updateTokenApi(calendarId!, tokenId, updates),
+    onMutate: async ({ tokenId, updates }) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.tokens.byCalendar(calendarId!),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.tokens.byCalendar(calendarId!)
+      );
 
-      try {
-        const response = await fetch(
-          `/api/calendars/${calendarId}/tokens/${tokenId}`,
-          {
-            method: "DELETE",
-          }
-        );
+      // Optimistic update
+      queryClient.setQueryData(
+        queryKeys.tokens.byCalendar(calendarId!),
+        (old: CalendarAccessToken[] = []) =>
+          old.map((token) =>
+            token.id === tokenId ? { ...token, ...updates } : token
+          )
+      );
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `HTTP ${response.status}`);
-        }
-
-        // Remove from local state
-        setTokens((prev) => prev.filter((token) => token.id !== tokenId));
-
-        toast.success(t("common.revoked", { item: t("token.accessLinks") }));
-
-        return true;
-      } catch (err) {
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : t("common.revokeError", { item: t("token.accessLinks") })
-        );
-        return false;
-      }
+      return { previous };
     },
-    [calendarId, t]
-  );
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(
+        queryKeys.tokens.byCalendar(calendarId!),
+        context?.previous
+      );
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.updateError", { item: t("token.accessLinks") })
+      );
+    },
+    onSuccess: () => {
+      toast.success(t("common.updated", { item: t("token.accessLinks") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.tokens.byCalendar(calendarId!),
+      });
+    },
+  });
+
+  // Delete token mutation
+  const deleteTokenMutation = useMutation({
+    mutationFn: (tokenId: string) => deleteTokenApi(calendarId!, tokenId),
+    onMutate: async (tokenId) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.tokens.byCalendar(calendarId!),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.tokens.byCalendar(calendarId!)
+      );
+
+      // Optimistic update
+      queryClient.setQueryData(
+        queryKeys.tokens.byCalendar(calendarId!),
+        (old: CalendarAccessToken[] = []) =>
+          old.filter((token) => token.id !== tokenId)
+      );
+
+      return { previous };
+    },
+    onError: (err, tokenId, context) => {
+      queryClient.setQueryData(
+        queryKeys.tokens.byCalendar(calendarId!),
+        context?.previous
+      );
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.revokeError", { item: t("token.accessLinks") })
+      );
+    },
+    onSuccess: () => {
+      toast.success(t("common.revoked", { item: t("token.accessLinks") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.tokens.byCalendar(calendarId!),
+      });
+    },
+  });
 
   /**
    * Generate a shareable link from token
@@ -219,10 +284,37 @@ export function useCalendarTokens(calendarId: string | null) {
     tokens,
     isLoading,
     error,
-    fetchTokens,
-    createToken,
-    updateToken,
-    deleteToken,
+    createToken: async (
+      params: CreateTokenParams
+    ): Promise<CalendarAccessToken | null> => {
+      if (!calendarId) return null;
+      try {
+        return await createTokenMutation.mutateAsync(params);
+      } catch {
+        return null;
+      }
+    },
+    updateToken: async (
+      tokenId: string,
+      updates: { isActive?: boolean }
+    ): Promise<boolean> => {
+      if (!calendarId) return false;
+      try {
+        await updateTokenMutation.mutateAsync({ tokenId, updates });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    deleteToken: async (tokenId: string): Promise<boolean> => {
+      if (!calendarId) return false;
+      try {
+        await deleteTokenMutation.mutateAsync(tokenId);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     getShareLink,
     copyShareLink,
   };

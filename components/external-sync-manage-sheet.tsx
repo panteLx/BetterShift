@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -45,6 +46,7 @@ import {
 } from "@/lib/external-calendar-utils";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useDirtyState } from "@/hooks/useDirtyState";
+import { queryKeys } from "@/lib/query-keys";
 
 interface ExternalSyncManageSheetProps {
   open: boolean;
@@ -59,18 +61,16 @@ export function ExternalSyncManageSheet({
   onOpenChange,
   calendarId,
   onSyncComplete,
-  syncErrorRefreshTrigger,
-}: ExternalSyncManageSheetProps) {
+}: // syncErrorRefreshTrigger is no longer needed - React Query polls automatically
+ExternalSyncManageSheetProps) {
   const t = useTranslations();
-  const [syncs, setSyncs] = useState<ExternalSync[]>([]);
-  const [syncErrors, setSyncErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSync, setEditingSync] = useState<ExternalSync | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // For form submission loading
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -94,81 +94,76 @@ export function ExternalSyncManageSheet({
     autoSyncInterval: number;
   } | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const queryClient = useQueryClient();
 
-  const fetchSyncs = useCallback(
-    async (showLoadingState = true) => {
-      if (!calendarId) return;
-
-      if (showLoadingState) {
-        setIsLoading(true);
-      }
-      try {
-        const params = new URLSearchParams({ calendarId });
-
-        const response = await fetch(`/api/external-syncs?${params}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSyncs(data);
-
-          // Fetch last sync logs to check for errors
-          const logsParams = new URLSearchParams({ calendarId, limit: "50" });
-
-          const logsResponse = await fetch(`/api/sync-logs?${logsParams}`);
-          if (logsResponse.ok) {
-            const logs = await logsResponse.json();
-            const errors: Record<string, string> = {};
-
-            // Get the latest error for each external sync
-            data.forEach((sync: ExternalSync) => {
-              const syncLogs = logs.filter(
-                (log: SyncLog) => log.externalSyncId === sync.id
-              );
-              // Only show unread errors
-              const latestError = syncLogs.find(
-                (log: SyncLog) => log.status === "error" && !log.isRead
-              );
-              if (latestError) {
-                errors[sync.id] =
-                  latestError.errorMessage ||
-                  t("syncNotifications.statusError");
-              }
-            });
-
-            setSyncErrors(errors);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch syncs:", error);
-      } finally {
-        if (showLoadingState) {
-          setIsLoading(false);
-        }
-      }
+  // Fetch external syncs with React Query for live updates
+  const { data: syncsData = [] } = useQuery({
+    queryKey: queryKeys.externalSyncs.byCalendar(calendarId!),
+    queryFn: async () => {
+      const params = new URLSearchParams({ calendarId: calendarId! });
+      const response = await fetch(`/api/external-syncs?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch syncs");
+      return (await response.json()) as ExternalSync[];
     },
-    [calendarId, t]
-  );
+    enabled: !!calendarId && open,
+    refetchInterval: 5000, // Poll every 5 seconds for live updates across devices
+    refetchIntervalInBackground: true,
+  });
 
-  // Silent refresh for sync error updates (triggered by SSE)
-  useEffect(() => {
-    if (
-      open &&
-      calendarId &&
-      syncErrorRefreshTrigger &&
-      syncErrorRefreshTrigger > 0
-    ) {
-      // Silently refresh sync errors without loading state
-      fetchSyncs(false);
+  // Fetch sync logs with React Query for live updates
+  const { data: syncLogsData = [] } = useQuery({
+    queryKey: queryKeys.externalSyncs.logs(calendarId!),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        calendarId: calendarId!,
+        limit: "50",
+      });
+      const response = await fetch(`/api/sync-logs?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch sync logs");
+      return (await response.json()) as SyncLog[];
+    },
+    enabled: !!calendarId && open,
+    refetchInterval: 5000, // Poll every 5 seconds for live updates across devices
+    refetchIntervalInBackground: true,
+  });
+
+  // Compute sync errors from logs
+  const syncErrors = useMemo(() => {
+    const errors: Record<string, string> = {};
+    syncsData.forEach((sync: ExternalSync) => {
+      const syncLogs = syncLogsData.filter(
+        (log: SyncLog) => log.externalSyncId === sync.id
+      );
+      const latestError = syncLogs.find(
+        (log: SyncLog) => log.status === "error" && !log.isRead
+      );
+      if (latestError) {
+        errors[sync.id] =
+          latestError.errorMessage || t("syncNotifications.statusError");
+      }
+    });
+    return errors;
+  }, [syncsData, syncLogsData, t]);
+
+  // Use syncsData from React Query
+  const syncs = syncsData;
+
+  // Invalidate queries function to refetch data
+  const invalidateSyncs = useCallback(() => {
+    if (calendarId) {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.externalSyncs.byCalendar(calendarId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.externalSyncs.logs(calendarId),
+      });
     }
-  }, [syncErrorRefreshTrigger, open, calendarId, fetchSyncs]);
+  }, [calendarId, queryClient]);
 
-  // Load syncs when dialog opens, reset state when it closes
+  // Reset form state when dialog closes
   useEffect(() => {
-    if (open && calendarId) {
-      fetchSyncs();
-    } else {
-      // Reset all internal state when dialog closes or calendarId becomes falsy
-      setSyncs([]);
-      setIsLoading(false);
+    if (!open) {
+      // Reset all internal state when dialog closes
       setIsSyncing(null);
       setIsDeleting(null);
       setShowAddForm(false);
@@ -182,8 +177,9 @@ export function ExternalSyncManageSheet({
       setImportType("url");
       setFormIsHidden(false);
       setFormHideFromStats(false);
+      setIsSubmitting(false);
     }
-  }, [open, calendarId, fetchSyncs]);
+  }, [open]);
 
   const handleAddSync = async () => {
     if (!calendarId || !formName.trim()) return;
@@ -222,7 +218,7 @@ export function ExternalSyncManageSheet({
       }
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       let icsContent: string | undefined;
 
@@ -232,7 +228,7 @@ export function ExternalSyncManageSheet({
         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
         if (icsFile.size > MAX_FILE_SIZE) {
           toast.error(t("validation.fileTooLarge", { maxSize: "5MB" }));
-          setIsLoading(false);
+          setIsSubmitting(false);
           return;
         }
         icsContent = await icsFile.text();
@@ -266,7 +262,7 @@ export function ExternalSyncManageSheet({
         setFormIsHidden(false);
         setFormHideFromStats(false);
         setShowAddForm(false);
-        await fetchSyncs();
+        invalidateSyncs();
         onSyncComplete?.(); // Trigger refresh to update parent state
         toast.success(
           t("common.created", { item: t("externalSync.syncTypeCustom") })
@@ -286,7 +282,7 @@ export function ExternalSyncManageSheet({
         t("common.createError", { item: t("externalSync.syncTypeCustom") })
       );
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -310,7 +306,7 @@ export function ExternalSyncManageSheet({
         throw new Error(data.error || "Failed to sync calendar");
       }
 
-      await fetchSyncs();
+      invalidateSyncs();
       onSyncComplete?.();
 
       // Show sync statistics
@@ -347,7 +343,7 @@ export function ExternalSyncManageSheet({
       });
 
       if (response.ok) {
-        await fetchSyncs();
+        invalidateSyncs();
         onSyncComplete?.();
         toast.success(
           t("common.deleted", { item: t("externalSync.syncTypeCustom") })
@@ -425,7 +421,7 @@ export function ExternalSyncManageSheet({
       });
 
       if (response.ok) {
-        await fetchSyncs();
+        invalidateSyncs();
         onSyncComplete?.(); // Trigger refresh
         toast.success(
           t("common.updated", { item: t("externalSync.syncTypeCustom") })
@@ -538,7 +534,7 @@ export function ExternalSyncManageSheet({
       });
 
       if (response.ok) {
-        await fetchSyncs();
+        invalidateSyncs();
         onSyncComplete?.();
         // Update initial data ref after successful save
         initialFormDataRef.current = {
@@ -578,7 +574,7 @@ export function ExternalSyncManageSheet({
     formColor,
     formDisplayMode,
     formAutoSyncInterval,
-    fetchSyncs,
+    invalidateSyncs,
     onSyncComplete,
     t,
   ]);
@@ -783,7 +779,7 @@ export function ExternalSyncManageSheet({
                     })}
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -836,7 +832,7 @@ export function ExternalSyncManageSheet({
                         const file = e.target.files?.[0];
                         setIcsFile(file || null);
                       }}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="cursor-pointer"
                       value=""
                     />
@@ -857,7 +853,7 @@ export function ExternalSyncManageSheet({
                         placeholder={getUrlPlaceholder()}
                         value={formUrl || ""}
                         onChange={(e) => setFormUrl(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isSubmitting}
                         readOnly={!!editingSync}
                         className={
                           editingSync
@@ -1187,7 +1183,7 @@ export function ExternalSyncManageSheet({
                     setFormIsHidden(false);
                     setFormHideFromStats(false);
                   }}
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                   className="flex-1 h-11 border-border/50 hover:bg-muted/50"
                 >
                   {t("common.cancel")}
@@ -1196,13 +1192,13 @@ export function ExternalSyncManageSheet({
                   type="button"
                   onClick={handleAddSync}
                   disabled={
-                    isLoading ||
+                    isSubmitting ||
                     !formName.trim() ||
                     (importType === "file" ? !icsFile : !formUrl.trim())
                   }
                   className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
                 >
-                  {isLoading ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {t("common.saving")}

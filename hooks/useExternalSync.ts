@@ -1,72 +1,102 @@
-import { useState, useEffect, useCallback } from "react";
+"use client";
+
+import { useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalSync, SyncLog } from "@/lib/db/schema";
+import { queryKeys } from "@/lib/query-keys";
 
+/**
+ * Fetch external syncs from API
+ */
+async function fetchExternalSyncsApi(
+  calendarId: string
+): Promise<ExternalSync[]> {
+  const params = new URLSearchParams({ calendarId });
+  const response = await fetch(`/api/external-syncs?${params}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch external syncs");
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch sync logs from API
+ */
+async function fetchSyncLogsApi(calendarId: string): Promise<SyncLog[]> {
+  const params = new URLSearchParams({
+    calendarId,
+    limit: "50",
+  });
+
+  const response = await fetch(`/api/sync-logs?${params}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch sync logs");
+  }
+
+  return await response.json();
+}
+
+/**
+ * External Sync Hook
+ *
+ * Provides external calendar sync data with automatic polling.
+ * Uses React Query for automatic cache management and live updates.
+ *
+ * Features:
+ * - Fetch external syncs for a calendar
+ * - Monitor sync error status from logs
+ * - Automatic polling every 5 seconds
+ * - Manual refetch available if needed
+ *
+ * @param selectedCalendar - Calendar ID to fetch syncs for
+ * @returns Object with syncs data, error status, and loading state
+ */
 export function useExternalSync(selectedCalendar: string | null) {
-  const [externalSyncs, setExternalSyncs] = useState<ExternalSync[]>([]);
-  const [hasSyncErrors, setHasSyncErrors] = useState(false);
-  const [syncLogRefreshTrigger, setSyncLogRefreshTrigger] = useState(0);
+  const queryClient = useQueryClient();
 
-  const fetchExternalSyncs = useCallback(async () => {
-    if (!selectedCalendar) {
-      setExternalSyncs([]);
-      setHasSyncErrors(false);
-      return;
-    }
+  // Fetch external syncs
+  const { data: externalSyncs = [], isLoading: syncsLoading } = useQuery({
+    queryKey: queryKeys.externalSyncs.byCalendar(selectedCalendar!),
+    queryFn: () => fetchExternalSyncsApi(selectedCalendar!),
+    enabled: !!selectedCalendar,
+    refetchInterval: 5000, // Poll every 5 seconds for live updates
+    refetchIntervalInBackground: true, // Continue polling in background
+  });
 
-    try {
-      const params = new URLSearchParams({ calendarId: selectedCalendar });
+  // Fetch sync logs
+  const { data: syncLogs = [], isLoading: logsLoading } = useQuery({
+    queryKey: queryKeys.externalSyncs.logs(selectedCalendar!),
+    queryFn: () => fetchSyncLogsApi(selectedCalendar!),
+    enabled: !!selectedCalendar,
+    refetchInterval: 5000, // Poll every 5 seconds for live updates
+    refetchIntervalInBackground: true, // Continue polling in background
+  });
 
-      const response = await fetch(`/api/external-syncs?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setExternalSyncs(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch external syncs:", error);
-    }
-  }, [selectedCalendar]);
+  // Compute error status from logs
+  const hasSyncErrors = useMemo(
+    () => syncLogs.some((log) => log.status === "error" && !log.isRead),
+    [syncLogs]
+  );
 
-  const fetchSyncErrorStatus = useCallback(async () => {
-    if (!selectedCalendar) {
-      setHasSyncErrors(false);
-      return;
-    }
-
-    try {
-      const params = new URLSearchParams({
-        calendarId: selectedCalendar,
-        limit: "50",
-      });
-
-      const response = await fetch(`/api/sync-logs?${params}`);
-      if (response.ok) {
-        const logs: SyncLog[] = await response.json();
-        const hasErrors = logs.some(
-          (log: SyncLog) => log.status === "error" && !log.isRead
-        );
-        setHasSyncErrors(hasErrors);
-      }
-    } catch (error) {
-      console.error("Failed to fetch sync logs:", error);
-    }
-  }, [selectedCalendar]);
-
-  // Fetch syncs and error status when calendar changes
-  useEffect(() => {
+  // Combined refetch function
+  const refetch = () => {
     if (selectedCalendar) {
-      const initializeData = async () => {
-        await Promise.all([fetchExternalSyncs(), fetchSyncErrorStatus()]);
-      };
-      initializeData();
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.externalSyncs.byCalendar(selectedCalendar),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.externalSyncs.logs(selectedCalendar),
+      });
     }
-  }, [selectedCalendar, fetchExternalSyncs, fetchSyncErrorStatus]);
+  };
 
   return {
     externalSyncs,
     hasSyncErrors,
-    syncLogRefreshTrigger,
-    setSyncLogRefreshTrigger,
-    fetchExternalSyncs,
-    fetchSyncErrorStatus,
+    loading: syncsLoading || logsLoading,
+    refetch,
   };
 }

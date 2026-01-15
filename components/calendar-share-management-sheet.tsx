@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Users, Shield, Link as LinkIcon } from "lucide-react";
 import {
@@ -45,6 +45,11 @@ export function CalendarShareManagementSheet({
     "none" | "read" | "write"
   >(calendarGuestPermission);
   const [saving, setSaving] = useState(false);
+
+  // Sync local state with prop changes (from React Query polling)
+  useEffect(() => {
+    setGuestPermission(calendarGuestPermission);
+  }, [calendarGuestPermission]);
 
   // Show public access tab when auth is enabled (allows sharing with authenticated users via guestPermission)
   // This is separate from allowGuest which controls unauthenticated access

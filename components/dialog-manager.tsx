@@ -35,14 +35,11 @@ interface DialogManagerProps {
   // External Sync Sheet
   showExternalSyncDialog: boolean;
   onExternalSyncDialogChange: (open: boolean) => void;
-  syncErrorRefreshTrigger: number;
   onSyncComplete: () => void;
 
   // Sync Notification Dialog
   showSyncNotificationDialog: boolean;
   onSyncNotificationDialogChange: (open: boolean) => void;
-  onErrorsMarkedRead: () => void;
-  onSyncLogUpdate: () => void;
 
   // Shifts Overview Dialog (for day shifts and synced shifts)
   showDayShiftsDialog: boolean;
@@ -157,7 +154,6 @@ export function DialogManager(props: DialogManagerProps) {
             open={props.showExternalSyncDialog}
             onOpenChange={props.onExternalSyncDialogChange}
             calendarId={props.selectedCalendar}
-            syncErrorRefreshTrigger={props.syncErrorRefreshTrigger}
             onSyncComplete={props.onSyncComplete}
           />
 
@@ -165,9 +161,6 @@ export function DialogManager(props: DialogManagerProps) {
             open={props.showSyncNotificationDialog}
             onOpenChange={props.onSyncNotificationDialogChange}
             calendarId={props.selectedCalendar}
-            onErrorsMarkedRead={props.onErrorsMarkedRead}
-            onSyncLogUpdate={props.onSyncLogUpdate}
-            syncLogRefreshTrigger={props.syncErrorRefreshTrigger}
           />
         </>
       )}

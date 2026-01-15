@@ -1,6 +1,10 @@
+"use client";
+
 import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { queryKeys } from "@/lib/query-keys";
 
 export interface CalendarShare {
   id: string;
@@ -29,120 +33,277 @@ export interface SearchUser {
   image: string | null;
 }
 
+/**
+ * Fetch calendar shares from API
+ */
+async function fetchSharesApi(calendarId: string): Promise<CalendarShare[]> {
+  const response = await fetch(`/api/calendars/${calendarId}/shares`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch shares");
+  }
+
+  const data = await response.json();
+
+  // Parse date strings to Date objects
+  return data.map((share: Record<string, unknown>) => ({
+    ...share,
+    createdAt: new Date(share.createdAt as string),
+  }));
+}
+
+/**
+ * Add a new share via API
+ */
+async function addShareApi(
+  calendarId: string,
+  userId: string,
+  permission: "admin" | "write" | "read"
+): Promise<CalendarShare> {
+  const response = await fetch(`/api/calendars/${calendarId}/shares`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, permission }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to add share");
+  }
+
+  const data = await response.json();
+
+  return {
+    ...data,
+    createdAt: new Date(data.createdAt),
+  };
+}
+
+/**
+ * Update a share's permission via API
+ */
+async function updateShareApi(
+  calendarId: string,
+  shareId: string,
+  permission: "admin" | "write" | "read"
+): Promise<CalendarShare> {
+  const response = await fetch(
+    `/api/calendars/${calendarId}/shares/${shareId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permission }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to update share");
+  }
+
+  const data = await response.json();
+
+  return {
+    ...data,
+    createdAt: new Date(data.createdAt),
+  };
+}
+
+/**
+ * Remove a share via API
+ */
+async function removeShareApi(
+  calendarId: string,
+  shareId: string
+): Promise<void> {
+  const response = await fetch(
+    `/api/calendars/${calendarId}/shares/${shareId}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to remove share");
+  }
+}
+
+/**
+ * Calendar Shares Hook
+ *
+ * Provides calendar share management with automatic polling.
+ * Uses React Query for automatic cache management and live updates.
+ *
+ * Features:
+ * - Fetch shares for a calendar
+ * - Add, update, and remove shares
+ * - Optimistic updates for instant UI feedback
+ * - User search functionality (local state)
+ * - Automatic polling every 5 seconds
+ *
+ * @param calendarId - Calendar ID to manage shares for
+ * @returns Object with shares data and management functions
+ */
 export function useCalendarShares(calendarId: string) {
   const t = useTranslations();
-  const [shares, setShares] = useState<CalendarShare[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  // User search state (not server data)
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const fetchShares = useCallback(async () => {
-    if (!calendarId) return;
+  // Fetch shares
+  const { data: shares = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.shares.byCalendar(calendarId),
+    queryFn: () => fetchSharesApi(calendarId),
+    enabled: !!calendarId,
+  });
 
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/calendars/${calendarId}/shares`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch shares");
-      }
-      const data = await response.json();
-      setShares(data);
-    } catch (error) {
-      console.error("Failed to fetch shares:", error);
-      toast.error(t("common.fetchError", { item: t("common.labels.shares") }));
-    } finally {
-      setLoading(false);
-    }
-  }, [calendarId, t]);
+  // Add share mutation
+  const addShareMutation = useMutation({
+    mutationFn: ({
+      userId,
+      permission,
+    }: {
+      userId: string;
+      permission: "admin" | "write" | "read";
+    }) => addShareApi(calendarId, userId, permission),
+    onMutate: async ({ userId, permission }) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.shares.byCalendar(calendarId),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.shares.byCalendar(calendarId)
+      );
 
-  const addShare = useCallback(
-    async (userId: string, permission: "admin" | "write" | "read") => {
-      try {
-        const response = await fetch(`/api/calendars/${calendarId}/shares`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, permission }),
-        });
+      // Optimistic update
+      const optimisticShare: CalendarShare = {
+        id: `temp-${Date.now()}`,
+        calendarId,
+        userId,
+        permission,
+        sharedBy: "current-user",
+        createdAt: new Date(),
+        user: {
+          id: userId,
+          name: null,
+          email: "",
+          image: null,
+        },
+        sharedByUser: {
+          id: "current-user",
+          name: null,
+          email: "",
+        },
+      };
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to add share");
-        }
+      queryClient.setQueryData(
+        queryKeys.shares.byCalendar(calendarId),
+        (old: CalendarShare[] = []) => [optimisticShare, ...old]
+      );
 
-        const newShare = await response.json();
-        setShares((prev) => [newShare, ...prev]);
-        toast.success(t("share.shareAdded"));
-        return { success: true };
-      } catch (error) {
-        console.error("Failed to add share:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t("common.createError", { item: t("share.share") })
-        );
-        return { success: false };
-      }
+      return { previous };
     },
-    [calendarId, t]
-  );
-
-  const updateShare = useCallback(
-    async (shareId: string, permission: "admin" | "write" | "read") => {
-      try {
-        const response = await fetch(
-          `/api/calendars/${calendarId}/shares/${shareId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ permission }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to update share");
-        }
-
-        const updatedShare = await response.json();
-        setShares((prev) =>
-          prev.map((s) => (s.id === shareId ? updatedShare : s))
-        );
-        toast.success(t("share.shareUpdated"));
-        return { success: true };
-      } catch (error) {
-        console.error("Failed to update share:", error);
-        toast.error(t("common.updateError", { item: t("share.share") }));
-        return { success: false };
-      }
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(
+        queryKeys.shares.byCalendar(calendarId),
+        context?.previous
+      );
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.createError", { item: t("share.share") })
+      );
     },
-    [calendarId, t]
-  );
-
-  const removeShare = useCallback(
-    async (shareId: string) => {
-      try {
-        const response = await fetch(
-          `/api/calendars/${calendarId}/shares/${shareId}`,
-          {
-            method: "DELETE",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to remove share");
-        }
-
-        setShares((prev) => prev.filter((s) => s.id !== shareId));
-        toast.success(t("share.shareRemoved"));
-        return { success: true };
-      } catch (error) {
-        console.error("Failed to remove share:", error);
-        toast.error(t("common.deleteError", { item: t("share.share") }));
-        return { success: false };
-      }
+    onSuccess: () => {
+      toast.success(t("share.shareAdded"));
     },
-    [calendarId, t]
-  );
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shares.byCalendar(calendarId),
+      });
+    },
+  });
 
+  // Update share mutation
+  const updateShareMutation = useMutation({
+    mutationFn: ({
+      shareId,
+      permission,
+    }: {
+      shareId: string;
+      permission: "admin" | "write" | "read";
+    }) => updateShareApi(calendarId, shareId, permission),
+    onMutate: async ({ shareId, permission }) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.shares.byCalendar(calendarId),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.shares.byCalendar(calendarId)
+      );
+
+      // Optimistic update
+      queryClient.setQueryData(
+        queryKeys.shares.byCalendar(calendarId),
+        (old: CalendarShare[] = []) =>
+          old.map((s) => (s.id === shareId ? { ...s, permission } : s))
+      );
+
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(
+        queryKeys.shares.byCalendar(calendarId),
+        context?.previous
+      );
+      toast.error(t("common.updateError", { item: t("share.share") }));
+    },
+    onSuccess: () => {
+      toast.success(t("share.shareUpdated"));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shares.byCalendar(calendarId),
+      });
+    },
+  });
+
+  // Remove share mutation
+  const removeShareMutation = useMutation({
+    mutationFn: (shareId: string) => removeShareApi(calendarId, shareId),
+    onMutate: async (shareId) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.shares.byCalendar(calendarId),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.shares.byCalendar(calendarId)
+      );
+
+      // Optimistic update
+      queryClient.setQueryData(
+        queryKeys.shares.byCalendar(calendarId),
+        (old: CalendarShare[] = []) => old.filter((s) => s.id !== shareId)
+      );
+
+      return { previous };
+    },
+    onError: (err, shareId, context) => {
+      queryClient.setQueryData(
+        queryKeys.shares.byCalendar(calendarId),
+        context?.previous
+      );
+      toast.error(t("common.deleteError", { item: t("share.share") }));
+    },
+    onSuccess: () => {
+      toast.success(t("share.shareRemoved"));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shares.byCalendar(calendarId),
+      });
+    },
+  });
+
+  // User search (local state, not server state)
   const searchUsers = useCallback(
     async (query: string) => {
       if (!query || query.length < 2) {
@@ -179,10 +340,36 @@ export function useCalendarShares(calendarId: string) {
     loading,
     searchResults,
     searchLoading,
-    fetchShares,
-    addShare,
-    updateShare,
-    removeShare,
+    addShare: async (
+      userId: string,
+      permission: "admin" | "write" | "read"
+    ): Promise<{ success: boolean }> => {
+      try {
+        await addShareMutation.mutateAsync({ userId, permission });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    updateShare: async (
+      shareId: string,
+      permission: "admin" | "write" | "read"
+    ): Promise<{ success: boolean }> => {
+      try {
+        await updateShareMutation.mutateAsync({ shareId, permission });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    removeShare: async (shareId: string): Promise<{ success: boolean }> => {
+      try {
+        await removeShareMutation.mutateAsync(shareId);
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
     searchUsers,
   };
 }

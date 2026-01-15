@@ -29,7 +29,7 @@ interface CalendarShareUserSearchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function CalendarShareUserSearch({
@@ -79,7 +79,7 @@ export function CalendarShareUserSearch({
       setQuery("");
       setSelectedUser(null);
       setPermission("read");
-      onSuccess();
+      onSuccess?.();
       onOpenChange(false);
     }
   };
