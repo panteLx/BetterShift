@@ -77,7 +77,6 @@ function HomeContent() {
     presets,
     loading: presetsLoading,
     hasLoadedOnce: presetsLoadedOnce,
-    refetchPresets,
   } = usePresets(selectedCalendar);
 
   // Local state
@@ -270,7 +269,7 @@ function HomeContent() {
   useSSEConnection({
     calendarId: selectedCalendar,
     onShiftUpdate: refetchShifts,
-    onPresetUpdate: refetchPresets,
+    onPresetUpdate: () => {},
     onNoteUpdate: refetchNotes,
     onCalendarUpdate: refetchCalendars,
     onStatsRefresh: () => setStatsRefreshTrigger((prev) => prev + 1),
@@ -949,7 +948,7 @@ function HomeContent() {
           onShiftSubmit={shiftActions.handleShiftSubmit}
           selectedDate={selectedDate}
           selectedCalendar={selectedCalendar || null}
-          onPresetsChange={refetchPresets}
+          onPresetsChange={() => {}}
           calendars={calendars}
           showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
           onCalendarSettingsDialogChange={
@@ -1040,7 +1039,7 @@ function HomeContent() {
           onShiftSubmit={shiftActions.handleShiftSubmit}
           selectedDate={selectedDate}
           selectedCalendar={selectedCalendar || null}
-          onPresetsChange={refetchPresets}
+          onPresetsChange={() => {}}
           calendars={calendars}
           showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
           onCalendarSettingsDialogChange={
@@ -1138,7 +1137,7 @@ function HomeContent() {
         onSettings={() => dialogStates.setShowCalendarSettingsDialog(true)}
         onSyncNotifications={handleSyncNotifications}
         onCompare={handleCompareClick}
-        onPresetsChange={refetchPresets}
+        onPresetsChange={() => {}}
         onShiftsChange={refetchShifts}
         onStatsRefresh={() => setStatsRefreshTrigger((prev) => prev + 1)}
         onManualShiftCreation={handleManualShiftCreation}
@@ -1217,7 +1216,7 @@ function HomeContent() {
         onShiftSubmit={shiftActions.handleShiftSubmit}
         selectedDate={selectedDate}
         selectedCalendar={selectedCalendar || null}
-        onPresetsChange={refetchPresets}
+        onPresetsChange={() => {}}
         calendars={calendars}
         showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
         onCalendarSettingsDialogChange={

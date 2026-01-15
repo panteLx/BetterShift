@@ -236,7 +236,7 @@ export default function AdminUsersPage() {
           open={showEditSheet}
           onOpenChange={setShowEditSheet}
           user={selectedUser}
-          onSuccess={refetch}
+          onSuccess={() => {}}
         />
       )}
 
