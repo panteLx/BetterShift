@@ -66,11 +66,9 @@ function HomeContent() {
 
   const {
     shifts,
-    setShifts,
     loading: shiftsLoading,
     hasLoadedOnce: shiftsLoadedOnce,
     createShift: createShiftHook,
-    updateShift: updateShiftHook,
     deleteShift: deleteShiftHook,
     refetchShifts,
   } = useShifts(selectedCalendar);
@@ -262,10 +260,8 @@ function HomeContent() {
   // Shift actions
   const shiftActions = useShiftActions({
     shifts,
-    setShifts,
     presets,
     createShift: createShiftHook,
-    updateShift: updateShiftHook,
     deleteShift: deleteShiftHook,
     onStatsRefresh: () => setStatsRefreshTrigger((prev) => prev + 1),
   });
@@ -385,10 +381,8 @@ function HomeContent() {
   // Calendar operations
   const handleDeleteCalendar = async () => {
     if (!selectedCalendar) return;
-    const success = await deleteCalendarHook(selectedCalendar);
-    if (success) {
-      dialogStates.setShowCalendarSettingsDialog(false);
-    }
+    await deleteCalendarHook(selectedCalendar);
+    dialogStates.setShowCalendarSettingsDialog(false);
   };
 
   // External sync operations

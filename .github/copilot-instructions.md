@@ -11,6 +11,7 @@
 - **Database**: SQLite (via better-sqlite3) + Drizzle ORM 0.44
 - **Auth**: Better Auth 1.4 (enabled by default) - email/password + OAuth (Google/GitHub/Discord) + custom OIDC
 - **i18n**: next-intl 4.5 - Supported locales: `en`, `de`, `it`
+- **Data Fetching**: @tanstack/react-query 5 - Polling, caching, optimistic updates
 - **Key Libraries**: date-fns, ical.js, jsPDF, @dnd-kit, recharts, sonner (toasts)
 
 ## Architecture Patterns
@@ -37,7 +38,6 @@
 ```bash
 npm run db:generate  # Generate SQL from schema changes
 npm run db:migrate   # Apply migrations to database
-npm run db:studio    # Open Drizzle Studio GUI
 ```
 
 ### 3. Authentication & Permissions
@@ -181,27 +181,87 @@ ALLOW_GUEST_ACCESS=false
 - `useAuthFeatures()` - Client: Convenience hook for auth-related flags
 - Feature flags in [`lib/auth/feature-flags.ts`](lib/auth/feature-flags.ts) are SERVER-ONLY now
 
-### 5. Real-Time Updates (SSE)
+### 5. Real-Time Updates (React Query Polling)
 
-**Event stream**: [`app/api/events/stream/route.ts`](app/api/events/stream/route.ts) - Server-Sent Events endpoint
+**Architecture**: All data fetching uses `@tanstack/react-query` with automatic polling for live updates across all pages and components.
 
-**Event emitter**: [`lib/event-emitter.ts`](lib/event-emitter.ts) - Singleton pattern with HMR support
-
-**Emit events after mutations**:
+**Configuration**: [`lib/query-client.ts`](lib/query-client.ts) - Global query client settings
 
 ```typescript
-import { eventEmitter } from "@/lib/event-emitter";
+// Default settings
+{
+  staleTime: 3000,      // Data fresh for 3s
+  gcTime: 300000,       // Cache for 5min
+  refetchInterval: 5000, // Poll every 5s
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+}
+```
 
-// After creating/updating/deleting
-eventEmitter.emit("calendar-change", {
-  type: "shift" | "preset" | "note" | "calendar" | "sync-log",
-  action: "create" | "update" | "delete" | "reorder",
-  calendarId: string,
-  data: unknown,
+**Query Keys**: [`lib/query-keys.ts`](lib/query-keys.ts) - Consistent key management
+
+```typescript
+import { queryKeys } from "@/lib/query-keys";
+
+// Examples
+queryKeys.shifts.byCalendar(calendarId); // ['shifts', calendarId]
+queryKeys.admin.users({ filters, sort }); // ['admin', 'users', { filters, sort }]
+```
+
+**Data fetching with useQuery**:
+
+```typescript
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+
+const { data: shifts = [], isLoading } = useQuery({
+  queryKey: queryKeys.shifts.byCalendar(calendarId!),
+  queryFn: () => fetchShiftsApi(calendarId!),
+  enabled: !!calendarId,
 });
 ```
 
-**Client connection**: Use `useSSEConnection` hook in [`hooks/useSSEConnection.ts`](hooks/useSSEConnection.ts) - automatically reconnects, handles visibility changes, and triggers data refreshes.
+**Mutations with optimistic updates**:
+
+```typescript
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+const queryClient = useQueryClient();
+
+const createMutation = useMutation({
+  mutationFn: createShiftApi,
+  onMutate: async (newShift) => {
+    await queryClient.cancelQueries({
+      queryKey: queryKeys.shifts.byCalendar(calendarId!),
+    });
+    const previous = queryClient.getQueryData(
+      queryKeys.shifts.byCalendar(calendarId!)
+    );
+    queryClient.setQueryData(
+      queryKeys.shifts.byCalendar(calendarId!),
+      (old: Shift[] = []) => [...old, optimisticShift]
+    );
+    return { previous };
+  },
+  onError: (err, variables, context) => {
+    queryClient.setQueryData(
+      queryKeys.shifts.byCalendar(calendarId!),
+      context?.previous
+    );
+    toast.error(t("common.createError", { item: t("shift.shift_one") }));
+  },
+  onSuccess: () => {
+    toast.success(t("common.created", { item: t("shift.shift_one") }));
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.shifts.byCalendar(calendarId!),
+    });
+  },
+});
+```
+
+**Cache invalidation**: After mutations, use `queryClient.invalidateQueries()` to refetch related data.
 
 ### 6. Component Architecture
 
@@ -220,7 +280,7 @@ eventEmitter.emit("calendar-change", {
 
 - Data fetching: `useShifts`, `usePresets`, `useNotes`, `useCalendars` (in `/hooks`)
 - Actions: `useShiftActions`, `useNoteActions` (handle CRUD + optimistic updates)
-- Forms: `useShiftForm`, `usePresetManagement` (form state + validation)
+- Forms: `useShiftForm` (form state + validation)
 
 ### 7. Internationalization
 
@@ -303,7 +363,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { checkPermission } from "@/lib/auth/permissions";
-import { eventEmitter } from "@/lib/event-emitter";
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request.headers);
@@ -324,27 +383,35 @@ export async function POST(request: NextRequest) {
     .values({ ...data, calendarId })
     .returning();
 
-  // Emit SSE event
-  eventEmitter.emit("calendar-change", {
-    type: "shift",
-    action: "create",
-    calendarId,
-    data: result,
-  });
-
+  // No event emission needed - React Query polling handles sync
   return NextResponse.json(result, { status: 201 });
 }
 ```
 
 ### Optimistic Updates
 
-See [`hooks/useShifts.ts`](hooks/useShifts.ts) `createShift` function:
+All mutations use React Query's optimistic update pattern. See [`hooks/useShifts.ts`](hooks/useShifts.ts):
 
-1. Generate temp ID: `temp-${Date.now()}`
-2. Add optimistic item to state immediately
-3. Make API call
-4. On error: Remove temp item, show toast
-5. On success: Replace temp item with real data from API
+1. **onMutate**: Cancel queries, save previous state, apply optimistic update
+2. **onError**: Rollback to previous state, show error toast
+3. **onSuccess**: Show success toast
+4. **onSettled**: Invalidate queries to refetch real data
+
+```typescript
+const mutation = useMutation({
+  mutationFn: createShiftApi,
+  onMutate: async (newData) => {
+    await queryClient.cancelQueries({ queryKey });
+    const previous = queryClient.getQueryData(queryKey);
+    queryClient.setQueryData(queryKey, (old) => [...old, optimisticItem]);
+    return { previous };
+  },
+  onError: (err, vars, context) => {
+    queryClient.setQueryData(queryKey, context?.previous);
+  },
+  onSettled: () => queryClient.invalidateQueries({ queryKey }),
+});
+```
 
 ### Date Handling
 
@@ -371,14 +438,18 @@ See [`hooks/useShifts.ts`](hooks/useShifts.ts) `createShift` function:
 - [`hooks/usePublicConfig.ts`](hooks/usePublicConfig.ts) - Client-side config access hook
 - [`hooks/useAuthFeatures.ts`](hooks/useAuthFeatures.ts) - Auth-specific feature flags hook
 - [`components/calendar-grid.tsx`](components/calendar-grid.tsx) - Core calendar rendering with shift display
-- [`hooks/useSSEConnection.ts`](hooks/useSSEConnection.ts) - Real-time sync connection management
+- [`lib/query-client.ts`](lib/query-client.ts) - React Query client configuration
+- [`lib/query-keys.ts`](lib/query-keys.ts) - Query key factory for consistent cache management
+- [`components/query-provider.tsx`](components/query-provider.tsx) - React Query provider
 - [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) - Detailed auth migration plan with phases and todos
 
 ## Important Notes
 
 - **No NEXT*PUBLIC***: Use `getPublicConfig()` on server, `usePublicConfig()` hook on client - never `process.env.NEXT_PUBLIC_*`
 - **Better Auth first**: Always check [Better Auth docs](https://www.better-auth.com/docs) before implementing auth features - use built-in methods, don't reinvent
-- **SSE is required**: All mutations must emit events to keep clients in sync
+- **React Query for data**: All data fetching uses `useQuery`/`useMutation` with polling - no manual fetch/refetch logic
+- **Query keys from factory**: Always use `queryKeys` from `lib/query-keys.ts` for cache consistency
+- **Optimistic updates**: All mutations should implement optimistic updates for instant UI feedback
 - **Permission checks everywhere**: Check permissions in both API routes (server) and UI (client) for security + UX
 - **Strict TypeScript**: No `any` types, use Drizzle-inferred types from schema
 - **Translations required**: All user-facing strings must use `t()` function

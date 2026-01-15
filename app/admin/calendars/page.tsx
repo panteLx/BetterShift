@@ -1,16 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Search,
-  Filter,
-  AlertCircle,
-  Send,
-  Trash2,
-  X,
-  RefreshCw,
-} from "lucide-react";
+import { Search, Filter, AlertCircle, Send, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,14 +29,8 @@ import { useAdminLevel } from "@/hooks/useAdminAccess";
 
 export default function AdminCalendarsPage() {
   const t = useTranslations();
-  const { fetchCalendars, deleteCalendar, bulkDeleteCalendars, isLoading } =
-    useAdminCalendars();
   const adminLevel = useAdminLevel();
   const isSuperAdmin = adminLevel === "superadmin";
-
-  // State
-  const [calendars, setCalendars] = useState<AdminCalendar[]>([]);
-  const [orphanedCount, setOrphanedCount] = useState(0);
 
   // Filters & Sort
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,6 +39,26 @@ export default function AdminCalendarsPage() {
   >("all");
   const sortField = "createdAt" as const;
   const sortDirection = "desc" as const;
+
+  // Build filters and sort
+  const filters: CalendarFilters = {
+    search: searchQuery || undefined,
+    status: statusFilter,
+  };
+
+  const sort: CalendarSort = {
+    field: sortField,
+    direction: sortDirection,
+  };
+
+  // Use hook with filters
+  const {
+    calendars,
+    orphanedCount,
+    isLoading,
+    deleteCalendar,
+    bulkDeleteCalendars,
+  } = useAdminCalendars(filters, sort);
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -71,50 +77,6 @@ export default function AdminCalendarsPage() {
   const [calendarsForBulkTransfer, setCalendarsForBulkTransfer] = useState<
     AdminCalendar[]
   >([]);
-
-  // Load calendars
-  const loadCalendars = async () => {
-    const filters: CalendarFilters = {
-      search: searchQuery || undefined,
-      status: statusFilter,
-    };
-
-    const sort: CalendarSort = {
-      field: sortField,
-      direction: sortDirection,
-    };
-
-    const result = await fetchCalendars(filters, sort);
-
-    if (result) {
-      setCalendars(result.calendars);
-      setOrphanedCount(result.orphanedCount);
-    }
-  };
-
-  // Initial load
-  useEffect(() => {
-    const filters: CalendarFilters = {
-      search: searchQuery || undefined,
-      status: statusFilter,
-    };
-
-    const sort: CalendarSort = {
-      field: sortField,
-      direction: sortDirection,
-    };
-
-    const loadData = async () => {
-      const result = await fetchCalendars(filters, sort);
-
-      if (result) {
-        setCalendars(result.calendars);
-        setOrphanedCount(result.orphanedCount);
-      }
-    };
-
-    loadData();
-  }, [searchQuery, statusFilter, sortField, sortDirection, fetchCalendars]);
 
   // Selection handlers
   const handleToggleSelect = (calendarId: string) => {
@@ -177,7 +139,6 @@ export default function AdminCalendarsPage() {
     const success = await bulkDeleteCalendars(selectedIds);
     if (success) {
       setSelectedIds([]);
-      await loadCalendars();
     }
   };
 
@@ -187,18 +148,16 @@ export default function AdminCalendarsPage() {
     if (success) {
       setShowDeleteDialog(false);
       setSelectedCalendar(null);
-      await loadCalendars();
     }
   };
 
-  const handleSuccess = async () => {
+  const handleSuccess = () => {
     setShowEditSheet(false);
     setShowTransferSheet(false);
     setShowBulkTransferSheet(false);
     setSelectedCalendar(null);
     setCalendarsForBulkTransfer([]);
     setSelectedIds([]);
-    await loadCalendars();
   };
 
   const handleEditFromDetails = () => {
@@ -239,14 +198,6 @@ export default function AdminCalendarsPage() {
               {t("admin.calendars.description")}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => loadCalendars()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={isLoading ? "animate-spin" : ""} />
-          </Button>
         </div>
 
         {/* Orphaned Calendars Warning Banner */}

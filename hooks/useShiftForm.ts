@@ -33,44 +33,26 @@ export function useShiftForm({
     isAllDay: false,
   });
 
-  const { presets, refetchPresets } = usePresets(calendarId);
+  const { presets, createPreset } = usePresets(calendarId);
   const [saveAsPreset, setSaveAsPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
 
   const saveAsPresetHandler = async (shiftData: ShiftFormData) => {
     if (!presetName.trim() || !calendarId) return false;
 
-    try {
-      const response = await fetch("/api/presets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          calendarId,
-          title: presetName,
-          startTime: shiftData.startTime,
-          endTime: shiftData.endTime,
-          color: shiftData.color,
-          notes: shiftData.notes,
-          isAllDay: shiftData.isAllDay,
-        }),
-      });
+    // Use the new createPreset mutation from usePresets
+    const success = await createPreset({
+      title: presetName,
+      startTime: shiftData.startTime,
+      endTime: shiftData.endTime,
+      color: shiftData.color || "#4b82f6",
+      notes: shiftData.notes || "",
+      isAllDay: shiftData.isAllDay || false,
+      isSecondary: false,
+      hideFromStats: false,
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `Failed to save preset: ${response.status} ${response.statusText}`,
-          errorText
-        );
-        return false;
-      }
-
-      await response.json();
-      await refetchPresets();
-      return true;
-    } catch (error) {
-      console.error("Failed to save preset:", error);
-      return false;
-    }
+    return success;
   };
 
   const applyPreset = (preset: ShiftPreset) => {
@@ -153,6 +135,5 @@ export function useShiftForm({
     applyPreset,
     saveAsPresetHandler,
     resetForm,
-    refetchPresets,
   };
 }

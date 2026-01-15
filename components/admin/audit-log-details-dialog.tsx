@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Copy, X } from "lucide-react";
 import { toast } from "sonner";
-import type { AuditLog } from "@/hooks/useAuditLogs";
+import type { AuditLog } from "@/hooks/useAdminAuditLogs";
 
 interface AuditLogDetailsDialogProps {
   open: boolean;

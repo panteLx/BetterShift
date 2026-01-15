@@ -116,14 +116,11 @@ export function CalendarSettingsSheet({
       color: selectedColor !== calendarColor ? selectedColor : undefined,
     };
 
-    const result = await updateCalendar(calendarId, updates);
+    await updateCalendar(calendarId, updates);
 
     setLoading(false);
-
-    if (result.success) {
-      onSuccess();
-      onOpenChange(false);
-    }
+    onSuccess();
+    onOpenChange(false);
   };
 
   const handleDelete = () => {

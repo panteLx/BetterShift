@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Trash2, X } from "lucide-react";
-import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { useAdminAuditLogs } from "@/hooks/useAdminAuditLogs";
 import { toast } from "sonner";
 
 interface AuditLogDeleteDialogProps {
@@ -31,7 +31,7 @@ export function AuditLogDeleteDialog({
   onSuccess,
 }: AuditLogDeleteDialogProps) {
   const t = useTranslations();
-  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAuditLogs();
+  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAdminAuditLogs();
 
   const [beforeDate, setBeforeDate] = useState("");
   const [confirmed, setConfirmed] = useState(false);

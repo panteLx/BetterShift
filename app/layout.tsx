@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { AuthProvider } from "@/components/auth-provider";
 import { PublicConfigProvider } from "@/components/public-config-provider";
+import { QueryProvider } from "@/components/query-provider";
 import { getPublicConfig } from "@/lib/public-config";
 import "./globals.css";
 
@@ -87,9 +88,11 @@ export default async function RootLayout({
           disableTransitionOnChange={false}
         >
           <NextIntlClientProvider messages={messages} locale={locale}>
-            <PublicConfigProvider initialConfig={publicConfig}>
-              <AuthProvider>{children}</AuthProvider>
-            </PublicConfigProvider>
+            <QueryProvider>
+              <PublicConfigProvider initialConfig={publicConfig}>
+                <AuthProvider>{children}</AuthProvider>
+              </PublicConfigProvider>
+            </QueryProvider>
             <ThemedToaster />
           </NextIntlClientProvider>
         </ThemeProvider>

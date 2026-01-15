@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useTransition } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { useAuditLogs, type AuditLog } from "@/hooks/useAuditLogs";
+import { useAdminAuditLogs, type AuditLog } from "@/hooks/useAdminAuditLogs";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,6 @@ import { AuditLogDeleteDialog } from "@/components/admin/audit-log-delete-dialog
 import {
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
   Trash2,
   Search,
   ChevronDown,
@@ -57,16 +56,11 @@ export default function AdminAuditLogsPage() {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
-  const { fetchAuditLogs, isLoading } = useAuditLogs();
   const isSuperAdmin = useIsSuperAdmin();
 
-  // Data State
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [total, setTotal] = useState(0);
+  // Filter State
   const [page, setPage] = useState(0);
   const limit = 25;
-
-  // Filter State
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,14 +68,53 @@ export default function AdminAuditLogsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // UI State
-  const [isPending, startTransition] = useTransition();
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
+  // Sort State
   const [sortColumn, setSortColumn] = useState<
-    "timestamp" | "action" | "severity" | "user" | "ipAddress" | null
+    "timestamp" | "action" | "severity" | "user" | "ipAddress"
   >("timestamp");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Build filters and sort for hook
+  const filters = useMemo(
+    () => ({
+      action: actionFilter !== "all" ? actionFilter : undefined,
+      severity:
+        severityFilter !== "all"
+          ? (severityFilter as "info" | "warning" | "error" | "critical")
+          : undefined,
+      search: debouncedSearch || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    }),
+    [actionFilter, severityFilter, debouncedSearch, startDate, endDate]
+  );
+
+  const sort = useMemo(
+    () => ({
+      field: sortColumn,
+      direction: sortDirection,
+    }),
+    [sortColumn, sortDirection]
+  );
+
+  const pagination = useMemo(
+    () => ({
+      limit,
+      offset: page * limit,
+    }),
+    [page, limit]
+  );
+
+  // Use hook with live updates
+  const { logs, total, isLoading } = useAdminAuditLogs(
+    filters,
+    sort,
+    pagination
+  );
+
+  // UI State
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -146,52 +179,13 @@ export default function AdminAuditLogsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Load logs
-  const loadLogs = async () => {
-    startTransition(async () => {
-      const filters = {
-        action: actionFilter !== "all" ? actionFilter : undefined,
-        severity:
-          severityFilter !== "all"
-            ? (severityFilter as "info" | "warning" | "error" | "critical")
-            : undefined,
-        search: debouncedSearch || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-      };
-
-      // Backend now supports all sort columns including user and ipAddress
-      const sort = {
-        sortBy: sortColumn || "timestamp",
-        sortOrder: sortDirection,
-      };
-
-      const result = await fetchAuditLogs(filters, sort, {
-        limit,
-        offset: page * limit,
-      });
-
-      if (result) {
-        setLogs(result.logs);
-        setTotal(result.pagination.total);
-      }
-    });
-  };
-
-  // Initial load and reload on filter/page/sort change
+  // Reset page to 0 when debounced search changes
   useEffect(() => {
-    loadLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    page,
-    actionFilter,
-    severityFilter,
-    debouncedSearch,
-    startDate,
-    endDate,
-    sortColumn,
-    sortDirection,
-  ]);
+    const timer = setTimeout(() => {
+      setPage(0);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [debouncedSearch, actionFilter, severityFilter, startDate, endDate]);
 
   // Toggle row expansion
   const toggleRow = (logId: string) => {
@@ -265,7 +259,8 @@ export default function AdminAuditLogsPage() {
   const isAllSelected =
     logs.length > 0 && selectedLogIds.length === logs.length;
 
-  if (isLoading && !isPending) {
+  // Show loader only on initial load
+  if (isLoading && logs.length === 0) {
     return <FullscreenLoader />;
   }
 
@@ -282,16 +277,6 @@ export default function AdminAuditLogsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadLogs}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={isLoading ? "animate-spin h-4 w-4" : "h-4 w-4"}
-            />
-          </Button>
           {isSuperAdmin && (
             <Button
               variant="outline"
@@ -440,219 +425,217 @@ export default function AdminAuditLogsPage() {
 
       {/* Table */}
       <div className="rounded-md border bg-card">
-        <div className={isPending ? "opacity-50 pointer-events-none" : ""}>
-          <Table>
-            <TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {isSuperAdmin && (
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
+              )}
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => handleSort("timestamp")}
+              >
+                <div className="flex items-center gap-2">
+                  {t("admin.timestamp")}
+                  {sortColumn === "timestamp" &&
+                    (sortDirection === "asc" ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    ))}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => handleSort("action")}
+              >
+                <div className="flex items-center gap-2">
+                  {t("common.labels.action")}
+                  {sortColumn === "action" &&
+                    (sortDirection === "asc" ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    ))}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => handleSort("user")}
+              >
+                <div className="flex items-center gap-2">
+                  {t("common.labels.user")}
+                  {sortColumn === "user" &&
+                    (sortDirection === "asc" ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    ))}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => handleSort("severity")}
+              >
+                <div className="flex items-center gap-2">
+                  {t("common.labels.severity")}
+                  {sortColumn === "severity" &&
+                    (sortDirection === "asc" ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    ))}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => handleSort("ipAddress")}
+              >
+                <div className="flex items-center gap-2">
+                  {t("common.labels.ipAddress")}
+                  {sortColumn === "ipAddress" &&
+                    (sortDirection === "asc" ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    ))}
+                </div>
+              </TableHead>
+              <TableHead className="w-[100px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {logs.length === 0 ? (
               <TableRow>
-                {isSuperAdmin && (
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={isAllSelected}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                )}
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead
-                  className="cursor-pointer select-none"
-                  onClick={() => handleSort("timestamp")}
+                <TableCell
+                  colSpan={isSuperAdmin ? 8 : 7}
+                  className="text-center py-8 text-muted-foreground"
                 >
-                  <div className="flex items-center gap-2">
-                    {t("admin.timestamp")}
-                    {sortColumn === "timestamp" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer select-none"
-                  onClick={() => handleSort("action")}
-                >
-                  <div className="flex items-center gap-2">
-                    {t("common.labels.action")}
-                    {sortColumn === "action" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer select-none"
-                  onClick={() => handleSort("user")}
-                >
-                  <div className="flex items-center gap-2">
-                    {t("common.labels.user")}
-                    {sortColumn === "user" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer select-none"
-                  onClick={() => handleSort("severity")}
-                >
-                  <div className="flex items-center gap-2">
-                    {t("common.labels.severity")}
-                    {sortColumn === "severity" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer select-none"
-                  onClick={() => handleSort("ipAddress")}
-                >
-                  <div className="flex items-center gap-2">
-                    {t("common.labels.ipAddress")}
-                    {sortColumn === "ipAddress" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                  {isLoading ? t("common.loading") : t("admin.noLogsFound")}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={isSuperAdmin ? 8 : 7}
-                    className="text-center py-8 text-muted-foreground"
+            ) : (
+              logs.map((log) => (
+                <React.Fragment key={log.id}>
+                  <TableRow
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => toggleRow(log.id)}
                   >
-                    {isPending ? t("common.loading") : t("admin.noLogsFound")}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                logs.map((log) => (
-                  <React.Fragment key={log.id}>
-                    <TableRow
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => toggleRow(log.id)}
-                    >
-                      {isSuperAdmin && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedLogIds.includes(log.id)}
-                            onCheckedChange={() => toggleLogSelection(log.id)}
-                          />
-                        </TableCell>
+                    {isSuperAdmin && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedLogIds.includes(log.id)}
+                          onCheckedChange={() => toggleLogSelection(log.id)}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      {expandedRows.has(log.id) ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
                       )}
-                      <TableCell>
-                        {expandedRows.has(log.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {format(new Date(log.timestamp), "PPp", {
-                          locale: dateLocale,
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={getActionColor(log.action)}
-                        >
-                          {log.action}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {log.userId ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              {log.userImage && (
-                                <AvatarImage
-                                  src={log.userImage}
-                                  alt={log.userName || ""}
-                                />
-                              )}
-                              <AvatarFallback className="text-xs">
-                                {getUserInitials(log.userName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">
-                              {log.userName ||
-                                log.userEmail ||
-                                t("admin.unknownUser")}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            {t("admin.systemAction")}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {format(new Date(log.timestamp), "PPp", {
+                        locale: dateLocale,
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={getActionColor(log.action)}
+                      >
+                        {log.action}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {log.userId ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            {log.userImage && (
+                              <AvatarImage
+                                src={log.userImage}
+                                alt={log.userName || ""}
+                              />
+                            )}
+                            <AvatarFallback className="text-xs">
+                              {getUserInitials(log.userName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {log.userName ||
+                              log.userEmail ||
+                              t("admin.unknownUser")}
                           </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={getSeverityColor(log.severity)}
-                        >
-                          {log.severity}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {log.ipAddress || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLog(log);
-                            setShowDetailsDialog(true);
-                          }}
-                        >
-                          {t("common.viewDetails")}
-                        </Button>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {t("admin.systemAction")}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={getSeverityColor(log.severity)}
+                      >
+                        {log.severity}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {log.ipAddress || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLog(log);
+                          setShowDetailsDialog(true);
+                        }}
+                      >
+                        {t("common.viewDetails")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  {expandedRows.has(log.id) && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={isSuperAdmin ? 8 : 7}
+                        className="bg-muted/50"
+                      >
+                        <div className="p-4 space-y-2">
+                          <div className="text-sm font-medium">
+                            {t("admin.metadata")}:
+                          </div>
+                          <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
+                            {JSON.stringify(log.metadata, null, 2)}
+                          </pre>
+                          {log.userAgent && (
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-medium">
+                                {t("admin.userAgent")}:
+                              </span>{" "}
+                              {log.userAgent}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
-                    {expandedRows.has(log.id) && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={isSuperAdmin ? 8 : 7}
-                          className="bg-muted/50"
-                        >
-                          <div className="p-4 space-y-2">
-                            <div className="text-sm font-medium">
-                              {t("admin.metadata")}:
-                            </div>
-                            <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
-                              {JSON.stringify(log.metadata, null, 2)}
-                            </pre>
-                            {log.userAgent && (
-                              <div className="text-xs text-muted-foreground">
-                                <span className="font-medium">
-                                  {t("admin.userAgent")}:
-                                </span>{" "}
-                                {log.userAgent}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  )}
+                </React.Fragment>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Pagination */}
@@ -701,7 +684,7 @@ export default function AdminAuditLogsPage() {
         onSuccess={() => {
           setPage(0);
           clearSelection();
-          loadLogs();
+          // No manual refetch needed - React Query will auto-update
         }}
       />
     </div>

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { parseLocalDate } from "@/lib/date-utils";
+import { queryKeys } from "@/lib/query-keys";
 
 // Helper to convert API response timestamps to Date objects
 export function normalizeShift(
@@ -23,174 +24,205 @@ export function normalizeShift(
   };
 }
 
+// API functions
+async function fetchShiftsApi(
+  calendarId: string
+): Promise<ShiftWithCalendar[]> {
+  const params = new URLSearchParams({ calendarId });
+  const response = await fetch(`/api/shifts?${params}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch shifts: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.map(normalizeShift);
+}
+
+async function createShiftApi(
+  calendarId: string,
+  formData: ShiftFormData
+): Promise<ShiftWithCalendar> {
+  const response = await fetch("/api/shifts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...formData, calendarId }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to create shift: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+  return normalizeShift(data);
+}
+
+async function deleteShiftApi(id: string): Promise<void> {
+  const response = await fetch(`/api/shifts/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to delete shift: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+}
+
+// Context type for optimistic updates
+interface CreateShiftContext {
+  previous: ShiftWithCalendar[] | undefined;
+}
+
+interface DeleteShiftContext {
+  previous: ShiftWithCalendar[] | undefined;
+}
+
 export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
-  const [shifts, setShifts] = useState<ShiftWithCalendar[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const queryClient = useQueryClient();
 
-  const fetchShifts = useCallback(
-    async (showLoading = true) => {
-      if (!calendarId) return;
+  // Data fetching with React Query
+  const {
+    data: shifts = [],
+    isLoading,
+    isFetched,
+  } = useQuery({
+    queryKey: queryKeys.shifts.byCalendar(calendarId!),
+    queryFn: () => fetchShiftsApi(calendarId!),
+    enabled: !!calendarId,
+  });
 
-      if (showLoading) {
-        setLoading(true);
-      }
-      try {
-        const params = new URLSearchParams({ calendarId });
-
-        const response = await fetch(`/api/shifts?${params}`);
-        if (!response.ok) {
-          setShifts([]);
-          return;
-        }
-        const data = await response.json();
-        setShifts(data.map(normalizeShift));
-        setHasLoadedOnce(true);
-      } catch (error) {
-        console.error("Failed to fetch shifts:", error);
-        setShifts([]);
-      } finally {
-        if (showLoading) {
-          setLoading(false);
-        }
-      }
-    },
-    [calendarId]
-  );
-
-  const createShift = async (formData: ShiftFormData) => {
-    if (!calendarId) return null;
-
-    const tempId = `temp-${Date.now()}`;
-    const optimisticShift: ShiftWithCalendar = {
-      id: tempId,
-      date: parseLocalDate(formData.date),
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      title: formData.title,
-      color: formData.color || "#000000",
-      notes: formData.notes || null,
-      isAllDay: formData.isAllDay || false,
-      calendarId: calendarId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    setShifts((prev) => [...prev, optimisticShift]);
-
-    try {
-      const response = await fetch("/api/shifts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          calendarId: calendarId,
-        }),
+  // Create mutation with optimistic update
+  const createMutation = useMutation<
+    ShiftWithCalendar,
+    Error,
+    ShiftFormData,
+    CreateShiftContext
+  >({
+    mutationFn: (formData) => createShiftApi(calendarId!, formData),
+    onMutate: async (formData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `Failed to create shift: ${response.status} ${response.statusText}`,
-          errorText
-        );
-        setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
-        toast.error(t("common.createError", { item: t("shift.shift_one") }));
-        return null;
-      }
-
-      const newShift = await response.json();
-      setShifts((shifts) =>
-        shifts.map((s) => (s.id === tempId ? normalizeShift(newShift) : s))
+      // Snapshot previous value
+      const previous = queryClient.getQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId!)
       );
-      toast.success(t("common.created", { item: t("shift.shift_one") }));
-      return normalizeShift(newShift);
-    } catch (error) {
-      console.error("Failed to create shift:", error);
-      setShifts((shifts) => shifts.filter((s) => s.id !== tempId));
+
+      // Create optimistic shift
+      const optimisticShift: ShiftWithCalendar = {
+        id: `temp-${Date.now()}`,
+        date: parseLocalDate(formData.date),
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        title: formData.title,
+        color: formData.color || "#000000",
+        notes: formData.notes || null,
+        isAllDay: formData.isAllDay || false,
+        calendarId: calendarId!,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Optimistically update cache
+      queryClient.setQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId!),
+        (old = []) => [...old, optimisticShift]
+      );
+
+      return { previous };
+    },
+    onError: (err, formData, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.shifts.byCalendar(calendarId!),
+          context.previous
+        );
+      }
+      console.error("Failed to create shift:", err);
       toast.error(t("common.createError", { item: t("shift.shift_one") }));
-      return null;
-    }
-  };
+    },
+    onSuccess: () => {
+      toast.success(t("common.created", { item: t("shift.shift_one") }));
+    },
+    onSettled: () => {
+      // Refetch to get real data from server
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
+      });
+    },
+  });
 
-  const updateShift = async (id: string, formData: ShiftFormData) => {
-    try {
-      const response = await fetch(`/api/shifts/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData }),
+  // Delete mutation with optimistic update
+  const deleteMutation = useMutation<void, Error, string, DeleteShiftContext>({
+    mutationFn: (id) => deleteShiftApi(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `Failed to update shift: ${response.status} ${response.statusText}`,
-          errorText
+      const previous = queryClient.getQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId!)
+      );
+
+      // Optimistically remove
+      queryClient.setQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId!),
+        (old = []) => old.filter((s) => s.id !== id)
+      );
+
+      return { previous };
+    },
+    onError: (err, id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.shifts.byCalendar(calendarId!),
+          context.previous
         );
-        toast.error(t("common.updateError", { item: t("shift.shift_one") }));
-        return false;
       }
-
-      const updatedShift = await response.json();
-      setShifts((prev) => prev.map((s) => (s.id === id ? updatedShift : s)));
-      toast.success(t("common.updated", { item: t("shift.shift_one") }));
-      return true;
-    } catch (error) {
-      console.error("Failed to update shift:", error);
-      toast.error(t("common.updateError", { item: t("shift.shift_one") }));
-      return false;
-    }
-  };
-
-  const deleteShift = async (id: string) => {
-    try {
-      const response = await fetch(`/api/shifts/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `Failed to delete shift: ${response.status} ${response.statusText}`,
-          errorText
-        );
-        toast.error(t("common.deleteError", { item: t("shift.shift_one") }));
-        return false;
-      }
-
-      setShifts((prev) => prev.filter((s) => s.id !== id));
-      toast.success(t("common.deleted", { item: t("shift.shift_one") }));
-      return true;
-    } catch (error) {
-      console.error("Failed to delete shift:", error);
+      console.error("Failed to delete shift:", err);
       toast.error(t("common.deleteError", { item: t("shift.shift_one") }));
-      return false;
-    }
-  };
+    },
+    onSuccess: () => {
+      toast.success(t("common.deleted", { item: t("shift.shift_one") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
+      });
+    },
+  });
 
-  // Fetch shifts when calendar changes
-
-  useEffect(() => {
-    if (!calendarId) {
-      setShifts([]);
-      return;
-    }
-    fetchShifts();
-  }, [calendarId, fetchShifts]);
-
+  // Return API-compatible interface
   return {
     shifts,
-    setShifts,
-    loading,
-    hasLoadedOnce,
-    createShift,
-    updateShift,
-    deleteShift,
-    refetchShifts: () => fetchShifts(false), // Silent refresh for live updates
+    setShifts: (
+      newShifts:
+        | ShiftWithCalendar[]
+        | ((prev: ShiftWithCalendar[]) => ShiftWithCalendar[])
+    ) => {
+      queryClient.setQueryData(
+        queryKeys.shifts.byCalendar(calendarId!),
+        newShifts
+      );
+    },
+    loading: isLoading,
+    hasLoadedOnce: isFetched,
+    createShift: createMutation.mutateAsync,
+    deleteShift: deleteMutation.mutateAsync,
+    refetchShifts: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
+      }),
   };
 }

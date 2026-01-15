@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Search, Filter, RefreshCw } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -29,18 +28,6 @@ import {
 
 export default function AdminUsersPage() {
   const t = useTranslations();
-  const {
-    fetchUsers,
-    banUser,
-    unbanUser,
-    deleteUser,
-    resetPassword,
-    isLoading,
-  } = useAdminUsers();
-
-  // State
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [totalUsers, setTotalUsers] = useState(0);
 
   // Filters & Sort
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,6 +40,31 @@ export default function AdminUsersPage() {
   const sortField = "createdAt" as const;
   const sortDirection = "desc" as const;
 
+  // Build filters, sort, and pagination
+  const filters: UserFilters = {
+    search: searchQuery || undefined,
+    role: roleFilter,
+    status: statusFilter,
+  };
+
+  const sort: UserSort = {
+    field: sortField,
+    direction: sortDirection,
+  };
+
+  const pagination = { page: 1, limit: 1000 };
+
+  // Use hook with filters
+  const {
+    users,
+    total: totalUsers,
+    isLoading,
+    banUser,
+    unbanUser,
+    deleteUser,
+    resetPassword,
+  } = useAdminUsers(filters, sort, pagination);
+
   // Dialogs & Sheets
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [showEditSheet, setShowEditSheet] = useState(false);
@@ -61,65 +73,6 @@ export default function AdminUsersPage() {
   const [showUnbanDialog, setShowUnbanDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-
-  // Load users
-  const loadUsers = async () => {
-    const filters: UserFilters = {
-      search: searchQuery || undefined,
-      role: roleFilter,
-      status: statusFilter,
-    };
-
-    const sort: UserSort = {
-      field: sortField,
-      direction: sortDirection,
-    };
-
-    const result = await fetchUsers(filters, sort, {
-      page: 1,
-      limit: 1000,
-    });
-
-    if (result) {
-      setUsers(result.users);
-      setTotalUsers(result.total);
-    }
-  };
-
-  // Initial load
-  useEffect(() => {
-    const filters: UserFilters = {
-      search: searchQuery || undefined,
-      role: roleFilter,
-      status: statusFilter,
-    };
-
-    const sort: UserSort = {
-      field: sortField,
-      direction: sortDirection,
-    };
-
-    const loadData = async () => {
-      const result = await fetchUsers(filters, sort, {
-        page: 1,
-        limit: 1000,
-      });
-
-      if (result) {
-        setUsers(result.users);
-        setTotalUsers(result.total);
-      }
-    };
-
-    loadData();
-  }, [
-    searchQuery,
-    roleFilter,
-    statusFilter,
-    sortField,
-    sortDirection,
-    fetchUsers,
-  ]);
 
   // Handlers
   const handleUserClick = (user: AdminUser) => {
@@ -156,7 +109,6 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
     const success = await banUser(selectedUser.id, reason, expiresAt);
     if (success) {
-      loadUsers();
       setShowBanDialog(false);
     }
   };
@@ -165,7 +117,6 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
     const success = await unbanUser(selectedUser.id);
     if (success) {
-      loadUsers();
       setShowUnbanDialog(false);
     }
   };
@@ -174,7 +125,6 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
     const success = await deleteUser(selectedUser.id);
     if (success) {
-      loadUsers();
       setShowDeleteDialog(false);
     }
   };
@@ -185,10 +135,6 @@ export default function AdminUsersPage() {
     if (success) {
       setShowPasswordDialog(false);
     }
-  };
-
-  const handleRefresh = () => {
-    loadUsers();
   };
 
   if (isLoading && users.length === 0) {
@@ -208,14 +154,6 @@ export default function AdminUsersPage() {
               {t("admin.userManagementDescription")}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className={isLoading ? "animate-spin" : ""} />
-          </Button>
         </div>
 
         {/* Filters */}
@@ -298,7 +236,7 @@ export default function AdminUsersPage() {
           open={showEditSheet}
           onOpenChange={setShowEditSheet}
           user={selectedUser}
-          onSuccess={loadUsers}
+          onSuccess={refetch}
         />
       )}
 

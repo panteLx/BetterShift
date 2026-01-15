@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarWithCount } from "@/lib/types";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -6,97 +7,334 @@ import {
   isRateLimitError,
   handleRateLimitError,
 } from "@/lib/rate-limit-client";
+import { queryKeys } from "@/lib/query-keys";
+
+// API functions
+async function fetchCalendarsApi(): Promise<CalendarWithCount[]> {
+  const response = await fetch("/api/calendars");
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch calendars: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+async function createCalendarApi(
+  name: string,
+  color: string
+): Promise<CalendarWithCount> {
+  const response = await fetch("/api/calendars", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      color,
+      guestPermission: "none",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to create calendar: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+
+  return response.json();
+}
+
+async function updateCalendarApi(
+  calendarId: string,
+  updates: {
+    name?: string;
+    color?: string;
+    guestPermission?: "none" | "read" | "write";
+  }
+): Promise<CalendarWithCount> {
+  const response = await fetch(`/api/calendars/${calendarId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to update calendar");
+  }
+
+  return response.json();
+}
+
+async function deleteCalendarApi(calendarId: string): Promise<void> {
+  const response = await fetch(`/api/calendars/${calendarId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to delete calendar: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+}
+
+// Context types for optimistic updates
+interface CreateCalendarContext {
+  previous: CalendarWithCount[] | undefined;
+}
+
+interface UpdateCalendarContext {
+  previous: CalendarWithCount[] | undefined;
+}
+
+interface DeleteCalendarContext {
+  previous: CalendarWithCount[] | undefined;
+  previousSelected: string | undefined;
+}
 
 export function useCalendars(initialCalendarId?: string | null) {
   const t = useTranslations();
-  const [calendars, setCalendars] = useState<CalendarWithCount[]>([]);
+  const queryClient = useQueryClient();
   const [selectedCalendar, setSelectedCalendar] = useState<
     string | undefined
   >();
-  const [loading, setLoading] = useState(true);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Capture initialCalendarId on mount to prevent dependency changes
   const initialCalendarIdRef = useRef(initialCalendarId);
 
-  const fetchCalendars = useCallback(async () => {
-    try {
-      const response = await fetch("/api/calendars");
-      const data = await response.json();
+  // Data fetching with React Query
+  const {
+    data: calendars = [],
+    isLoading,
+    isFetched,
+  } = useQuery({
+    queryKey: queryKeys.calendars.all,
+    queryFn: fetchCalendarsApi,
+  });
 
-      // Ensure data is an array
-      const calendarsData = Array.isArray(data) ? data : [];
-      setCalendars(calendarsData);
-      setHasLoadedOnce(true);
-
-      // Only auto-select on initial load
-      setSelectedCalendar((current) => {
-        // If a calendar is already selected and still exists, keep it
-        if (
-          current &&
-          calendarsData.some((cal: CalendarWithCount) => cal.id === current)
-        ) {
-          return current;
-        }
-        // Otherwise, try initialCalendarId or fallback to first calendar
-        if (
-          initialCalendarIdRef.current &&
-          calendarsData.some(
-            (cal: CalendarWithCount) => cal.id === initialCalendarIdRef.current
-          )
-        ) {
-          return initialCalendarIdRef.current;
-        } else if (calendarsData.length > 0) {
-          return calendarsData[0].id;
-        }
-        return undefined;
-      });
-    } catch (error) {
-      console.error("Failed to fetch calendars:", error);
-      setCalendars([]);
-    } finally {
-      setLoading(false);
+  // Auto-select calendar when data loads
+  useEffect(() => {
+    if (calendars.length > 0 && !selectedCalendar) {
+      const initial = initialCalendarIdRef.current;
+      const found = calendars.find((c) => c.id === initial);
+      const initialId = found?.id || calendars[0].id;
+      queueMicrotask(() => setSelectedCalendar(initialId));
     }
-  }, []);
+  }, [calendars, selectedCalendar]);
 
+  // Listen for calendar subscription changes (keep for useCalendarSubscriptions)
+  useEffect(() => {
+    const handleCalendarListChange = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    };
+
+    window.addEventListener(
+      "calendar-list-change" as never,
+      handleCalendarListChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "calendar-list-change" as never,
+        handleCalendarListChange
+      );
+    };
+  }, [queryClient]);
+
+  // Create mutation with optimistic update
+  const createMutation = useMutation<
+    CalendarWithCount,
+    Error,
+    { name: string; color: string },
+    CreateCalendarContext
+  >({
+    mutationFn: ({ name, color }) => createCalendarApi(name, color),
+    onMutate: async ({ name, color }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.calendars.all });
+
+      const previous = queryClient.getQueryData<CalendarWithCount[]>(
+        queryKeys.calendars.all
+      );
+
+      const optimisticCalendar: CalendarWithCount = {
+        id: `temp-${Date.now()}`,
+        name,
+        color,
+        guestPermission: "none",
+        ownerId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: 0,
+      };
+
+      queryClient.setQueryData<CalendarWithCount[]>(
+        queryKeys.calendars.all,
+        (old = []) => [...old, optimisticCalendar]
+      );
+
+      // Auto-select new calendar
+      setSelectedCalendar(optimisticCalendar.id);
+
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.calendars.all, context.previous);
+      }
+      console.error("Failed to create calendar:", err);
+      toast.error(t("common.createError", { item: t("calendar.title") }));
+    },
+    onSuccess: (newCalendar) => {
+      // Update selection with real ID
+      setSelectedCalendar(newCalendar.id);
+      toast.success(t("common.created", { item: t("calendar.title") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    },
+  });
+
+  // Update mutation with optimistic update
+  const updateMutation = useMutation<
+    CalendarWithCount,
+    Error,
+    {
+      calendarId: string;
+      updates: {
+        name?: string;
+        color?: string;
+        guestPermission?: "none" | "read" | "write";
+      };
+    },
+    UpdateCalendarContext
+  >({
+    mutationFn: ({ calendarId, updates }) =>
+      updateCalendarApi(calendarId, updates),
+    onMutate: async ({ calendarId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.calendars.all });
+
+      const previous = queryClient.getQueryData<CalendarWithCount[]>(
+        queryKeys.calendars.all
+      );
+
+      queryClient.setQueryData<CalendarWithCount[]>(
+        queryKeys.calendars.all,
+        (old = []) =>
+          old.map((cal) =>
+            cal.id === calendarId ? { ...cal, ...updates } : cal
+          )
+      );
+
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.calendars.all, context.previous);
+      }
+      console.error("Failed to update calendar:", err);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : t("common.updateError", { item: t("calendar.title") });
+      toast.error(errorMessage);
+    },
+    onSuccess: () => {
+      toast.success(t("common.updated", { item: t("calendar.title") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    },
+  });
+
+  // Delete mutation with optimistic update
+  const deleteMutation = useMutation<
+    void,
+    Error,
+    string,
+    DeleteCalendarContext
+  >({
+    mutationFn: (calendarId) => deleteCalendarApi(calendarId),
+    onMutate: async (calendarId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.calendars.all });
+
+      const previous = queryClient.getQueryData<CalendarWithCount[]>(
+        queryKeys.calendars.all
+      );
+      const previousSelected = selectedCalendar;
+
+      queryClient.setQueryData<CalendarWithCount[]>(
+        queryKeys.calendars.all,
+        (old = []) => {
+          const remaining = old.filter((c) => c.id !== calendarId);
+
+          // Update selected calendar if deleted
+          if (selectedCalendar === calendarId) {
+            setSelectedCalendar(
+              remaining.length > 0 ? remaining[0].id : undefined
+            );
+          }
+
+          return remaining;
+        }
+      );
+
+      return { previous, previousSelected };
+    },
+    onError: (err, calendarId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.calendars.all, context.previous);
+      }
+      if (context?.previousSelected) {
+        setSelectedCalendar(context.previousSelected);
+      }
+      console.error("Failed to delete calendar:", err);
+      toast.error(t("common.deleteError", { item: t("calendar.title") }));
+    },
+    onSuccess: () => {
+      toast.success(t("common.deleted", { item: t("calendar.title") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    },
+  });
+
+  // Wrapper for createCalendar to handle rate limiting
   const createCalendar = async (name: string, color: string) => {
     try {
-      const response = await fetch("/api/calendars", {
+      // Check rate limit before mutation
+      const testResponse = await fetch("/api/calendars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          color,
-          guestPermission: "none", // Always default to "none" on creation
-        }),
+        body: JSON.stringify({ name, color, guestPermission: "none" }),
       });
 
-      if (isRateLimitError(response)) {
-        await handleRateLimitError(response, t);
+      if (isRateLimitError(testResponse)) {
+        await handleRateLimitError(testResponse, t);
         return;
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `Failed to create calendar: ${response.status} ${response.statusText}`,
-          errorText
+      // If rate limit check passed, use mutation
+      if (testResponse.ok) {
+        const calendar = await testResponse.json();
+        // Update cache and selection
+        queryClient.setQueryData<CalendarWithCount[]>(
+          queryKeys.calendars.all,
+          (old = []) => [...old, calendar]
         );
-        toast.error(t("common.createError", { item: t("calendar.title") }));
-        return;
+        setSelectedCalendar(calendar.id);
+        toast.success(t("common.created", { item: t("calendar.title") }));
+      } else {
+        await createMutation.mutateAsync({ name, color });
       }
-
-      const newCalendar = await response.json();
-      setCalendars((prev) => [...prev, newCalendar]);
-      setSelectedCalendar(newCalendar.id);
-
-      toast.success(t("common.created", { item: t("calendar.title") }));
     } catch (error) {
       console.error("Failed to create calendar:", error);
-      toast.error(t("common.createError", { item: t("calendar.title") }));
     }
   };
 
+  // Wrapper for updateCalendar to maintain original signature
   const updateCalendar = async (
     calendarId: string,
     updates: {
@@ -105,135 +343,24 @@ export function useCalendars(initialCalendarId?: string | null) {
       guestPermission?: "none" | "read" | "write";
     }
   ) => {
-    try {
-      const response = await fetch(`/api/calendars/${calendarId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.error ||
-          t("common.updateError", { item: t("calendar.title") });
-        toast.error(errorMessage);
-        return { success: false, error: "failed" as const };
-      }
-
-      const updatedCalendar = await response.json();
-
-      // Update local state
-      setCalendars((prev) =>
-        prev.map((cal) => (cal.id === calendarId ? updatedCalendar : cal))
-      );
-
-      toast.success(t("common.updated", { item: t("calendar.title") }));
-      return { success: true };
-    } catch (error) {
-      console.error("Failed to update calendar:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("common.updateError", { item: t("calendar.title") })
-      );
-      return { success: false, error: "failed" as const };
-    }
+    return updateMutation.mutateAsync({ calendarId, updates });
   };
 
+  // Wrapper for deleteCalendar to maintain original signature
   const deleteCalendar = async (calendarId: string) => {
-    try {
-      const response = await fetch(`/api/calendars/${calendarId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        setCalendars((prev) => {
-          const remainingCalendars = prev.filter((c) => c.id !== calendarId);
-
-          if (selectedCalendar === calendarId) {
-            setSelectedCalendar(
-              remainingCalendars.length > 0
-                ? remainingCalendars[0].id
-                : undefined
-            );
-          }
-
-          return remainingCalendars;
-        });
-
-        toast.success(t("common.deleted", { item: t("calendar.title") }));
-        return true;
-      } else {
-        const errorText = await response.text();
-        console.error(
-          `Failed to delete calendar: ${response.status} ${response.statusText}`,
-          errorText
-        );
-        toast.error(t("common.deleteError", { item: t("calendar.title") }));
-        return false;
-      }
-    } catch (error) {
-      console.error("Failed to delete calendar:", error);
-      toast.error(t("common.deleteError", { item: t("calendar.title") }));
-    }
-    return false;
+    return deleteMutation.mutateAsync(calendarId);
   };
-
-  // Initial calendar fetch
-  useEffect(() => {
-    fetchCalendars();
-  }, [fetchCalendars]);
-
-  // Listen for calendar subscription changes (SSE events + custom events)
-  useEffect(() => {
-    const handleCalendarChange = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { type, action } = customEvent.detail || {};
-
-      // Refetch calendars when subscriptions change
-      if (type === "calendar" && (action === "update" || action === "delete")) {
-        fetchCalendars();
-      }
-    };
-
-    const handleCalendarListChange = () => {
-      // Triggered by calendar subscription/dismissal actions
-      fetchCalendars();
-    };
-
-    // Listen to SSE calendar-change events
-    window.addEventListener("calendar-change" as never, handleCalendarChange);
-    // Listen to direct calendar list changes (subscriptions/dismissals)
-    window.addEventListener(
-      "calendar-list-change" as never,
-      handleCalendarListChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        "calendar-change" as never,
-        handleCalendarChange
-      );
-      window.removeEventListener(
-        "calendar-list-change" as never,
-        handleCalendarListChange
-      );
-    };
-  }, [fetchCalendars]);
 
   return {
     calendars,
     selectedCalendar,
     setSelectedCalendar,
-    loading,
-    hasLoadedOnce,
+    loading: isLoading,
+    hasLoadedOnce: isFetched,
     createCalendar,
     updateCalendar,
     deleteCalendar,
-    refetchCalendars: fetchCalendars,
+    refetchCalendars: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all }),
   };
 }

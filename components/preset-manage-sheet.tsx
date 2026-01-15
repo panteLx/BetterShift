@@ -39,7 +39,7 @@ import { Plus, Trash2, Edit2, Loader2, GripVertical } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useDirtyState } from "@/hooks/useDirtyState";
-import { usePresetManagement } from "@/hooks/usePresetManagement";
+import { usePresets } from "@/hooks/usePresets";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface PresetFormData {
@@ -58,7 +58,7 @@ interface PresetManageSheetProps {
   onOpenChange: (open: boolean) => void;
   calendarId: string;
   presets: ShiftPreset[];
-  onPresetsChange: () => void;
+  onPresetsChange?: () => void; // Now optional - React Query handles refetching
   readOnly?: boolean;
 }
 
@@ -183,7 +183,6 @@ export function PresetManageSheet({
   onOpenChange,
   calendarId,
   presets,
-  onPresetsChange,
   readOnly = false,
 }: PresetManageSheetProps) {
   const t = useTranslations();
@@ -217,11 +216,13 @@ export function PresetManageSheet({
   >([]);
   const initialFormDataRef = useRef<PresetFormData | null>(null);
 
-  const { createPreset, updatePreset, deletePreset, reorderPresets } =
-    usePresetManagement({
-      calendarId,
-      onSuccess: onPresetsChange,
-    });
+  // Use the unified usePresets hook with mutations
+  const {
+    createPreset: createPresetMutation,
+    updatePreset: updatePresetMutation,
+    deletePreset: deletePresetMutation,
+    reorderPresets: reorderPresetsMutation,
+  } = usePresets(calendarId);
 
   // Initialize ordered presets
   useEffect(() => {
@@ -288,7 +289,7 @@ export function PresetManageSheet({
       order: index,
     }));
 
-    const success = await reorderPresets(presetOrders);
+    const success = await reorderPresetsMutation(presetOrders);
     if (!success) {
       // Revert order on error
       setOrderedPrimaryPresets(presets.filter((p) => !p.isSecondary));
@@ -324,9 +325,9 @@ export function PresetManageSheet({
       let success = false;
 
       if (editingPreset) {
-        success = await updatePreset(editingPreset.id, formData);
+        success = await updatePresetMutation(editingPreset.id, formData);
       } else {
-        success = await createPreset(formData);
+        success = await createPresetMutation(formData);
       }
 
       if (success) {
@@ -360,7 +361,7 @@ export function PresetManageSheet({
     setShowDeleteConfirm(false);
 
     try {
-      const success = await deletePreset(deleteTargetId);
+      const success = await deletePresetMutation(deleteTargetId);
       if (success) {
         // If we're editing the deleted preset, close the edit form
         if (editingPreset?.id === deleteTargetId) {

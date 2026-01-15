@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
 
-  const { stats, isLoading: isLoadingStats, refetch } = useAdminStats();
+  const { stats, isLoading: isLoadingStats } = useAdminStats();
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [isLoadingVersion, setIsLoadingVersion] = useState(true);
 
@@ -93,14 +93,6 @@ export default function AdminDashboardPage() {
             {t("admin.dashboardDescription")}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => refetch()}
-          disabled={isLoadingStats}
-        >
-          <RefreshCw className={isLoadingStats ? "animate-spin" : ""} />
-        </Button>
       </div>
 
       {/* System Information */}
