@@ -88,13 +88,8 @@ export function ExportDialog({
   // Initialize or reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      // Set default selections when dialog opens
-      const today = new Date();
-      const defaultMonth = `${today.getFullYear()}-${String(
-        today.getMonth() + 1
-      ).padStart(2, "0")}`;
-      const currentYear = today.getFullYear();
-      setSelectedCalendarIds([calendarId]); // Pre-select current calendar
+      // Pre-select current calendar for multi-calendar export
+      setSelectedCalendarIds([calendarId]);
     } else {
       // Reset state when dialog closes
       setExportFormat("ics");
