@@ -396,9 +396,51 @@ function main() {
   const usedKeys = findUsedKeys(files);
   const staticKeys = Array.from(usedKeys).filter((k) => !k.endsWith(".*"));
   const wildcardPatterns = Array.from(usedKeys).filter((k) => k.endsWith(".*"));
-  console.log(
-    `   Found ${staticKeys.length} static keys + ${wildcardPatterns.length} dynamic patterns\n`
-  );
+
+  // Identify phantom keys (used in code but don't exist in de.json)
+  const allKeysSet = new Set(allKeys);
+  const phantomKeys = staticKeys.filter((key) => !allKeysSet.has(key));
+  const realStaticKeys = staticKeys.filter((key) => allKeysSet.has(key));
+
+  // Count how many actual keys are matched by wildcards
+  let wildcardMatchedKeysCount = 0;
+  for (const wildcardKey of wildcardPatterns) {
+    const prefix = wildcardKey.slice(0, -2); // Remove ".*"
+    const matchingKeys = allKeys.filter((key) => {
+      if (key.startsWith(prefix + ".")) return true;
+      if (key.startsWith(prefix) && key.length > prefix.length) {
+        const afterPrefix = key.substring(prefix.length);
+        return !afterPrefix.includes(".");
+      }
+      return false;
+    });
+    wildcardMatchedKeysCount += matchingKeys.length;
+  }
+
+  // Keys that are used via both static AND wildcard (avoid double counting)
+  const keysInBoth = realStaticKeys.filter((key) => {
+    for (const wildcardKey of wildcardPatterns) {
+      const prefix = wildcardKey.slice(0, -2);
+      if (
+        key.startsWith(prefix + ".") ||
+        (key.startsWith(prefix) &&
+          key.length > prefix.length &&
+          !key.substring(prefix.length).includes("."))
+      ) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const totalUniqueKeysUsed =
+    realStaticKeys.length + wildcardMatchedKeysCount - keysInBoth.length;
+
+  console.log(`   Found ${totalUniqueKeysUsed} keys used in code`);
+  if (phantomKeys.length > 0) {
+    console.log(`   ⚠️  ${phantomKeys.length} missing in de.json`);
+  }
+  console.log();
 
   // 1. Find unused keys
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -440,11 +482,22 @@ function main() {
 
   const missingKeys = findMissingKeys(usedKeys, allKeys);
 
-  if (missingKeys.length === 0) {
-    console.log("✅ No missing translation keys found!\n");
-  } else {
+  // Show phantom keys first (static keys that don't exist)
+  if (phantomKeys.length > 0) {
     hasIssues = true;
-    console.log(`❌ Found ${missingKeys.length} missing translation keys:\n`);
+    console.log(`❌ Found ${phantomKeys.length} missing static keys:\n`);
+    for (const key of phantomKeys.sort()) {
+      console.log(`   - ${key}`);
+    }
+    console.log();
+  }
+
+  // Show missing dynamic pattern keys
+  if (missingKeys.length > 0) {
+    hasIssues = true;
+    console.log(
+      `❌ Found ${missingKeys.length} missing dynamic pattern keys:\n`
+    );
     for (const item of missingKeys) {
       if (item.pattern) {
         // Dynamic pattern
@@ -462,6 +515,11 @@ function main() {
       }
     }
     console.log();
+  }
+
+  // If no missing keys at all
+  if (phantomKeys.length === 0 && missingKeys.length === 0) {
+    console.log("✅ No missing translation keys found!\n");
   }
 
   // 3. Compare translation files
@@ -524,21 +582,62 @@ function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("📊 SUMMARY");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-  console.log(`   Total keys in de.json: ${allKeys.length}`);
-  console.log(`   Static keys used in code: ${staticKeys.length}`);
-  console.log(`   Dynamic patterns (wildcards): ${wildcardPatterns.length}`);
-  console.log(`   Unused keys: ${unusedKeys.length}`);
-  console.log(`   Missing keys: ${missingKeys.length}`);
-  console.log(
-    `   Usage rate: ${((1 - unusedKeys.length / allKeys.length) * 100).toFixed(
-      1
-    )}%`
-  );
+
+  // Calculate overall health
+  const totalIssues =
+    unusedKeys.length +
+    phantomKeys.length +
+    missingKeys.length +
+    missingInEn.length +
+    missingInIt.length +
+    extraInEn.length +
+    extraInIt.length;
+  const healthScore =
+    totalIssues === 0 ? 100 : Math.max(0, 100 - totalIssues * 2);
+  const healthIcon =
+    healthScore === 100 ? "✅" : healthScore >= 80 ? "⚠️" : "❌";
+
+  console.log(`${healthIcon} Overall Health: ${healthScore}%\n`);
+
+  // Main stats
+  console.log("📊 Translation Keys:");
+  console.log(`   Keys in de.json:     ${allKeys.length}`);
+  console.log(`   Keys used in code:   ${totalUniqueKeysUsed}`);
+  console.log(`   Unused keys:         ${unusedKeys.length}`);
+  const missingTotal = phantomKeys.length + missingKeys.length;
+  if (missingTotal > 0) {
+    console.log(`   Missing keys:        ${missingTotal}`);
+  }
+
+  const matchRate = ((totalUniqueKeysUsed / allKeys.length) * 100).toFixed(1);
+  console.log(`   Match rate:          ${matchRate}%`);
   console.log();
-  console.log(`   en.json missing: ${missingInEn.length}`);
-  console.log(`   en.json extra: ${extraInEn.length}`);
-  console.log(`   it.json missing: ${missingInIt.length}`);
-  console.log(`   it.json extra: ${extraInIt.length}`);
+
+  if (phantomKeys.length > 0 || missingKeys.length > 0) {
+    console.log("⚠️  Issues:");
+    console.log(
+      `   Missing in de.json: ${phantomKeys.length + missingKeys.length}`
+    );
+    console.log();
+  }
+
+  console.log("🌍 File Synchronization:");
+  const enIssues = missingInEn.length + extraInEn.length;
+  const itIssues = missingInIt.length + extraInIt.length;
+  console.log(
+    `   en.json:             ${
+      enIssues === 0
+        ? "✅ Synced"
+        : `⚠️  ${missingInEn.length} missing, ${extraInEn.length} extra`
+    }`
+  );
+  console.log(
+    `   it.json:             ${
+      itIssues === 0
+        ? "✅ Synced"
+        : `⚠️  ${missingInIt.length} missing, ${extraInIt.length} extra`
+    }`
+  );
   console.log();
 
   if (!hasIssues) {

@@ -126,7 +126,7 @@ async function deleteLogsByIdsApi(
     if (response.status === 403) {
       throw new Error(t("admin.accessDenied"));
     }
-    throw new Error(t("admin.auditLogs.deleteError"));
+    throw new Error(t("common.deleteError", { item: t("admin.auditLogs") }));
   }
 
   return await response.json();
@@ -150,7 +150,7 @@ async function deleteLogsByDateApi(
     if (response.status === 403) {
       throw new Error(t("admin.accessDenied"));
     }
-    throw new Error(t("admin.auditLogs.deleteError"));
+    throw new Error(t("common.deleteError", { item: t("admin.auditLogs") }));
   }
 
   return await response.json();
@@ -229,7 +229,9 @@ export function useAdminAuditLogs(
         context?.previous
       );
       toast.error(
-        err instanceof Error ? err.message : t("admin.auditLogs.deleteError")
+        err instanceof Error
+          ? err.message
+          : t("common.deleteError", { item: t("admin.auditLogs") })
       );
     },
     onSuccess: (data) => {
@@ -246,7 +248,9 @@ export function useAdminAuditLogs(
     mutationFn: (beforeDate: string) => deleteLogsByDateApi(beforeDate, t),
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : t("admin.auditLogs.deleteError")
+        err instanceof Error
+          ? err.message
+          : t("common.deleteError", { item: t("admin.auditLogs") })
       );
     },
     onSuccess: (data) => {
@@ -271,7 +275,6 @@ export function useAdminAuditLogs(
     refetch,
     deleteLogsByIds: async (logIds: string[]): Promise<boolean> => {
       if (logIds.length === 0) {
-        toast.error(t("admin.auditLogs.noLogsSelected"));
         return false;
       }
       try {
