@@ -89,6 +89,9 @@ export async function POST(request: NextRequest) {
       accessibleCalendars.map((c) => [c.id, { name: c.name, color: c.color }])
     );
 
+    // Determine if multi-calendar export
+    const isMultiCalendar = accessibleCalendars.length > 1;
+
     // Sort all shifts by date (already sorted from DB, but ensure it)
     allShifts.sort((a, b) => {
       const dateA = (a.date as Date).getTime();
@@ -128,22 +131,29 @@ export async function POST(request: NextRequest) {
     // Title
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
-    doc.text("BetterShift Multi-Calendar Export", pageWidth / 2, yPosition, {
-      align: "center",
-    });
+    doc.text(
+      isMultiCalendar
+        ? "BetterShift Multi-Calendar Export"
+        : accessibleCalendars[0].name,
+      pageWidth / 2,
+      yPosition,
+      { align: "center" }
+    );
     yPosition += 10;
 
-    // Calendar names
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    const calendarNames = accessibleCalendars.map((c) => c.name).join(", ");
-    const wrappedNames = doc.splitTextToSize(
-      calendarNames,
-      pageWidth - margin * 2
-    );
-    for (const line of wrappedNames) {
-      doc.text(line, pageWidth / 2, yPosition, { align: "center" });
-      yPosition += 5;
+    // Calendar names (only for multi-calendar)
+    if (isMultiCalendar) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const calendarNames = accessibleCalendars.map((c) => c.name).join(", ");
+      const wrappedNames = doc.splitTextToSize(
+        calendarNames,
+        pageWidth - margin * 2
+      );
+      for (const line of wrappedNames) {
+        doc.text(line, pageWidth / 2, yPosition, { align: "center" });
+        yPosition += 5;
+      }
     }
 
     // Date range
@@ -226,19 +236,25 @@ export async function POST(request: NextRequest) {
             : `${shift.startTime} - ${shift.endTime}`;
           doc.text(timeStr, margin + 35, yPosition);
 
-          // Calendar name (in brackets)
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(9);
-          doc.text(
-            `[${calendarInfo?.name || "Unknown"}]`,
-            margin + 70,
-            yPosition
-          );
+          // Calendar name (only for multi-calendar exports)
+          if (isMultiCalendar) {
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(9);
+            doc.text(
+              `[${calendarInfo?.name || "Unknown"}]`,
+              margin + 70,
+              yPosition
+            );
+          }
 
           // Shift title
           doc.setFont("helvetica", "bold");
           doc.setFontSize(10);
-          doc.text(shift.title, margin + 105, yPosition);
+          doc.text(
+            shift.title,
+            isMultiCalendar ? margin + 105 : margin + 70,
+            yPosition
+          );
 
           yPosition += 5;
 

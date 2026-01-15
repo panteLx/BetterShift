@@ -6,10 +6,16 @@ import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
 import { getServerTimezone, formatDateToLocal } from "@/lib/date-utils";
+import { rateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser(request.headers);
+
+    // Rate limiting: 20 ICS exports per 10 minutes
+    const rateLimitResponse = rateLimit(request, user?.id, "export-ics");
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { calendarIds } = await request.json();
 
     if (!Array.isArray(calendarIds) || calendarIds.length === 0) {
@@ -62,6 +68,9 @@ export async function POST(request: NextRequest) {
     // Get server timezone for proper time conversion
     const serverTimezone = getServerTimezone();
 
+    // Determine if multi-calendar export
+    const isMultiCalendar = accessibleCalendars.length > 1;
+
     // Create iCalendar
     const cal = new ICAL.Component(["vcalendar", [], []]);
     cal.updatePropertyWithValue(
@@ -71,7 +80,12 @@ export async function POST(request: NextRequest) {
     cal.updatePropertyWithValue("version", "2.0");
     cal.updatePropertyWithValue("calscale", "GREGORIAN");
     cal.updatePropertyWithValue("method", "PUBLISH");
-    cal.updatePropertyWithValue("x-wr-calname", "BetterShift Multi-Calendar");
+    cal.updatePropertyWithValue(
+      "x-wr-calname",
+      isMultiCalendar
+        ? "BetterShift Multi-Calendar"
+        : accessibleCalendars[0].name
+    );
     cal.updatePropertyWithValue("x-wr-timezone", serverTimezone);
 
     // Add shifts as events
@@ -82,9 +96,11 @@ export async function POST(request: NextRequest) {
       // Set event ID
       event.uid = shift.id;
 
-      // Set title with calendar prefix
+      // Set title with calendar prefix only for multi-calendar exports
       const calendarName = calendarMap.get(shift.calendarId);
-      event.summary = `[${calendarName}] ${shift.title}`;
+      event.summary = isMultiCalendar
+        ? `[${calendarName}] ${shift.title}`
+        : shift.title;
 
       // Set description (notes)
       if (shift.notes) {

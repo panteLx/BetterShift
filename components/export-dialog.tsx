@@ -94,7 +94,7 @@ export function ExportDialog({
         today.getMonth() + 1
       ).padStart(2, "0")}`;
       const currentYear = today.getFullYear();
-  setSelectedCalendarIds([calendarId]); // Pre-select current calendar
+      setSelectedCalendarIds([calendarId]); // Pre-select current calendar
     } else {
       // Reset state when dialog closes
       setExportFormat("ics");
@@ -105,7 +105,11 @@ export function ExportDialog({
       setMultiCalendar(false);
       setSelectedCalendarIds([]);
     }
-  },// Validate calendar selection for multi-calendar export
+  }, [open, calendarId]);
+
+  // Handle export action
+  const handleExport = async () => {
+    // Validate calendar selection for multi-calendar export
     if (multiCalendar && selectedCalendarIds.length === 0) {
       toast.error(t("export.selectAtLeastOne"));
       return;
@@ -114,67 +118,35 @@ export function ExportDialog({
     setLoading(true);
 
     try {
-      let url: string;
-      let fetchOptions: RequestInit = { method: "GET" };
+      // Unified API endpoint
+      const url = `/api/export/${exportFormat}`;
+      const params = new URLSearchParams();
 
-      if (multiCalendar) {
-        // Multi-calendar export
-        url = `/api/export/${exportFormat}`;
-        const params = new URLSearchParams();
-
-        if (exportFormat === "pdf") {
-          params.append("locale", locale);
-          if (exportRange === "month" && selectedMonth) {
-            params.append("month", selectedMonth);
-          } else if (exportRange === "year" && selectedYear) {
-            params.append("year", selectedYear);
-          }
+      // Add PDF-specific params
+      if (exportFormat === "pdf") {
+        params.append("locale", locale);
+        if (exportRange === "month" && selectedMonth) {
+          params.append("month", selectedMonth);
+        } else if (exportRange === "year" && selectedYear) {
+          params.append("year", selectedYear);
         }
-
-        if (params.toString()) {
-          url += `?${params.toString()}`;
-        }
-
-        fetchOptions = {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ calendarIds: selectedCalendarIds }),
-        };
-      } else {
-        // Single calendar export
-        url = `/api/calendars/${calendarId}/export/${exportFormat}`;
-        const params = new URLSearchParams();
-
-        if (exportFormat === "pdf") {
-          params.append("locale", locale);
-          if (exportRange === "month" && selectedMonth) {
-            params.append("month", selectedMonth);
-          } else if (exportRange === "year" && selectedYear) {
-            params.append("year", selectedYear);
-          }: string;
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        } else {
-          filename = multiCalendar
-            ? `multi_calendar_export.${exportFormat}`
-            : `${calendarName.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${exportFormat}`;
-        }
-      } else {
-        filename = multiCalendar
-          ? `multi_calendar_export.${exportFormat}`
-          : `${calendarName.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${exportFormat}`;
-      // Fetch the file
-      const response = await fetch(url, fetchOptions
-      if (params.toString()) {
-        url += `?${params.toString()}`;
       }
 
+      const urlWithParams = params.toString() ? `${url}?${params}` : url;
+
+      // Determine calendar IDs to export
+      const idsToExport = multiCalendar ? selectedCalendarIds : [calendarId];
+
+      const fetchOptions: RequestInit = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ calendarIds: idsToExport }),
+      };
+
       // Fetch the file
-      const response = await fetch(url);
+      const response = await fetch(urlWithParams, fetchOptions);
 
       if (isRateLimitError(response)) {
         await handleRateLimitError(response, t);
@@ -223,7 +195,20 @@ export function ExportDialog({
     } finally {
       setLoading(false);
     }
+  };
 
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Download className="size-5" />
+            {t("export.title")}
+          </DialogTitle>
+          <DialogDescription>{t("export.description")}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
           {/* Multi-Calendar Export Toggle */}
           {availableCalendars.length > 1 && (
             <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4">
@@ -309,21 +294,7 @@ export function ExportDialog({
               </p>
             </div>
           )}
-  };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
-        <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
-          <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("export.title")}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {t("export.description")}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 overflow-y-auto flex-1 px-6 pb-6 pt-6">
           {/* Export Format */}
           <div className="space-y-2">
             <Label>{t("export.formatLabel")}</Label>

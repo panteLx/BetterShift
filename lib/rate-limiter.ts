@@ -98,6 +98,11 @@ const config = {
     windowMs:
       parseInt(process.env.RATE_LIMIT_EXPORT_PDF_WINDOW || "600", 10) * 1000, // 10 minutes
   },
+  exportIcs: {
+    requests: parseInt(process.env.RATE_LIMIT_EXPORT_ICS_REQUESTS || "20", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_EXPORT_ICS_WINDOW || "600", 10) * 1000, // 10 minutes
+  },
   tokenValidation: {
     requests: parseInt(
       process.env.RATE_LIMIT_TOKEN_VALIDATION_REQUESTS || "10",
@@ -319,6 +324,7 @@ export function rateLimit(
     | "calendar-create"
     | "external-sync"
     | "export-pdf"
+    | "export-ics"
     | "token-validation"
     | "token-creation"
     | "admin-user-mutations"
@@ -366,6 +372,9 @@ export function rateLimit(
       break;
     case "export-pdf":
       options = config.exportPdf;
+      break;
+    case "export-ics":
+      options = config.exportIcs;
       break;
     case "token-validation":
       options = config.tokenValidation;
@@ -442,6 +451,7 @@ export function getRateLimitStatus(
     | "calendar-create"
     | "external-sync"
     | "export-pdf"
+    | "export-ics"
     | "token-validation"
     | "token-creation" = "auth"
 ): RateLimitResult {
@@ -473,6 +483,9 @@ export function getRateLimitStatus(
       break;
     case "export-pdf":
       options = config.exportPdf;
+      break;
+    case "export-ics":
+      options = config.exportIcs;
       break;
     case "token-validation":
       options = config.tokenValidation;
