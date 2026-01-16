@@ -13,7 +13,6 @@ interface PresetSelectorProps {
   onSelectPreset: (presetId: string | undefined) => void;
   onPresetsChange: () => void;
   onShiftsChange?: () => void;
-  onStatsRefresh?: () => void;
   calendarId: string;
   onViewSettingsClick?: () => void;
   loading?: boolean;
@@ -29,7 +28,6 @@ export function PresetSelector({
   onSelectPreset,
   onPresetsChange,
   onShiftsChange,
-  onStatsRefresh,
   calendarId,
   onViewSettingsClick,
   hidePresetHeader = false,
@@ -45,7 +43,6 @@ export function PresetSelector({
   const handlePresetsChange = () => {
     onPresetsChange();
     if (onShiftsChange) onShiftsChange();
-    if (onStatsRefresh) onStatsRefresh();
   };
 
   return (

@@ -323,11 +323,8 @@
     "radarDescription": "Compare top shift types by total hours and average"
   },
   "sync": {
-    "reconnected": "Connection restored",
-    "disconnected": "Connection to server lost",
-    "offline": "No internet connection",
-    "refreshing": "Refreshing data...",
-    "resyncing": "Syncing data..."
+    "connected": "Connected to server",
+    "disconnected": "Connection to server lost"
   },
   "onboarding": {
     "welcome": "Welcome to BetterShift",

@@ -125,25 +125,6 @@ export function useCalendars(initialCalendarId?: string | null) {
     }
   }, [calendars, selectedCalendar]);
 
-  // Listen for calendar subscription changes (keep for useCalendarSubscriptions)
-  useEffect(() => {
-    const handleCalendarListChange = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
-    };
-
-    window.addEventListener(
-      "calendar-list-change" as never,
-      handleCalendarListChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        "calendar-list-change" as never,
-        handleCalendarListChange
-      );
-    };
-  }, [queryClient]);
-
   // Create mutation with optimistic update
   const createMutation = useMutation<
     CalendarWithCount,

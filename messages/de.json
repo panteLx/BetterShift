@@ -323,11 +323,8 @@
     "radarDescription": "Vergleiche Top-Schichttypen nach Gesamtstunden und Durchschnitt"
   },
   "sync": {
-    "reconnected": "Verbindung wiederhergestellt",
-    "disconnected": "Verbindung zum Server verloren",
-    "offline": "Keine Internetverbindung",
-    "refreshing": "Daten werden aktualisiert...",
-    "resyncing": "Daten werden synchronisiert..."
+    "connected": "Server Verbindung hergestellt",
+    "disconnected": "Server Verbindung verloren"
   },
   "onboarding": {
     "welcome": "Willkommen bei BetterShift",

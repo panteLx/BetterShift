@@ -30,7 +30,6 @@ interface CalendarContentProps {
   highlightedWeekdays?: number[];
   highlightColor?: string;
   selectedCalendar: string | null;
-  statsRefreshTrigger: number;
   locale?: Locale;
   onDayClick: (date: Date) => void;
   onDayRightClick?: (e: React.MouseEvent, date: Date) => void;

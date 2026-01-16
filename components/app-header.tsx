@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 import { useLocale } from "next-intl";
 
@@ -33,7 +34,6 @@ interface AppHeaderProps {
   selectedCalendar: string | undefined;
   presets: ShiftPreset[];
   selectedPresetId: string | undefined;
-  isConnected: boolean;
   showMobileCalendarDialog: boolean;
   hasSyncErrors?: boolean;
   onSelectCalendar: (id: string) => void;
@@ -44,7 +44,6 @@ interface AppHeaderProps {
   onCompare?: () => void;
   onPresetsChange: () => void;
   onShiftsChange: () => void;
-  onStatsRefresh: () => void;
   onManualShiftCreation: () => void;
   onMobileCalendarDialogChange: (open: boolean) => void;
   onViewSettingsClick: () => void;
@@ -58,7 +57,6 @@ export function AppHeader({
   selectedCalendar,
   presets,
   selectedPresetId,
-  isConnected,
   showMobileCalendarDialog,
   hasSyncErrors = false,
   onSelectCalendar,
@@ -69,7 +67,6 @@ export function AppHeader({
   onCompare,
   onPresetsChange,
   onShiftsChange,
-  onStatsRefresh,
   onManualShiftCreation,
   onMobileCalendarDialogChange,
   onViewSettingsClick,
@@ -82,6 +79,7 @@ export function AppHeader({
   const { isGuest } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
   const { versionInfo } = useVersionUpdateCheck();
+  const { isOnline } = useConnectionStatus();
   const [showChangelog, setShowChangelog] = useState(false);
 
   return (
@@ -106,14 +104,10 @@ export function AppHeader({
                     {/* Connection Status Indicator */}
                     <div
                       className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background transition-colors ${
-                        isConnected
-                          ? "bg-green-500 animate-pulse"
-                          : "bg-red-500"
+                        isOnline ? "bg-green-500 animate-pulse" : "bg-red-500"
                       }`}
                       title={
-                        isConnected
-                          ? t("sync.reconnected")
-                          : t("sync.disconnected")
+                        isOnline ? t("sync.connected") : t("sync.disconnected")
                       }
                     ></div>
                   </div>
@@ -251,10 +245,10 @@ export function AppHeader({
                 {/* Connection Status Indicator - Top Right of Card */}
                 <div
                   className={`absolute top-2 right-2 w-2 h-2 rounded-full transition-colors ${
-                    isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+                    isOnline ? "bg-green-500 animate-pulse" : "bg-red-500"
                   }`}
                   title={
-                    isConnected ? t("sync.reconnected") : t("sync.disconnected")
+                    isOnline ? t("sync.connected") : t("sync.disconnected")
                   }
                 ></div>
 
@@ -319,7 +313,6 @@ export function AppHeader({
                   onSelectPreset={onSelectPreset}
                   onPresetsChange={onPresetsChange}
                   onShiftsChange={onShiftsChange}
-                  onStatsRefresh={onStatsRefresh}
                   calendarId={selectedCalendar}
                   onViewSettingsClick={onViewSettingsClick}
                   loading={presetsLoading}

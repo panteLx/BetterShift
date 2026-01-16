@@ -323,11 +323,8 @@
     "radarDescription": "Confronta i tipi di turno principali per ore totali e media"
   },
   "sync": {
-    "reconnected": "Connessione ripristinata",
-    "disconnected": "Connessione al server persa",
-    "offline": "Nessuna connessione internet",
-    "refreshing": "Aggiornamento dati...",
-    "resyncing": "Sincronizzazione dati..."
+    "connected": "Connesso al server",
+    "disconnected": "Connessione al server persa"
   },
   "onboarding": {
     "welcome": "Benvenuto in BetterShift",

@@ -36,7 +36,6 @@ interface CalendarCompareViewProps {
   combinedSortMode: boolean;
   highlightedWeekdays?: number[];
   highlightColor?: string;
-  statsRefreshTrigger: number;
   locale?: Locale;
   onDayClick: (calendarId: string, date: Date) => void;
   onDayRightClick?: (
@@ -67,7 +66,6 @@ interface CalendarCompareViewProps {
   onHidePresetHeaderChange?: (hide: boolean) => void;
   onPresetsChange: (calendarId: string) => void;
   onShiftsChange?: () => void;
-  onStatsRefresh?: () => void;
   presetsLoadingMap?: Map<string, boolean>;
 }
 
@@ -241,7 +239,6 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                       onSelectPreset={props.onSelectPreset}
                       onPresetsChange={() => props.onPresetsChange(calendar.id)}
                       onShiftsChange={props.onShiftsChange}
-                      onStatsRefresh={props.onStatsRefresh}
                       calendarId={calendar.id}
                       onViewSettingsClick={props.onViewSettingsClick}
                       loading={presetsLoading}
@@ -283,7 +280,6 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                     highlightedWeekdays={props.highlightedWeekdays}
                     highlightColor={props.highlightColor}
                     selectedCalendar={calendar.id}
-                    statsRefreshTrigger={props.statsRefreshTrigger}
                     locale={props.locale}
                     onDayClick={
                       isDisabled
