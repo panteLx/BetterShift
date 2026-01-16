@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
@@ -106,6 +107,7 @@ export function useAdminStats(): {
   refetch: () => void;
 } {
   const t = useTranslations();
+  const lastErrorMessage = useRef<string | null>(null);
 
   const {
     data: stats = null,
@@ -119,10 +121,14 @@ export function useAdminStats(): {
     refetchInterval: REFETCH_INTERVAL,
   });
 
-  // Show error toast when error occurs
-  if (error) {
-    toast.error(error.message);
-  }
+  useEffect(() => {
+    if (error && error.message !== lastErrorMessage.current) {
+      toast.error(error.message);
+      lastErrorMessage.current = error.message;
+    } else if (!error) {
+      lastErrorMessage.current = null;
+    }
+  }, [error]);
 
   return {
     stats,

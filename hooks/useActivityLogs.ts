@@ -96,7 +96,7 @@ async function clearLogsApi(
   });
 
   if (!response.ok) {
-    throw new Error(t("common.deleteError", { item: "Activity logs" }));
+    throw new Error(t("common.deleteError", { item: t("activityLog.title") }));
   }
 }
 
@@ -146,7 +146,9 @@ export function useActivityLogs(
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to clear activity logs"
+        err instanceof Error
+          ? err.message
+          : t("common.deleteError", { item: t("activityLog.title") })
       );
     },
   });

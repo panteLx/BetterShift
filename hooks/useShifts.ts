@@ -63,8 +63,6 @@ async function createShiftApi(
 async function deleteShiftApi(id: string): Promise<void> {
   const response = await fetch(`/api/shifts/${id}`, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
   });
 
   if (!response.ok) {
@@ -125,7 +123,7 @@ export function useShifts(calendarId: string | undefined) {
         startTime: formData.startTime,
         endTime: formData.endTime,
         title: formData.title,
-        color: formData.color || "#000000",
+        color: formData.color || "#3b82f6",
         notes: formData.notes || null,
         isAllDay: formData.isAllDay || false,
         calendarId: calendarId!,

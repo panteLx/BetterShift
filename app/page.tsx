@@ -672,7 +672,6 @@ function HomeContent() {
           onShiftSubmit={shiftActions.handleShiftSubmit}
           selectedDate={selectedDate}
           selectedCalendar={selectedCalendar || null}
-          onPresetsChange={() => {}}
           calendars={calendars}
           showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
           onCalendarSettingsDialogChange={
@@ -760,7 +759,6 @@ function HomeContent() {
           onShiftSubmit={shiftActions.handleShiftSubmit}
           selectedDate={selectedDate}
           selectedCalendar={selectedCalendar || null}
-          onPresetsChange={() => {}}
           calendars={calendars}
           showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
           onCalendarSettingsDialogChange={

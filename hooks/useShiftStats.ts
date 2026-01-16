@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { formatDateToLocal } from "@/lib/date-utils";
 
 export interface ShiftStatsData {
   period: string;
@@ -37,7 +38,7 @@ async function fetchShiftStatsApi(
   const params = new URLSearchParams({
     calendarId,
     period,
-    date: currentDate.toISOString(),
+    date: formatDateToLocal(currentDate),
   });
 
   const response = await fetch(`/api/shifts/stats?${params}`);
@@ -75,11 +76,11 @@ export function useShiftStats({
     isLoading: loading,
     refetch,
   } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- currentDate is included via toISOString() in queryKey
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- currentDate is included via formatDateToLocal() in queryKey
     queryKey: queryKeys.stats.shifts(
       calendarId!,
       period,
-      currentDate.toISOString()
+      formatDateToLocal(currentDate)
     ),
     queryFn: () => fetchShiftStatsApi(calendarId!, period, currentDate),
     enabled: !!calendarId,

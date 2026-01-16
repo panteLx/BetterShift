@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 export interface CalendarAccessToken {
   id: string;
@@ -164,6 +165,7 @@ export function useCalendarTokens(calendarId: string | null) {
     queryKey: queryKeys.tokens.byCalendar(calendarId!),
     queryFn: () => fetchTokensApi(calendarId!),
     enabled: !!calendarId,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   // Create token mutation (NO optimistic update - need real token!)

@@ -178,6 +178,10 @@ export function useCalendars(initialCalendarId?: string | null) {
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.calendars.all, context.previous);
       }
+      // Skip duplicate notifications for rate limit errors (already handled by wrapper)
+      if (err instanceof RateLimitError) {
+        return;
+      }
       console.error("Failed to create calendar:", err);
       toast.error(t("common.createError", { item: t("calendar.title") }));
     },
@@ -283,6 +287,10 @@ export function useCalendars(initialCalendarId?: string | null) {
       }
       if (context?.previousSelected) {
         setSelectedCalendar(context.previousSelected);
+      }
+      // Skip duplicate notifications for rate limit errors (already handled by wrapper)
+      if (err instanceof RateLimitError) {
+        return;
       }
       console.error("Failed to delete calendar:", err);
       toast.error(t("common.deleteError", { item: t("calendar.title") }));
