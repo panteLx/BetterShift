@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -36,6 +37,7 @@ interface AdminHeaderProps {
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const t = useTranslations();
   const pathname = usePathname();
+  const { isOnline } = useConnectionStatus();
 
   // Generate breadcrumbs from pathname
   const generateBreadcrumbs = (): BreadcrumbSegment[] => {
@@ -124,8 +126,20 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             </BreadcrumbList>
           </Breadcrumb>
 
-          {/* Controls: Theme + Language */}
+          {/* Controls: Connection Status + Theme + Language */}
           <div className="flex items-center gap-2">
+            {/* Connection Status Indicator */}
+            <div
+              title={isOnline ? t("sync.connected") : t("sync.disconnected")}
+            >
+              <div
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  isOnline
+                    ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+                    : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                }`}
+              ></div>
+            </div>
             <LanguageSwitcher />
             <ThemeSwitcher />
           </div>

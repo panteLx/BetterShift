@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/user-menu";
 import { Calendar as CalendarIcon, Bell, ExternalLink } from "lucide-react";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { ChangelogDialog } from "@/components/changelog-dialog";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 
 /**
  * Simplified header for authentication pages
@@ -22,6 +23,7 @@ export function AuthHeader({ showUserMenu = false }: AuthHeaderProps) {
   const t = useTranslations();
   const locale = useLocale();
   const { versionInfo } = useVersionUpdateCheck();
+  const { isOnline } = useConnectionStatus();
   const [showChangelog, setShowChangelog] = useState(false);
 
   return (
@@ -43,6 +45,15 @@ export function AuthHeader({ showUserMenu = false }: AuthHeaderProps) {
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 flex items-center justify-center shadow-xl shadow-slate-900/50 dark:shadow-slate-950/70 ring-2 ring-slate-700/50 dark:ring-slate-600/50 transition-transform group-hover:scale-105">
                       <CalendarIcon className="h-6 w-6 text-white" />
                     </div>
+                    {/* Connection Status Indicator */}
+                    <div
+                      className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background transition-colors ${
+                        isOnline ? "bg-green-500 animate-pulse" : "bg-red-500"
+                      }`}
+                      title={
+                        isOnline ? t("sync.connected") : t("sync.disconnected")
+                      }
+                    ></div>
                   </div>
                   <div>
                     <h1 className="text-xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text transition-all group-hover:from-primary group-hover:via-primary group-hover:to-primary/70">
