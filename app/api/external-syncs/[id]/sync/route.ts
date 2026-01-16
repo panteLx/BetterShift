@@ -10,6 +10,7 @@ import {
   splitMultiDayEvent,
   createEventFingerprint,
   needsUpdate,
+  processTodoToShift,
 } from "@/lib/external-calendar-utils";
 import { rateLimit } from "@/lib/rate-limiter";
 import {
@@ -97,6 +98,7 @@ export async function syncExternalCalendar(
 
     const comp = new ICAL.Component(jcalData);
     const vevents = comp.getAllSubcomponents("vevent");
+    const vtodos = comp.getAllSubcomponents("vtodo");
 
     // Define sync window: 3 months back to 1 year forward
     const syncWindowStart = new Date();
@@ -230,6 +232,76 @@ export async function syncExternalCalendar(
       }
     }
 
+    // Process VTODO components (tasks/to-dos)
+    for (const vtodo of vtodos) {
+      const todoData = processTodoToShift(vtodo);
+      
+      if (!todoData) {
+        continue; // Skip invalid todos
+      }
+
+      // Check if task date is within sync window
+      const taskDate = todoData.date;
+      if (taskDate < syncWindowStart || taskDate > syncWindowEnd) {
+        continue; // Skip tasks outside sync window
+      }
+
+      // Create event ID for the todo
+      const eventId = todoData.uid;
+      const title = todoData.title;
+
+      // Create fingerprint based on task content
+      const fingerprint = createEventFingerprint(
+        todoData.date,
+        todoData.startTime,
+        todoData.endTime,
+        title,
+        undefined,
+        externalSync.syncType !== "custom" ? eventId : undefined
+      );
+
+      processedFingerprints.add(fingerprint);
+
+      const shiftData = {
+        calendarId: externalSync.calendarId,
+        date: todoData.date,
+        startTime: todoData.startTime,
+        endTime: todoData.endTime,
+        title,
+        color: externalSync.color,
+        notes: todoData.notes,
+        isAllDay: todoData.isAllDay,
+        isSecondary: false,
+        externalEventId: eventId,
+        externalSyncId: syncId,
+        syncedFromExternal: true,
+        presetId: null,
+      };
+
+      // Check if this task already exists by fingerprint
+      const existingShift = existingShiftsByFingerprint.get(fingerprint);
+
+      if (existingShift) {
+        // Only update if data has actually changed
+        if (needsUpdate(existingShift, shiftData)) {
+          shiftsToUpdate.push({
+            id: existingShift.id,
+            ...shiftData,
+            updatedAt: new Date(),
+          });
+        }
+        // If no changes, skip this shift (no update needed)
+      } else {
+        // Collect for batch insert
+        shiftsToInsert.push({
+          id: crypto.randomUUID(),
+          ...shiftData,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+
     // Calculate which shifts to delete before transaction
     // Delete shifts that are no longer in the external calendar (based on fingerprint)
     const shiftIdsToDelete = existingShifts
@@ -302,6 +374,7 @@ export async function syncExternalCalendar(
         updated: shiftsToUpdate.length,
         deleted: shiftIdsToDelete.length,
         totalEvents: vevents.length,
+        totalTodos: vtodos.length,
         totalOccurrences: shiftsToInsert.length + shiftsToUpdate.length,
         calendarId: externalSync.calendarId,
         syncType: externalSync.syncType,

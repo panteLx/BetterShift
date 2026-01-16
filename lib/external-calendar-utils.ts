@@ -111,7 +111,8 @@ export function isValidICSContent(icsContent: string): boolean {
     const jcalData = ICAL.parse(icsContent);
     const comp = new ICAL.Component(jcalData);
     const vevents = comp.getAllSubcomponents("vevent");
-    return vevents.length > 0;
+    const vtodos = comp.getAllSubcomponents("vtodo");
+    return vevents.length > 0 || vtodos.length > 0;
   } catch {
     return false;
   }
@@ -404,4 +405,72 @@ export function needsUpdate(
 
   // No differences found
   return false;
+}
+
+/**
+ * Processes a VTODO component and converts it to shift data
+ * @param vtodo - The VTODO component from iCal.js
+ * @returns Shift data object or null if invalid
+ */
+export function processTodoToShift(vtodo: ICAL.Component): {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  title: string;
+  notes: string | null;
+  isAllDay: boolean;
+  uid: string;
+} | null {
+  try {
+    // Get the TODO properties
+    const summary = vtodo.getFirstPropertyValue("summary") || "Untitled Task";
+    const description = vtodo.getFirstPropertyValue("description") || null;
+    const uid = vtodo.getFirstPropertyValue("uid") || crypto.randomUUID();
+    
+    // VTODO can have DUE (due date) or DTSTART (start date)
+    const dueDate = vtodo.getFirstPropertyValue("due") as ICAL.Time | null;
+    const startDate = vtodo.getFirstPropertyValue("dtstart") as ICAL.Time | null;
+    
+    // Use due date if available, otherwise use start date
+    const taskDate = dueDate || startDate;
+    
+    if (!taskDate) {
+      // If no date is set, skip this task
+      return null;
+    }
+    
+    const isAllDay = taskDate.isDate;
+    const jsDate = taskDate.toJSDate();
+    
+    // For tasks, we'll show them as all-day items by default
+    // or use specific times if they have them
+    let startTime = "00:00";
+    let endTime = "23:59";
+    
+    if (!isAllDay && dueDate) {
+      // If there's a specific due time, show it as ending at that time
+      const hours = jsDate.getHours().toString().padStart(2, "0");
+      const minutes = jsDate.getMinutes().toString().padStart(2, "0");
+      endTime = `${hours}:${minutes}`;
+    } else if (!isAllDay && startDate) {
+      // If there's a start time but no due time, show it starting at that time
+      const hours = jsDate.getHours().toString().padStart(2, "0");
+      const minutes = jsDate.getMinutes().toString().padStart(2, "0");
+      startTime = `${hours}:${minutes}`;
+      endTime = "23:59";
+    }
+    
+    return {
+      date: jsDate,
+      startTime,
+      endTime,
+      title: summary as string,
+      notes: description as string | null,
+      isAllDay,
+      uid: uid as string,
+    };
+  } catch (error) {
+    console.error("Error processing VTODO:", error);
+    return null;
+  }
 }
