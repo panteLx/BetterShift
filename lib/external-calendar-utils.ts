@@ -426,27 +426,29 @@ export function processTodoToShift(vtodo: ICAL.Component): {
     const summary = vtodo.getFirstPropertyValue("summary") || "Untitled Task";
     const description = vtodo.getFirstPropertyValue("description") || null;
     const uid = vtodo.getFirstPropertyValue("uid") || crypto.randomUUID();
-    
+
     // VTODO can have DUE (due date) or DTSTART (start date)
     const dueDate = vtodo.getFirstPropertyValue("due") as ICAL.Time | null;
-    const startDate = vtodo.getFirstPropertyValue("dtstart") as ICAL.Time | null;
-    
+    const startDate = vtodo.getFirstPropertyValue(
+      "dtstart"
+    ) as ICAL.Time | null;
+
     // Use due date if available, otherwise use start date
     const taskDate = dueDate || startDate;
-    
+
     if (!taskDate) {
       // If no date is set, skip this task
       return null;
     }
-    
+
     const isAllDay = taskDate.isDate;
     const jsDate = taskDate.toJSDate();
-    
+
     // For tasks, we'll show them as all-day items by default
     // or use specific times if they have them
     let startTime = "00:00";
     let endTime = "23:59";
-    
+
     if (!isAllDay && dueDate) {
       // If there's a specific due time, show it as ending at that time
       const hours = jsDate.getHours().toString().padStart(2, "0");
@@ -459,7 +461,7 @@ export function processTodoToShift(vtodo: ICAL.Component): {
       startTime = `${hours}:${minutes}`;
       endTime = "23:59";
     }
-    
+
     return {
       date: jsDate,
       startTime,

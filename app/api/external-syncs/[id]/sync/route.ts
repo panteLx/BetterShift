@@ -235,7 +235,7 @@ export async function syncExternalCalendar(
     // Process VTODO components (tasks/to-dos)
     for (const vtodo of vtodos) {
       const todoData = processTodoToShift(vtodo);
-      
+
       if (!todoData) {
         continue; // Skip invalid todos
       }
