@@ -8,6 +8,7 @@ import {
   handleRateLimitError,
 } from "@/lib/rate-limit-client";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 // API functions
 async function fetchCalendarsApi(): Promise<CalendarWithCount[]> {
@@ -136,6 +137,7 @@ export function useCalendars(initialCalendarId?: string | null) {
   } = useQuery({
     queryKey: queryKeys.calendars.all,
     queryFn: fetchCalendarsApi,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   // Auto-select calendar when data loads
@@ -242,6 +244,10 @@ export function useCalendars(initialCalendarId?: string | null) {
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.calendars.all, context.previous);
       }
+      // Skip duplicate notifications for rate limit errors (already handled by wrapper)
+      if (err instanceof RateLimitError) {
+        return;
+      }
       console.error("Failed to update calendar:", err);
       const errorMessage =
         err instanceof Error
@@ -336,12 +342,28 @@ export function useCalendars(initialCalendarId?: string | null) {
       guestPermission?: "none" | "read" | "write";
     }
   ) => {
-    return updateMutation.mutateAsync({ calendarId, updates });
+    try {
+      return await updateMutation.mutateAsync({ calendarId, updates });
+    } catch (error) {
+      // Handle rate-limit errors specifically
+      if (error instanceof RateLimitError) {
+        await handleRateLimitError(error.response, t);
+      }
+      throw error;
+    }
   };
 
   // Wrapper for deleteCalendar to maintain original signature
   const deleteCalendar = async (calendarId: string) => {
-    return deleteMutation.mutateAsync(calendarId);
+    try {
+      return await deleteMutation.mutateAsync(calendarId);
+    } catch (error) {
+      // Handle rate-limit errors specifically
+      if (error instanceof RateLimitError) {
+        await handleRateLimitError(error.response, t);
+      }
+      throw error;
+    }
   };
 
   return {

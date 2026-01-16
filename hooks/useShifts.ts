@@ -228,6 +228,16 @@ export function useShifts(calendarId: string | undefined) {
       if (!calendarId) {
         throw new Error("Calendar ID is required to delete a shift");
       }
+      // Check if shift is externally synced (read-only)
+      const cachedShifts = queryClient.getQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId)
+      );
+      const shift = cachedShifts?.find((s) => s.id === shiftId);
+      if (shift?.syncedFromExternal) {
+        throw new Error(
+          t("common.deleteError", { item: t("shift.shift_one") })
+        );
+      }
       return deleteMutation.mutateAsync(shiftId);
     },
     refetchShifts: () => {
