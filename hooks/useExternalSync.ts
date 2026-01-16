@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalSync, SyncLog } from "@/lib/db/schema";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 /**
  * Fetch external syncs from API
@@ -62,7 +63,7 @@ export function useExternalSync(selectedCalendar: string | null) {
     queryKey: queryKeys.externalSyncs.byCalendar(selectedCalendar!),
     queryFn: () => fetchExternalSyncsApi(selectedCalendar!),
     enabled: !!selectedCalendar,
-    refetchInterval: 5000, // Poll every 5 seconds for live updates
+    refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
   });
 
@@ -71,7 +72,7 @@ export function useExternalSync(selectedCalendar: string | null) {
     queryKey: queryKeys.externalSyncs.logs(selectedCalendar!),
     queryFn: () => fetchSyncLogsApi(selectedCalendar!),
     enabled: !!selectedCalendar,
-    refetchInterval: 5000, // Poll every 5 seconds for live updates
+    refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
   });
 

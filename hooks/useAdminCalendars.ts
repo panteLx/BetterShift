@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 /**
  * Calendar Owner Info
@@ -290,7 +291,7 @@ export function useAdminCalendars(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: queryKeys.admin.calendars({ filters, sort }),
     queryFn: () => fetchCalendarsApi(filters, sort, t),
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   // Update calendar mutation

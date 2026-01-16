@@ -25,6 +25,7 @@ import {
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 import {
   Trash2,
   RefreshCw,
@@ -106,7 +107,7 @@ ExternalSyncManageSheetProps) {
       return (await response.json()) as ExternalSync[];
     },
     enabled: !!calendarId && open,
-    refetchInterval: 5000, // Poll every 5 seconds for live updates across devices
+    refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true,
   });
 
@@ -123,7 +124,7 @@ ExternalSyncManageSheetProps) {
       return (await response.json()) as SyncLog[];
     },
     enabled: !!calendarId && open,
-    refetchInterval: 5000, // Poll every 5 seconds for live updates across devices
+    refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true,
   });
 

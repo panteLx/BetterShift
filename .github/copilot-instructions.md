@@ -188,15 +188,20 @@ ALLOW_GUEST_ACCESS=false
 **Configuration**: [`lib/query-client.ts`](lib/query-client.ts) - Global query client settings
 
 ```typescript
+// Centralized refetch interval constant
+export const REFETCH_INTERVAL = 5000; // 5s polling for live updates
+
 // Default settings
 {
   staleTime: 3000,      // Data fresh for 3s
   gcTime: 300000,       // Cache for 5min
-  refetchInterval: 5000, // Poll every 5s
+  refetchInterval: REFETCH_INTERVAL,
   refetchOnWindowFocus: true,
   refetchOnReconnect: true,
 }
 ```
+
+**Using custom polling intervals**: Import and use `REFETCH_INTERVAL` from [`lib/query-client.ts`](lib/query-client.ts) in all queries that need polling:
 
 **Query Keys**: [`lib/query-keys.ts`](lib/query-keys.ts) - Consistent key management
 
@@ -213,11 +218,13 @@ queryKeys.admin.users({ filters, sort }); // ['admin', 'users', { filters, sort 
 ```typescript
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 const { data: shifts = [], isLoading } = useQuery({
   queryKey: queryKeys.shifts.byCalendar(calendarId!),
   queryFn: () => fetchShiftsApi(calendarId!),
   enabled: !!calendarId,
+  refetchInterval: REFETCH_INTERVAL, // Use centralized constant
 });
 ```
 

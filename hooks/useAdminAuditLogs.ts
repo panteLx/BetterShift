@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 /**
  * Audit Log Types
@@ -193,7 +194,7 @@ export function useAdminAuditLogs(
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination }),
     queryFn: () => fetchAuditLogsApi(filters, sort, pagination, t),
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
   });
 

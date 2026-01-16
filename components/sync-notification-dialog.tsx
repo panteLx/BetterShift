@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Button } from "@/components/ui/button";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 import {
   Select,
   SelectContent,
@@ -69,7 +70,7 @@ export function SyncNotificationDialog({
     queryKey: queryKeys.externalSyncs.logs(calendarId!),
     queryFn: () => fetchSyncLogsApi(calendarId!),
     enabled: !!calendarId && open,
-    refetchInterval: 5000, // Poll every 5 seconds for live updates
+    refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: false, // Only poll when dialog is open
   });
 
