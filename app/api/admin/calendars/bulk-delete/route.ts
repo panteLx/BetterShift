@@ -19,7 +19,6 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { eventEmitter } from "@/lib/event-emitter";
 
 /**
  * Admin Calendar Bulk Delete API
@@ -135,16 +134,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         deletedBy: currentUser.email,
       },
     });
-
-    // Emit SSE events for each deleted calendar
-    for (const calendarId of calendarIds) {
-      eventEmitter.emit("calendar-change", {
-        type: "calendar",
-        action: "delete",
-        calendarId,
-        data: { id: calendarId },
-      });
-    }
 
     return NextResponse.json({
       message: `${calendars.length} calendar(s) deleted successfully`,

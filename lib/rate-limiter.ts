@@ -15,8 +15,6 @@
  * - RATE_LIMIT_ACCOUNT_DELETE_WINDOW
  * - RATE_LIMIT_UPLOAD_AVATAR_REQUESTS - Avatar upload endpoint
  * - RATE_LIMIT_UPLOAD_AVATAR_WINDOW
- * - RATE_LIMIT_SSE_CONNECTIONS - SSE connection limit per user
- * - RATE_LIMIT_SSE_WINDOW
  * - RATE_LIMIT_CALENDAR_CREATE_REQUESTS - Calendar creation
  * - RATE_LIMIT_CALENDAR_CREATE_WINDOW
  * - RATE_LIMIT_EXTERNAL_SYNC_REQUESTS - External sync execution (per calendar)
@@ -71,10 +69,6 @@ const config = {
     ),
     windowMs:
       parseInt(process.env.RATE_LIMIT_UPLOAD_AVATAR_WINDOW || "300", 10) * 1000,
-  },
-  sseConnection: {
-    requests: parseInt(process.env.RATE_LIMIT_SSE_CONNECTIONS || "10", 10),
-    windowMs: parseInt(process.env.RATE_LIMIT_SSE_WINDOW || "10", 10) * 1000,
   },
   calendarCreate: {
     requests: parseInt(
@@ -320,7 +314,6 @@ export function rateLimit(
     | "password-change"
     | "account-delete"
     | "upload-avatar"
-    | "sse"
     | "calendar-create"
     | "external-sync"
     | "export-pdf"
@@ -360,9 +353,6 @@ export function rateLimit(
       break;
     case "upload-avatar":
       options = config.uploadAvatar;
-      break;
-    case "sse":
-      options = config.sseConnection;
       break;
     case "calendar-create":
       options = config.calendarCreate;
@@ -447,7 +437,6 @@ export function getRateLimitStatus(
     | "password-change"
     | "account-delete"
     | "upload-avatar"
-    | "sse"
     | "calendar-create"
     | "external-sync"
     | "export-pdf"
@@ -471,9 +460,6 @@ export function getRateLimitStatus(
       break;
     case "upload-avatar":
       options = config.uploadAvatar;
-      break;
-    case "sse":
-      options = config.sseConnection;
       break;
     case "calendar-create":
       options = config.calendarCreate;

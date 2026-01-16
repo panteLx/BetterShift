@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
@@ -88,14 +87,6 @@ export async function DELETE(
     }
 
     await db.delete(shifts).where(eq(shifts.id, id));
-
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "shift",
-      action: "delete",
-      calendarId: shift.calendarId,
-      data: { id },
-    } as CalendarChangeEvent);
 
     return NextResponse.json({ success: true });
   } catch (error) {

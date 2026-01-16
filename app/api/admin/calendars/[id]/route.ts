@@ -25,7 +25,6 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { eventEmitter } from "@/lib/event-emitter";
 
 /**
  * Admin Calendar Detail API
@@ -348,14 +347,6 @@ export async function PATCH(
       },
     });
 
-    // Emit SSE event
-    eventEmitter.emit("calendar-change", {
-      type: "calendar",
-      action: "update",
-      calendarId,
-      data: updatedCalendar,
-    });
-
     return NextResponse.json(updatedCalendar);
   } catch (error) {
     console.error("[Admin Calendar Update API] Error:", error);
@@ -475,14 +466,6 @@ export async function DELETE(
         presetCount: Number(presetCount?.count || 0),
         deletedBy: currentUser.email,
       },
-    });
-
-    // Emit SSE event
-    eventEmitter.emit("calendar-change", {
-      type: "calendar",
-      action: "delete",
-      calendarId,
-      data: { id: calendarId },
     });
 
     return NextResponse.json({

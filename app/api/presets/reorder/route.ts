@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canEditCalendar } from "@/lib/auth/permissions";
 
@@ -90,14 +89,6 @@ export async function PATCH(request: NextRequest) {
           .where(eq(shiftPresets.id, id))
     );
     await Promise.all(updatePromises);
-
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "preset",
-      action: "reorder",
-      calendarId,
-      data: { presetOrders },
-    } as CalendarChangeEvent);
 
     return NextResponse.json({ success: true });
   } catch (error) {

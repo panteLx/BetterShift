@@ -12,7 +12,6 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { eventEmitter } from "@/lib/event-emitter";
 
 /**
  * Admin Calendar Bulk Transfer API
@@ -119,16 +118,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         })),
       },
     });
-
-    // Emit SSE events for each transferred calendar
-    for (const calendarId of calendarIds) {
-      eventEmitter.emit("calendar-change", {
-        type: "calendar",
-        action: "update",
-        calendarId,
-        data: { id: calendarId, ownerId: newOwnerId },
-      });
-    }
 
     return NextResponse.json({
       message: `${calendars.length} calendar(s) transferred successfully`,

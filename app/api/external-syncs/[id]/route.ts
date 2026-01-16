@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { externalSyncs, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { eventEmitter } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 import {
@@ -190,24 +189,6 @@ export async function PATCH(
           updatedAt: new Date(),
         })
         .where(eq(shifts.externalSyncId, id));
-
-      // Emit event to notify clients about shift updates
-      eventEmitter.emit("calendar-change", {
-        type: "shift",
-        action: "update",
-        calendarId: updated.calendarId,
-        data: { externalSyncId: id, colorUpdated: true },
-      });
-    }
-
-    // Emit event to notify clients about visibility changes
-    if (isHidden !== undefined || hideFromStats !== undefined) {
-      eventEmitter.emit("calendar-change", {
-        type: "shift",
-        action: "update",
-        calendarId: updated.calendarId,
-        data: { externalSyncId: id, visibilityUpdated: true },
-      });
     }
 
     return NextResponse.json(updated);

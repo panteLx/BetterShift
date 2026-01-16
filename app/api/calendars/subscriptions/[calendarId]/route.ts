@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { dismissCalendar } from "@/lib/auth/permissions";
-import { eventEmitter } from "@/lib/event-emitter";
 
 /**
  * DELETE /api/calendars/subscriptions/[calendarId]
@@ -25,14 +24,6 @@ export async function DELETE(
 
     // Use the helper function to handle dismissal/unsubscribe
     await dismissCalendar(user.id, calendarId);
-
-    // Emit SSE event to trigger calendar list refresh
-    eventEmitter.emit("calendar-change", {
-      type: "calendar",
-      action: "update",
-      calendarId,
-      data: { dismissed: true },
-    });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

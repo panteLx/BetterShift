@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
@@ -147,14 +146,6 @@ export async function PUT(
       );
     }
 
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "note",
-      action: "update",
-      calendarId: updated.calendarId,
-      data: updated,
-    } as CalendarChangeEvent);
-
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update calendar note:", error);
@@ -220,14 +211,6 @@ export async function DELETE(
         { status: 404 }
       );
     }
-
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "note",
-      action: "delete",
-      calendarId: result[0].calendarId,
-      data: { id },
-    } as CalendarChangeEvent);
 
     return NextResponse.json({ success: true });
   } catch (error) {

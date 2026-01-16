@@ -11,7 +11,6 @@ import {
   createEventFingerprint,
   needsUpdate,
 } from "@/lib/external-calendar-utils";
-import { eventEmitter } from "@/lib/event-emitter";
 import { rateLimit } from "@/lib/rate-limiter";
 import {
   logUserAction,
@@ -328,13 +327,6 @@ export async function syncExternalCalendar(
       },
       request,
     });
-
-    // Emit event for sync log creation after successful transaction
-    eventEmitter.emit("calendar-change", {
-      type: "sync-log",
-      action: "create",
-      calendarId: externalSync.calendarId,
-    });
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Unknown sync error";
@@ -371,13 +363,6 @@ export async function syncExternalCalendar(
         error: errorMessage,
       },
       request,
-    });
-
-    // Emit event for sync log creation
-    eventEmitter.emit("calendar-change", {
-      type: "sync-log",
-      action: "create",
-      calendarId: externalSync.calendarId,
     });
 
     throw error;

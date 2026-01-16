@@ -7,7 +7,6 @@
 import { db } from "@/lib/db";
 import { externalSyncs, calendars } from "@/lib/db/schema";
 import { gt, eq } from "drizzle-orm";
-import { eventEmitter } from "@/lib/event-emitter";
 import { syncExternalCalendar } from "@/app/api/external-syncs/[id]/sync/route";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
 
@@ -195,16 +194,6 @@ class AutoSyncService {
 
       if (stats) {
         console.log(`Auto-sync completed for ${syncId}:`, stats);
-
-        // Emit event to notify connected clients only if changes were made
-        if (stats.created > 0 || stats.updated > 0 || stats.deleted > 0) {
-          eventEmitter.emit("calendar-change", {
-            type: "shift",
-            action: "update",
-            calendarId: stats.calendarId,
-            data: { autoSync: true, syncId, stats },
-          });
-        }
       }
     } catch (error) {
       console.error(`Auto-sync error for ${syncId}:`, error);

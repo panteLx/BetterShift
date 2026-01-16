@@ -12,7 +12,6 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { eventEmitter } from "@/lib/event-emitter";
 
 /**
  * Admin Calendar Transfer API
@@ -126,14 +125,6 @@ export async function POST(
         transferredBy: currentUser.email,
         assignedToSelf: body.assignToSelf === true,
       },
-    });
-
-    // Emit SSE event
-    eventEmitter.emit("calendar-change", {
-      type: "calendar",
-      action: "update",
-      calendarId,
-      data: updatedCalendar,
     });
 
     return NextResponse.json({

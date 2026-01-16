@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
@@ -131,14 +130,6 @@ export async function POST(request: NextRequest) {
         order: maxOrder + 1,
       })
       .returning();
-
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "preset",
-      action: "create",
-      calendarId,
-      data: preset,
-    } as CalendarChangeEvent);
 
     return NextResponse.json(preset);
   } catch (error) {

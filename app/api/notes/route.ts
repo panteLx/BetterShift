@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
-import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
@@ -162,14 +161,6 @@ export async function POST(request: Request) {
         recurringInterval: recurringInterval || null,
       })
       .returning();
-
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "note",
-      action: "create",
-      calendarId,
-      data: calendarNote,
-    } as CalendarChangeEvent);
 
     return NextResponse.json(calendarNote);
   } catch (error) {

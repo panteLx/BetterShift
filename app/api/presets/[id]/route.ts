@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { eventEmitter, CalendarChangeEvent } from "@/lib/event-emitter";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 
@@ -142,14 +141,6 @@ export async function PATCH(
       })
       .where(eq(shifts.presetId, id));
 
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "preset",
-      action: "update",
-      calendarId: existingPreset.calendarId,
-      data: updatedPreset,
-    } as CalendarChangeEvent);
-
     return NextResponse.json(updatedPreset);
   } catch (error) {
     console.error("Error updating preset:", error);
@@ -206,14 +197,6 @@ export async function DELETE(
 
     // Delete the preset
     await db.delete(shiftPresets).where(eq(shiftPresets.id, id));
-
-    // Emit event for SSE
-    eventEmitter.emit("calendar-change", {
-      type: "preset",
-      action: "delete",
-      calendarId: preset.calendarId,
-      data: { id },
-    } as CalendarChangeEvent);
 
     return NextResponse.json({ success: true });
   } catch (error) {
