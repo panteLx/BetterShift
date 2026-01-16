@@ -61,7 +61,6 @@ async function fetchAuditLogsApi(
   filters: AuditLogFilters,
   sort: AuditLogSort,
   pagination: AuditLogPagination,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   t: ReturnType<typeof useTranslations>
 ): Promise<AuditLogsResponse> {
   const params = new URLSearchParams();
@@ -89,9 +88,9 @@ async function fetchAuditLogsApi(
 
   if (!response.ok) {
     if (response.status === 403) {
-      throw new Error("Access denied");
+      throw new Error(t("admin.accessDenied"));
     }
-    throw new Error("Failed to fetch audit logs");
+    throw new Error(t("common.fetchError", { item: t("admin.auditLogs") }));
   }
 
   const data = await response.json();

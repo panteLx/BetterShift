@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { REFETCH_INTERVAL } from "@/lib/query-client";
 
 export interface ShiftStatsData {
   period: string;
@@ -82,6 +83,7 @@ export function useShiftStats({
     ),
     queryFn: () => fetchShiftStatsApi(calendarId!, period, currentDate),
     enabled: !!calendarId,
+    refetchInterval: REFETCH_INTERVAL,
   });
 
   return {

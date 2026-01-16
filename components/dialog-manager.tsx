@@ -22,7 +22,7 @@ interface DialogManagerProps {
   onShiftSubmit: (data: ShiftFormData) => void;
   selectedDate?: Date;
   selectedCalendar: string | null;
-  onPresetsChange: () => void;
+  onPresetsChange?: () => void;
   calendars: CalendarWithCount[];
 
   // Calendar Settings Dialog

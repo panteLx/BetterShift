@@ -42,7 +42,7 @@ interface AppHeaderProps {
   onSettings: () => void;
   onSyncNotifications: () => void;
   onCompare?: () => void;
-  onPresetsChange: () => void;
+  onPresetsChange?: () => void;
   onShiftsChange: () => void;
   onManualShiftCreation: () => void;
   onMobileCalendarDialogChange: (open: boolean) => void;

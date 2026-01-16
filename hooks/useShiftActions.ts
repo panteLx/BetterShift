@@ -10,7 +10,7 @@ interface UseShiftActionsProps {
   presets: ShiftPreset[];
   createShift: (data: ShiftFormData) => Promise<ShiftWithCalendar>;
   deleteShift: (id: string) => Promise<void>;
-  onStatsRefresh: () => void;
+  onStatsRefresh?: () => void;
 }
 
 export function useShiftActions({
@@ -18,7 +18,6 @@ export function useShiftActions({
   presets,
   createShift,
   deleteShift,
-  onStatsRefresh,
 }: UseShiftActionsProps) {
   const [togglingDates, setTogglingDates] = useState<Set<string>>(new Set());
   const togglingDatesRef = useRef(togglingDates);
@@ -32,24 +31,22 @@ export function useShiftActions({
     async (formData: ShiftFormData) => {
       try {
         await createShift(formData);
-        onStatsRefresh();
       } catch (error) {
         console.error("Failed to create shift:", error);
       }
     },
-    [createShift, onStatsRefresh]
+    [createShift]
   );
 
   const handleDeleteShift = useCallback(
     async (id: string) => {
       try {
         await deleteShift(id);
-        onStatsRefresh();
       } catch (error) {
         console.error("Failed to delete shift:", error);
       }
     },
-    [deleteShift, onStatsRefresh]
+    [deleteShift]
   );
 
   const handleAddShift = useCallback(
@@ -82,7 +79,6 @@ export function useShiftActions({
         if (existingShift) {
           try {
             await deleteShift(existingShift.id);
-            onStatsRefresh();
           } catch (error) {
             console.error("Failed to delete shift:", error);
           }
@@ -100,7 +96,6 @@ export function useShiftActions({
 
           try {
             await createShift(shiftData);
-            onStatsRefresh();
           } catch (error) {
             console.error("Failed to create shift:", error);
           }
@@ -113,7 +108,7 @@ export function useShiftActions({
         });
       }
     },
-    [shifts, presets, createShift, deleteShift, onStatsRefresh]
+    [shifts, presets, createShift, deleteShift]
   );
 
   return {

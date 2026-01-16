@@ -174,26 +174,36 @@ export default function AdminAuditLogsPage() {
   const handleActionFilterChange = (value: string) => {
     setActionFilter(value);
     setPage(0);
+    setSelectedLogIds([]);
+    setExpandedRows(new Set());
   };
 
   const handleSeverityFilterChange = (value: string) => {
     setSeverityFilter(value);
     setPage(0);
+    setSelectedLogIds([]);
+    setExpandedRows(new Set());
   };
 
   const handleStartDateChange = (value: string) => {
     setStartDate(value);
     setPage(0);
+    setSelectedLogIds([]);
+    setExpandedRows(new Set());
   };
 
   const handleEndDateChange = (value: string) => {
     setEndDate(value);
     setPage(0);
+    setSelectedLogIds([]);
+    setExpandedRows(new Set());
   };
 
   const handleDebouncedSearchChange = (value: string) => {
     setDebouncedSearch(value);
     setPage(0);
+    setSelectedLogIds([]);
+    setExpandedRows(new Set());
   };
 
   // Debounce search query
@@ -251,6 +261,8 @@ export default function AdminAuditLogsPage() {
     setStartDate("");
     setEndDate("");
     setPage(0);
+    // Immediately clear debouncedSearch to prevent stale value
+    handleDebouncedSearchChange("");
   };
 
   // Checkbox selection handlers

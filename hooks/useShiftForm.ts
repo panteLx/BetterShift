@@ -45,7 +45,7 @@ export function useShiftForm({
       title: presetName,
       startTime: shiftData.startTime,
       endTime: shiftData.endTime,
-      color: shiftData.color || "#4b82f6",
+      color: shiftData.color || "#3b82f6",
       notes: shiftData.notes || "",
       isAllDay: shiftData.isAllDay || false,
       isSecondary: false,

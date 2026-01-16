@@ -199,13 +199,12 @@ function HomeContent() {
   // Version info
   const versionInfo = useVersionInfo();
 
-  // Shift actions (onStatsRefresh is no longer needed - React Query handles cache invalidation)
+  // Shift actions
   const shiftActions = useShiftActions({
     shifts,
     presets,
     createShift: createShiftHook,
     deleteShift: deleteShiftHook,
-    onStatsRefresh: () => {}, // No-op, stats auto-update via React Query polling
   });
 
   // Load compare mode from URL on initial load
@@ -855,7 +854,6 @@ function HomeContent() {
         onSettings={() => dialogStates.setShowCalendarSettingsDialog(true)}
         onSyncNotifications={handleSyncNotifications}
         onCompare={handleCompareClick}
-        onPresetsChange={() => {}}
         onShiftsChange={refetchShifts}
         onManualShiftCreation={handleManualShiftCreation}
         onMobileCalendarDialogChange={dialogStates.setShowMobileCalendarDialog}
@@ -932,7 +930,6 @@ function HomeContent() {
         onShiftSubmit={shiftActions.handleShiftSubmit}
         selectedDate={selectedDate}
         selectedCalendar={selectedCalendar || null}
-        onPresetsChange={() => {}}
         calendars={calendars}
         showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
         onCalendarSettingsDialogChange={

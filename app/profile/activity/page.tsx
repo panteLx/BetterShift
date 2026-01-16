@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/hooks/useAuth";
@@ -136,10 +136,10 @@ export default function ActivityLogPage() {
     setPage(0);
   };
 
-  const handleDebouncedSearchChange = (value: string) => {
+  const handleDebouncedSearchChange = useCallback((value: string) => {
     setDebouncedSearch(value);
     setPage(0);
-  };
+  }, []);
 
   // Debounce search query
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function ActivityLogPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, handleDebouncedSearchChange]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

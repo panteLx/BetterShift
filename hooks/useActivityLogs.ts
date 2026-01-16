@@ -141,7 +141,7 @@ export function useActivityLogs(
   const clearLogsMutation = useMutation({
     mutationFn: () => clearLogsApi(t),
     onSuccess: () => {
-      toast.success("Activity logs cleared");
+      toast.success(t("common.deleted", { item: t("activityLog.title") }));
       queryClient.invalidateQueries({ queryKey: ["activity-logs"] });
     },
     onError: (err) => {

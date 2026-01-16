@@ -211,18 +211,31 @@ export function useShifts(calendarId: string | undefined) {
         | ShiftWithCalendar[]
         | ((prev: ShiftWithCalendar[]) => ShiftWithCalendar[])
     ) => {
+      if (!calendarId) return;
       queryClient.setQueryData(
-        queryKeys.shifts.byCalendar(calendarId!),
+        queryKeys.shifts.byCalendar(calendarId),
         newShifts
       );
     },
     loading: isLoading,
     hasLoadedOnce: isFetched,
-    createShift: createMutation.mutateAsync,
-    deleteShift: deleteMutation.mutateAsync,
-    refetchShifts: () =>
+    createShift: async (shift: ShiftFormData) => {
+      if (!calendarId) {
+        throw new Error("Calendar ID is required to create a shift");
+      }
+      return createMutation.mutateAsync(shift);
+    },
+    deleteShift: async (shiftId: string) => {
+      if (!calendarId) {
+        throw new Error("Calendar ID is required to delete a shift");
+      }
+      return deleteMutation.mutateAsync(shiftId);
+    },
+    refetchShifts: () => {
+      if (!calendarId) return;
       queryClient.invalidateQueries({
-        queryKey: queryKeys.shifts.byCalendar(calendarId!),
-      }),
+        queryKey: queryKeys.shifts.byCalendar(calendarId),
+      });
+    },
   };
 }

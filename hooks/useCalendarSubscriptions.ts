@@ -118,8 +118,10 @@ export function useCalendarSubscriptions() {
 
   // Subscribe mutation
   const subscribeMutation = useMutation({
-    mutationFn: subscribeApi,
-    onMutate: async (calendarId) => {
+    mutationFn: (variables: { calendarId: string; name: string }) =>
+      subscribeApi(variables.calendarId),
+    onMutate: async (variables) => {
+      const { calendarId } = variables;
       await queryClient.cancelQueries({
         queryKey: queryKeys.subscriptions.all,
       });
@@ -172,15 +174,14 @@ export function useCalendarSubscriptions() {
 
       return { previous };
     },
-    onError: (err, calendarId, context) => {
+    onError: (err, variables, context) => {
       queryClient.setQueryData(queryKeys.subscriptions.all, context?.previous);
       toast.error(err instanceof Error ? err.message : "Failed to subscribe");
     },
-    onSuccess: (_, calendarId) => {
-      const calendar = availableCalendars.find((cal) => cal.id === calendarId);
+    onSuccess: (_, variables) => {
       toast.success(
         t("calendar.subscriptionSuccess", {
-          name: calendar?.name || "Calendar",
+          name: variables.name || "Calendar",
         })
       );
     },
@@ -233,7 +234,12 @@ export function useCalendarSubscriptions() {
       toast.error(err instanceof Error ? err.message : "Failed to unsubscribe");
     },
     onSuccess: (_, calendarId) => {
-      const calendar = availableCalendars.find((cal) => cal.id === calendarId);
+      const data = queryClient.getQueryData<SubscriptionResponse>(
+        queryKeys.subscriptions.all
+      );
+      const calendar =
+        data?.available.find((cal) => cal.id === calendarId) ||
+        data?.dismissed.find((cal) => cal.id === calendarId);
       toast.success(
         t("calendar.unsubscribeSuccess", { name: calendar?.name || "Calendar" })
       );
@@ -249,14 +255,13 @@ export function useCalendarSubscriptions() {
     availableCalendars,
     dismissedCalendars,
     loading,
-    error: errorMessage,
+    error: errorMessage ? errorMessage.message : null,
     subscribe: async (
       calendarId: string,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _calendarName: string
+      calendarName: string
     ): Promise<boolean> => {
       try {
-        await subscribeMutation.mutateAsync(calendarId);
+        await subscribeMutation.mutateAsync({ calendarId, name: calendarName });
         return true;
       } catch {
         return false;

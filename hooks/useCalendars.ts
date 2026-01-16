@@ -21,6 +21,14 @@ async function fetchCalendarsApi(): Promise<CalendarWithCount[]> {
   return Array.isArray(data) ? data : [];
 }
 
+// Custom error class for rate-limit errors
+class RateLimitError extends Error {
+  constructor(public response: Response) {
+    super("Rate limit exceeded");
+    this.name = "RateLimitError";
+  }
+}
+
 async function createCalendarApi(
   name: string,
   color: string
@@ -34,6 +42,11 @@ async function createCalendarApi(
       guestPermission: "none",
     }),
   });
+
+  // Check for rate-limit error first
+  if (isRateLimitError(response)) {
+    throw new RateLimitError(response);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -285,33 +298,14 @@ export function useCalendars(initialCalendarId?: string | null) {
   // Wrapper for createCalendar to handle rate limiting
   const createCalendar = async (name: string, color: string) => {
     try {
-      // Check rate limit before mutation
-      const testResponse = await fetch("/api/calendars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color, guestPermission: "none" }),
-      });
-
-      if (isRateLimitError(testResponse)) {
-        await handleRateLimitError(testResponse, t);
-        return;
-      }
-
-      // If rate limit check passed, use mutation
-      if (testResponse.ok) {
-        const calendar = await testResponse.json();
-        // Update cache and selection
-        queryClient.setQueryData<CalendarWithCount[]>(
-          queryKeys.calendars.all,
-          (old = []) => [...old, calendar]
-        );
-        setSelectedCalendar(calendar.id);
-        toast.success(t("common.created", { item: t("calendar.title") }));
-      } else {
-        await createMutation.mutateAsync({ name, color });
-      }
+      // Call mutation once - it handles optimistic updates, toasts, and cache invalidation
+      await createMutation.mutateAsync({ name, color });
     } catch (error) {
-      console.error("Failed to create calendar:", error);
+      // Handle rate-limit errors specifically
+      if (error instanceof RateLimitError) {
+        await handleRateLimitError(error.response, t);
+      }
+      // Other errors are already handled by createMutation's onError handler
     }
   };
 

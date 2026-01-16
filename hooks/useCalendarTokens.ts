@@ -27,6 +27,30 @@ export interface CreateTokenParams {
 }
 
 /**
+ * Safe error extraction helper
+ * Handles non-JSON responses gracefully
+ */
+async function parseErrorResponse(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    if (!text) {
+      return response.statusText || `HTTP ${response.status}`;
+    }
+    try {
+      const json = JSON.parse(text);
+      return json.error || json.message || text;
+    } catch {
+      // Not JSON, return the text or fallback
+      return text.includes("<")
+        ? response.statusText || `HTTP ${response.status}`
+        : text;
+    }
+  } catch {
+    return response.statusText || `HTTP ${response.status}`;
+  }
+}
+
+/**
  * Fetch calendar access tokens from API
  */
 async function fetchTokensApi(
@@ -56,8 +80,8 @@ async function createTokenApi(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const errorMessage = await parseErrorResponse(response);
+    throw new Error(errorMessage);
   }
 
   return await response.json();
@@ -81,8 +105,8 @@ async function updateTokenApi(
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const errorMessage = await parseErrorResponse(response);
+    throw new Error(errorMessage);
   }
 
   return await response.json();
@@ -103,8 +127,8 @@ async function deleteTokenApi(
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const errorMessage = await parseErrorResponse(response);
+    throw new Error(errorMessage);
   }
 }
 
