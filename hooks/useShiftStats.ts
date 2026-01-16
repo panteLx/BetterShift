@@ -76,7 +76,6 @@ export function useShiftStats({
     isLoading: loading,
     refetch,
   } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- currentDate is included via formatDateToLocal() in queryKey
     queryKey: queryKeys.stats.shifts(
       calendarId!,
       period,

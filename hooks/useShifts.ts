@@ -126,6 +126,7 @@ export function useShifts(calendarId: string | undefined) {
         color: formData.color || "#3b82f6",
         notes: formData.notes || null,
         isAllDay: formData.isAllDay || false,
+        presetId: formData.presetId || null,
         calendarId: calendarId!,
         createdAt: new Date(),
         updatedAt: new Date(),

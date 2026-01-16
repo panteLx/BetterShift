@@ -45,7 +45,8 @@ export interface ActivityLogsResponse {
  */
 async function fetchActivityLogsApi(
   filters: ActivityLogsFilters,
-  pagination: ActivityLogsPagination
+  pagination: ActivityLogsPagination,
+  t: ReturnType<typeof useTranslations>
 ): Promise<ActivityLogsResponse> {
   const params = new URLSearchParams();
 
@@ -66,7 +67,7 @@ async function fetchActivityLogsApi(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch activity logs");
+    throw new Error(t("common.fetchError", { item: t("activityLog.title") }));
   }
 
   const data = await response.json();
@@ -131,8 +132,9 @@ export function useActivityLogs(
     error,
     refetch,
   } = useQuery({
+    /* eslint-disable-next-line @tanstack/query/exhaustive-deps */
     queryKey: queryKeys.activityLogs({ filters, pagination }),
-    queryFn: () => fetchActivityLogsApi(filters, pagination),
+    queryFn: () => fetchActivityLogsApi(filters, pagination, t),
     refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
   });

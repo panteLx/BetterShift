@@ -72,6 +72,11 @@ async function updateCalendarApi(
     body: JSON.stringify(updates),
   });
 
+  // Check for rate-limit error first
+  if (isRateLimitError(response)) {
+    throw new RateLimitError(response);
+  }
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || "Failed to update calendar");
@@ -85,6 +90,11 @@ async function deleteCalendarApi(calendarId: string): Promise<void> {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
   });
+
+  // Check for rate-limit error first
+  if (isRateLimitError(response)) {
+    throw new RateLimitError(response);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
