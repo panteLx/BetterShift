@@ -374,7 +374,6 @@ export async function syncExternalCalendar(
         updated: shiftsToUpdate.length,
         deleted: shiftIdsToDelete.length,
         totalEvents: vevents.length,
-        totalTodos: vtodos.length,
         totalOccurrences: shiftsToInsert.length + shiftsToUpdate.length,
         calendarId: externalSync.calendarId,
         syncType: externalSync.syncType,
