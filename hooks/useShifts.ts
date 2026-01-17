@@ -73,12 +73,37 @@ async function deleteShiftApi(id: string): Promise<void> {
   }
 }
 
+async function updateShiftApi(
+  id: string,
+  formData: ShiftFormData
+): Promise<ShiftWithCalendar> {
+  const response = await fetch(`/api/shifts/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(formData),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to update shift: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+  return normalizeShift(data);
+}
+
 // Context type for optimistic updates
 interface CreateShiftContext {
   previous: ShiftWithCalendar[] | undefined;
 }
 
 interface DeleteShiftContext {
+  previous: ShiftWithCalendar[] | undefined;
+}
+
+interface UpdateShiftContext {
   previous: ShiftWithCalendar[] | undefined;
 }
 
@@ -202,6 +227,67 @@ export function useShifts(calendarId: string | undefined) {
     },
   });
 
+  // Update mutation with optimistic update
+  const updateMutation = useMutation<
+    ShiftWithCalendar,
+    Error,
+    { id: string; formData: ShiftFormData },
+    UpdateShiftContext
+  >({
+    mutationFn: ({ id, formData }) => updateShiftApi(id, formData),
+    onMutate: async ({ id, formData }) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
+      });
+
+      const previous = queryClient.getQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId!)
+      );
+
+      // Optimistically update the shift
+      queryClient.setQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId!),
+        (old = []) =>
+          old.map((s) =>
+            s.id === id
+              ? {
+                ...s,
+                date: parseLocalDate(formData.date),
+                startTime: formData.startTime,
+                endTime: formData.endTime,
+                title: formData.title,
+                color: formData.color || s.color,
+                notes: formData.notes || null,
+                isAllDay: formData.isAllDay || false,
+                presetId: formData.presetId || null,
+                updatedAt: new Date(),
+              }
+              : s
+          )
+      );
+
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.shifts.byCalendar(calendarId!),
+          context.previous
+        );
+      }
+      console.error("Failed to update shift:", err);
+      toast.error(t("common.updateError", { item: t("shift.shift_one") }));
+    },
+    onSuccess: () => {
+      toast.success(t("common.updated", { item: t("shift.shift_one") }));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.shifts.byCalendar(calendarId!),
+      });
+    },
+  });
+
   // Return API-compatible interface
   return {
     shifts,
@@ -239,6 +325,22 @@ export function useShifts(calendarId: string | undefined) {
         );
       }
       return deleteMutation.mutateAsync(shiftId);
+    },
+    updateShift: async (shiftId: string, formData: ShiftFormData) => {
+      if (!calendarId) {
+        throw new Error("Calendar ID is required to update a shift");
+      }
+      // Check if shift is externally synced (read-only)
+      const cachedShifts = queryClient.getQueryData<ShiftWithCalendar[]>(
+        queryKeys.shifts.byCalendar(calendarId)
+      );
+      const shift = cachedShifts?.find((s) => s.id === shiftId);
+      if (shift?.syncedFromExternal) {
+        throw new Error(
+          t("common.updateError", { item: t("shift.shift_one") })
+        );
+      }
+      return updateMutation.mutateAsync({ id: shiftId, formData });
     },
     refetchShifts: () => {
       if (!calendarId) return;

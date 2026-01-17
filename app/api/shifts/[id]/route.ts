@@ -97,3 +97,56 @@ export async function DELETE(
     );
   }
 }
+
+// PUT/UPDATE shift (requires write permission)
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const user = await getSessionUser(request.headers);
+    const body = await request.json();
+
+    // Fetch shift to get calendar ID
+    const [existingShift] = await db.select().from(shifts).where(eq(shifts.id, id));
+
+    if (!existingShift) {
+      return NextResponse.json({ error: "Shift not found" }, { status: 404 });
+    }
+
+    // Check write permission (works for both authenticated users and guests)
+    const hasAccess = await canEditCalendar(user?.id, existingShift.calendarId);
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
+
+    // Update the shift
+    const [updatedShift] = await db
+      .update(shifts)
+      .set({
+        date: body.date ? new Date(body.date) : existingShift.date,
+        startTime: body.startTime ?? existingShift.startTime,
+        endTime: body.endTime ?? existingShift.endTime,
+        title: body.title ?? existingShift.title,
+        color: body.color ?? existingShift.color,
+        notes: body.notes ?? existingShift.notes,
+        isAllDay: body.isAllDay ?? existingShift.isAllDay,
+        presetId: body.presetId ?? existingShift.presetId,
+        updatedAt: new Date(),
+      })
+      .where(eq(shifts.id, id))
+      .returning();
+
+    return NextResponse.json(updatedShift);
+  } catch (error) {
+    console.error("Failed to update shift:", error);
+    return NextResponse.json(
+      { error: "Failed to update shift" },
+      { status: 500 }
+    );
+  }
+}

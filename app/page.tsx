@@ -33,6 +33,7 @@ import { CalendarCompareView } from "@/components/calendar-compare-view";
 import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
 import { DialogManager } from "@/components/dialog-manager";
+import { ShiftFormData } from "@/components/shift-sheet";
 import { getCalendarDays } from "@/lib/calendar-utils";
 import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
@@ -67,6 +68,7 @@ function HomeContent() {
     hasLoadedOnce: shiftsLoadedOnce,
     createShift: createShiftHook,
     deleteShift: deleteShiftHook,
+    updateShift: updateShiftHook,
     refetchShifts,
   } = useShifts(selectedCalendar);
 
@@ -85,6 +87,7 @@ function HomeContent() {
   const [compareNoteCalendarId, setCompareNoteCalendarId] = useState<
     string | undefined
   >();
+  const [editingShift, setEditingShift] = useState<ShiftWithCalendar | undefined>();
 
   // Compare mode state (needs to be before useNotes hook)
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -356,6 +359,34 @@ function HomeContent() {
     dialogStates.setShowDayShiftsDialog(false);
     await shiftActions.handleDeleteShift(shiftId);
     refetchShifts();
+  };
+
+  // Handler for editing a shift from the day shifts dialog
+  const handleEditShiftFromDayDialog = (shift: ShiftWithCalendar) => {
+    setEditingShift(shift);
+    setSelectedDate(shift.date as Date);
+    dialogStates.setShowShiftDialog(true);
+  };
+
+  // Clear editing state when dialog closes
+  const handleShiftDialogChange = (open: boolean) => {
+    dialogStates.setShowShiftDialog(open);
+    if (!open) {
+      setEditingShift(undefined);
+    }
+  };
+
+  // Handle shift submit (create or update)
+  const handleShiftSubmit = async (formData: ShiftFormData) => {
+    if (editingShift) {
+      // Update existing shift
+      await updateShiftHook(editingShift.id, formData);
+      setEditingShift(undefined);
+      refetchShifts();
+    } else {
+      // Create new shift
+      await shiftActions.handleShiftSubmit(formData);
+    }
   };
 
   // Compare mode handlers
@@ -897,6 +928,7 @@ function HomeContent() {
           onShowAllShifts={handleShowAllShifts}
           onShowSyncedShifts={handleShowSyncedShifts}
           onDeleteShift={shiftActions.handleDeleteShift}
+          onEditShift={handleEditShiftFromDayDialog}
         />
       </div>
 
@@ -924,11 +956,12 @@ function HomeContent() {
         onCalendarDialogChange={dialogStates.setShowCalendarDialog}
         onCreateCalendar={createCalendarHook}
         showShiftDialog={dialogStates.showShiftDialog}
-        onShiftDialogChange={dialogStates.setShowShiftDialog}
-        onShiftSubmit={shiftActions.handleShiftSubmit}
+        onShiftDialogChange={handleShiftDialogChange}
+        onShiftSubmit={handleShiftSubmit}
         selectedDate={selectedDate}
         selectedCalendar={selectedCalendar || null}
         calendars={calendars}
+        editingShift={editingShift}
         showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
         onCalendarSettingsDialogChange={
           dialogStates.setShowCalendarSettingsDialog
@@ -951,6 +984,7 @@ function HomeContent() {
         selectedDayShifts={dialogStates.selectedDayShifts}
         locale={locale}
         onDeleteShiftFromDayDialog={handleDeleteShiftFromDayDialog}
+        onEditShiftFromDayDialog={handleEditShiftFromDayDialog}
         showSyncedShiftsDialog={dialogStates.showSyncedShiftsDialog}
         onSyncedShiftsDialogChange={dialogStates.setShowSyncedShiftsDialog}
         selectedSyncedShifts={dialogStates.selectedSyncedShifts}

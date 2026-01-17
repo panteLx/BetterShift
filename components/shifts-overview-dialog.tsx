@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { getDateLocale } from "@/lib/locales";
 import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 
 interface ShiftsOverviewDialogProps {
   open: boolean;
@@ -21,6 +21,7 @@ interface ShiftsOverviewDialogProps {
   date: Date | null;
   shifts: ShiftWithCalendar[];
   onDeleteShift?: (shiftId: string) => void;
+  onEditShift?: (shift: ShiftWithCalendar) => void;
 }
 
 export function ShiftsOverviewDialog({
@@ -29,6 +30,7 @@ export function ShiftsOverviewDialog({
   date,
   shifts,
   onDeleteShift,
+  onEditShift,
 }: ShiftsOverviewDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -39,6 +41,13 @@ export function ShiftsOverviewDialog({
   const formattedDate = format(date, "EEEE, d. MMMM yyyy", {
     locale: dateLocale,
   });
+
+  const handleShiftClick = (shift: ShiftWithCalendar) => {
+    if (onEditShift && !shift.externalSyncId) {
+      onOpenChange(false); // Close dialog first
+      onEditShift(shift);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,8 +71,12 @@ export function ShiftsOverviewDialog({
             shifts.map((shift) => (
               <div
                 key={shift.id}
-                className="flex items-start justify-between p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
+                className={`flex items-start justify-between p-4 rounded-xl border border-border/50 bg-muted/20 transition-all ${onEditShift && !shift.externalSyncId
+                    ? "hover:bg-muted/40 cursor-pointer"
+                    : "hover:bg-muted/30"
+                  }`}
                 style={{ borderLeftColor: shift.color, borderLeftWidth: 4 }}
+                onClick={() => handleShiftClick(shift)}
               >
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold flex items-center gap-2">
@@ -88,16 +101,35 @@ export function ShiftsOverviewDialog({
                     </p>
                   )}
                 </div>
-                {onDeleteShift && !shift.externalSyncId && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => onDeleteShift(shift.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-1">
+                  {onEditShift && !shift.externalSyncId && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenChange(false);
+                        onEditShift(shift);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onDeleteShift && !shift.externalSyncId && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteShift(shift.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             ))
           )}

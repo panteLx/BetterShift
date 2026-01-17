@@ -38,6 +38,7 @@ interface CalendarContentProps {
   onShowAllShifts: (date: Date, shifts: ShiftWithCalendar[]) => void;
   onShowSyncedShifts: (date: Date, shifts: ShiftWithCalendar[]) => void;
   onDeleteShift?: (id: string) => void;
+  onEditShift?: (shift: ShiftWithCalendar) => void;
 }
 
 export function CalendarContent(props: CalendarContentProps) {
@@ -87,6 +88,7 @@ export function CalendarContent(props: CalendarContentProps) {
         onLongPress={props.onLongPress}
         onShowAllShifts={props.onShowAllShifts}
         onShowSyncedShifts={props.onShowSyncedShifts}
+        onEditShift={props.onEditShift}
       />
 
       <motion.div
@@ -128,6 +130,7 @@ export function CalendarContent(props: CalendarContentProps) {
           shifts={props.shifts}
           currentDate={props.currentDate}
           onDeleteShift={props.onDeleteShift}
+          onEditShift={props.onEditShift}
           calendarId={props.selectedCalendar || undefined}
         />
       </div>

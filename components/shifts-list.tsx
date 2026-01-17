@@ -12,6 +12,7 @@ interface ShiftsListProps {
   shifts: ShiftWithCalendar[];
   currentDate: Date;
   onDeleteShift?: (id: string) => void;
+  onEditShift?: (shift: ShiftWithCalendar) => void;
   calendarId?: string; // Optional: if provided, uses this for permission check instead of first shift's calendarId
 }
 
@@ -19,6 +20,7 @@ export function ShiftsList({
   shifts,
   currentDate,
   onDeleteShift,
+  onEditShift,
   calendarId: propCalendarId,
 }: ShiftsListProps) {
   const t = useTranslations();
@@ -164,6 +166,7 @@ export function ShiftsList({
                             key={shift.id}
                             shift={shift}
                             onDelete={canEdit ? onDeleteShift : undefined}
+                            onEdit={canEdit ? onEditShift : undefined}
                           />
                         ))}
                       </div>
