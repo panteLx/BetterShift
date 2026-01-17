@@ -74,7 +74,7 @@ export function ShiftCard({ shift, onDelete, onEdit }: ShiftCardProps) {
                 <Pencil className="h-4 w-4" />
               </Button>
             )}
-            {!shift.externalSyncId && onDelete && (
+            {!shift.externalSyncId && !shift.syncedFromExternal && onDelete && (
               <Button
                 variant="ghost"
                 size="icon"

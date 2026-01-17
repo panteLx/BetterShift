@@ -43,7 +43,7 @@ export function ShiftsOverviewDialog({
   });
 
   const handleShiftClick = (shift: ShiftWithCalendar) => {
-    if (onEditShift && !shift.externalSyncId) {
+    if (onEditShift && !shift.externalSyncId && !shift.syncedFromExternal) {
       onOpenChange(false); // Close dialog first
       onEditShift(shift);
     }
@@ -71,9 +71,9 @@ export function ShiftsOverviewDialog({
             shifts.map((shift) => (
               <div
                 key={shift.id}
-                className={`flex items-start justify-between p-4 rounded-xl border border-border/50 bg-muted/20 transition-all ${onEditShift && !shift.externalSyncId
-                    ? "hover:bg-muted/40 cursor-pointer"
-                    : "hover:bg-muted/30"
+                className={`flex items-start justify-between p-4 rounded-xl border border-border/50 bg-muted/20 transition-all ${onEditShift && !shift.externalSyncId && !shift.syncedFromExternal
+                  ? "hover:bg-muted/40 cursor-pointer"
+                  : "hover:bg-muted/30"
                   }`}
                 style={{ borderLeftColor: shift.color, borderLeftWidth: 4 }}
                 onClick={() => handleShiftClick(shift)}
@@ -102,7 +102,7 @@ export function ShiftsOverviewDialog({
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {onEditShift && !shift.externalSyncId && (
+                  {onEditShift && !shift.externalSyncId && !shift.syncedFromExternal && (
                     <Button
                       size="icon"
                       variant="ghost"
@@ -116,7 +116,7 @@ export function ShiftsOverviewDialog({
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
-                  {onDeleteShift && !shift.externalSyncId && (
+                  {onDeleteShift && !shift.externalSyncId && !shift.syncedFromExternal && (
                     <Button
                       size="icon"
                       variant="ghost"

@@ -115,6 +115,14 @@ export async function PUT(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
+    // Check if shift is externally synced (read-only)
+    if (existingShift.externalSyncId || existingShift.syncedFromExternal) {
+      return NextResponse.json(
+        { error: "Cannot edit externally synced shifts. They are read-only." },
+        { status: 403 }
+      );
+    }
+
     // Check write permission (works for both authenticated users and guests)
     const hasAccess = await canEditCalendar(user?.id, existingShift.calendarId);
     if (!hasAccess) {
