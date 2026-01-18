@@ -389,6 +389,50 @@ export const calendarAccessTokens = sqliteTable(
   ]
 );
 
+// Registration Whitelist for controlling who can register
+export const registrationWhitelist = sqliteTable(
+  "registration_whitelist",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    // Can be exact email (user@example.com) or domain pattern (*@example.com)
+    pattern: text("pattern").notNull().unique(),
+    // Type helps with UI display and matching logic
+    patternType: text("pattern_type", { enum: ["email", "domain"] })
+      .notNull()
+      .default("email"),
+    addedBy: text("added_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    // Track when this pattern was used (null = not yet used)
+    usedAt: integer("used_at", { mode: "timestamp" }),
+    // For exact emails, record which user registered with it
+    usedByUserId: text("used_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("registration_whitelist_pattern_idx").on(table.pattern),
+    index("registration_whitelist_patternType_idx").on(table.patternType),
+  ]
+);
+
+// System Settings for runtime-configurable options
+export const systemSettings = sqliteTable("system_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedBy: text("updated_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
 
@@ -420,6 +464,15 @@ export type UserCalendarSubscription =
   typeof userCalendarSubscriptions.$inferSelect;
 export type NewUserCalendarSubscription =
   typeof userCalendarSubscriptions.$inferInsert;
+
+// Registration whitelist types
+export type RegistrationWhitelist = typeof registrationWhitelist.$inferSelect;
+export type NewRegistrationWhitelist =
+  typeof registrationWhitelist.$inferInsert;
+
+// System settings types
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type NewSystemSetting = typeof systemSettings.$inferInsert;
 
 // =====================================================
 // Drizzle Relations (for experimental joins)

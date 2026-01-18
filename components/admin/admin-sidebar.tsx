@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Crown,
+  ShieldCheck,
 } from "lucide-react";
 import { useAdminLevel } from "@/hooks/useAdminAccess";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,7 +85,13 @@ export function AdminSidebar({
       href: "/admin/logs",
       icon: ScrollText,
     },
-  ];
+    {
+      label: t("admin.registration"),
+      href: "/admin/whitelist",
+      icon: ShieldCheck,
+      adminOnly: true, // Only visible to superadmins
+    },
+  ].filter((item) => !item.adminOnly || isSuperAdmin);
 
   const handleNavigation = (href: string) => {
     router.push(href);

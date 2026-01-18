@@ -14,6 +14,8 @@
  * - Client Components: use the usePublicConfig() hook
  */
 
+import { getRegistrationMode } from "@/lib/settings";
+
 /**
  * Returns public configuration that can be safely exposed to the client.
  * This function runs ONLY on the server and explicitly whitelists which
@@ -21,7 +23,9 @@
  *
  * @returns Public configuration object
  */
-export function getPublicConfig() {
+export async function getPublicConfig() {
+  const registrationMode = await getRegistrationMode();
+
   return {
     // =============================================================================
     // Auth System Configuration
@@ -46,7 +50,13 @@ export function getPublicConfig() {
       allowRegistration: process.env.ALLOW_USER_REGISTRATION !== "false",
 
       /**
-       * Allow unauthenticated users to view calendars with guest permission
+       * Registration mode: "open", "whitelist", or "closed"
+       * @default "open"
+       */
+      registrationMode,
+
+      /**
+       * Allow unauthenticated users to verify calendars with guest permission
        * @default false
        */
       allowGuestAccess: process.env.ALLOW_GUEST_ACCESS === "true",
@@ -104,14 +114,14 @@ export function getPublicConfig() {
 /**
  * Type-safe public configuration object
  */
-export type PublicConfig = ReturnType<typeof getPublicConfig>;
+export type PublicConfig = Awaited<ReturnType<typeof getPublicConfig>>;
 
 /**
  * Validates that the public configuration is properly set up.
  * Called during build/startup to catch configuration errors early.
  */
-export function validatePublicConfig(): void {
-  const config = getPublicConfig();
+export async function validatePublicConfig(): Promise<void> {
+  const config = await getPublicConfig();
 
   // Validate auth configuration
   if (config.auth.enabled && !config.auth.url) {

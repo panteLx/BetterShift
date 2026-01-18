@@ -34,7 +34,7 @@ export default function RegisterPage() {
   const t = useTranslations();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { isAuthEnabled, allowRegistration } = useAuthFeatures();
+  const { isAuthEnabled, allowRegistration, registrationMode } = useAuthFeatures();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -172,6 +172,22 @@ export default function RegisterPage() {
               {t("auth.registerDescription")}
             </p>
           </div>
+
+          {/* Whitelist Warning Banner */}
+          {allowRegistration && registrationMode === "whitelist" && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 shadow-sm">
+              <div className="flex gap-3">
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-foreground">
+                    {t("auth.whitelistRestricted")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("auth.whitelistRestrictedDescription")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Registration Form */}
           <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 p-8 shadow-lg backdrop-blur-sm">

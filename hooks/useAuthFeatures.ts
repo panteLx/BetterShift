@@ -19,7 +19,12 @@ export interface AuthFeatures {
   isAuthEnabled: boolean;
 
   /**
-   * Whether new user registration is allowed
+   * Allowed registration mode
+   */
+  registrationMode: "open" | "whitelist" | "closed";
+
+  /**
+   * Whether new user registration is allowed (computed from mode)
    */
   allowRegistration: boolean;
 
@@ -55,9 +60,19 @@ export interface AuthFeatures {
 export function useAuthFeatures(): AuthFeatures {
   const { auth, oauth, oidc } = usePublicConfig();
 
+  const registrationMode = auth.registrationMode || "open";
+  /*
+   * Allow registration if:
+   * 1. Auth is enabled
+   * 2. Registration mode is NOT closed
+   * (We ignore auth.allowRegistration env var here because registrationMode encompasses it)
+   */
+  const allowRegistration = auth.enabled && registrationMode !== "closed";
+
   return {
     isAuthEnabled: auth.enabled,
-    allowRegistration: auth.enabled && auth.allowRegistration,
+    registrationMode,
+    allowRegistration,
     allowGuest: !auth.enabled || auth.allowGuestAccess,
     providers: {
       google: oauth.google,

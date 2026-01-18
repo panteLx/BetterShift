@@ -24,8 +24,8 @@ export const BETTER_AUTH_URL =
 export const BETTER_AUTH_TRUSTED_ORIGINS = process.env
   .BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((origin) =>
-      origin.trim()
-    )
+    origin.trim()
+  )
   : [BETTER_AUTH_URL]; // Default: Trust only the configured base URL
 
 // =============================================================================
@@ -34,6 +34,12 @@ export const BETTER_AUTH_TRUSTED_ORIGINS = process.env
 
 export const ALLOW_USER_REGISTRATION =
   process.env.ALLOW_USER_REGISTRATION !== "false"; // Default: true
+
+// Registration mode: "open" (anyone), "whitelist" (only whitelisted emails), "closed" (no one)
+// Default: Determined by ALLOW_USER_REGISTRATION for backwards compatibility
+export const REGISTRATION_MODE: "open" | "whitelist" | "closed" =
+  (process.env.REGISTRATION_MODE as "open" | "whitelist" | "closed") ||
+  (ALLOW_USER_REGISTRATION ? "open" : "closed");
 
 // =============================================================================
 // Guest Access Settings

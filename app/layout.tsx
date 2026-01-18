@@ -66,7 +66,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
-  const publicConfig = getPublicConfig();
+  const publicConfig = await getPublicConfig();
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -79,6 +79,7 @@ export default async function RootLayout({
         />
       </head>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ThemeProvider

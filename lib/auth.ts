@@ -7,6 +7,10 @@ import { auditLogPlugin } from "@/lib/auth/audit-plugin";
 import { handleFirstUserPromotion } from "@/lib/auth/first-user";
 import { ac, roles } from "@/lib/auth/access-control";
 import {
+  isEmailAllowedToRegister,
+  markWhitelistEntryAsUsed,
+} from "@/lib/auth/whitelist";
+import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GITHUB_CLIENT_ID,
@@ -22,7 +26,7 @@ import {
   SESSION_UPDATE_AGE,
   BETTER_AUTH_TRUSTED_ORIGINS,
   BETTER_AUTH_URL,
-  ALLOW_USER_REGISTRATION,
+  REGISTRATION_MODE,
 } from "@/lib/auth/env";
 
 export const auth = betterAuth({
@@ -39,7 +43,8 @@ export const auth = betterAuth({
 
   // Email and Password authentication
   emailAndPassword: {
-    disableSignUp: !ALLOW_USER_REGISTRATION,
+    // Disable email signup if registration is closed (whitelist mode still allows via hook)
+    disableSignUp: REGISTRATION_MODE === "closed",
     enabled: true,
   },
 
@@ -47,21 +52,21 @@ export const auth = betterAuth({
   socialProviders: {
     google: GOOGLE_CLIENT_ID
       ? {
-          clientId: GOOGLE_CLIENT_ID,
-          clientSecret: GOOGLE_CLIENT_SECRET!,
-        }
+        clientId: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET!,
+      }
       : undefined,
     github: GITHUB_CLIENT_ID
       ? {
-          clientId: GITHUB_CLIENT_ID,
-          clientSecret: GITHUB_CLIENT_SECRET!,
-        }
+        clientId: GITHUB_CLIENT_ID,
+        clientSecret: GITHUB_CLIENT_SECRET!,
+      }
       : undefined,
     discord: DISCORD_CLIENT_ID
       ? {
-          clientId: DISCORD_CLIENT_ID,
-          clientSecret: DISCORD_CLIENT_SECRET!,
-        }
+        clientId: DISCORD_CLIENT_ID,
+        clientSecret: DISCORD_CLIENT_SECRET!,
+      }
       : undefined,
   },
 
@@ -87,18 +92,18 @@ export const auth = betterAuth({
         // Custom OIDC Provider
         ...(CUSTOM_OIDC_ENABLED && CUSTOM_OIDC_CLIENT_ID
           ? [
-              {
-                providerId: "custom-oidc",
-                clientId: CUSTOM_OIDC_CLIENT_ID,
-                clientSecret: CUSTOM_OIDC_CLIENT_SECRET!,
-                discoveryUrl: CUSTOM_OIDC_ISSUER!,
-                scopes: CUSTOM_OIDC_SCOPES?.split(" ") || [
-                  "openid",
-                  "profile",
-                  "email",
-                ],
-              },
-            ]
+            {
+              providerId: "custom-oidc",
+              clientId: CUSTOM_OIDC_CLIENT_ID,
+              clientSecret: CUSTOM_OIDC_CLIENT_SECRET!,
+              discoveryUrl: CUSTOM_OIDC_ISSUER!,
+              scopes: CUSTOM_OIDC_SCOPES?.split(" ") || [
+                "openid",
+                "profile",
+                "email",
+              ],
+            },
+          ]
           : []),
       ],
     }),
@@ -140,13 +145,19 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async () => {
-          // Block OAuth/OIDC registration when ALLOW_USER_REGISTRATION is false
+        before: async (userData) => {
+          // Check registration mode and whitelist
           // This hook runs for ALL user creation attempts (email + OAuth/OIDC)
-          // Email registration is already blocked by disableSignUp config
-          if (!ALLOW_USER_REGISTRATION) {
+          const email = userData.email;
+          if (!email) {
+            throw new Error("Email is required for registration.");
+          }
+
+          const { allowed, reason } = await isEmailAllowedToRegister(email);
+          if (!allowed) {
             throw new Error(
-              "Registration is currently disabled. Please contact an administrator."
+              reason ||
+              "Registration is not allowed. Please contact an administrator."
             );
           }
           // Return void to allow creation
@@ -161,6 +172,13 @@ export const auth = betterAuth({
             handleFirstUserPromotion(user.id).catch((error) => {
               console.error("Failed to promote first user:", error);
             });
+
+            // Mark whitelist entry as used (for exact email matches)
+            if (user.email) {
+              markWhitelistEntryAsUsed(user.email, user.id).catch((error) => {
+                console.error("Failed to mark whitelist entry as used:", error);
+              });
+            }
           }
         },
       },
