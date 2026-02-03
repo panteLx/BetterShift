@@ -31,7 +31,7 @@ _BetterShift is a self-hosted shift management application for teams and individ
 | **Admin Panel**    | User management, calendar administration, audit logging         |
 | **Statistics**     | Real-time shift tracking with visual charts                     |
 | **Export**         | Download calendars as ICS or PDF                                |
-| **Localization**   | English, German, Italian                                        |
+| **Localization**   | English, German, Italian, Spanish                                        |
 | **PWA**            | Installable on mobile and desktop                               |
 
 ## Quick Start
