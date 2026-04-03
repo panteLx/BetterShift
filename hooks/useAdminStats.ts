@@ -57,7 +57,7 @@ interface AuditLogResponse {
  * Fetch admin stats from API
  */
 async function fetchAdminStatsApi(
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<AdminStats> {
   const response = await fetch("/api/admin/stats", {
     method: "GET",
@@ -115,8 +115,7 @@ export function useAdminStats(): {
     error,
     refetch,
   } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: queryKeys.admin.stats,
+    queryKey: queryKeys.admin.stats({ t }),
     queryFn: () => fetchAdminStatsApi(t),
     refetchInterval: REFETCH_INTERVAL,
   });

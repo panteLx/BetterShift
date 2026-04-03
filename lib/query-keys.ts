@@ -36,7 +36,7 @@ export const queryKeys = {
 
   // Admin Data
   admin: {
-    stats: ["admin", "stats"] as const,
+    stats: (deps?: object) => ["admin", "stats", deps] as const,
     users: (filters?: object) => ["admin", "users", filters] as const,
     userDetails: (userId: string) => ["admin", "users", userId] as const,
     calendars: (filters?: object) => ["admin", "calendars", filters] as const,

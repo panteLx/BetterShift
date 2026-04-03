@@ -46,7 +46,7 @@ export interface ActivityLogsResponse {
 async function fetchActivityLogsApi(
   filters: ActivityLogsFilters,
   pagination: ActivityLogsPagination,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<ActivityLogsResponse> {
   const params = new URLSearchParams();
 
@@ -90,7 +90,7 @@ async function fetchActivityLogsApi(
  * Clear all activity logs via API
  */
 async function clearLogsApi(
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch("/api/activity-logs", {
     method: "DELETE",
@@ -120,7 +120,7 @@ async function clearLogsApi(
  */
 export function useActivityLogs(
   filters: ActivityLogsFilters = {},
-  pagination: ActivityLogsPagination = { limit: 50, offset: 0 }
+  pagination: ActivityLogsPagination = { limit: 50, offset: 0 },
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -132,8 +132,7 @@ export function useActivityLogs(
     error,
     refetch,
   } = useQuery({
-    /* eslint-disable-next-line @tanstack/query/exhaustive-deps */
-    queryKey: queryKeys.activityLogs({ filters, pagination }),
+    queryKey: queryKeys.activityLogs({ filters, pagination, t }),
     queryFn: () => fetchActivityLogsApi(filters, pagination, t),
     refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
@@ -150,7 +149,7 @@ export function useActivityLogs(
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.deleteError", { item: t("activityLog.title") })
+          : t("common.deleteError", { item: t("activityLog.title") }),
       );
     },
   });

@@ -23,9 +23,9 @@ export const auditLogPlugin = () => {
           // Match all auth endpoints
           matcher: (context) => {
             return (
-              context.path.startsWith("/sign-in") ||
-              context.path.startsWith("/sign-up") ||
-              context.path.startsWith("/callback") ||
+              context.path?.startsWith("/sign-in") ||
+              context.path?.startsWith("/sign-up") ||
+              context.path?.startsWith("/callback") ||
               context.path === "/update-user"
             );
           },
