@@ -61,7 +61,7 @@ async function fetchAuditLogsApi(
   filters: AuditLogFilters,
   sort: AuditLogSort,
   pagination: AuditLogPagination,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<AuditLogsResponse> {
   const params = new URLSearchParams();
 
@@ -114,7 +114,7 @@ async function fetchAuditLogsApi(
  */
 async function deleteLogsByIdsApi(
   logIds: string[],
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<{ deletedCount: number }> {
   const response = await fetch("/api/admin/audit-logs", {
     method: "DELETE",
@@ -137,13 +137,13 @@ async function deleteLogsByIdsApi(
  */
 async function deleteLogsByDateApi(
   beforeDate: string,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<{ deletedCount: number }> {
   const response = await fetch(
     `/api/admin/audit-logs?before=${encodeURIComponent(beforeDate)}`,
     {
       method: "DELETE",
-    }
+    },
   );
 
   if (!response.ok) {
@@ -178,7 +178,7 @@ async function deleteLogsByDateApi(
 export function useAdminAuditLogs(
   filters: AuditLogFilters = {},
   sort: AuditLogSort = { field: "timestamp", direction: "desc" },
-  pagination: AuditLogPagination = { limit: 25, offset: 0 }
+  pagination: AuditLogPagination = { limit: 25, offset: 0 },
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -190,8 +190,7 @@ export function useAdminAuditLogs(
     error,
     refetch,
   } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination }),
+    queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination, t }),
     queryFn: () => fetchAuditLogsApi(filters, sort, pagination, t),
     refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
@@ -205,7 +204,7 @@ export function useAdminAuditLogs(
         queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.auditLogs({ filters, sort, pagination })
+        queryKeys.admin.auditLogs({ filters, sort, pagination }),
       );
 
       // Optimistic update
@@ -218,7 +217,7 @@ export function useAdminAuditLogs(
             logs: old.logs.filter((log) => !logIds.includes(log.id)),
             total: old.total - logIds.length,
           };
-        }
+        },
       );
 
       return { previous };
@@ -226,12 +225,12 @@ export function useAdminAuditLogs(
     onError: (err, logIds, context) => {
       queryClient.setQueryData(
         queryKeys.admin.auditLogs({ filters, sort, pagination }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.deleteError", { item: t("admin.auditLogs") })
+          : t("common.deleteError", { item: t("admin.auditLogs") }),
       );
     },
     onSuccess: (data) => {
@@ -239,7 +238,7 @@ export function useAdminAuditLogs(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -250,7 +249,7 @@ export function useAdminAuditLogs(
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.deleteError", { item: t("admin.auditLogs") })
+          : t("common.deleteError", { item: t("admin.auditLogs") }),
       );
     },
     onSuccess: (data) => {
@@ -258,7 +257,7 @@ export function useAdminAuditLogs(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -295,14 +294,14 @@ export function useAdminAuditLogs(
     fetchAuditLogs: async (
       searchFilters: AuditLogFilters,
       searchSort: AuditLogSort,
-      searchPagination: AuditLogPagination
+      searchPagination: AuditLogPagination,
     ): Promise<AuditLogsResponse | null> => {
       try {
         return await fetchAuditLogsApi(
           searchFilters,
           searchSort,
           searchPagination,
-          t
+          t,
         );
       } catch {
         return null;

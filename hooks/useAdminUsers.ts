@@ -85,7 +85,7 @@ async function fetchUsersApi(
   filters: UserFilters,
   sort: UserSort,
   pagination: Pagination,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<UsersListResponse> {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
@@ -136,7 +136,7 @@ async function fetchUsersApi(
  */
 async function fetchUserDetailsApi(
   userId: string,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<UserDetails> {
   const response = await fetch(`/api/admin/users/${userId}`, {
     method: "GET",
@@ -186,7 +186,7 @@ async function fetchUserDetailsApi(
 async function updateUserApi(
   userId: string,
   data: { name?: string; email?: string; role?: string },
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}`, {
     method: "PATCH",
@@ -214,7 +214,7 @@ async function banUserApi(
   userId: string,
   reason: string,
   expiresAt: Date | undefined,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}/ban`, {
     method: "POST",
@@ -243,7 +243,7 @@ async function banUserApi(
  */
 async function unbanUserApi(
   userId: string,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}/unban`, {
     method: "POST",
@@ -268,7 +268,7 @@ async function unbanUserApi(
  */
 async function deleteUserApi(
   userId: string,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}`, {
     method: "DELETE",
@@ -294,7 +294,7 @@ async function deleteUserApi(
 async function resetPasswordApi(
   userId: string,
   newPassword: string,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch(`/api/admin/users/${userId}/password`, {
     method: "POST",
@@ -340,7 +340,7 @@ async function resetPasswordApi(
 export function useAdminUsers(
   filters: UserFilters = {},
   sort: UserSort = { field: "createdAt", direction: "desc" },
-  pagination: Pagination = { page: 1, limit: 25 }
+  pagination: Pagination = { page: 1, limit: 25 },
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -352,8 +352,7 @@ export function useAdminUsers(
     error,
     refetch,
   } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: queryKeys.admin.users({ filters, sort, pagination }),
+    queryKey: queryKeys.admin.users({ filters, sort, pagination, t }),
     queryFn: () => fetchUsersApi(filters, sort, pagination, t),
     refetchInterval: REFETCH_INTERVAL,
   });
@@ -372,7 +371,7 @@ export function useAdminUsers(
         queryKey: queryKeys.admin.users({ filters, sort, pagination }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination })
+        queryKeys.admin.users({ filters, sort, pagination }),
       );
 
       // Optimistic update
@@ -383,10 +382,10 @@ export function useAdminUsers(
           return {
             ...old,
             users: old.users.map((user) =>
-              user.id === userId ? { ...user, ...data } : user
+              user.id === userId ? { ...user, ...data } : user,
             ),
           };
-        }
+        },
       );
 
       return { previous };
@@ -394,12 +393,12 @@ export function useAdminUsers(
     onError: (err, variables, context) => {
       queryClient.setQueryData(
         queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.updateError", { item: t("common.labels.user") })
+          : t("common.updateError", { item: t("common.labels.user") }),
       );
     },
     onSuccess: () => {
@@ -408,7 +407,7 @@ export function useAdminUsers(
     onSettled: () => {
       // Invalidate all user queries
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -428,7 +427,7 @@ export function useAdminUsers(
         queryKey: queryKeys.admin.users({ filters, sort, pagination }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination })
+        queryKeys.admin.users({ filters, sort, pagination }),
       );
 
       // Optimistic update
@@ -446,10 +445,10 @@ export function useAdminUsers(
                     banReason: reason,
                     banExpires: expiresAt || null,
                   }
-                : user
+                : user,
             ),
           };
-        }
+        },
       );
 
       return { previous };
@@ -457,12 +456,12 @@ export function useAdminUsers(
     onError: (err, variables, context) => {
       queryClient.setQueryData(
         queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.banError", { item: t("common.labels.user") })
+          : t("common.banError", { item: t("common.labels.user") }),
       );
     },
     onSuccess: () => {
@@ -470,7 +469,7 @@ export function useAdminUsers(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -482,7 +481,7 @@ export function useAdminUsers(
         queryKey: queryKeys.admin.users({ filters, sort, pagination }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination })
+        queryKeys.admin.users({ filters, sort, pagination }),
       );
 
       // Optimistic update
@@ -495,10 +494,10 @@ export function useAdminUsers(
             users: old.users.map((user) =>
               user.id === userId
                 ? { ...user, banned: false, banReason: null, banExpires: null }
-                : user
+                : user,
             ),
           };
-        }
+        },
       );
 
       return { previous };
@@ -506,12 +505,12 @@ export function useAdminUsers(
     onError: (err, userId, context) => {
       queryClient.setQueryData(
         queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.unbanError", { item: t("common.labels.user") })
+          : t("common.unbanError", { item: t("common.labels.user") }),
       );
     },
     onSuccess: () => {
@@ -519,7 +518,7 @@ export function useAdminUsers(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -531,7 +530,7 @@ export function useAdminUsers(
         queryKey: queryKeys.admin.users({ filters, sort, pagination }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination })
+        queryKeys.admin.users({ filters, sort, pagination }),
       );
 
       // Optimistic update
@@ -544,7 +543,7 @@ export function useAdminUsers(
             users: old.users.filter((user) => user.id !== userId),
             total: old.total - 1,
           };
-        }
+        },
       );
 
       return { previous };
@@ -552,12 +551,12 @@ export function useAdminUsers(
     onError: (err, userId, context) => {
       queryClient.setQueryData(
         queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
         err instanceof Error
           ? err.message
-          : t("common.deleteError", { item: t("common.labels.user") })
+          : t("common.deleteError", { item: t("common.labels.user") }),
       );
     },
     onSuccess: () => {
@@ -565,7 +564,7 @@ export function useAdminUsers(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -580,7 +579,7 @@ export function useAdminUsers(
     }) => resetPasswordApi(userId, newPassword, t),
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : t("common.passwordResetError")
+        err instanceof Error ? err.message : t("common.passwordResetError"),
       );
     },
     onSuccess: () => {
@@ -603,7 +602,7 @@ export function useAdminUsers(
     fetchUserDetails: (userId: string) => fetchUserDetailsApi(userId, t),
     updateUser: async (
       userId: string,
-      data: { name?: string; email?: string; role?: string }
+      data: { name?: string; email?: string; role?: string },
     ): Promise<boolean> => {
       try {
         await updateMutation.mutateAsync({ userId, data });
@@ -615,7 +614,7 @@ export function useAdminUsers(
     banUser: async (
       userId: string,
       reason: string,
-      expiresAt?: Date
+      expiresAt?: Date,
     ): Promise<boolean> => {
       try {
         await banMutation.mutateAsync({ userId, reason, expiresAt });
@@ -642,7 +641,7 @@ export function useAdminUsers(
     },
     resetPassword: async (
       userId: string,
-      newPassword: string
+      newPassword: string,
     ): Promise<boolean> => {
       try {
         await resetPasswordMutation.mutateAsync({ userId, newPassword });
@@ -654,14 +653,14 @@ export function useAdminUsers(
     fetchUsers: async (
       searchFilters: UserFilters,
       searchSort: UserSort,
-      searchPagination: Pagination
+      searchPagination: Pagination,
     ): Promise<UsersListResponse | null> => {
       try {
         return await fetchUsersApi(
           searchFilters,
           searchSort,
           searchPagination,
-          t
+          t,
         );
       } catch {
         return null;

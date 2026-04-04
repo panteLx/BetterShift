@@ -63,6 +63,18 @@ function getAllTranslationKeys(): string[] {
 }
 
 /**
+ * Get all available locales from the messages directory
+ */
+function getAvailableLocales(): string[] {
+  const messagesDir = path.join(rootDir, "messages");
+  const files = fs.readdirSync(messagesDir);
+  return files
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => f.replace(".json", ""))
+    .sort();
+}
+
+/**
  * Recursively find all files with given extensions in a directory
  */
 function findFiles(dir: string, exts: string[]): string[] {
@@ -276,44 +288,46 @@ function isKeyOrParentUsed(key: string, usedKeys: Set<string>): boolean {
  * Compare translation files and find missing/extra keys
  */
 function compareTranslationFiles(): {
-  missingInEn: string[];
-  missingInIt: string[];
-  extraInEn: string[];
-  extraInIt: string[];
+  [locale: string]: {
+    missing: string[];
+    extra: string[];
+  };
 } {
+  const locales = getAvailableLocales();
   const deKeys = new Set(getTranslationKeys("de"));
-  const enKeys = new Set(getTranslationKeys("en"));
-  const itKeys = new Set(getTranslationKeys("it"));
+  const otherLocales = locales.filter((l) => l !== "de");
 
-  const missingInEn: string[] = [];
-  const missingInIt: string[] = [];
-  const extraInEn: string[] = [];
-  const extraInIt: string[] = [];
+  const results: {
+    [locale: string]: {
+      missing: string[];
+      extra: string[];
+    };
+  } = {};
 
-  // Find keys missing in en.json and it.json
-  for (const key of deKeys) {
-    if (!enKeys.has(key)) {
-      missingInEn.push(key);
+  for (const locale of otherLocales) {
+    const localeKeys = new Set(getTranslationKeys(locale));
+
+    const missing: string[] = [];
+    const extra: string[] = [];
+
+    // Find keys missing in this locale
+    for (const key of deKeys) {
+      if (!localeKeys.has(key)) {
+        missing.push(key);
+      }
     }
-    if (!itKeys.has(key)) {
-      missingInIt.push(key);
+
+    // Find extra keys in this locale
+    for (const key of localeKeys) {
+      if (!deKeys.has(key)) {
+        extra.push(key);
+      }
     }
+
+    results[locale] = { missing, extra };
   }
 
-  // Find extra keys in en.json and it.json
-  for (const key of enKeys) {
-    if (!deKeys.has(key)) {
-      extraInEn.push(key);
-    }
-  }
-
-  for (const key of itKeys) {
-    if (!deKeys.has(key)) {
-      extraInIt.push(key);
-    }
-  }
-
-  return { missingInEn, missingInIt, extraInEn, extraInIt };
+  return results;
 }
 
 /**
@@ -321,7 +335,7 @@ function compareTranslationFiles(): {
  */
 function findMissingKeys(
   usedKeys: Set<string>,
-  allKeys: string[]
+  allKeys: string[],
 ): Array<{ key: string; pattern?: string; existingKeys?: string[] }> {
   const allKeysSet = new Set(allKeys);
   const missingKeys: Array<{
@@ -496,7 +510,7 @@ function main() {
   if (missingKeys.length > 0) {
     hasIssues = true;
     console.log(
-      `❌ Found ${missingKeys.length} missing dynamic pattern keys:\n`
+      `❌ Found ${missingKeys.length} missing dynamic pattern keys:\n`,
     );
     for (const item of missingKeys) {
       if (item.pattern) {
@@ -506,8 +520,8 @@ function main() {
             item.pattern
           } (dynamic key - no keys with prefix '${item.key.replace(
             ".*",
-            ""
-          )}' found)`
+            "",
+          )}' found)`,
         );
       } else {
         // Static key
@@ -524,57 +538,47 @@ function main() {
 
   // 3. Compare translation files
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("3️⃣  FILE SYNCHRONIZATION (de.json vs en.json vs it.json)");
+  console.log("3️⃣  FILE SYNCHRONIZATION (de.json vs other locales)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  const { missingInEn, missingInIt, extraInEn, extraInIt } =
-    compareTranslationFiles();
+  const comparisonResults = compareTranslationFiles();
+  const allLocales = getAvailableLocales();
+  const otherLocales = allLocales.filter((l) => l !== "de");
 
-  const syncIssues =
-    missingInEn.length +
-    missingInIt.length +
-    extraInEn.length +
-    extraInIt.length;
+  let totalSyncIssues = 0;
+  const localeIssues: { [locale: string]: number } = {};
 
-  if (syncIssues === 0) {
+  for (const locale of otherLocales) {
+    const { missing, extra } = comparisonResults[locale];
+    localeIssues[locale] = missing.length + extra.length;
+    totalSyncIssues += localeIssues[locale];
+  }
+
+  if (totalSyncIssues === 0) {
     console.log("✅ All translation files are synchronized!\n");
   } else {
     hasIssues = true;
 
-    if (missingInEn.length > 0) {
-      console.log(`❌ Missing in en.json (${missingInEn.length} keys):`);
-      for (const key of missingInEn.sort()) {
-        console.log(`   - ${key}`);
-      }
-      console.log();
-    }
+    for (const locale of otherLocales) {
+      const { missing, extra } = comparisonResults[locale];
 
-    if (missingInIt.length > 0) {
-      console.log(`❌ Missing in it.json (${missingInIt.length} keys):`);
-      for (const key of missingInIt.sort()) {
-        console.log(`   - ${key}`);
+      if (missing.length > 0) {
+        console.log(`❌ Missing in ${locale}.json (${missing.length} keys):`);
+        for (const key of missing.sort()) {
+          console.log(`   - ${key}`);
+        }
+        console.log();
       }
-      console.log();
-    }
 
-    if (extraInEn.length > 0) {
-      console.log(
-        `⚠️  Extra in en.json (${extraInEn.length} keys not in de.json):`
-      );
-      for (const key of extraInEn.sort()) {
-        console.log(`   - ${key}`);
+      if (extra.length > 0) {
+        console.log(
+          `⚠️  Extra in ${locale}.json (${extra.length} keys not in de.json):`,
+        );
+        for (const key of extra.sort()) {
+          console.log(`   - ${key}`);
+        }
+        console.log();
       }
-      console.log();
-    }
-
-    if (extraInIt.length > 0) {
-      console.log(
-        `⚠️  Extra in it.json (${extraInIt.length} keys not in de.json):`
-      );
-      for (const key of extraInIt.sort()) {
-        console.log(`   - ${key}`);
-      }
-      console.log();
     }
   }
 
@@ -584,14 +588,17 @@ function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // Calculate overall health
+  let totalSyncIssuesInSummary = 0;
+  for (const locale of otherLocales) {
+    const { missing, extra } = comparisonResults[locale];
+    totalSyncIssuesInSummary += missing.length + extra.length;
+  }
+
   const totalIssues =
     unusedKeys.length +
     phantomKeys.length +
     missingKeys.length +
-    missingInEn.length +
-    missingInIt.length +
-    extraInEn.length +
-    extraInIt.length;
+    totalSyncIssuesInSummary;
   const healthScore =
     totalIssues === 0 ? 100 : Math.max(0, 100 - totalIssues * 2);
   const healthIcon =
@@ -616,28 +623,21 @@ function main() {
   if (phantomKeys.length > 0 || missingKeys.length > 0) {
     console.log("⚠️  Issues:");
     console.log(
-      `   Missing in de.json: ${phantomKeys.length + missingKeys.length}`
+      `   Missing in de.json: ${phantomKeys.length + missingKeys.length}`,
     );
     console.log();
   }
 
   console.log("🌍 File Synchronization:");
-  const enIssues = missingInEn.length + extraInEn.length;
-  const itIssues = missingInIt.length + extraInIt.length;
-  console.log(
-    `   en.json:             ${
-      enIssues === 0
+  for (const locale of otherLocales) {
+    const { missing, extra } = comparisonResults[locale];
+    const issues = missing.length + extra.length;
+    const status =
+      issues === 0
         ? "✅ Synced"
-        : `⚠️  ${missingInEn.length} missing, ${extraInEn.length} extra`
-    }`
-  );
-  console.log(
-    `   it.json:             ${
-      itIssues === 0
-        ? "✅ Synced"
-        : `⚠️  ${missingInIt.length} missing, ${extraInIt.length} extra`
-    }`
-  );
+        : `⚠️  ${missing.length} missing, ${extra.length} extra`;
+    console.log(`   ${locale}.json:             ${status}`);
+  }
   console.log();
 
   if (!hasIssues) {

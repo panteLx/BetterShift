@@ -91,7 +91,7 @@ async function fetchCalendarsApi(
   filters: CalendarFilters | undefined,
   sort: CalendarSort | undefined,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
 ): Promise<CalendarsListResponse> {
   const params = new URLSearchParams();
 
@@ -136,7 +136,7 @@ async function fetchCalendarsApi(
  * Fetch calendar details from API
  */
 async function fetchCalendarDetailsApi(
-  calendarId: string
+  calendarId: string,
 ): Promise<CalendarDetails> {
   const response = await fetch(`/api/admin/calendars/${calendarId}`);
 
@@ -156,7 +156,7 @@ async function fetchCalendarDetailsApi(
       (sync: CalendarDetails["externalSyncs"][number]) => ({
         ...sync,
         lastSyncedAt: sync.lastSyncedAt ? new Date(sync.lastSyncedAt) : null,
-      })
+      }),
     ),
   };
 }
@@ -166,7 +166,7 @@ async function fetchCalendarDetailsApi(
  */
 async function updateCalendarApi(
   calendarId: string,
-  updates: { name?: string; color?: string; guestPermission?: string }
+  updates: { name?: string; color?: string; guestPermission?: string },
 ): Promise<void> {
   const response = await fetch(`/api/admin/calendars/${calendarId}`, {
     method: "PATCH",
@@ -199,7 +199,7 @@ async function deleteCalendarApi(calendarId: string): Promise<void> {
  */
 async function transferCalendarApi(
   calendarId: string,
-  newOwnerId: string
+  newOwnerId: string,
 ): Promise<void> {
   const response = await fetch(`/api/admin/calendars/${calendarId}/transfer`, {
     method: "POST",
@@ -217,7 +217,7 @@ async function transferCalendarApi(
  * Bulk delete calendars via API
  */
 async function bulkDeleteCalendarsApi(
-  calendarIds: string[]
+  calendarIds: string[],
 ): Promise<{ deletedCount: number }> {
   const response = await fetch("/api/admin/calendars/bulk-delete", {
     method: "POST",
@@ -238,7 +238,7 @@ async function bulkDeleteCalendarsApi(
  */
 async function bulkTransferCalendarsApi(
   calendarIds: string[],
-  newOwnerId: string
+  newOwnerId: string,
 ): Promise<{ transferredCount: number }> {
   const response = await fetch("/api/admin/calendars/bulk-transfer", {
     method: "POST",
@@ -276,7 +276,7 @@ async function bulkTransferCalendarsApi(
  */
 export function useAdminCalendars(
   filters?: CalendarFilters,
-  sort?: CalendarSort
+  sort?: CalendarSort,
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -288,8 +288,7 @@ export function useAdminCalendars(
     error,
     refetch,
   } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: queryKeys.admin.calendars({ filters, sort }),
+    queryKey: queryKeys.admin.calendars({ filters, sort, t }),
     queryFn: () => fetchCalendarsApi(filters, sort, t),
     refetchInterval: REFETCH_INTERVAL,
   });
@@ -308,7 +307,7 @@ export function useAdminCalendars(
         queryKey: queryKeys.admin.calendars({ filters, sort }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.calendars({ filters, sort })
+        queryKeys.admin.calendars({ filters, sort }),
       );
 
       // Optimistic update
@@ -319,10 +318,10 @@ export function useAdminCalendars(
           return {
             ...old,
             calendars: old.calendars.map((cal) =>
-              cal.id === calendarId ? { ...cal, ...updates } : cal
+              cal.id === calendarId ? { ...cal, ...updates } : cal,
             ),
           };
-        }
+        },
       );
 
       return { previous };
@@ -330,10 +329,10 @@ export function useAdminCalendars(
     onError: (err, variables, context) => {
       queryClient.setQueryData(
         queryKeys.admin.calendars({ filters, sort }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
-        t("common.updateError", { item: t("common.labels.calendar") })
+        t("common.updateError", { item: t("common.labels.calendar") }),
       );
     },
     onSuccess: () => {
@@ -341,7 +340,7 @@ export function useAdminCalendars(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -353,7 +352,7 @@ export function useAdminCalendars(
         queryKey: queryKeys.admin.calendars({ filters, sort }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.calendars({ filters, sort })
+        queryKeys.admin.calendars({ filters, sort }),
       );
 
       // Optimistic update
@@ -366,7 +365,7 @@ export function useAdminCalendars(
             calendars: old.calendars.filter((cal) => cal.id !== calendarId),
             total: old.total - 1,
           };
-        }
+        },
       );
 
       return { previous };
@@ -374,10 +373,10 @@ export function useAdminCalendars(
     onError: (err, calendarId, context) => {
       queryClient.setQueryData(
         queryKeys.admin.calendars({ filters, sort }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
-        t("common.deleteError", { item: t("common.labels.calendar") })
+        t("common.deleteError", { item: t("common.labels.calendar") }),
       );
     },
     onSuccess: () => {
@@ -385,7 +384,7 @@ export function useAdminCalendars(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -400,17 +399,17 @@ export function useAdminCalendars(
     }) => transferCalendarApi(calendarId, newOwnerId),
     onError: () => {
       toast.error(
-        t("common.transferError", { item: t("common.labels.calendar") })
+        t("common.transferError", { item: t("common.labels.calendar") }),
       );
     },
     onSuccess: () => {
       toast.success(
-        t("common.transferred", { item: t("common.labels.calendar") })
+        t("common.transferred", { item: t("common.labels.calendar") }),
       );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -422,7 +421,7 @@ export function useAdminCalendars(
         queryKey: queryKeys.admin.calendars({ filters, sort }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.calendars({ filters, sort })
+        queryKeys.admin.calendars({ filters, sort }),
       );
 
       // Optimistic update
@@ -433,11 +432,11 @@ export function useAdminCalendars(
           return {
             ...old,
             calendars: old.calendars.filter(
-              (cal) => !calendarIds.includes(cal.id)
+              (cal) => !calendarIds.includes(cal.id),
             ),
             total: old.total - calendarIds.length,
           };
-        }
+        },
       );
 
       return { previous };
@@ -445,20 +444,20 @@ export function useAdminCalendars(
     onError: (err, calendarIds, context) => {
       queryClient.setQueryData(
         queryKeys.admin.calendars({ filters, sort }),
-        context?.previous
+        context?.previous,
       );
       toast.error(
-        t("common.deleteError", { item: t("common.labels.calendar") })
+        t("common.deleteError", { item: t("common.labels.calendar") }),
       );
     },
     onSuccess: (data) => {
       toast.success(
-        t("admin.calendars.calendarsDeleted", { count: data.deletedCount })
+        t("admin.calendars.calendarsDeleted", { count: data.deletedCount }),
       );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -473,19 +472,19 @@ export function useAdminCalendars(
     }) => bulkTransferCalendarsApi(calendarIds, newOwnerId),
     onError: () => {
       toast.error(
-        t("common.transferError", { item: t("common.labels.calendar") })
+        t("common.transferError", { item: t("common.labels.calendar") }),
       );
     },
     onSuccess: (data) => {
       toast.success(
         t("admin.calendars.calendarsTransferred", {
           count: data.transferredCount,
-        })
+        }),
       );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
     },
   });
 
@@ -503,7 +502,7 @@ export function useAdminCalendars(
       fetchCalendarDetailsApi(calendarId),
     updateCalendar: async (
       calendarId: string,
-      updates: { name?: string; color?: string; guestPermission?: string }
+      updates: { name?: string; color?: string; guestPermission?: string },
     ): Promise<boolean> => {
       try {
         await updateMutation.mutateAsync({ calendarId, updates });
@@ -522,7 +521,7 @@ export function useAdminCalendars(
     },
     transferCalendar: async (
       calendarId: string,
-      newOwnerId: string
+      newOwnerId: string,
     ): Promise<boolean> => {
       try {
         await transferMutation.mutateAsync({ calendarId, newOwnerId });
@@ -541,7 +540,7 @@ export function useAdminCalendars(
     },
     bulkTransferCalendars: async (
       calendarIds: string[],
-      newOwnerId: string
+      newOwnerId: string,
     ): Promise<boolean> => {
       try {
         await bulkTransferMutation.mutateAsync({ calendarIds, newOwnerId });
