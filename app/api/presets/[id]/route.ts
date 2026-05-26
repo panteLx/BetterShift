@@ -67,6 +67,7 @@ export async function PATCH(
       title,
       startTime,
       endTime,
+      number,
       color,
       notes,
       isSecondary,
@@ -117,6 +118,7 @@ export async function PATCH(
         title,
         startTime: isAllDay ? "00:00" : startTime,
         endTime: isAllDay ? "23:59" : endTime,
+        number: number !== undefined ? number : "",
         color,
         notes: notes || null,
         isSecondary: isSecondary !== undefined ? isSecondary : undefined,
@@ -136,6 +138,7 @@ export async function PATCH(
         endTime: isAllDay ? "23:59" : endTime,
         color,
         notes: notes || null,
+        number: number !== undefined ? number : "",
         isAllDay: isAllDay !== undefined ? isAllDay : undefined,
         updatedAt: new Date(),
       })

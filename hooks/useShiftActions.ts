@@ -73,7 +73,8 @@ export function useShiftActions({
             isSameDay(shift.date as Date, targetDate) &&
             shift.title === preset.title &&
             shift.startTime === preset.startTime &&
-            shift.endTime === preset.endTime
+            shift.endTime === preset.endTime &&
+            shift.number === preset.number
         );
 
         if (existingShift) {
@@ -88,6 +89,7 @@ export function useShiftActions({
             startTime: preset.startTime,
             endTime: preset.endTime,
             title: preset.title,
+            number: preset.number,
             color: preset.color,
             notes: preset.notes || "",
             presetId: preset.id,

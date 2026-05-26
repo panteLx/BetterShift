@@ -492,6 +492,7 @@ function HomeContent() {
           startTime: preset.startTime,
           endTime: preset.endTime,
           title: preset.title,
+          number: preset.number,
           color: preset.color,
           notes: preset.notes || "",
           presetId: preset.id,

@@ -46,6 +46,7 @@ interface PresetFormData {
   title: string;
   startTime: string;
   endTime: string;
+  number: string;
   color: string;
   notes: string;
   isSecondary: boolean;
@@ -198,6 +199,7 @@ export function PresetManageSheet({
     title: "",
     startTime: "09:00",
     endTime: "17:00",
+    number: "",
     color: PRESET_COLORS[0].value,
     notes: "",
     isSecondary: false,
@@ -306,6 +308,7 @@ export function PresetManageSheet({
         title: "",
         startTime: "09:00",
         endTime: "17:00",
+        number: "",
         color: PRESET_COLORS[0].value,
         notes: "",
         isSecondary: false,
@@ -337,6 +340,7 @@ export function PresetManageSheet({
           title: "",
           startTime: "09:00",
           endTime: "17:00",
+          number: "",
           color: PRESET_COLORS[0].value,
           notes: "",
           isSecondary: false,
@@ -379,6 +383,7 @@ export function PresetManageSheet({
       title: preset.title,
       startTime: preset.startTime,
       endTime: preset.endTime,
+      number: preset.number,
       color: preset.color,
       notes: preset.notes || "",
       isSecondary: preset.isSecondary || false,
@@ -398,6 +403,7 @@ export function PresetManageSheet({
       title: "",
       startTime: "09:00",
       endTime: "17:00",
+      number: "",
       color: PRESET_COLORS[0].value,
       notes: "",
       isSecondary: false,
@@ -419,6 +425,7 @@ export function PresetManageSheet({
         formData.title.trim() !== "" ||
         formData.startTime !== "09:00" ||
         formData.endTime !== "17:00" ||
+        formData.number.trim() !== "" ||
         formData.color !== PRESET_COLORS[0].value ||
         formData.notes.trim() !== "" ||
         formData.isSecondary ||
@@ -438,6 +445,7 @@ export function PresetManageSheet({
         title: "",
         startTime: "09:00",
         endTime: "17:00",
+        number: "",
         color: PRESET_COLORS[0].value,
         notes: "",
         isSecondary: false,
@@ -466,6 +474,7 @@ export function PresetManageSheet({
       title: "",
       startTime: "09:00",
       endTime: "17:00",
+      number: "",
       color: PRESET_COLORS[0].value,
       notes: "",
       isSecondary: false,
@@ -486,7 +495,7 @@ export function PresetManageSheet({
               {t("preset.manage")}
             </SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground">
-              {t("preset.manageDescription")}
+              test
             </SheetDescription>
           </SheetHeader>
 
@@ -638,6 +647,24 @@ export function PresetManageSheet({
                   </Label>
                 </div>
 
+                <Label
+                    htmlFor="preset-number"
+                    className="text-sm font-medium flex items-center gap-2"
+                  >
+                    <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+                    {t("shift.numberLabel")}
+                  </Label>
+                  <Input
+                    id="preset-number"
+                    placeholder={t("shift.numberPlaceholder")}
+                    value={formData.number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, number: e.target.value })
+                    }
+                    className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
+                    disabled={isLoading}
+                  />
+
                 {!formData.isAllDay && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -785,6 +812,7 @@ export function PresetManageSheet({
                         title: "",
                         startTime: "09:00",
                         endTime: "17:00",
+                        number: "",
                         color: PRESET_COLORS[0].value,
                         notes: "",
                         isSecondary: false,

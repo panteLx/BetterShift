@@ -27,6 +27,7 @@ export interface ShiftFormData {
   startTime: string;
   endTime: string;
   title: string;
+  number: string;
   color?: string;
   notes?: string;
   presetId?: string;
@@ -76,6 +77,7 @@ export function ShiftSheet({
         startTime: shift.startTime,
         endTime: shift.endTime,
         title: shift.title,
+        number: shift.number,
         notes: shift.notes || "",
         color: shift.color,
         isAllDay: shift.isAllDay || false,
@@ -96,6 +98,7 @@ export function ShiftSheet({
         startTime: formData.startTime,
         endTime: formData.endTime,
         title: formData.title,
+        number: formData.number,
         notes: formData.notes || "",
         color: formData.color,
         isAllDay: formData.isAllDay || false,

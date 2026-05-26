@@ -28,6 +28,7 @@ export function useShiftForm({
     startTime: shift?.startTime || "09:00",
     endTime: shift?.endTime || "17:00",
     title: shift?.title || "",
+    number: shift?.number || "",
     notes: shift?.notes || "",
     color: shift?.color || "#3b82f6",
     isAllDay: false,
@@ -46,6 +47,7 @@ export function useShiftForm({
       startTime: shiftData.startTime,
       endTime: shiftData.endTime,
       color: shiftData.color || "#3b82f6",
+      number: shiftData.number,
       notes: shiftData.notes || "",
       isAllDay: shiftData.isAllDay || false,
       isSecondary: false,
@@ -61,6 +63,7 @@ export function useShiftForm({
       startTime: preset.startTime,
       endTime: preset.endTime,
       title: preset.title,
+      number: preset.number,
       notes: preset.notes || "",
       color: preset.color,
       isAllDay: preset.isAllDay || false,
@@ -75,6 +78,7 @@ export function useShiftForm({
       startTime: "09:00",
       endTime: "17:00",
       title: "",
+      number: "",
       notes: "",
       color: "#3b82f6",
       isAllDay: false,
@@ -100,6 +104,7 @@ export function useShiftForm({
         startTime: shift?.startTime || "09:00",
         endTime: shift?.endTime || "17:00",
         title: shift?.title || "",
+        number: shift?.number || "",
         notes: shift?.notes || "",
         color: shift?.color || "#3b82f6",
         isAllDay: shift?.isAllDay || false,
@@ -111,6 +116,7 @@ export function useShiftForm({
         formDataRef.current.startTime !== newFormData.startTime ||
         formDataRef.current.endTime !== newFormData.endTime ||
         formDataRef.current.title !== newFormData.title ||
+        formDataRef.current.number !== newFormData.number ||
         formDataRef.current.notes !== newFormData.notes ||
         formDataRef.current.color !== newFormData.color ||
         formDataRef.current.isAllDay !== newFormData.isAllDay;

@@ -117,11 +117,13 @@ export async function syncExternalCalendar(
       string,
       typeof shifts.$inferSelect
     >();
+    
     for (const shift of existingShifts) {
       const fingerprint = createEventFingerprint(
         shift.date,
         shift.startTime,
         shift.endTime,
+        shift.number,
         shift.title,
         undefined,
         // Only use externalEventId for iCloud/Google (stable UIDs)
@@ -175,6 +177,7 @@ export async function syncExternalCalendar(
               : baseEventId;
 
           const title = event.summary || "Untitled Event";
+          const number = event.organizer || "";
 
           // Create fingerprint based on event content
           // For iCloud/Google: include eventId for stable UID-based matching
@@ -184,6 +187,7 @@ export async function syncExternalCalendar(
             dayEntry.startTime,
             dayEntry.endTime,
             title,
+            number,
             undefined,
             externalSync.syncType !== "custom" ? eventId : undefined
           );
@@ -196,6 +200,7 @@ export async function syncExternalCalendar(
             startTime: dayEntry.startTime,
             endTime: dayEntry.endTime,
             title,
+            number: "",
             color: externalSync.color,
             notes: event.description || null,
             isAllDay,
@@ -255,6 +260,7 @@ export async function syncExternalCalendar(
         todoData.date,
         todoData.startTime,
         todoData.endTime,
+        todoData.number,
         title,
         undefined,
         externalSync.syncType !== "custom" ? eventId : undefined
@@ -268,6 +274,7 @@ export async function syncExternalCalendar(
         startTime: todoData.startTime,
         endTime: todoData.endTime,
         title,
+        number: todoData.number,
         color: externalSync.color,
         notes: todoData.notes,
         isAllDay: todoData.isAllDay,
@@ -310,6 +317,7 @@ export async function syncExternalCalendar(
           shift.date,
           shift.startTime,
           shift.endTime,
+          shift.number,
           shift.title,
           undefined,
           // Only use externalEventId for iCloud/Google (stable UIDs)

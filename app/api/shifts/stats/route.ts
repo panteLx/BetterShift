@@ -18,6 +18,7 @@ import {
   startOfYear,
   endOfYear,
 } from "date-fns";
+import { number } from "better-auth";
 
 // GET shift statistics for a calendar
 export async function GET(request: Request) {
@@ -88,6 +89,7 @@ export async function GET(request: Request) {
         date: shifts.date,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
+        number: shifts.number,
         isAllDay: shifts.isAllDay,
       })
       .from(shifts)

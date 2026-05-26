@@ -9,6 +9,7 @@ export interface PresetFormData {
   title: string;
   startTime: string;
   endTime: string;
+  number: string;
   color: string;
   notes: string;
   isSecondary: boolean;
@@ -102,6 +103,7 @@ function createOptimisticPreset(
     id: `temp-${Date.now()}`,
     calendarId,
     title: formData.title,
+    number: formData.number,
     startTime: formData.startTime,
     endTime: formData.endTime,
     color: formData.color,

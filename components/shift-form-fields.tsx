@@ -139,6 +139,29 @@ export function ShiftFormFields({
 
       <div className="space-y-2.5">
         <Label
+          htmlFor="number"
+          className="text-sm font-medium flex items-center gap-2"
+        >
+          <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+          {t("shift.numberLabel")}
+        </Label>
+        <Input
+          id="number"
+          placeholder={t("shift.numberPlaceholder")}
+          value={formData.number}
+          onChange={(e) =>
+            onFormDataChange({ ...formData, number: e.target.value })
+          }
+          onBlur={onBlur}
+          disabled={readOnly}
+          className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
+          autoFocus={!readOnly}
+        />
+      </div>
+
+
+      <div className="space-y-2.5">
+        <Label
           htmlFor="notes"
           className="text-sm font-medium flex items-center gap-2"
         >
