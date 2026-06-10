@@ -184,7 +184,7 @@ export async function POST(request: Request) {
         startTime: isAllDay ? "00:00" : startTime,
         endTime: isAllDay ? "23:59" : endTime,
         title,
-        number: "",
+        number: number || "",
         color: color || "#3b82f6",
         notes: notes || null,
         isAllDay: isAllDay || false,
