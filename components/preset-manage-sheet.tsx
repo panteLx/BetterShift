@@ -495,7 +495,7 @@ export function PresetManageSheet({
               {t("preset.manage")}
             </SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground">
-              test
+              {t("preset.manageDescription")}
             </SheetDescription>
           </SheetHeader>
 
