@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bettershift_deployment
+  labels:
+    app: bettershift
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bettershift
+  template:
+    metadata:
+      labels:
+        app: bettershift
+    spec:
+      containers:
+      - name: bettershift
+        image: bettershift-bettershift:latest
+        ports:
+        - containerPort: 3000
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: /home/nsf_selkhalifi/BetterShift/data
+            type: DirectoryOrCreate
