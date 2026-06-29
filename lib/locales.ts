@@ -1,10 +1,11 @@
-import { de, enUS, es, fr, it } from "date-fns/locale";
+import { cs, de, enUS, es, fr, it } from "date-fns/locale";
 import type { Locale as DateFnsLocale } from "date-fns";
 
-export const locales = ["de", "en", "es", "fr", "it"] as const;
+export const locales = ["cs", "de", "en", "es", "fr", "it"] as const;
 export type Locale = (typeof locales)[number];
 
 const dateFnsLocales: Record<Locale, DateFnsLocale> = {
+  cs: cs,
   de: de,
   en: enUS,
   es: es,
