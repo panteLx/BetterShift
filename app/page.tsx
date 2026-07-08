@@ -376,18 +376,45 @@ function HomeContent() {
     }
   };
 
-  // Handle shift submit (create or update)
   const handleShiftSubmit = async (formData: ShiftFormData) => {
-    if (editingShift) {
-      // Update existing shift
-      await updateShiftHook(editingShift.id, formData);
-      setEditingShift(undefined);
-      refetchShifts();
+  if (editingShift) {
+    const rangeChanged = formData.startDay !== formData.endDay;
+
+    if (rangeChanged) {
+      // Delete old shift
+      await deleteShiftHook(editingShift.id);
+
+      // Create one shift per day in the range
+      if (formData.startDay && formData.endDay) {
+        const currentDay = new Date(formData.startDay);
+        const endDay = new Date(formData.endDay);
+
+        while (currentDay <= endDay) {
+          await createShiftHook({
+            ...formData,
+            date: currentDay.toISOString().slice(0, 10),
+            startDay: undefined,
+            endDay: undefined,
+          });
+
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+      }
     } else {
-      // Create new shift
-      await shiftActions.handleShiftSubmit(formData);
+      // Normal update
+      await updateShiftHook(editingShift.id, {
+        ...formData,
+        date: formData.startDay || formData.date,
+      });
     }
-  };
+
+    setEditingShift(undefined);
+    refetchShifts();
+  } else {
+    // Create new shift(s)
+    await shiftActions.handleShiftSubmit(formData);
+  }
+};
 
   // Compare mode handlers
   const handleCompareClick = () => {

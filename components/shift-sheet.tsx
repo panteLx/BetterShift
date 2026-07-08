@@ -32,6 +32,8 @@ export interface ShiftFormData {
   notes?: string;
   presetId?: string;
   isAllDay?: boolean;
+  startDay?: string;
+  endDay?: string;
 }
 
 export function ShiftSheet({
