@@ -30,6 +30,7 @@ export interface ShiftWithCalendar {
   startTime: string;
   endTime: string;
   title: string;
+  number: string;
   color: string;
   notes?: string | null;
   isAllDay?: boolean;

@@ -235,6 +235,8 @@
     "endTime": "End Time",
     "titlePlaceholder": "e.g., Morning Shift",
     "titleLabel": "Title",
+    "numberLabel": "Phone number",
+    "numberPlaceholder": "e.g., 0623456789",
     "allDay": "All Day",
     "allDayShift": "All-day shift",
     "noShiftsInMonth": "No shifts this month",

@@ -5,6 +5,7 @@ import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
+import { number } from "better-auth";
 
 // GET shifts for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
         date: shifts.date,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
+        number: shifts.number,
         title: shifts.title,
         color: shifts.color,
         notes: shifts.notes,
@@ -124,6 +126,7 @@ export async function POST(request: Request) {
       startTime,
       endTime,
       title,
+      number,
       color,
       notes,
       presetId,
@@ -181,6 +184,7 @@ export async function POST(request: Request) {
         startTime: isAllDay ? "00:00" : startTime,
         endTime: isAllDay ? "23:59" : endTime,
         title,
+        number: number || "",
         color: color || "#3b82f6",
         notes: notes || null,
         isAllDay: isAllDay || false,

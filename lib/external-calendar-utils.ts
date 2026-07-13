@@ -338,6 +338,7 @@ export function createEventFingerprint(
   startTime: string,
   endTime: string,
   title: string,
+  number: string,
   dayIndex?: number,
   externalEventId?: string
 ): string {
@@ -364,6 +365,7 @@ export function needsUpdate(
     startTime: string;
     endTime: string;
     title: string;
+    number: string,
     color: string;
     notes: string | null;
     isAllDay: boolean;
@@ -374,6 +376,7 @@ export function needsUpdate(
     startTime: string;
     endTime: string;
     title: string;
+    number: string,
     color: string;
     notes: string | null;
     isAllDay: boolean;
@@ -392,6 +395,8 @@ export function needsUpdate(
 
   // Compare title
   if (existing.title !== newData.title) return true;
+
+  if (existing.number !== newData.number) return true;
 
   // Compare color
   if (existing.color !== newData.color) return true;
@@ -417,6 +422,7 @@ export function processTodoToShift(vtodo: ICAL.Component): {
   startTime: string;
   endTime: string;
   title: string;
+  number: string,
   notes: string | null;
   isAllDay: boolean;
   uid: string;
@@ -467,6 +473,7 @@ export function processTodoToShift(vtodo: ICAL.Component): {
       startTime,
       endTime,
       title: summary as string,
+      number: "",
       notes: description as string | null,
       isAllDay,
       uid: uid as string,

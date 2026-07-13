@@ -227,7 +227,7 @@ export const shifts = sqliteTable("shifts", {
   startTime: text("start_time").notNull(),
   endTime: text("end_time").notNull(),
   title: text("title").notNull(),
-  number: text("phone_number").notNull().default(""),
+  number: text("number").notNull().default(""),
   color: text("color").notNull().default("#3b82f6"),
   notes: text("notes"),
   isAllDay: integer("is_all_day", { mode: "boolean" }).notNull().default(false),
@@ -260,6 +260,7 @@ export const shiftPresets = sqliteTable("shift_presets", {
   number: text("phone_number").notNull().default(""),
   startTime: text("start_time").notNull(),
   endTime: text("end_time").notNull(),
+  number: text("number").notNull().default(""),
   color: text("color").notNull().default("#3b82f6"),
   notes: text("notes"),
   isSecondary: integer("is_secondary", { mode: "boolean" })
