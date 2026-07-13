@@ -82,3 +82,5 @@ public/workbox-*.js.map
 
 # Local scripts
 .LOCAL
+
+.npmrc
