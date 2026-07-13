@@ -1,16 +1,15 @@
 services:
   bettershift:
-    # image: ghcr.io/pantelx/bettershift:latest
+    image: ghcr.io/pantelx/bettershift:latest
     # Or build the image locally using the Dockerfile
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: bettershift
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-      - ./Fortinet_CA_SSL.cer:/../etc/ssl/certs/Fortinet_CA_SSL.cer:ro
     env_file:
       - .env

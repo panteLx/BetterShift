@@ -2,10 +2,7 @@
 
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
-COPY Fortinet_CA_SSL.cer /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
-RUN cat /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt >> /etc/ssl/certs/ca-certificates.crt
 RUN apk add --no-cache libc6-compat
-ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
 WORKDIR /app
 
 # Copy only package files for better caching
@@ -15,10 +12,7 @@ RUN --mount=type=cache,target=/root/.npm-deps \
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
-COPY Fortinet_CA_SSL.cer /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
-RUN cat /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt >> /etc/ssl/certs/ca-certificates.crt
 RUN apk add --no-cache libc6-compat
-ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
 WORKDIR /app
 
 # Build argument for version
@@ -40,10 +34,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
 
 # Stage 3: Production dependencies
 FROM node:20-alpine AS prod-deps
-COPY Fortinet_CA_SSL.cer /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
-RUN cat /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt >> /etc/ssl/certs/ca-certificates.crt
 RUN apk add --no-cache libc6-compat
-ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
 WORKDIR /app
 
 # Copy package files
@@ -56,10 +47,7 @@ RUN --mount=type=cache,target=/root/.npm-prod \
 
 # Stage 4: Runner
 FROM node:20-alpine AS runner
-COPY Fortinet_CA_SSL.cer /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
-RUN cat /usr/local/share/ca-certificates/Fortinet_CA_SSL.crt >> /etc/ssl/certs/ca-certificates.crt
 RUN apk add --no-cache libc6-compat dumb-init
-ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/Fortinet_CA_SSL.crt
 WORKDIR /app
 
 # Build-time metadata (passed from GitHub Actions)
