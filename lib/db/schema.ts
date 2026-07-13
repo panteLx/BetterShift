@@ -257,6 +257,7 @@ export const shiftPresets = sqliteTable("shift_presets", {
     .notNull()
     .references(() => calendars.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
+  number: text("phone_number").notNull().default(""),
   startTime: text("start_time").notNull(),
   endTime: text("end_time").notNull(),
   number: text("number").notNull().default(""),

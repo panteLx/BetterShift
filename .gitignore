@@ -84,3 +84,4 @@ public/workbox-*.js.map
 .LOCAL
 
 .npmrc
+*.cer
