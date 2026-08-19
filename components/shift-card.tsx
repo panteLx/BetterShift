@@ -53,6 +53,10 @@ export function ShiftCard({ shift, onDelete, onEdit }: ShiftCardProps) {
                   <span className="font-medium">{shift.endTime}</span>
                 </>
               )}
+
+              <h3 className="font-semibold text-sm sm:text-base truncate">
+                {shift.number}
+              </h3>
             </div>
             {shift.notes && (
               <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">

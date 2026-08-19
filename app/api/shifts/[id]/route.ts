@@ -4,6 +4,7 @@ import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { number } from "better-auth";
 
 // GET single shift
 export async function GET(
@@ -21,6 +22,7 @@ export async function GET(
         date: shifts.date,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
+        number: shifts.number,
         title: shifts.title,
         color: shifts.color,
         notes: shifts.notes,
@@ -139,6 +141,7 @@ export async function PUT(
         date: body.date ? new Date(body.date) : existingShift.date,
         startTime: body.startTime ?? existingShift.startTime,
         endTime: body.endTime ?? existingShift.endTime,
+        number: body.number ?? existingShift.number,
         title: body.title ?? existingShift.title,
         color: body.color ?? existingShift.color,
         notes: body.notes ?? existingShift.notes,

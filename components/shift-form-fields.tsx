@@ -37,14 +37,14 @@ export function ShiftFormFields({
   return (
     <div className="space-y-5">
       <div className="space-y-2.5">
-        <Label
+        {/* <Label
           htmlFor="date"
           className="text-sm font-medium flex items-center gap-2"
         >
           <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
           {t("shift.date")}
-        </Label>
-        <Input
+        </Label> */}
+        {/* <Input
           id="date"
           type="date"
           value={formData.date}
@@ -54,7 +54,48 @@ export function ShiftFormFields({
           onBlur={onBlur}
           disabled={readOnly}
           className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
-        />
+        /> */}
+        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label htmlFor="startDay" className="text-sm font-medium">
+            Start Date
+          </label>
+          <Input
+            id="startDay"
+            type="date"
+            value={formData.startDay || formData.date}
+            onChange={(e) =>
+              onFormDataChange({
+                ...formData,
+                startDay: e.target.value,
+                date: e.target.value,
+              })
+            }
+            onBlur={onBlur}
+            disabled={readOnly}
+            className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="endDay" className="text-sm font-medium">
+            End Date
+          </label>
+          <Input
+            id="endDay"
+            type="date"
+            value={formData.endDay || formData.date}
+            onChange={(e) =>
+              onFormDataChange({
+                ...formData,
+                endDay: e.target.value,
+              })
+            }
+            disabled={readOnly}
+            className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
+          />
+        </div>
+      </div>
       </div>
 
       <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/30">
@@ -136,6 +177,29 @@ export function ShiftFormFields({
           autoFocus={!readOnly}
         />
       </div>
+
+      <div className="space-y-2.5">
+        <Label
+          htmlFor="number"
+          className="text-sm font-medium flex items-center gap-2"
+        >
+          <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+          {t("shift.numberLabel")}
+        </Label>
+        <Input
+          id="number"
+          placeholder={t("shift.numberPlaceholder")}
+          value={formData.number}
+          onChange={(e) =>
+            onFormDataChange({ ...formData, number: e.target.value })
+          }
+          onBlur={onBlur}
+          disabled={readOnly}
+          className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
+          autoFocus={!readOnly}
+        />
+      </div>
+
 
       <div className="space-y-2.5">
         <Label

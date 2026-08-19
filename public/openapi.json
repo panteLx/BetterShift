@@ -1,0 +1,298 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Calendar API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/api/shifts": {
+      "get": {
+        "summary": "Get shifts",
+        "parameters": [
+          {
+            "name": "calendarId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of shifts"
+          },
+          "400": {
+            "description": "Missing calendar ID"
+          },
+          "403": {
+            "description": "Permission denied"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a shift",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShiftRequest"
+              },
+              "examples": {
+                "shift": {
+                  "summary": "Shift without preset",
+                  "value": {
+                    "calendarId": "1f8a0c10-e5f0-4720-bdb8-f00f858a7b3c",
+                    "date": "2026-06-06",
+                    "startTime": "10:00",
+                    "endTime": "17:00",
+                    "title": "Morning Shift",
+                    "color": "#10b981",
+                    "notes": "",
+                    "isAllDay": false,
+                    "isSecondary": false,
+                    "calendar": {
+                      "id": "1f8a0c10-e5f0-4720-bdb8-f00f858a7b3c",
+                      "name": "test",
+                      "color": "#f59e0b"
+                    }
+                  }
+                },
+                "preset": {
+                  "summary": "Shift from preset",
+                  "value": {
+                    "calendarId": "1f8a0c10-e5f0-4720-bdb8-f00f858a7b3c",
+                    "presetId": "1cac3942-0b2b-46c3-a9ba-b63b2eed1718",
+                    "date": "2026-06-08",
+                    "startTime": "10:00",
+                    "endTime": "17:00",
+                    "title": "Morning Shift",
+                    "color": "#10b981",
+                    "notes": "",
+                    "isAllDay": false,
+                    "isSecondary": false,
+                    "calendar": {
+                      "id": "1f8a0c10-e5f0-4720-bdb8-f00f858a7b3c",
+                      "name": "test",
+                      "color": "#f59e0b"
+                    }
+                  }
+                },
+                "number": {
+                  "summary": "Shift with number",
+                  "value": {
+                    "calendarId": "88dc55da-c271-4dc0-8189-c5febeb95d8c",
+                    "date": "2026-06-10",
+                    "startTime": "10:00",
+                    "endTime": "17:00",
+                    "title": "test9",
+                    "number": "huefiu",
+                    "color": "#10b981",
+                    "notes": "",
+                    "isAllDay": false,
+                    "isSecondary": false,
+                    "calendar": {
+                      "id": "88dc55da-c271-4dc0-8189-c5febeb95d8c",
+                      "name": "test",
+                      "color": "#f59e0b"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Shift created"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          }
+        }
+      }
+    },
+    "/api/presets": {
+      "get": {
+        "summary": "Get presets",
+        "parameters": [
+          {
+            "name": "calendarId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of presets"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a preset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePresetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Preset created"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Calendar": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "example": "#f59e0b"
+          }
+        }
+      },
+      "CreateShiftRequest": {
+        "type": "object",
+        "required": [
+          "calendarId",
+          "date",
+          "title"
+        ],
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "presetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional preset to associate with the shift."
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "10:00"
+          },
+          "endTime": {
+            "type": "string",
+            "example": "17:00"
+          },
+          "title": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string",
+            "example": "huefiu"
+          },
+          "color": {
+            "type": "string",
+            "example": "#10b981"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "isAllDay": {
+            "type": "boolean"
+          },
+          "isSecondary": {
+            "type": "boolean"
+          },
+          "calendar": {
+            "$ref": "#/components/schemas/Calendar"
+          }
+        }
+      },
+      "CreatePresetRequest": {
+        "type": "object",
+        "required": [
+          "calendarId",
+          "date",
+          "title"
+        ],
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "isAllDay": {
+            "type": "boolean"
+          },
+          "isSecondary": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "calendar": {
+            "$ref": "#/components/schemas/Calendar"
+          }
+        }
+      }
+    }
+  }
+}
