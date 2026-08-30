@@ -266,7 +266,11 @@
     "showPresets": "Mostrar preajustes",
     "hidePresets": "Ocultar preajustes",
     "hiddenFromStats": "Oculto de las estadísticas",
-    "cannotAddPresetHint": "Este preajuste pertenece a un calendario diferente y no se puede añadir aquí."
+    "cannotAddPresetHint": "Este preajuste pertenece a un calendario diferente y no se puede añadir aquí.",
+    "group": "Grupo",
+    "groupPlaceholder": "ej., Entre semana, Fin de semana...",
+    "groups": "Grupos",
+    "selectGroupHint": "Seleccionar todos los preajustes de este grupo"
   },
   "view": {
     "settingsTitle": "Ajustes de vista",

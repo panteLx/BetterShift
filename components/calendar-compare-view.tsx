@@ -25,7 +25,8 @@ interface CalendarCompareViewProps {
   externalSyncsMap: Map<string, ExternalSync[]>;
   presetsMap: Map<string, ShiftPreset[]>;
   selectedPresetId?: string;
-  onSelectPreset: (id: string | undefined) => void;
+  selectedPresetIds?: string[];
+  onSelectPreset: (id: string | undefined, multiSelect?: boolean) => void;
   togglingDatesMap: Map<string, Set<string>>;
   maxShiftsToShow?: number;
   maxExternalShiftsToShow?: number;
@@ -94,17 +95,20 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
   if (selectedCalendars[2])
     permissionsMap.set(selectedCalendars[2].id, permission2);
 
-  // Find which calendar owns the selected preset
-  const selectedPresetCalendarId = props.selectedPresetId
-    ? (() => {
-        for (const [calendarId, presets] of props.presetsMap.entries()) {
-          if (presets.some((p) => p.id === props.selectedPresetId)) {
-            return calendarId;
-          }
-        }
-        return null;
-      })()
-    : null;
+  const activePresetIds =
+    props.selectedPresetIds && props.selectedPresetIds.length > 0
+      ? props.selectedPresetIds
+      : props.selectedPresetId
+        ? [props.selectedPresetId]
+        : [];
+
+  // Restrict date clicks to the calendar(s) that own the selected preset(s).
+  const selectedPresetCalendarIds = new Set<string>();
+  for (const [calendarId, presets] of props.presetsMap.entries()) {
+    if (presets.some((preset) => activePresetIds.includes(preset.id))) {
+      selectedPresetCalendarIds.add(calendarId);
+    }
+  }
 
   const handleShareLink = () => {
     const url = new URL(window.location.href);
@@ -200,8 +204,8 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
 
             // Check if this calendar is disabled (preset from different calendar selected)
             const isDisabled =
-              selectedPresetCalendarId !== null &&
-              selectedPresetCalendarId !== calendar.id;
+              selectedPresetCalendarIds.size > 0 &&
+              !selectedPresetCalendarIds.has(calendar.id);
 
             return (
               <motion.div
@@ -236,6 +240,7 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                       calendars={props.allCalendars}
                       presets={calendarPresets}
                       selectedPresetId={props.selectedPresetId}
+                      selectedPresetIds={props.selectedPresetIds}
                       onSelectPreset={props.onSelectPreset}
                       onPresetsChange={() => props.onPresetsChange(calendar.id)}
                       onShiftsChange={props.onShiftsChange}
@@ -267,6 +272,9 @@ export function CalendarCompareView(props: CalendarCompareViewProps) {
                     notes={notes}
                     selectedPresetId={
                       isDisabled ? undefined : props.selectedPresetId
+                    }
+                    selectedPresetIds={
+                      isDisabled ? [] : props.selectedPresetIds
                     }
                     togglingDates={togglingDates}
                     externalSyncs={externalSyncs}

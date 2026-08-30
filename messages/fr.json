@@ -266,7 +266,11 @@
     "showPresets": "Afficher les modèles",
     "hidePresets": "Masquer les modèles",
     "hiddenFromStats": "Exclu des statistiques",
-    "cannotAddPresetHint": "Ce modèle appartient à un autre calendrier et ne peut pas être ajouté ici."
+    "cannotAddPresetHint": "Ce modèle appartient à un autre calendrier et ne peut pas être ajouté ici.",
+    "group": "Groupe",
+    "groupPlaceholder": "ex. : Semaine, Week-end...",
+    "groups": "Groupes",
+    "selectGroupHint": "Sélectionner tous les modèles de ce groupe"
   },
   "view": {
     "settingsTitle": "Paramètres d'affichage",

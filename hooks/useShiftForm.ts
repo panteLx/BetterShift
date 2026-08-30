@@ -47,6 +47,7 @@ export function useShiftForm({
       endTime: shiftData.endTime,
       color: shiftData.color || "#3b82f6",
       notes: shiftData.notes || "",
+      groupName: "",
       isAllDay: shiftData.isAllDay || false,
       isSecondary: false,
       hideFromStats: false,

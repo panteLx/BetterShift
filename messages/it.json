@@ -266,7 +266,11 @@
     "showPresets": "Mostra preset",
     "hidePresets": "Nascondi preset",
     "hiddenFromStats": "Nascosto dalle statistiche",
-    "cannotAddPresetHint": "Questo preset appartiene a un altro calendario e non può essere aggiunto qui."
+    "cannotAddPresetHint": "Questo preset appartiene a un altro calendario e non può essere aggiunto qui.",
+    "group": "Gruppo",
+    "groupPlaceholder": "es., Feriale, Weekend...",
+    "groups": "Gruppi",
+    "selectGroupHint": "Seleziona tutti i preset di questo gruppo"
   },
   "view": {
     "settingsTitle": "Impostazioni Vista",

@@ -1,0 +1,1 @@
+ALTER TABLE `shift_presets` ADD `group_name` text;

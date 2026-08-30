@@ -35,7 +35,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { ShiftPreset } from "@/lib/db/schema";
 import { PRESET_COLORS } from "@/lib/constants";
-import { Plus, Trash2, Edit2, Loader2, GripVertical } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Loader2,
+  GripVertical,
+  Copy,
+  Tag,
+} from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useDirtyState } from "@/hooks/useDirtyState";
@@ -48,9 +56,45 @@ interface PresetFormData {
   endTime: string;
   color: string;
   notes: string;
+  groupName: string;
   isSecondary: boolean;
   isAllDay: boolean;
   hideFromStats: boolean;
+}
+
+const EMPTY_FORM_DATA: PresetFormData = {
+  title: "",
+  startTime: "09:00",
+  endTime: "17:00",
+  color: PRESET_COLORS[0].value,
+  notes: "",
+  groupName: "",
+  isSecondary: false,
+  isAllDay: false,
+  hideFromStats: false,
+};
+
+// Group presets (within a primary/secondary section) by their groupName,
+// keeping ungrouped presets first and named groups sorted alphabetically.
+function groupPresetsByName(presetList: ShiftPreset[]) {
+  const ungrouped: ShiftPreset[] = [];
+  const groupsMap = new Map<string, ShiftPreset[]>();
+
+  for (const preset of presetList) {
+    const name = preset.groupName?.trim();
+    if (!name) {
+      ungrouped.push(preset);
+      continue;
+    }
+    if (!groupsMap.has(name)) groupsMap.set(name, []);
+    groupsMap.get(name)!.push(preset);
+  }
+
+  const groups = [...groupsMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, items]) => ({ name, items }));
+
+  return { ungrouped, groups };
 }
 
 interface PresetManageSheetProps {
@@ -66,7 +110,9 @@ interface PresetManageSheetProps {
 interface SortablePresetItemProps {
   preset: ShiftPreset;
   isDeleting: boolean;
+  isCloneDisabled?: boolean;
   onEdit: (preset: ShiftPreset) => void;
+  onClone: (preset: ShiftPreset) => void;
   onDelete: (id: string) => void;
   t: (key: string) => string;
   showDragHandle?: boolean;
@@ -76,7 +122,9 @@ interface SortablePresetItemProps {
 const SortablePresetItem = memo(function SortablePresetItem({
   preset,
   isDeleting,
+  isCloneDisabled = false,
   onEdit,
+  onClone,
   onDelete,
   t,
   showDragHandle = true,
@@ -152,6 +200,16 @@ const SortablePresetItem = memo(function SortablePresetItem({
                 size="icon"
                 variant="ghost"
                 className="h-8 w-8"
+                onClick={() => onClone(preset)}
+                disabled={isDeleting || isCloneDisabled}
+                title={t("common.copy")}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
                 onClick={() => onEdit(preset)}
                 disabled={isDeleting}
               >
@@ -178,6 +236,88 @@ const SortablePresetItem = memo(function SortablePresetItem({
   );
 });
 
+// Renders one Primary/Secondary section, clustering its presets under their
+// group name. Ungrouped presets render first, each subgroup gets its own
+// drag-and-drop context so reordering never crosses group boundaries.
+interface PresetSectionListProps {
+  heading: string;
+  orderedPresets: ShiftPreset[];
+  sensors: ReturnType<typeof useSensors>;
+  onDragEnd: (subgroupIds: string[], event: DragEndEvent) => void;
+  isDeleting: string | null;
+  isCloneDisabled: boolean;
+  onEdit: (preset: ShiftPreset) => void;
+  onClone: (preset: ShiftPreset) => void;
+  onDelete: (id: string) => void;
+  t: (key: string) => string;
+  isReadOnly: boolean;
+}
+
+function PresetSectionList({
+  heading,
+  orderedPresets,
+  sensors,
+  onDragEnd,
+  isDeleting,
+  isCloneDisabled,
+  onEdit,
+  onClone,
+  onDelete,
+  t,
+  isReadOnly,
+}: PresetSectionListProps) {
+  const { ungrouped, groups } = groupPresetsByName(orderedPresets);
+
+  const renderSubgroup = (subgroupPresets: ShiftPreset[]) => {
+    const ids = subgroupPresets.map((p) => p.id);
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={(event) => onDragEnd(ids, event)}
+      >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {subgroupPresets.map((preset) => (
+              <SortablePresetItem
+                key={preset.id}
+                preset={preset}
+                isDeleting={isDeleting === preset.id}
+                isCloneDisabled={isCloneDisabled}
+                onEdit={onEdit}
+                onClone={onClone}
+                onDelete={onDelete}
+                t={t}
+                showDragHandle={subgroupPresets.length > 1}
+                isReadOnly={isReadOnly}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-muted-foreground px-1">
+        {heading}
+      </h3>
+      {ungrouped.length > 0 && renderSubgroup(ungrouped)}
+      {groups.map(({ name, items }) => (
+        <div key={name} className="space-y-2 pt-1">
+          <h4 className="text-xs font-medium text-muted-foreground/80 px-1 flex items-center gap-1.5">
+            <Tag className="h-3 w-3" />
+            {name}
+            <span className="opacity-70">({items.length})</span>
+          </h4>
+          {renderSubgroup(items)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PresetManageSheet({
   open,
   onOpenChange,
@@ -192,17 +332,18 @@ export function PresetManageSheet({
   // Determine if sheet should be in read-only mode
   const isReadOnly = readOnly || !permission.canEdit;
 
+  const existingGroupNames = [
+    ...new Set(
+      presets
+        .map((p) => p.groupName?.trim())
+        .filter((name): name is string => !!name)
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPreset, setEditingPreset] = useState<ShiftPreset | null>(null);
   const [formData, setFormData] = useState<PresetFormData>({
-    title: "",
-    startTime: "09:00",
-    endTime: "17:00",
-    color: PRESET_COLORS[0].value,
-    notes: "",
-    isSecondary: false,
-    isAllDay: false,
-    hideFromStats: false,
+    ...EMPTY_FORM_DATA,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -239,48 +380,41 @@ export function PresetManageSheet({
     })
   );
 
-  const handlePrimaryDragEnd = async (event: DragEndEvent) => {
+  // Reorders a drag within one subgroup (the ungrouped pool, or a named
+  // group) while preserving that subgroup's slot positions inside the
+  // section's overall order.
+  const handleSectionDragEnd = async (
+    section: "primary" | "secondary",
+    subgroupIds: string[],
+    event: DragEndEvent
+  ) => {
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
       return;
     }
 
-    const oldIndex = orderedPrimaryPresets.findIndex((p) => p.id === active.id);
-    const newIndex = orderedPrimaryPresets.findIndex((p) => p.id === over.id);
+    const oldIndex = subgroupIds.indexOf(active.id as string);
+    const newIndex = subgroupIds.indexOf(over.id as string);
+    const reorderedIds = arrayMove(subgroupIds, oldIndex, newIndex);
 
-    const newOrderedPrimary = arrayMove(
-      orderedPrimaryPresets,
-      oldIndex,
-      newIndex
+    const sectionPresets =
+      section === "primary" ? orderedPrimaryPresets : orderedSecondaryPresets;
+    const byId = new Map(sectionPresets.map((p) => [p.id, p]));
+    const reorderedSubgroup = reorderedIds.map((id) => byId.get(id)!);
+
+    let i = 0;
+    const newSectionPresets = sectionPresets.map((p) =>
+      subgroupIds.includes(p.id) ? reorderedSubgroup[i++] : p
     );
-    setOrderedPrimaryPresets(newOrderedPrimary);
 
-    // Save new order to backend
-    await savePresetOrder([...newOrderedPrimary, ...orderedSecondaryPresets]);
-  };
-
-  const handleSecondaryDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
+    if (section === "primary") {
+      setOrderedPrimaryPresets(newSectionPresets);
+      await savePresetOrder([...newSectionPresets, ...orderedSecondaryPresets]);
+    } else {
+      setOrderedSecondaryPresets(newSectionPresets);
+      await savePresetOrder([...orderedPrimaryPresets, ...newSectionPresets]);
     }
-
-    const oldIndex = orderedSecondaryPresets.findIndex(
-      (p) => p.id === active.id
-    );
-    const newIndex = orderedSecondaryPresets.findIndex((p) => p.id === over.id);
-
-    const newOrderedSecondary = arrayMove(
-      orderedSecondaryPresets,
-      oldIndex,
-      newIndex
-    );
-    setOrderedSecondaryPresets(newOrderedSecondary);
-
-    // Save new order to backend
-    await savePresetOrder([...orderedPrimaryPresets, ...newOrderedSecondary]);
   };
 
   const savePresetOrder = async (allPresets: ShiftPreset[]) => {
@@ -302,16 +436,7 @@ export function PresetManageSheet({
     if (!open) {
       setShowAddForm(false);
       setEditingPreset(null);
-      setFormData({
-        title: "",
-        startTime: "09:00",
-        endTime: "17:00",
-        color: PRESET_COLORS[0].value,
-        notes: "",
-        isSecondary: false,
-        isAllDay: false,
-        hideFromStats: false,
-      });
+      setFormData({ ...EMPTY_FORM_DATA });
       setIsLoading(false);
       setIsDeleting(null);
     }
@@ -333,16 +458,7 @@ export function PresetManageSheet({
       if (success) {
         setEditingPreset(null);
         setShowAddForm(false);
-        setFormData({
-          title: "",
-          startTime: "09:00",
-          endTime: "17:00",
-          color: PRESET_COLORS[0].value,
-          notes: "",
-          isSecondary: false,
-          isAllDay: false,
-          hideFromStats: false,
-        });
+        setFormData({ ...EMPTY_FORM_DATA });
       }
     } finally {
       setIsLoading(false);
@@ -374,6 +490,33 @@ export function PresetManageSheet({
     }
   };
 
+  const clonePreset = async (preset: ShiftPreset) => {
+    if (isReadOnly || !calendarId || isLoading) return;
+
+    const clonedFormData: PresetFormData = {
+      title: `${preset.title} (${t("common.copy")})`,
+      startTime: preset.startTime,
+      endTime: preset.endTime,
+      color: preset.color,
+      notes: preset.notes || "",
+      groupName: preset.groupName || "",
+      isSecondary: preset.isSecondary || false,
+      isAllDay: preset.isAllDay || false,
+      hideFromStats: preset.hideFromStats || false,
+    };
+
+    setIsLoading(true);
+    try {
+      const success = await createPresetMutation(clonedFormData);
+      if (success) {
+        setShowAddForm(false);
+        setEditingPreset(null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const startEdit = (preset: ShiftPreset) => {
     const editFormData = {
       title: preset.title,
@@ -381,6 +524,7 @@ export function PresetManageSheet({
       endTime: preset.endTime,
       color: preset.color,
       notes: preset.notes || "",
+      groupName: preset.groupName || "",
       isSecondary: preset.isSecondary || false,
       isAllDay: preset.isAllDay || false,
       hideFromStats: preset.hideFromStats || false,
@@ -394,16 +538,7 @@ export function PresetManageSheet({
 
   const cancelEdit = () => {
     setEditingPreset(null);
-    setFormData({
-      title: "",
-      startTime: "09:00",
-      endTime: "17:00",
-      color: PRESET_COLORS[0].value,
-      notes: "",
-      isSecondary: false,
-      isAllDay: false,
-      hideFromStats: false,
-    });
+    setFormData({ ...EMPTY_FORM_DATA });
     initialFormDataRef.current = null;
   };
 
@@ -421,6 +556,7 @@ export function PresetManageSheet({
         formData.endTime !== "17:00" ||
         formData.color !== PRESET_COLORS[0].value ||
         formData.notes.trim() !== "" ||
+        formData.groupName.trim() !== "" ||
         formData.isSecondary ||
         formData.isAllDay ||
         formData.hideFromStats
@@ -434,16 +570,7 @@ export function PresetManageSheet({
       cancelEdit();
     } else if (showAddForm) {
       setShowAddForm(false);
-      setFormData({
-        title: "",
-        startTime: "09:00",
-        endTime: "17:00",
-        color: PRESET_COLORS[0].value,
-        notes: "",
-        isSecondary: false,
-        isAllDay: false,
-        hideFromStats: false,
-      });
+      setFormData({ ...EMPTY_FORM_DATA });
     }
   };
 
@@ -462,16 +589,7 @@ export function PresetManageSheet({
   const startAdd = () => {
     setShowAddForm(true);
     setEditingPreset(null);
-    setFormData({
-      title: "",
-      startTime: "09:00",
-      endTime: "17:00",
-      color: PRESET_COLORS[0].value,
-      notes: "",
-      isSecondary: false,
-      isAllDay: false,
-      hideFromStats: false,
-    });
+    setFormData({ ...EMPTY_FORM_DATA });
   };
 
   return (
@@ -509,72 +627,42 @@ export function PresetManageSheet({
             {orderedPrimaryPresets.length > 0 &&
               !showAddForm &&
               !editingPreset && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground px-1">
-                    {t("preset.primaryPresets")}
-                  </h3>
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handlePrimaryDragEnd}
-                  >
-                    <SortableContext
-                      items={orderedPrimaryPresets.map((p) => p.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-3">
-                        {orderedPrimaryPresets.map((preset) => (
-                          <SortablePresetItem
-                            key={preset.id}
-                            preset={preset}
-                            isDeleting={isDeleting === preset.id}
-                            onEdit={startEdit}
-                            onDelete={handleDeleteClick}
-                            t={t}
-                            showDragHandle={orderedPrimaryPresets.length > 1}
-                            isReadOnly={isReadOnly}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
+                <PresetSectionList
+                  heading={t("preset.primaryPresets")}
+                  orderedPresets={orderedPrimaryPresets}
+                  sensors={sensors}
+                  onDragEnd={(subgroupIds, event) =>
+                    handleSectionDragEnd("primary", subgroupIds, event)
+                  }
+                  isDeleting={isDeleting}
+                  isCloneDisabled={isLoading}
+                  onEdit={startEdit}
+                  onClone={clonePreset}
+                  onDelete={handleDeleteClick}
+                  t={t}
+                  isReadOnly={isReadOnly}
+                />
               )}
 
             {/* Secondary Presets List */}
             {orderedSecondaryPresets.length > 0 &&
               !showAddForm &&
               !editingPreset && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground px-1">
-                    {t("preset.secondaryPresets")}
-                  </h3>
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleSecondaryDragEnd}
-                  >
-                    <SortableContext
-                      items={orderedSecondaryPresets.map((p) => p.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-3">
-                        {orderedSecondaryPresets.map((preset) => (
-                          <SortablePresetItem
-                            key={preset.id}
-                            preset={preset}
-                            isDeleting={isDeleting === preset.id}
-                            onEdit={startEdit}
-                            onDelete={handleDeleteClick}
-                            t={t}
-                            showDragHandle={orderedSecondaryPresets.length > 1}
-                            isReadOnly={isReadOnly}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
+                <PresetSectionList
+                  heading={t("preset.secondaryPresets")}
+                  orderedPresets={orderedSecondaryPresets}
+                  sensors={sensors}
+                  onDragEnd={(subgroupIds, event) =>
+                    handleSectionDragEnd("secondary", subgroupIds, event)
+                  }
+                  isDeleting={isDeleting}
+                  isCloneDisabled={isLoading}
+                  onEdit={startEdit}
+                  onClone={clonePreset}
+                  onDelete={handleDeleteClick}
+                  t={t}
+                  isReadOnly={isReadOnly}
+                />
               )}
 
             {/* Show edited preset */}
@@ -583,7 +671,9 @@ export function PresetManageSheet({
                 <SortablePresetItem
                   preset={editingPreset}
                   isDeleting={isDeleting === editingPreset.id}
+                  isCloneDisabled={isLoading}
                   onEdit={startEdit}
+                  onClone={clonePreset}
                   onDelete={handleDeleteClick}
                   t={t}
                   showDragHandle={false}
@@ -715,6 +805,32 @@ export function PresetManageSheet({
                   />
                 </div>
 
+                <div className="space-y-2.5">
+                  <Label
+                    htmlFor="preset-group"
+                    className="text-sm font-medium flex items-center gap-2"
+                  >
+                    <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+                    {t("preset.group")}
+                  </Label>
+                  <Input
+                    id="preset-group"
+                    list="preset-group-names"
+                    placeholder={t("preset.groupPlaceholder")}
+                    value={formData.groupName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, groupName: e.target.value })
+                    }
+                    className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
+                    disabled={isLoading}
+                  />
+                  <datalist id="preset-group-names">
+                    {existingGroupNames.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </div>
+
                 <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/30">
                   <Checkbox
                     id="preset-secondary"
@@ -781,16 +897,7 @@ export function PresetManageSheet({
                       cancelEdit();
                     } else {
                       setShowAddForm(false);
-                      setFormData({
-                        title: "",
-                        startTime: "09:00",
-                        endTime: "17:00",
-                        color: PRESET_COLORS[0].value,
-                        notes: "",
-                        isSecondary: false,
-                        isAllDay: false,
-                        hideFromStats: false,
-                      });
+                      setFormData({ ...EMPTY_FORM_DATA });
                     }
                   }}
                   disabled={isLoading}
