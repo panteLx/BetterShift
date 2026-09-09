@@ -29,6 +29,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { logAuditEvent, type RateLimitHitMetadata } from "@/lib/audit-log";
+import { getClientIp } from "@/lib/ip-utils";
 
 // =============================================================================
 // Configuration from Environment Variables
@@ -190,19 +191,52 @@ function cleanupExpiredEntry(key: string, now: number): void {
 }
 
 /**
+ * Periodic sweep: drop every expired entry from `store`, not just the one
+ * being looked up right now. Without this, a key that is only ever touched
+ * once (e.g. a one-off spoofed IP) is never revisited by
+ * `cleanupExpiredEntry` and would sit in memory forever, growing `store`
+ * without bound.
+ *
+ * Guarded so importing this module in an environment without timers (e.g.
+ * some test runners or edge-like sandboxes) doesn't throw, and `.unref()`d
+ * so the interval never keeps the Node process alive on its own.
+ */
+const SWEEP_INTERVAL_MS = 60 * 1000;
+
+function sweepExpiredEntries(): void {
+  const now = Date.now();
+  for (const [key, entry] of store) {
+    if (entry.resetAt <= now) {
+      store.delete(key);
+    }
+  }
+}
+
+if (typeof setInterval === "function") {
+  const sweepTimer = setInterval(sweepExpiredEntries, SWEEP_INTERVAL_MS);
+  sweepTimer.unref?.();
+}
+
+/**
  * Get client identifier from request
  * - Authenticated: User ID
- * - Unauthenticated: IP Address
+ * - Unauthenticated: IP Address, via getClientIp() so this agrees with what
+ *   the audit log records for the same request. getClientIp() also
+ *   recognizes CF-Connecting-IP and other cloud load-balancer headers as
+ *   fallbacks and validates that the extracted value is actually an IP
+ *   (the previous hand-rolled parsing took the raw X-Forwarded-For value
+ *   verbatim). Note this does not, by itself, stop X-Forwarded-For spoofing
+ *   when the app is directly reachable or sits behind a proxy that forwards
+ *   a client-supplied X-Forwarded-For unchanged: the underlying library
+ *   still prefers X-Forwarded-For over every other header, including
+ *   CF-Connecting-IP, when a syntactically valid X-Forwarded-For is present.
  */
 function getClientIdentifier(req: NextRequest, userId?: string | null): string {
   if (userId) {
     return `user:${userId}`;
   }
 
-  // Try to get real IP from headers (proxies)
-  const forwarded = req.headers.get("x-forwarded-for");
-  const realIp = req.headers.get("x-real-ip");
-  const ip = forwarded?.split(",")[0].trim() || realIp || "unknown";
+  const ip = getClientIp(req) || "unknown";
 
   return `ip:${ip}`;
 }
