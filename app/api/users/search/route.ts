@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/sessions";
+import { checkPermission } from "@/lib/auth/permissions";
 import { like, or, and, ne } from "drizzle-orm";
 import { user as userTable } from "@/lib/db/schema";
 
@@ -20,6 +21,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "calendarId is required" },
         { status: 400 }
+      );
+    }
+
+    // Require a real search term so this endpoint cannot be used as a
+    // directory dump of every account's name and email
+    if (query.length < 2) {
+      return NextResponse.json(
+        { error: "Query must be at least 2 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Only calendar admins/owners may search for users to share the calendar with
+    const hasPermission = await checkPermission(
+      currentUser.id,
+      calendarId,
+      "admin"
+    );
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
       );
     }
 
