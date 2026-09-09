@@ -8,6 +8,10 @@ import { getClientIp as resolveClientIp } from "@supercharge/request-ip";
 
 const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 const IPV6 = /^[0-9a-f:]+$/i;
+// IPv4-mapped IPv6, e.g. ::ffff:203.0.113.5. A dual-stack listener (nginx
+// `listen [::]:443` with ipv6only=off, Caddy, Traefik) reports IPv4 clients
+// in this form, so it must not be rejected as malformed.
+const IPV4_MAPPED = /^::(?:ffff:)?(?=\d{1,3}\.)/i;
 
 /**
  * Parse a single client IP out of a raw header value.
@@ -38,6 +42,11 @@ function parseIp(raw: string | null | undefined): string | null {
   // Drop an IPv6 zone index, e.g. fe80::1%eth0
   const zone = value.indexOf("%");
   if (zone !== -1) value = value.slice(0, zone);
+
+  // Unwrap an IPv4-mapped IPv6 address to its dotted-quad form, so the same
+  // client is one identity whether the proxy reports it as 203.0.113.5 or
+  // ::ffff:203.0.113.5.
+  value = value.replace(IPV4_MAPPED, "");
 
   if (!value) return null;
 

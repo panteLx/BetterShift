@@ -174,6 +174,16 @@ class AutoSyncService {
       }min)`
     );
 
+    // Clear any timer this call replaces. Without this, a reschedule that
+    // races an in-flight executeSync (the poll picks up a changed interval
+    // while the sync is awaiting its fetch) overwrites the map entry and
+    // orphans the previous timer, which still fires -- syncing the calendar
+    // twice per cycle at the stale interval.
+    const existing = this.timers.get(syncId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
     const timer = setTimeout(() => {
       this.executeSync(syncId, intervalMs);
     }, delay);

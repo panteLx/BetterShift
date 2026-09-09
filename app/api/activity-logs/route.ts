@@ -251,7 +251,12 @@ export async function DELETE(request: NextRequest) {
       );
 
     // Delete sync logs only for calendars the user can edit (write or better) -
-    // read-only access must not permit destroying another owner's sync history
+    // read-only access must not permit destroying another owner's sync history.
+    // Note this is calendar-scoped, not per-user: a write-level member who
+    // clears their own activity also clears that calendar's shared sync
+    // history. That matches what write access already allows (editing and
+    // deleting the shifts those logs describe), but it is a deliberate
+    // boundary rather than a per-user delete.
     const editablePermissions: CalendarPermission[] = [
       "owner",
       "admin",

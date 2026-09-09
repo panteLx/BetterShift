@@ -15,7 +15,7 @@ import { rateLimit } from "@/lib/rate-limiter";
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const rateLimitResponse = rateLimit(request, null, "auth");
+    const rateLimitResponse = rateLimit(request, null, "ban-info");
     if (rateLimitResponse) return rateLimitResponse;
 
     const body = await request.json();

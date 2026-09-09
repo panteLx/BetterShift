@@ -40,6 +40,15 @@ const config = {
     requests: parseInt(process.env.RATE_LIMIT_AUTH_REQUESTS || "5", 10),
     windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW || "60", 10) * 1000,
   },
+  banInfo: {
+    // Separate from "auth" on purpose: the login page calls this straight
+    // after a BANNED_USER sign-in error, so sharing the auth bucket meant a
+    // banned user spent two tokens per attempt and stopped being shown the
+    // reason and expiry after the second try.
+    requests: parseInt(process.env.RATE_LIMIT_BAN_INFO_REQUESTS || "10", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_BAN_INFO_WINDOW || "60", 10) * 1000,
+  },
   register: {
     requests: parseInt(process.env.RATE_LIMIT_REGISTER_REQUESTS || "3", 10),
     windowMs:
@@ -344,6 +353,7 @@ export function rateLimit(
   userId?: string | null,
   type:
     | "auth"
+    | "ban-info"
     | "register"
     | "password-change"
     | "account-delete"
@@ -375,6 +385,9 @@ export function rateLimit(
   switch (type) {
     case "auth":
       options = config.auth;
+      break;
+    case "ban-info":
+      options = config.banInfo;
       break;
     case "register":
       options = config.register;

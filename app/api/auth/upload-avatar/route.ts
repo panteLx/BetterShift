@@ -123,20 +123,6 @@ export async function POST(request: NextRequest) {
       await mkdir(UPLOAD_DIR, { recursive: true });
     }
 
-    // Remove any previous avatars for this user so uploads don't
-    // accumulate unbounded. A failure here must not fail the upload.
-    try {
-      const existingFiles = await readdir(UPLOAD_DIR);
-      const previousAvatars = existingFiles.filter((name) =>
-        name.startsWith(`${user.id}-`)
-      );
-      await Promise.all(
-        previousAvatars.map((name) => unlink(join(UPLOAD_DIR, name)))
-      );
-    } catch (cleanupError) {
-      console.error("Avatar cleanup error:", cleanupError);
-    }
-
     // Generate unique filename. The extension is derived solely from
     // the validated MIME type map above, never from the client-supplied
     // file name.
@@ -145,6 +131,22 @@ export async function POST(request: NextRequest) {
 
     // Save file
     await writeFile(filePath, buffer);
+
+    // Only once the replacement is on disk, remove this user's earlier
+    // avatars so uploads don't accumulate unbounded. Doing this before the
+    // write would leave user.image pointing at a deleted file if the write
+    // failed. A failure here must not fail the upload.
+    try {
+      const existingFiles = await readdir(UPLOAD_DIR);
+      const staleAvatars = existingFiles.filter(
+        (name) => name.startsWith(`${user.id}-`) && name !== fileName
+      );
+      await Promise.all(
+        staleAvatars.map((name) => unlink(join(UPLOAD_DIR, name)))
+      );
+    } catch (cleanupError) {
+      console.error("Avatar cleanup error:", cleanupError);
+    }
 
     // Return public URL
     const url = `/uploads/avatars/${fileName}`;

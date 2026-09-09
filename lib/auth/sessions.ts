@@ -96,7 +96,10 @@ function parseUserAgent(userAgent: string | null): {
     ? `${osData.name}${osData.version ? ` ${osData.version}` : ""}`
     : "Unknown OS";
 
-  const deviceType = deviceData.type || "unknown";
+  // UAParser leaves device.type undefined for desktop browsers, so "desktop"
+  // is the correct fallback -- and it is what app/profile/page.tsx derives
+  // client-side for the same user agent.
+  const deviceType = deviceData.type || "desktop";
 
   const deviceName = `${browser} on ${os}`;
 
