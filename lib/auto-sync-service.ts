@@ -199,6 +199,14 @@ class AutoSyncService {
       console.error(`Auto-sync error for ${syncId}:`, error);
     }
 
+    // The service may have been stopped, or this job removed (sync deleted
+    // or disabled), while the sync above was in flight. Either way, the
+    // timers/jobs maps no longer expect this job to exist, so rescheduling
+    // here would resurrect a stopped service or a deleted/disabled sync.
+    if (!this.isRunning || !this.jobs.has(syncId)) {
+      return;
+    }
+
     // Schedule next sync
     this.scheduleJob(syncId, intervalMs, new Date());
   }
