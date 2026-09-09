@@ -82,3 +82,6 @@ public/workbox-*.js.map
 .LOCAL
 # Claude Code agent worktrees (nested checkouts, never commit)
 .claude/worktrees/
+
+# Playwright MCP output directory
+.playwright-mcp/

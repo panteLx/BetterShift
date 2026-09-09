@@ -221,15 +221,15 @@ if (typeof setInterval === "function") {
  * Get client identifier from request
  * - Authenticated: User ID
  * - Unauthenticated: IP Address, via getClientIp() so this agrees with what
- *   the audit log records for the same request. getClientIp() also
- *   recognizes CF-Connecting-IP and other cloud load-balancer headers as
- *   fallbacks and validates that the extracted value is actually an IP
- *   (the previous hand-rolled parsing took the raw X-Forwarded-For value
- *   verbatim). Note this does not, by itself, stop X-Forwarded-For spoofing
- *   when the app is directly reachable or sits behind a proxy that forwards
- *   a client-supplied X-Forwarded-For unchanged: the underlying library
- *   still prefers X-Forwarded-For over every other header, including
- *   CF-Connecting-IP, when a syntactically valid X-Forwarded-For is present.
+ *   the audit log records for the same request, and so that the bucket key is
+ *   always a validated IP (the previous hand-rolled parsing took the raw
+ *   X-Forwarded-For value verbatim).
+ *
+ * Spoofing resistance depends on TRUSTED_PROXY_HEADER being configured. With
+ * it set, only that header is read and a client cannot influence its own
+ * bucket. Left unset, the underlying library prefers X-Forwarded-For over
+ * every other header, so a client that prepends a value to it gets a fresh
+ * bucket per request. See lib/ip-utils.ts.
  */
 function getClientIdentifier(req: NextRequest, userId?: string | null): string {
   if (userId) {
