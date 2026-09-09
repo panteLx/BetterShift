@@ -4,19 +4,27 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Tests & Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
 
       - name: Install dependencies
@@ -31,7 +39,12 @@ jobs:
       - name: i18n Check
         run: npm run i18n
 
-      - name: Database Migration Test
+      - name: Migrations apply cleanly and match the committed schema
         run: |
-          npm run db:generate
+          # Apply the committed migrations first (mirrors what the Docker image's
+          # CMD does in production), then assert that generating from the schema
+          # produces no further changes — if it does, a migration was edited
+          # without committing the generated SQL under drizzle/.
           npm run db:migrate
+          npm run db:generate
+          git diff --exit-code drizzle/

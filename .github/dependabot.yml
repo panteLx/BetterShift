@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # npm dependencies (root)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # 1.7 removes genericOAuthClient and changes the OIDC callback URL from
+      # /api/auth/oauth2/callback/:id to /api/auth/callback/:id, which would
+      # silently break every self-hoster's identity-provider configuration.
+      # That upgrade needs a deliberate migration with release notes, not an
+      # automatic PR.
+      - dependency-name: "better-auth"
+        versions:
+          - ">= 1.7.0"
+
+  # GitHub Actions workflows (root)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker base image (picks up node:24-alpine)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
