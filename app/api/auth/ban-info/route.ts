@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { user as userTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { rateLimit } from "@/lib/rate-limiter";
 
 /**
  * Public API to get ban information for a banned user
@@ -14,6 +15,9 @@ import { eq } from "drizzle-orm";
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const rateLimitResponse = rateLimit(request, null, "auth");
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await request.json();
     const { email } = body;
 
@@ -32,13 +36,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .where(eq(userTable.email, email))
       .limit(1);
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    if (!user.banned) {
+    // Respond identically whether the account does not exist or exists but
+    // is not banned, so this endpoint cannot be used to enumerate accounts.
+    if (!user || !user.banned) {
       return NextResponse.json(
-        { error: "User is not banned" },
+        { error: "No ban information available" },
         { status: 404 }
       );
     }

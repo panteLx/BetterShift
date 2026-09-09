@@ -86,6 +86,14 @@ export async function DELETE(
       );
     }
 
+    // Check if shift is externally synced (read-only)
+    if (shift.externalSyncId || shift.syncedFromExternal) {
+      return NextResponse.json(
+        { error: "Cannot delete externally synced shifts. They are read-only." },
+        { status: 403 }
+      );
+    }
+
     await db.delete(shifts).where(eq(shifts.id, id));
 
     return NextResponse.json({ success: true });
@@ -115,19 +123,19 @@ export async function PUT(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    // Check if shift is externally synced (read-only)
-    if (existingShift.externalSyncId || existingShift.syncedFromExternal) {
-      return NextResponse.json(
-        { error: "Cannot edit externally synced shifts. They are read-only." },
-        { status: 403 }
-      );
-    }
-
     // Check write permission (works for both authenticated users and guests)
     const hasAccess = await canEditCalendar(user?.id, existingShift.calendarId);
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
+        { status: 403 }
+      );
+    }
+
+    // Check if shift is externally synced (read-only)
+    if (existingShift.externalSyncId || existingShift.syncedFromExternal) {
+      return NextResponse.json(
+        { error: "Cannot edit externally synced shifts. They are read-only." },
         { status: 403 }
       );
     }
