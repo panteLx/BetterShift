@@ -98,9 +98,10 @@ export async function PUT(
       );
     }
 
-    // Check permissions
+    // Check permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    if (user && !(await canEditCalendar(user.id, calendar.id))) {
+    const hasAccess = await canEditCalendar(user?.id, calendar.id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
