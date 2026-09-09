@@ -68,6 +68,15 @@ ENV COMMIT_REF=$COMMIT_REF
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# The standalone server binds to $HOSTNAME, and Docker always sets HOSTNAME to
+# the container id. Without this default it binds to that name only, so 127.0.0.1
+# inside the container is unbound and the HEALTHCHECK below can never pass --
+# the container is reported unhealthy even though it serves traffic fine.
+# docker-compose.yml happens to supply HOSTNAME=0.0.0.0 through env_file, but a
+# plain `docker run` does not. A runtime -e still overrides this.
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
 # Create data and uploads directories (ownership is fixed at container
 # start by docker-entrypoint.sh, since a bind mount can override it)
 RUN mkdir -p /app/data /app/public/uploads
