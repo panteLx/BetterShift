@@ -25,52 +25,22 @@ interface HealthCacheEntry {
 
 let healthCache: HealthCacheEntry | null = null;
 const HEALTH_CACHE_TTL = 10000; // 10 seconds
-const HEALTH_CHECK_TIMEOUT = 2000; // 2 seconds
 
 /**
  * Lightweight internal health check function that directly probes the database
  * without calling API routes. Avoids middleware recursion and internal fetch issues.
  */
 async function checkHealthInternal(): Promise<"healthy" | "unhealthy"> {
-  let timeoutId: NodeJS.Timeout | null = null;
-
   try {
-    // Create a timeout promise that rejects after HEALTH_CHECK_TIMEOUT
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error("Database health check timeout"));
-      }, HEALTH_CHECK_TIMEOUT);
-    });
+    // better-sqlite3 is synchronous, so this either resolves immediately or throws
+    await db.select({ count: sql<number>`count(*)` }).from(user).limit(1);
 
-    // Create the database query promise
-    const dbPromise = db
-      .select({ count: sql<number>`count(*)` })
-      .from(user)
-      .limit(1);
-
-    // Race the query against the timeout
-    await Promise.race([dbPromise, timeoutPromise]);
-
-    // Query succeeded before timeout
-    if (timeoutId) clearTimeout(timeoutId);
     return "healthy";
   } catch (error) {
-    // Clear timeout if it exists
-    if (timeoutId) clearTimeout(timeoutId);
-
-    // Log specific message for timeout vs other errors
-    if (error instanceof Error && error.message.includes("timeout")) {
-      console.error(
-        "[Middleware] Health check timed out after",
-        HEALTH_CHECK_TIMEOUT,
-        "ms"
-      );
-    } else {
-      console.error(
-        "[Middleware] Health check failed:",
-        error instanceof Error ? error.message : String(error)
-      );
-    }
+    console.error(
+      "[Middleware] Health check failed:",
+      error instanceof Error ? error.message : String(error)
+    );
     return "unhealthy";
   }
 }
@@ -361,28 +331,10 @@ export async function proxy(request: NextRequest) {
   // Session token validation happens in API routes via getSessionUser()
   // Middleware only checks for cookie presence (fast routing decision)
 
-  // Add security headers to response
-  const response = NextResponse.next();
-
-  // Security Headers (Defense in Depth)
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-XSS-Protection", "1; mode=block");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-
-  // Content Security Policy (strict but allows inline scripts for Next.js hydration)
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js
-    "style-src 'self' 'unsafe-inline'", // Required for Tailwind
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self'",
-    "frame-ancestors 'none'",
-  ].join("; ");
-  response.headers.set("Content-Security-Policy", csp);
-
-  return response;
+  // Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
+  // X-XSS-Protection, Content-Security-Policy) are set globally in next.config.ts
+  // so they apply to every response, not just this fall-through branch.
+  return NextResponse.next();
 }
 
 // Configure which routes to run proxy on
