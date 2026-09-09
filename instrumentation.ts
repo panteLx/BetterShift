@@ -25,12 +25,19 @@ export async function register() {
     // succeeded — stop() is safe to call even if the service never started.
     // dumb-init (PID 1 in the container) forwards signals to this process,
     // so SIGTERM/SIGINT are reliably delivered here.
+    //
+    // Deliberately does not exit: Next registers its own SIGTERM/SIGINT
+    // cleanup before instrumentation runs, which closes the server, drains
+    // in-flight requests and then exits with the signal-based code (143/130).
+    // Calling process.exit() here would run first and cut that short, killing
+    // in-flight requests and reporting exit 0 on every container stop.
+    // stop() is fully synchronous (it only clears timers), so it completes
+    // inline and Next's cleanup takes over from here.
     const shutdown = (signal: NodeJS.Signals) => {
       if (shuttingDown) return;
       shuttingDown = true;
-      console.log(`Received ${signal}, shutting down...`);
+      console.log(`Received ${signal}, shutting down auto-sync service...`);
       autoSyncService.stop();
-      process.exit(0);
     };
     process.once("SIGTERM", shutdown);
     process.once("SIGINT", shutdown);
