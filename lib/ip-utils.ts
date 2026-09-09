@@ -1,5 +1,10 @@
 import { NextRequest } from "next/server";
-import RequestIp from "@supercharge/request-ip";
+// Named import: the package is CommonJS and exports only `getClientIp`
+// (no `default`). A default import (`import RequestIp from "..."`) resolves
+// to `undefined` under both CJS-interop (webpack/SWC) and native ESM
+// resolution because the module sets `__esModule: true` without a `.default`
+// property, so the interop helper never synthesizes one.
+import { getClientIp as resolveClientIp } from "@supercharge/request-ip";
 
 /**
  * Extract the real client IP address from a request.
@@ -20,7 +25,7 @@ export function getClientIp(request: NextRequest | Request): string | null {
     socket: {},
   };
 
-  const ip = RequestIp.getClientIp(
+  const ip = resolveClientIp(
     expressLikeRequest as {
       headers: Record<string, string>;
       connection: Record<string, unknown>;
