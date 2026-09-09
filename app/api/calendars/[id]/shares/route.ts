@@ -84,8 +84,17 @@ export async function POST(
     const body = await request.json();
     const { userId: targetUserId, permission } = body;
 
-    // Validate permission value
-    const validPermissions = ["owner", "admin", "write", "read"];
+    // Validate target user id
+    if (!targetUserId || typeof targetUserId !== "string") {
+      return NextResponse.json(
+        { error: "Invalid user id" },
+        { status: 400 }
+      );
+    }
+
+    // Validate permission value. "owner" is intentionally excluded — ownership
+    // transfer is not a share concept and only happens through admin routes.
+    const validPermissions = ["admin", "write", "read"];
     if (!validPermissions.includes(permission)) {
       return NextResponse.json(
         { error: "Invalid permission value" },
@@ -102,6 +111,15 @@ export async function POST(
           { status: 403 }
         );
       }
+    }
+
+    // Ensure the target user actually exists
+    const targetUserExists = await db.query.user.findFirst({
+      where: (users, { eq }) => eq(users.id, targetUserId),
+      columns: { id: true },
+    });
+    if (!targetUserExists) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if share already exists
