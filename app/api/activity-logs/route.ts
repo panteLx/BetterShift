@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auditLogs, syncLogs } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
+import {
+  getUserAccessibleCalendars,
+  type CalendarPermission,
+} from "@/lib/auth/permissions";
 import { eq, and, desc, gte, lte, inArray, sql } from "drizzle-orm";
 
 // Unified activity log format
@@ -226,6 +229,11 @@ export async function GET(request: NextRequest) {
  * - userId = currentUser
  * - isUserVisible = true
  * Cannot delete admin/system logs.
+ *
+ * Sync logs are only deleted for calendars the user has write access or
+ * better to (owner, admin, write) - read-only shares (including via token
+ * or public subscription) must not let a viewer wipe someone else's sync
+ * history.
  */
 export async function DELETE(request: NextRequest) {
   const user = await getSessionUser(request.headers);
@@ -242,9 +250,17 @@ export async function DELETE(request: NextRequest) {
         and(eq(auditLogs.userId, user.id), eq(auditLogs.isUserVisible, true))
       );
 
-    // Delete sync logs for user's calendars
+    // Delete sync logs only for calendars the user can edit (write or better) -
+    // read-only access must not permit destroying another owner's sync history
+    const editablePermissions: CalendarPermission[] = [
+      "owner",
+      "admin",
+      "write",
+    ];
     const accessibleCalendars = await getUserAccessibleCalendars(user.id);
-    const calendarIds = accessibleCalendars.map((cal) => cal.id);
+    const calendarIds = accessibleCalendars
+      .filter((cal) => editablePermissions.includes(cal.permission))
+      .map((cal) => cal.id);
 
     if (calendarIds.length > 0) {
       await db
