@@ -21,6 +21,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Check .nvmrc matches the Dockerfile base image
+        shell: bash
+        run: |
+          # Dependabot bumps the Dockerfile but cannot touch .nvmrc, so fail loudly on drift.
+          nvmrc="$(sed 's/^v//; s/\..*//' .nvmrc | tr -d '[:space:]')"
+          mapfile -t majors < <(grep -oE '^FROM node:[0-9]+' Dockerfile | cut -d: -f2 | sort -u)
+          if [ "${#majors[@]}" -ne 1 ] || [ "${majors[0]}" != "$nvmrc" ]; then
+            echo "::error file=.nvmrc::.nvmrc pins Node $nvmrc, Dockerfile uses ${majors[*]:-none}"
+            exit 1
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
