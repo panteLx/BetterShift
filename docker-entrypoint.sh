@@ -11,11 +11,14 @@
 # runs unprivileged.
 set -e
 
-# Everything below is the root path. When the container is started with an
-# explicit user (`docker run --user`, compose `user:`), there is nothing to
-# drop to and no privilege to chown with: su-exec would still attempt the
-# identity-changing syscalls and abort before the app ever starts.
+# When the container is started with an explicit user (`docker run --user`,
+# compose `user:`), there is nothing to drop to and no privilege to chown
+# with: su-exec would still attempt the identity-changing syscalls and abort
+# before the app ever starts. The image ships both paths owned by "node", so
+# that user needs no repair here; any other uid, or a bind mount the host has
+# not made writable for it, has to be sorted out on the host side.
 if [ "$(id -u)" != "0" ]; then
+    mkdir -p /app/data /app/public/uploads 2>/dev/null || true
     exec "$@"
 fi
 

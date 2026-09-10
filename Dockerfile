@@ -77,10 +77,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# Create data and uploads directories (ownership is fixed at container
-# start by docker-entrypoint.sh, since a bind mount can override it)
-RUN mkdir -p /app/data /app/public/uploads
-
 # Copy necessary files from builder
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
@@ -99,6 +95,17 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
+
+# The writable paths, handed to the unprivileged user at build time. This has
+# to come after the COPY of ./public, which would otherwise put a root-owned
+# uploads directory back. Giving them away here is what lets the image run
+# under an explicit `docker run --user node` with no privileged repair step.
+# A bind mount overrides all of it with the host's ownership: as root the
+# entrypoint chowns that at startup, while an explicit non-root user needs the
+# host directory to be writable for that uid -- nothing in the container can
+# fix it from the inside.
+RUN mkdir -p /app/data /app/public/uploads \
+    && chown -R node:node /app/data /app/public/uploads
 
 # Write build metadata
 RUN node -e "const fs=require('fs');fs.writeFileSync('/app/.build-info.json',JSON.stringify({version:process.env.VERSION||'',buildDate:process.env.BUILD_DATE||'',commitSha:process.env.COMMIT_SHA||'',commitRef:process.env.COMMIT_REF||''}));"
