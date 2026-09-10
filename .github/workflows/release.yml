@@ -182,7 +182,7 @@ jobs:
             COMMIT_REF=${{ github.ref_name }}
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: v${{ steps.version.outputs.VERSION }}
           body: |
