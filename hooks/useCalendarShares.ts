@@ -5,6 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  handleRateLimitError,
+  isRateLimitError,
+} from "@/lib/rate-limit-client";
 
 export interface CalendarShare {
   id: string;
@@ -318,6 +322,12 @@ export function useCalendarShares(calendarId: string) {
             query
           )}&calendarId=${calendarId}`
         );
+
+        if (isRateLimitError(response)) {
+          await handleRateLimitError(response, t);
+          setSearchResults([]);
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("Failed to search users");

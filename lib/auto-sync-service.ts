@@ -174,6 +174,16 @@ class AutoSyncService {
       }min)`
     );
 
+    // Clear any timer this call replaces. Without this, a reschedule that
+    // races an in-flight executeSync (the poll picks up a changed interval
+    // while the sync is awaiting its fetch) overwrites the map entry and
+    // orphans the previous timer, which still fires -- syncing the calendar
+    // twice per cycle at the stale interval.
+    const existing = this.timers.get(syncId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
     const timer = setTimeout(() => {
       this.executeSync(syncId, intervalMs);
     }, delay);
@@ -197,6 +207,14 @@ class AutoSyncService {
       }
     } catch (error) {
       console.error(`Auto-sync error for ${syncId}:`, error);
+    }
+
+    // The service may have been stopped, or this job removed (sync deleted
+    // or disabled), while the sync above was in flight. Either way, the
+    // timers/jobs maps no longer expect this job to exist, so rescheduling
+    // here would resurrect a stopped service or a deleted/disabled sync.
+    if (!this.isRunning || !this.jobs.has(syncId)) {
+      return;
     }
 
     // Schedule next sync

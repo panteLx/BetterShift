@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { session } from "@/lib/db/schema";
-import { eq, and, desc, ne } from "drizzle-orm";
+import { eq, and, desc, ne, gt } from "drizzle-orm";
 import { UAParser } from "ua-parser-js";
 import { auth } from "@/lib/auth";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
@@ -96,6 +96,9 @@ function parseUserAgent(userAgent: string | null): {
     ? `${osData.name}${osData.version ? ` ${osData.version}` : ""}`
     : "Unknown OS";
 
+  // UAParser leaves device.type undefined for desktop browsers, so "desktop"
+  // is the correct fallback -- and it is what app/profile/page.tsx derives
+  // client-side for the same user agent.
   const deviceType = deviceData.type || "desktop";
 
   const deviceName = `${browser} on ${os}`;
@@ -117,7 +120,7 @@ export async function getUserSessions(
   const sessions = await db
     .select()
     .from(session)
-    .where(eq(session.userId, userId))
+    .where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
     .orderBy(desc(session.updatedAt));
 
   return sessions.map((s) => {

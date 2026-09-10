@@ -17,14 +17,24 @@ export function getDateLocale(locale: string): DateFnsLocale {
   return dateFnsLocales[locale as Locale] || enUS;
 }
 
-export const defaultLocale: Locale =
-  (process.env.DEFAULT_LOCALE as Locale) || "en";
+// Validate the raw env value before it is trusted as a `Locale`, so an
+// invalid entry falls back instead of slipping through an unchecked cast.
+const rawDefaultLocale = process.env.DEFAULT_LOCALE;
 
-// Validate default locale
-if (!locales.includes(defaultLocale)) {
-  throw new Error(
-    `Invalid DEFAULT_LOCALE: ${defaultLocale}. Must be one of: ${locales.join(
+function isValidLocale(value: string | undefined): value is Locale {
+  return !!value && (locales as readonly string[]).includes(value);
+}
+
+if (rawDefaultLocale && !isValidLocale(rawDefaultLocale)) {
+  // A typo'd DEFAULT_LOCALE must not be fatal for a self-hosted app — warn
+  // loudly and fall back to "en" instead of crashing the whole server.
+  console.warn(
+    `Invalid DEFAULT_LOCALE: "${rawDefaultLocale}". Must be one of: ${locales.join(
       ", "
-    )}`
+    )}. Falling back to "en".`
   );
 }
+
+export const defaultLocale: Locale = isValidLocale(rawDefaultLocale)
+  ? rawDefaultLocale
+  : "en";

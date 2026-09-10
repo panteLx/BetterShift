@@ -30,8 +30,9 @@ export async function PUT(
     const body = await request.json();
     const { permission } = body;
 
-    // Validate permission value
-    const validPermissions = ["owner", "admin", "write", "read"];
+    // Validate permission value. "owner" is intentionally excluded — ownership
+    // transfer is not a share concept and only happens through admin routes.
+    const validPermissions = ["admin", "write", "read"];
     if (!validPermissions.includes(permission)) {
       return NextResponse.json(
         { error: "Invalid permission value" },
@@ -70,8 +71,14 @@ export async function PUT(
       return NextResponse.json({ error: "Share not found" }, { status: 404 });
     }
 
-    // Only owner can modify admin permissions
-    if (existingShare.permission === "admin") {
+    // Only owner can modify admin permissions, and only owner can modify a
+    // legacy "owner" share (ownership grants are no longer issued via shares).
+    // Cast for the "owner" comparison: the schema's enum type no longer
+    // includes it, but pre-existing rows in the database may still carry it.
+    if (
+      existingShare.permission === "admin" ||
+      (existingShare.permission as string) === "owner"
+    ) {
       const isOwner = await checkPermission(user.id, calendarId, "owner");
       if (!isOwner) {
         return NextResponse.json(

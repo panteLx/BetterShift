@@ -87,8 +87,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Check write permission (if auth is enabled)
-    if (user && !(await canEditCalendar(user.id, calendarId))) {
+    // Check write permission (works for both authenticated users and guests)
+    const hasWriteAccess = await canEditCalendar(user?.id, calendarId);
+    if (!hasWriteAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
         { status: 403 }

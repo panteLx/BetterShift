@@ -16,6 +16,24 @@ export interface SessionWithDevice {
 }
 
 /**
+ * Fetches the session list, without touching any component state. Shared
+ * by the initial mount fetch and the manual refetch path below.
+ */
+async function getSessions(): Promise<SessionWithDevice[]> {
+  // Use Better Auth's built-in listSessions. It resolves with
+  // `{ data: null, error }` on a failed response instead of rejecting, so the
+  // error has to be turned into a throw here — otherwise a failed request
+  // renders as an empty, apparently successful session list.
+  const { data, error } = await authClient.listSessions();
+
+  if (error) {
+    throw new Error(error.message || "Failed to fetch sessions");
+  }
+
+  return data || [];
+}
+
+/**
  * Hook to manage user sessions using Better Auth client
  */
 export function useSessions() {
@@ -28,9 +46,7 @@ export function useSessions() {
     setError(null);
 
     try {
-      // Use Better Auth's built-in listSessions
-      const data = await authClient.listSessions();
-      setSessions(data.data || []);
+      setSessions(await getSessions());
     } catch (err) {
       console.error("Error fetching sessions:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -65,8 +81,34 @@ export function useSessions() {
   }, [fetchSessions, sessions.length]);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    let cancelled = false;
+
+    // Inlined (rather than calling `fetchSessions`) so the initial fetch
+    // owns its own guard against a stale response resolving after this
+    // effect has already been cleaned up.
+    (async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await getSessions();
+        if (cancelled) return;
+        setSessions(data);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Error fetching sessions:", err);
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return {
     sessions,

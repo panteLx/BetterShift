@@ -85,7 +85,9 @@ export function useShiftForm({
 
   // Sync form data when dialog state changes (refs only)
   const formDataRef = useRef(formData);
-  formDataRef.current = formData;
+  useEffect(() => {
+    formDataRef.current = formData;
+  });
 
   // Only update on mount or when key changes
   useEffect(() => {
