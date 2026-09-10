@@ -145,6 +145,13 @@ Images are available at `ghcr.io/pantelx/bettershift`:
 | `vX.Y.Z` | Specific version             |
 | `dev`    | Development build (unstable) |
 
+> [!IMPORTANT]
+> **Platform support: `linux/amd64` only.**
+> Releases up to and including `v2.2.1` were also published for `linux/arm64`.
+> Starting with `v3.0.0`, ARM images are no longer built — running BetterShift
+> on ARM hardware (Raspberry Pi, Ampere, Apple Silicon) requires pinning to
+> `v2.2.1`, which will not receive further updates.
+
 ## Tech Stack
 
 | Layer     | Technology                        |

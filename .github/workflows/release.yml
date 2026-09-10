@@ -12,7 +12,7 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Never cancel an in-progress release build: a half-cancelled run could
-  # publish a broken or partial multi-arch image and/or GitHub release.
+  # publish a broken or partial image and/or GitHub release.
   cancel-in-progress: false
 
 jobs:
@@ -86,36 +86,45 @@ jobs:
           # Build changelog with grouping
           CHANGELOG=""
 
+          # Breaking changes: conventional commits mark these with a `!` before
+          # the colon (feat!:, chore(docker)!:). Listed first and also under their
+          # own type below, so an upgrade note is never buried in a long list.
+          BREAKING=$(echo "$ALL_COMMITS" | grep -E "^[a-z]+(\([^)]*\))?!:" | sed 's/|/ /' | sed 's/^/- /' || true)
+          if [ -n "$BREAKING" ]; then
+            CHANGELOG+="### ⚠️ Breaking Changes"$'\n\n'
+            CHANGELOG+="$BREAKING"$'\n\n'
+          fi
+
           # Features
-          FEATURES=$(echo "$ALL_COMMITS" | grep "^feat:" | sed 's/|/ /' | sed 's/^/- /' || true)
+          FEATURES=$(echo "$ALL_COMMITS" | grep -E "^feat(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
           if [ -n "$FEATURES" ]; then
             CHANGELOG+="### ✨ Features"$'\n\n'
             CHANGELOG+="$FEATURES"$'\n\n'
           fi
 
           # Bug Fixes
-          FIXES=$(echo "$ALL_COMMITS" | grep "^fix:" | sed 's/|/ /' | sed 's/^/- /' || true)
+          FIXES=$(echo "$ALL_COMMITS" | grep -E "^fix(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
           if [ -n "$FIXES" ]; then
             CHANGELOG+="### 🐛 Bug Fixes"$'\n\n'
             CHANGELOG+="$FIXES"$'\n\n'
           fi
 
           # Documentation
-          DOCS=$(echo "$ALL_COMMITS" | grep "^docs:" | sed 's/|/ /' | sed 's/^/- /' || true)
+          DOCS=$(echo "$ALL_COMMITS" | grep -E "^docs(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
           if [ -n "$DOCS" ]; then
             CHANGELOG+="### 📝 Documentation"$'\n\n'
             CHANGELOG+="$DOCS"$'\n\n'
           fi
 
           # Chores
-          CHORES=$(echo "$ALL_COMMITS" | grep "^chore:" | sed 's/|/ /' | sed 's/^/- /' || true)
+          CHORES=$(echo "$ALL_COMMITS" | grep -E "^chore(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
           if [ -n "$CHORES" ]; then
             CHANGELOG+="### 🔧 Chores"$'\n\n'
             CHANGELOG+="$CHORES"$'\n\n'
           fi
 
           # Other changes (not matching conventional commits)
-          OTHERS=$(echo "$ALL_COMMITS" | grep -vE "^(feat|fix|docs|chore):" | sed 's/|/ /' | sed 's/^/- /' || true)
+          OTHERS=$(echo "$ALL_COMMITS" | grep -vE "^(feat|fix|docs|chore)(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
           if [ -n "$OTHERS" ]; then
             CHANGELOG+="### 🔀 Other Changes"$'\n\n'
             CHANGELOG+="$OTHERS"$'\n\n'
@@ -130,9 +139,6 @@ jobs:
 
           # Set previous tag
           echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -164,7 +170,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

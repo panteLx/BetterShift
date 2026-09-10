@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
 
+  // No <Image> anywhere: avatars are plain <img>. Declaring that lets the
+  // trace exclude below drop sharp (~46 MB) without breaking a reachable path.
+  images: { unoptimized: true },
+  outputFileTracingExcludes: {
+    "next-server": ["**/node_modules/sharp/**/*", "**/node_modules/@img/**/*"],
+  },
+
   // Build optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === "production"
