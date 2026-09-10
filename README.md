@@ -46,6 +46,7 @@ docker run -d \
   -v ./data:/app/data \
   -e BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
   -e BETTER_AUTH_URL=http://localhost:3000 \
+  -e TZ=Europe/Berlin \
   --name bettershift \
   ghcr.io/pantelx/bettershift:latest
 ```
@@ -59,7 +60,7 @@ git clone https://github.com/pantelx/bettershift.git
 cd bettershift
 cp .env.example .env
 # Edit .env and set BETTER_AUTH_SECRET
-docker-compose up -d
+docker compose up -d
 ```
 
 ### From Source
@@ -91,10 +92,22 @@ npm run dev
 ### Required
 
 ```bash
-AUTH_ENABLED=true
 BETTER_AUTH_SECRET=          # npx @better-auth/cli secret
-BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_URL=https://shifts.example.com   # public URL, no trailing slash
 ```
+
+### Recommended
+
+```bash
+TZ=Europe/Berlin             # without it the container runs on UTC
+DEFAULT_LOCALE=en            # cs, de, en, es, fr, it
+AUTH_ENABLED=true            # false serves everything publicly, without accounts
+TRUSTED_PROXY_HEADER=        # CF-Connecting-IP behind Cloudflare, X-Real-IP behind Caddy/nginx
+```
+
+Behind a reverse proxy `TRUSTED_PROXY_HEADER` decides which header the real
+client IP is read from. Rate limits and audit-log entries are keyed off it, so
+leaving it wrong lumps every visitor into one bucket.
 
 ### Optional: OAuth Providers
 
