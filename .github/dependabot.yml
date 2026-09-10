@@ -28,6 +28,15 @@ updates:
       - dependency-name: "better-sqlite3"
         versions:
           - ">= 13.0.0"
+      # 10 removes the deprecated rule-context methods, which eslint-plugin-react
+      # still calls (`contextOrFilename.getFilename is not a function`). Its
+      # newest release, 7.37.5, caps its peer range at eslint ^9.7, and
+      # eslint-config-next pins ^7.37.0 even on canary — so there is no override
+      # that fixes this. eslint-config-next's own peer range of ">=9.0.0" is what
+      # lets npm install 10 in the first place. Revisit once that chain supports 10.
+      - dependency-name: "eslint"
+        versions:
+          - ">= 10.0.0"
 
   # GitHub Actions workflows (root)
   - package-ecosystem: "github-actions"
