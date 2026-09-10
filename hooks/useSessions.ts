@@ -20,9 +20,17 @@ export interface SessionWithDevice {
  * by the initial mount fetch and the manual refetch path below.
  */
 async function getSessions(): Promise<SessionWithDevice[]> {
-  // Use Better Auth's built-in listSessions
-  const data = await authClient.listSessions();
-  return data.data || [];
+  // Use Better Auth's built-in listSessions. It resolves with
+  // `{ data: null, error }` on a failed response instead of rejecting, so the
+  // error has to be turned into a throw here — otherwise a failed request
+  // renders as an empty, apparently successful session list.
+  const { data, error } = await authClient.listSessions();
+
+  if (error) {
+    throw new Error(error.message || "Failed to fetch sessions");
+  }
+
+  return data || [];
 }
 
 /**

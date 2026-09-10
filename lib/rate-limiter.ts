@@ -25,6 +25,8 @@
  * - RATE_LIMIT_TOKEN_VALIDATION_WINDOW
  * - RATE_LIMIT_TOKEN_CREATION_REQUESTS - Token creation (per calendar)
  * - RATE_LIMIT_TOKEN_CREATION_WINDOW
+ * - RATE_LIMIT_USER_SEARCH_REQUESTS - User directory search (per user)
+ * - RATE_LIMIT_USER_SEARCH_WINDOW
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -125,6 +127,13 @@ const config = {
       parseInt(process.env.RATE_LIMIT_TOKEN_CREATION_WINDOW || "3600", 10) *
       1000, // 1 hour
   },
+  // Directory search used by the calendar-share dialog. Keyed per user, and
+  // generous enough for typing with the client-side debounce in place.
+  userSearch: {
+    requests: parseInt(process.env.RATE_LIMIT_USER_SEARCH_REQUESTS || "30", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_USER_SEARCH_WINDOW || "60", 10) * 1000,
+  },
   // Admin Panel
   adminUserMutations: {
     requests: parseInt(process.env.RATE_LIMIT_ADMIN_USER_MUTATIONS || "10", 10),
@@ -160,6 +169,33 @@ const config = {
       ) * 1000, // 1 minute
   },
 };
+
+/**
+ * Maps the endpoint type used by callers to its configuration. Also the single
+ * source of truth for which types exist — `RateLimitType` is derived from it,
+ * so adding an entry here is all it takes to add a new limit.
+ */
+const limitsByType = {
+  auth: config.auth,
+  "ban-info": config.banInfo,
+  register: config.register,
+  "password-change": config.passwordChange,
+  "account-delete": config.accountDelete,
+  "upload-avatar": config.uploadAvatar,
+  "calendar-create": config.calendarCreate,
+  "external-sync": config.externalSync,
+  "export-pdf": config.exportPdf,
+  "export-ics": config.exportIcs,
+  "token-validation": config.tokenValidation,
+  "token-creation": config.tokenCreation,
+  "user-search": config.userSearch,
+  "admin-user-mutations": config.adminUserMutations,
+  "admin-password-reset": config.adminPasswordReset,
+  "admin-bulk-operations": config.adminBulkOperations,
+  "admin-calendar-mutations": config.adminCalendarMutations,
+} as const;
+
+export type RateLimitType = keyof typeof limitsByType;
 
 // =============================================================================
 // Types
@@ -231,14 +267,13 @@ if (typeof setInterval === "function") {
  * - Authenticated: User ID
  * - Unauthenticated: IP Address, via getClientIp() so this agrees with what
  *   the audit log records for the same request, and so that the bucket key is
- *   always a validated IP (the previous hand-rolled parsing took the raw
- *   X-Forwarded-For value verbatim).
+ *   always a validated IP rather than a raw header value.
  *
- * Spoofing resistance depends on TRUSTED_PROXY_HEADER being configured. With
- * it set, only that header is read and a client cannot influence its own
- * bucket. Left unset, the underlying library prefers X-Forwarded-For over
- * every other header, so a client that prepends a value to it gets a fresh
- * bucket per request. See lib/ip-utils.ts.
+ * getClientIp() never returns a client-controlled value: with
+ * TRUSTED_PROXY_HEADER set only that header is read, and without it only the
+ * last X-Forwarded-For entry, which the nearest proxy appends. Requests that
+ * carry no usable address at all collapse into one shared "ip:unknown"
+ * bucket, which is the conservative outcome. See lib/ip-utils.ts.
  */
 function getClientIdentifier(req: NextRequest, userId?: string | null): string {
   if (userId) {
@@ -255,10 +290,14 @@ function getClientIdentifier(req: NextRequest, userId?: string | null): string {
  */
 function checkRateLimit(
   identifier: string,
-  options: RateLimitOptions
+  options: RateLimitOptions,
+  scope: RateLimitType
 ): RateLimitResult {
   const now = Date.now();
-  const key = `${identifier}:${options.windowMs}`;
+  // The scope has to be part of the key: two endpoint types that happen to
+  // share a window length (auth and ban-info are both 60s) would otherwise
+  // draw from one counter, which silently undoes their separate budgets.
+  const key = `${scope}:${identifier}:${options.windowMs}`;
 
   // Clean up expired entry
   cleanupExpiredEntry(key, now);
@@ -351,89 +390,23 @@ function addRateLimitHeaders(
 export function rateLimit(
   req: NextRequest,
   userId?: string | null,
-  type:
-    | "auth"
-    | "ban-info"
-    | "register"
-    | "password-change"
-    | "account-delete"
-    | "upload-avatar"
-    | "calendar-create"
-    | "external-sync"
-    | "export-pdf"
-    | "export-ics"
-    | "token-validation"
-    | "token-creation"
-    | "admin-user-mutations"
-    | "admin-password-reset"
-    | "admin-bulk-operations"
-    | "admin-calendar-mutations" = "auth",
+  type: RateLimitType = "auth",
   resourceId?: string
 ): NextResponse | null {
   // Special handling for resource-based limits (e.g., token-creation per calendar)
   let identifier: string;
-  if (type === "token-creation" && resourceId) {
-    identifier = `calendar:${resourceId}`;
-  } else if (type === "external-sync" && resourceId) {
+  if (
+    (type === "token-creation" || type === "external-sync") &&
+    resourceId
+  ) {
     identifier = `calendar:${resourceId}`;
   } else {
     identifier = getClientIdentifier(req, userId);
   }
 
-  // Select config based on type
-  let options: RateLimitOptions;
-  switch (type) {
-    case "auth":
-      options = config.auth;
-      break;
-    case "ban-info":
-      options = config.banInfo;
-      break;
-    case "register":
-      options = config.register;
-      break;
-    case "password-change":
-      options = config.passwordChange;
-      break;
-    case "account-delete":
-      options = config.accountDelete;
-      break;
-    case "upload-avatar":
-      options = config.uploadAvatar;
-      break;
-    case "calendar-create":
-      options = config.calendarCreate;
-      break;
-    case "external-sync":
-      options = config.externalSync;
-      break;
-    case "export-pdf":
-      options = config.exportPdf;
-      break;
-    case "export-ics":
-      options = config.exportIcs;
-      break;
-    case "token-validation":
-      options = config.tokenValidation;
-      break;
-    case "token-creation":
-      options = config.tokenCreation;
-      break;
-    case "admin-user-mutations":
-      options = config.adminUserMutations;
-      break;
-    case "admin-password-reset":
-      options = config.adminPasswordReset;
-      break;
-    case "admin-bulk-operations":
-      options = config.adminBulkOperations;
-      break;
-    case "admin-calendar-mutations":
-      options = config.adminCalendarMutations;
-      break;
-  }
+  const options = limitsByType[type];
 
-  const result = checkRateLimit(identifier, options);
+  const result = checkRateLimit(identifier, options, type);
 
   if (!result.success) {
     // Rate limit exceeded
@@ -478,58 +451,12 @@ export function rateLimit(
  */
 export function getRateLimitStatus(
   identifier: string,
-  type:
-    | "auth"
-    | "register"
-    | "password-change"
-    | "account-delete"
-    | "upload-avatar"
-    | "calendar-create"
-    | "external-sync"
-    | "export-pdf"
-    | "export-ics"
-    | "token-validation"
-    | "token-creation" = "auth"
+  type: RateLimitType = "auth"
 ): RateLimitResult {
-  let options: RateLimitOptions;
-  switch (type) {
-    case "auth":
-      options = config.auth;
-      break;
-    case "register":
-      options = config.register;
-      break;
-    case "password-change":
-      options = config.passwordChange;
-      break;
-    case "account-delete":
-      options = config.accountDelete;
-      break;
-    case "upload-avatar":
-      options = config.uploadAvatar;
-      break;
-    case "calendar-create":
-      options = config.calendarCreate;
-      break;
-    case "external-sync":
-      options = config.externalSync;
-      break;
-    case "export-pdf":
-      options = config.exportPdf;
-      break;
-    case "export-ics":
-      options = config.exportIcs;
-      break;
-    case "token-validation":
-      options = config.tokenValidation;
-      break;
-    case "token-creation":
-      options = config.tokenCreation;
-      break;
-  }
+  const options = limitsByType[type];
 
   const now = Date.now();
-  const key = `${identifier}:${options.windowMs}`;
+  const key = `${type}:${identifier}:${options.windowMs}`;
   cleanupExpiredEntry(key, now);
 
   const entry = store.get(key);

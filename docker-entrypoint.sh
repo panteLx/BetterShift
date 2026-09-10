@@ -11,11 +11,18 @@
 # runs unprivileged.
 set -e
 
+# Everything below is the root path. When the container is started with an
+# explicit user (`docker run --user`, compose `user:`), there is nothing to
+# drop to and no privilege to chown with: su-exec would still attempt the
+# identity-changing syscalls and abort before the app ever starts.
+if [ "$(id -u)" != "0" ]; then
+    exec "$@"
+fi
+
 for dir in /app/data /app/public/uploads; do
     mkdir -p "$dir"
-    # Skip the chown if ownership is already correct -- this is also what
-    # keeps the container working when it is run with `--user`, where root
-    # is unavailable and chown would otherwise fail.
+    # Skip the chown when ownership is already correct, so an upgrade of a
+    # deployment whose volumes are fine does not walk the whole tree.
     owner="$(stat -c '%u:%g' "$dir")"
     if [ "$owner" != "$(id -u node):$(id -g node)" ]; then
         chown -R node:node "$dir" 2>/dev/null || true

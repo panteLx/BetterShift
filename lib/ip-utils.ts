@@ -1,10 +1,4 @@
 import { NextRequest } from "next/server";
-// Named import: the package is CommonJS and exports only `getClientIp`
-// (no `default`). A default import (`import RequestIp from "..."`) resolves
-// to `undefined` under both CJS-interop (webpack/SWC) and native ESM
-// resolution because the module sets `__esModule: true` without a `.default`
-// property, so the interop helper never synthesizes one.
-import { getClientIp as resolveClientIp } from "@supercharge/request-ip";
 
 const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 const IPV6 = /^[0-9a-f:]+$/i;
@@ -14,21 +8,15 @@ const IPV6 = /^[0-9a-f:]+$/i;
 const IPV4_MAPPED = /^::(?:ffff:)?(?=\d{1,3}\.)/i;
 
 /**
- * Parse a single client IP out of a raw header value.
+ * Normalise a single address into a canonical, validated form.
  *
- * Handles the shapes proxies actually emit: a comma-separated forwarding
- * chain, a bracketed IPv6 literal, an appended port, and an IPv6 zone index.
- * Anything that does not parse as an IP is rejected rather than passed on —
- * the result becomes a rate-limit bucket key and an audit-log field, so a
- * caller-controlled arbitrary string must never reach either.
+ * Handles the shapes proxies actually emit: a bracketed IPv6 literal, an
+ * appended port, and an IPv6 zone index. Anything that does not parse as an IP
+ * is rejected rather than passed on — the result becomes a rate-limit bucket
+ * key and an audit-log field, so a caller-controlled arbitrary string must
+ * never reach either.
  */
-function parseIp(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-
-  // A forwarding chain lists the client first, then each proxy it passed.
-  let value = raw.split(",")[0].trim();
-  if (!value) return null;
-
+function normalizeIp(value: string): string | null {
   if (value.startsWith("[")) {
     // Bracketed IPv6, optionally with a port: [::1]:443
     const end = value.indexOf("]");
@@ -59,44 +47,60 @@ function parseIp(raw: string | null | undefined): string | null {
 }
 
 /**
+ * Pick one address out of a raw header value.
+ *
+ * `from` selects which end of a comma-separated forwarding chain to read.
+ * "start" is the client as the first proxy saw it — correct for a header a
+ * trusted proxy sets itself. "end" is the address the *nearest* proxy
+ * observed, which is the only entry a client cannot influence.
+ */
+function parseIp(
+  raw: string | null | undefined,
+  from: "start" | "end" = "start"
+): string | null {
+  if (!raw) return null;
+
+  const parts = raw.split(",");
+  const value = (from === "start" ? parts[0] : parts[parts.length - 1]).trim();
+  if (!value) return null;
+
+  return normalizeIp(value);
+}
+
+/**
  * Extract the real client IP address from a request.
  *
- * When `TRUSTED_PROXY_HEADER` is set, that header is the *only* source: its
- * value is taken verbatim and no other header is consulted. Use this whenever
- * the app sits behind a proxy that sets a header the client cannot forge —
- * `CF-Connecting-IP` behind Cloudflare, for example. Without it the resolution
- * order is the library's, which prefers `X-Forwarded-For`; since most proxies
- * append to that header rather than replace it, a client-supplied value ends up
- * first in the chain and wins. That is spoofable, and it is why the rate limiter
- * can be evaded by rotating the header on a deployment that leaves this unset.
+ * Resolution depends on `TRUSTED_PROXY_HEADER`:
  *
- * If the configured header is absent, this returns null rather than falling
- * back to a spoofable header. Callers treat that as an unidentified client,
- * which is the conservative outcome: requests that bypass the proxy share one
- * rate-limit bucket instead of getting a fresh one each time.
+ * - Set to a header name: that header is the *only* source and its value is
+ *   taken verbatim. Use this whenever a proxy in front sets a header the
+ *   client cannot forge — `CF-Connecting-IP` behind Cloudflare, for example.
+ *   If the header is absent, this returns null rather than falling back to
+ *   anything else: a request that bypassed the proxy is an unidentified
+ *   client, not a fresh identity.
+ * - Set to `none`: nothing is trusted and this always returns null. For a
+ *   deployment with no proxy at all, where every forwarding header is
+ *   client-supplied and therefore worthless.
+ * - Unset: the last entry of `X-Forwarded-For` is used. Proxies append the
+ *   address they saw, so with a single reverse proxy in front that entry is
+ *   the real peer and a client cannot prepend its way past it. With a longer
+ *   chain (Cloudflare in front of Caddy) it resolves to the nearest hop rather
+ *   than the client, which costs precision but is still unforgeable — that
+ *   deployment should name its trusted header instead.
+ *
+ * Reading the *first* entry, which is what most helper libraries do, is what
+ * makes rate limits evadable: the client simply prepends a value of its own.
  *
  * @param request - Request object (NextRequest or standard Request)
- * @returns Client IP address or null if not found
+ * @returns Client IP address or null if none could be established
  */
 export function getClientIp(request: NextRequest | Request): string | null {
   const trustedHeader = process.env.TRUSTED_PROXY_HEADER?.trim();
+
   if (trustedHeader) {
+    if (trustedHeader.toLowerCase() === "none") return null;
     return parseIp(request.headers.get(trustedHeader));
   }
 
-  // Create a minimal Express-like request object for the library
-  const expressLikeRequest = {
-    headers: Object.fromEntries(request.headers.entries()),
-    connection: {},
-    socket: {},
-  };
-
-  const ip = resolveClientIp(
-    expressLikeRequest as {
-      headers: Record<string, string>;
-      connection: Record<string, unknown>;
-      socket: Record<string, unknown>;
-    }
-  );
-  return ip || null;
+  return parseIp(request.headers.get("x-forwarded-for"), "end");
 }

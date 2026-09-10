@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Search, UserPlus, X } from "lucide-react";
 import {
@@ -50,15 +50,25 @@ export function CalendarShareUserSearch({
   );
   const [loading, setLoading] = useState(false);
 
-  // Debounced search
+  // Debounced search. The timer lives in a ref because the previous version
+  // returned a cleanup function from an event handler, where nothing ever
+  // calls it -- every keystroke fired its own request.
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+  }, []);
+
   const handleSearch = useCallback(
     (value: string) => {
       setQuery(value);
       setSelectedUser(null);
-      const timeoutId = setTimeout(() => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      searchTimeout.current = setTimeout(() => {
         searchUsers(value);
       }, 300);
-      return () => clearTimeout(timeoutId);
     },
     [searchUsers]
   );
