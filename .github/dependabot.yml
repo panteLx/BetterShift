@@ -37,6 +37,13 @@ updates:
       - dependency-name: "eslint"
         versions:
           - ">= 10.0.0"
+      # 7 is the native port and no longer exposes the compiler API: `next build`
+      # aborts with "TypeScript 7.0.2 does not provide the compiler API required
+      # by Next.js", and typescript-eslint refuses to load at all. 6.x is what
+      # Next.js points at instead and stays reachable through this rule.
+      - dependency-name: "typescript"
+        versions:
+          - ">= 7.0.0"
 
   # GitHub Actions workflows (root)
   - package-ecosystem: "github-actions"
