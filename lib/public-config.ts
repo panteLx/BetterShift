@@ -28,10 +28,13 @@ export function getPublicConfig() {
     // =============================================================================
     auth: {
       /**
-       * Whether the authentication system is enabled
-       * @default false
+       * Whether the authentication system is enabled.
+       * Must match AUTH_ENABLED in lib/auth/env.ts -- if the browser disagrees
+       * with the server here, the UI drops into single-user mode while the API
+       * keeps rejecting every request.
+       * @default true
        */
-      enabled: process.env.AUTH_ENABLED === "true",
+      enabled: process.env.AUTH_ENABLED !== "false",
 
       /**
        * Better Auth base URL for callbacks and API endpoints
