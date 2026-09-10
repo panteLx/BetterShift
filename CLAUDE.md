@@ -30,7 +30,7 @@ There is no unit-test framework here — "tests" means the lint/build/i18n pipel
 
 ### Request flow
 
-```
+```text
 proxy.ts  →  app/api/**/route.ts  →  getSessionUser(headers)  →  permission check  →  db  →  NextResponse.json()
 component →  hooks/use*.ts (TanStack Query) → fetch("/api/…") → cache keyed via lib/query-keys.ts
 ```
@@ -56,9 +56,9 @@ Purely visual preferences (shifts shown per day, note visibility, full titles) l
 
 Two independent questions, easy to conflate:
 
-**May the user do X?** `getUserCalendarPermission()` in `lib/auth/permissions.ts` resolves, in priority order: owner → `calendarShares` row → access-token cookie → `calendar.guestPermission`. In routes call the wrappers `canViewCalendar` / `canEditCalendar` / `canManageCalendar` / `canDeleteCalendar` instead of touching the tables.
+**May the user do X?** `getUserCalendarPermission()` in `lib/auth/permissions.ts` resolves, in priority order: owner → `calendarShares` row → access-token cookie → `calendar.guestPermission`. That last step is not unconditional for a signed-in user: it applies only when a `userCalendarSubscriptions` row with `status: "subscribed"` exists, so a public calendar someone dismissed grants them nothing until they re-subscribe. Guests reach `guestPermission` without that check. In routes call the wrappers `canViewCalendar` / `canEditCalendar` / `canManageCalendar` / `canDeleteCalendar` instead of touching the tables.
 
-**Does the calendar show up in their list?** `getUserAccessibleCalendars()` additionally applies `userCalendarSubscriptions`. Shared and publicly visible calendars can be dismissed by a user (`status: "dismissed"`), the calendar-discovery sheet lets them re-subscribe, and owned calendars can never be hidden. A permission check alone therefore does not tell you whether a calendar is visible.
+**Does the calendar show up in their list?** `getUserAccessibleCalendars()` applies `userCalendarSubscriptions` across the board, not just on the guest-permission branch above. Shared and publicly visible calendars can be dismissed by a user (`status: "dismissed"`), the calendar-discovery sheet lets them re-subscribe, and owned calendars can never be hidden. A permission check alone therefore does not tell you whether a calendar is visible.
 
 `AUTH_ENABLED=false` short-circuits both: every calendar becomes `owner` for everyone. Gate on `isAuthEnabled()` / `allowGuestAccess()` from `lib/auth/feature-flags.ts` rather than assuming a session exists.
 
