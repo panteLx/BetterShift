@@ -11,9 +11,5 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-      # Persist uploaded avatars on the host; without this they live only
-      # in the container's writable layer and are lost on every
-      # `docker compose pull && docker compose up -d`.
-      - ./data/uploads:/app/public/uploads
     env_file:
       - .env
