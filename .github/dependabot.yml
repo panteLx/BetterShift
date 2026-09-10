@@ -19,6 +19,15 @@ updates:
       - dependency-name: "better-auth"
         versions:
           - ">= 1.7.0"
+      # 13.0 rewrote the driver onto N-API and dropped the prebuild-install
+      # release assets. The npm package now ships prebuilds/, but it also ships
+      # binding.gyp without an install script, so npm falls back to
+      # `node-gyp rebuild` and compiles from source — which fails in the slim
+      # Alpine image, and would mean a from-scratch rewrite of the only
+      # datastore either way. Revisit once upstream stops triggering node-gyp.
+      - dependency-name: "better-sqlite3"
+        versions:
+          - ">= 13.0.0"
 
   # GitHub Actions workflows (root)
   - package-ecosystem: "github-actions"
