@@ -55,9 +55,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          # Fork PRs get a read-only GITHUB_TOKEN, so pushing to ghcr.io only happens
-          # on pushes to main; PRs still get the full multi-arch build as a check.
-          push: ${{ github.event_name == 'push' }}
+          # Fork PRs get a read-only GITHUB_TOKEN and cannot push to ghcr.io, so they
+          # only run the multi-arch build as a check. Pushes to main and PRs from
+          # branches in this repository publish their image (dev / pr-<number>).
+          push: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
