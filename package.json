@@ -13,7 +13,7 @@
     "test": "npm run lint && npm run build && npm run i18n",
     "test:ci": "npm run lint && npm run build && npm run i18n && npm run db:generate && npm run db:migrate",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node scripts/migrate.mjs",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "i18n": "tsx scripts/i18n-checks.ts",

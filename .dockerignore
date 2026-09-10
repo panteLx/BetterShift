@@ -1,5 +1,7 @@
 # dependencies
-node_modules
+# **/ because Docker matches the whole relative path: a bare "node_modules"
+# excludes the root one only.
+**/node_modules
 .pnp
 .pnp.*
 
@@ -7,7 +9,7 @@ node_modules
 coverage
 
 # next.js
-.next/
+**/.next/
 out/
 build
 
@@ -47,6 +49,10 @@ data/
 .gitignore
 .github
 
+# Agent worktrees: gitignored, so CI never sends them -- a local build does.
+.claude
+.LOCAL
+
 # IDE
 .vscode
 .idea
@@ -55,7 +61,5 @@ data/
 docker-compose.override.yml
 
 # misc
-README.md
 *.md
-test-changelog.sh
 LICENSE

@@ -7,6 +7,12 @@ on:
   pull_request:
     branches:
       - main
+    # The image content of a translations- or docs-only PR is covered by the
+    # main build.
+    paths-ignore:
+      - "messages/**"
+      - "docs/**"
+      - "**/*.md"
 
 permissions:
   contents: read
@@ -24,9 +30,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -55,15 +58,21 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          # Fork PRs get a read-only GITHUB_TOKEN and cannot push to ghcr.io, so they
-          # only run the multi-arch build as a check. Pushes to main and PRs from
+          # Fork PRs get a read-only GITHUB_TOKEN and cannot push to ghcr.io, so
+          # they only run the build as a check. Pushes to main and PRs from
           # branches in this repository publish their image (dev / pr-<number>).
           push: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Only write the cache on main. Actions caches are scoped per ref, so a
+          # PR's export is never read back, and mode=max on a PR evicts main's
+          # entry from the 10 GB budget -- ~5.5 min of export per PR run.
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max' || '' }}
+          # No consumer for provenance/SBOM on a dev image, and it adds the
+          # unknown/unknown entries in the ghcr tag list.
+          provenance: false
           build-args: |
             VERSION=dev
             BUILD_DATE=${{ steps.timestamp.outputs.BUILD_DATE }}
