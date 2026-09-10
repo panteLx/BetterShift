@@ -55,7 +55,7 @@ jobs:
         run: echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           # Fork PRs get a read-only GITHUB_TOKEN and cannot push to ghcr.io, so
