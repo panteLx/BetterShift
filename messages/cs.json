@@ -893,14 +893,10 @@
     "repeatPassword": "Zopakovat heslo",
     "passwordsMatch": "Hesla se shodují",
     "haveAccount": "Už máte účet?",
-    "registerNote": "Registrace probíhá pouze e-mailem. Poskytovatelé jako Google nebo SSO jsou k dispozici při přihlášení. První účet instance se stane superadministrátorem.",
     "showPassword": "Zobrazit heslo",
     "hidePassword": "Skrýt heslo",
     "sampleMonth": "Ukázkový měsíc",
-    "instance": "Instance",
-    "statusOk": "dostupná",
-    "statusDown": "nedostupná",
-    "statusChecking": "ověřuje se …"
+    "instance": "Instance"
   },
   "emptyState": {
     "guestBadge": "Host",
@@ -911,7 +907,6 @@
     "guestTitle": "Žádný kalendář není veřejně sdílen",
     "guestDescription": "Bez účtu vidíte jen kalendáře, které byly výslovně otevřeny pro hosty. Pokud jste dostali přístupový odkaz, otevřete ho přímo – odkaz obsahuje přístup.",
     "pasteAccessLink": "Vložit přístupový odkaz",
-    "registrationEnabled": "Registrace je na této instanci povolena.",
     "accessLinkDescription": "Vložte odkaz, který jste dostali – nebo jen token z něj.",
     "accessLinkLabel": "Přístupový odkaz",
     "accessLinkInvalid": "Toto není platný přístupový odkaz.",

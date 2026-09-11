@@ -893,14 +893,10 @@
     "repeatPassword": "Passwort wiederholen",
     "passwordsMatch": "Passwörter stimmen überein",
     "haveAccount": "Schon ein Konto?",
-    "registerNote": "Registrierung läuft nur über E-Mail. Anmeldeanbieter wie Google oder SSO stehen erst beim Anmelden zur Verfügung. Der erste Account einer Instanz wird Superadmin.",
     "showPassword": "Passwort anzeigen",
     "hidePassword": "Passwort verbergen",
     "sampleMonth": "Beispielmonat",
-    "instance": "Instanz",
-    "statusOk": "erreichbar",
-    "statusDown": "nicht erreichbar",
-    "statusChecking": "wird geprüft …"
+    "instance": "Instanz"
   },
   "emptyState": {
     "guestBadge": "Gast",
@@ -911,7 +907,6 @@
     "guestTitle": "Kein Kalender öffentlich freigegeben",
     "guestDescription": "Ohne Konto siehst du nur Kalender, die ausdrücklich für Gäste geöffnet wurden. Wenn du einen Zugangslink bekommen hast, öffne ihn direkt – der Link enthält den Zugriff.",
     "pasteAccessLink": "Zugangslink einfügen",
-    "registrationEnabled": "Registrierung ist an dieser Instanz aktiviert.",
     "accessLinkDescription": "Füge den Link ein, den du bekommen hast – oder nur den Token daraus.",
     "accessLinkLabel": "Zugangslink",
     "accessLinkInvalid": "Das ist kein gültiger Zugangslink.",

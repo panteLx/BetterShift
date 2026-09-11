@@ -893,14 +893,10 @@
     "repeatPassword": "Répéter le mot de passe",
     "passwordsMatch": "Les mots de passe correspondent",
     "haveAccount": "Vous avez déjà un compte ?",
-    "registerNote": "L'inscription se fait uniquement par e-mail. Les fournisseurs comme Google ou le SSO sont disponibles lors de la connexion. Le premier compte d'une instance devient superadministrateur.",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
     "sampleMonth": "Mois d'exemple",
-    "instance": "Instance",
-    "statusOk": "accessible",
-    "statusDown": "inaccessible",
-    "statusChecking": "vérification …"
+    "instance": "Instance"
   },
   "emptyState": {
     "guestBadge": "Invité",
@@ -911,7 +907,6 @@
     "guestTitle": "Aucun calendrier partagé publiquement",
     "guestDescription": "Sans compte, vous ne voyez que les calendriers explicitement ouverts aux invités. Si vous avez reçu un lien d'accès, ouvrez-le directement – le lien contient l'accès.",
     "pasteAccessLink": "Coller un lien d'accès",
-    "registrationEnabled": "L'inscription est activée sur cette instance.",
     "accessLinkDescription": "Collez le lien que vous avez reçu – ou seulement le jeton qu'il contient.",
     "accessLinkLabel": "Lien d'accès",
     "accessLinkInvalid": "Ce n'est pas un lien d'accès valide.",

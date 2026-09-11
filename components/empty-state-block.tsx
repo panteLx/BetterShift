@@ -15,14 +15,12 @@ export function EmptyStateBlock({
   title,
   description,
   actions,
-  footnote,
 }: {
   icon: LucideIcon;
   tone?: keyof typeof TONES;
   title: ReactNode;
   description: ReactNode;
   actions?: ReactNode;
-  footnote?: ReactNode;
 }) {
   return (
     <div className="flex w-full max-w-[520px] flex-col items-center gap-4 text-center">
@@ -47,7 +45,6 @@ export function EmptyStateBlock({
           {actions}
         </div>
       )}
-      {footnote && <p className="text-[13px] text-fg-tertiary">{footnote}</p>}
     </div>
   );
 }

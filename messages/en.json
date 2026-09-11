@@ -893,14 +893,10 @@
     "repeatPassword": "Repeat password",
     "passwordsMatch": "Passwords match",
     "haveAccount": "Already have an account?",
-    "registerNote": "Registration works by email only. Sign-in providers such as Google or SSO are available when signing in. The first account on an instance becomes superadmin.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "sampleMonth": "Sample month",
-    "instance": "Instance",
-    "statusOk": "reachable",
-    "statusDown": "unreachable",
-    "statusChecking": "checking …"
+    "instance": "Instance"
   },
   "emptyState": {
     "guestBadge": "Guest",
@@ -911,7 +907,6 @@
     "guestTitle": "No calendar is shared publicly",
     "guestDescription": "Without an account you only see calendars that were explicitly opened to guests. If you received an access link, open it directly – the link carries the access.",
     "pasteAccessLink": "Paste access link",
-    "registrationEnabled": "Registration is enabled on this instance.",
     "accessLinkDescription": "Paste the link you received – or just the token from it.",
     "accessLinkLabel": "Access link",
     "accessLinkInvalid": "This is not a valid access link.",

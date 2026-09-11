@@ -893,14 +893,10 @@
     "repeatPassword": "Repetir contraseña",
     "passwordsMatch": "Las contraseñas coinciden",
     "haveAccount": "¿Ya tienes una cuenta?",
-    "registerNote": "El registro solo funciona por correo electrónico. Proveedores como Google o SSO están disponibles al iniciar sesión. La primera cuenta de una instancia se convierte en superadministrador.",
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "sampleMonth": "Mes de ejemplo",
-    "instance": "Instancia",
-    "statusOk": "accesible",
-    "statusDown": "no accesible",
-    "statusChecking": "comprobando …"
+    "instance": "Instancia"
   },
   "emptyState": {
     "guestBadge": "Invitado",
@@ -911,7 +907,6 @@
     "guestTitle": "Ningún calendario compartido públicamente",
     "guestDescription": "Sin cuenta solo ves los calendarios abiertos expresamente a invitados. Si has recibido un enlace de acceso, ábrelo directamente: el enlace contiene el acceso.",
     "pasteAccessLink": "Pegar enlace de acceso",
-    "registrationEnabled": "El registro está activado en esta instancia.",
     "accessLinkDescription": "Pega el enlace que has recibido, o solo el token que contiene.",
     "accessLinkLabel": "Enlace de acceso",
     "accessLinkInvalid": "No es un enlace de acceso válido.",

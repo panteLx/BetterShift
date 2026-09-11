@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentProps, ReactNode, useEffect, useMemo, useState } from "react";
+import { ComponentProps, ReactNode, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   eachDayOfInterval,
@@ -14,6 +14,7 @@ import {
 } from "date-fns";
 import { CalendarDays, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
@@ -172,36 +173,14 @@ function SampleMonth() {
   );
 }
 
-type Health = { ok: boolean; version?: string };
-
 function InstanceFacts() {
   const t = useTranslations();
-  const [health, setHealth] = useState<Health | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/health", { cache: "no-store", signal: controller.signal })
-      .then(async (response) => {
-        const data = await response.json().catch(() => null);
-        setHealth({ ok: response.ok, version: data?.version });
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setHealth({ ok: false });
-      });
-    return () => controller.abort();
-  }, []);
+  const version = useVersionInfo()?.version;
 
   const host = typeof window === "undefined" ? "" : window.location.host;
-  const status = !health
-    ? { dot: "bg-[#667085]", label: t("authPage.statusChecking") }
-    : health.ok
-      ? { dot: "bg-[#12b76a]", label: t("authPage.statusOk") }
-      : { dot: "bg-[#f04438]", label: t("authPage.statusDown") };
-
-  const facts: { label: string; value: string; dot?: string }[] = [
+  const facts = [
     { label: t("authPage.instance"), value: host },
-    { label: t("admin.systemInfo.version"), value: health?.version ?? "–" },
-    { label: t("common.labels.status"), value: status.label, dot: status.dot },
+    { label: t("admin.systemInfo.version"), value: version ?? "–" },
   ];
 
   return (
@@ -209,14 +188,7 @@ function InstanceFacts() {
       {facts.map((fact) => (
         <div key={fact.label} className="flex items-center gap-2.5">
           <dt className="w-[78px] shrink-0 text-[#8a94a6]">{fact.label}</dt>
-          <dd className="flex min-w-0 items-center gap-2.5 text-[#d0d5dd]">
-            {fact.dot && (
-              <span
-                className={cn("size-1.5 shrink-0 rounded-full", fact.dot)}
-              />
-            )}
-            <span className="truncate">{fact.value}</span>
-          </dd>
+          <dd className="min-w-0 truncate text-[#d0d5dd]">{fact.value}</dd>
         </div>
       ))}
     </dl>

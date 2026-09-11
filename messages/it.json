@@ -893,14 +893,10 @@
     "repeatPassword": "Ripeti password",
     "passwordsMatch": "Le password coincidono",
     "haveAccount": "Hai già un account?",
-    "registerNote": "La registrazione avviene solo tramite e-mail. Provider come Google o SSO sono disponibili all'accesso. Il primo account di un'istanza diventa superadmin.",
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
     "sampleMonth": "Mese di esempio",
-    "instance": "Istanza",
-    "statusOk": "raggiungibile",
-    "statusDown": "non raggiungibile",
-    "statusChecking": "verifica in corso …"
+    "instance": "Istanza"
   },
   "emptyState": {
     "guestBadge": "Ospite",
@@ -911,7 +907,6 @@
     "guestTitle": "Nessun calendario condiviso pubblicamente",
     "guestDescription": "Senza account vedi solo i calendari aperti esplicitamente agli ospiti. Se hai ricevuto un link di accesso, aprilo direttamente: il link contiene l'accesso.",
     "pasteAccessLink": "Incolla link di accesso",
-    "registrationEnabled": "La registrazione è attiva su questa istanza.",
     "accessLinkDescription": "Incolla il link che hai ricevuto, oppure solo il token che contiene.",
     "accessLinkLabel": "Link di accesso",
     "accessLinkInvalid": "Questo non è un link di accesso valido.",

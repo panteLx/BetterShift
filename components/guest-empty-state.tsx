@@ -10,7 +10,6 @@ import { AuthHeader } from "@/components/auth-header";
 import { PanelDialog } from "@/components/panel-dialog";
 import { Field, inputClass } from "@/components/form-kit";
 import { EmptyStateBlock, stateActionClass } from "@/components/empty-state-block";
-import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { cn } from "@/lib/utils";
 
 const SHARE_PATH = "/share/token/";
@@ -29,7 +28,6 @@ function extractAccessToken(input: string): string | null {
 /** Shown to guests when no calendar is open to them. */
 export function GuestEmptyState() {
   const t = useTranslations();
-  const { allowRegistration } = useAuthFeatures();
   const [linkOpen, setLinkOpen] = useState(false);
 
   return (
@@ -55,7 +53,6 @@ export function GuestEmptyState() {
               </Button>
             </>
           }
-          footnote={allowRegistration ? t("emptyState.registrationEnabled") : undefined}
         />
       </main>
       <AccessLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />

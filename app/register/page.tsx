@@ -16,8 +16,8 @@ import {
   PasswordInput,
   authInputClass,
 } from "@/components/auth-shell";
-import { Field, InfoNote } from "@/components/form-kit";
-import { Check, Info } from "lucide-react";
+import { Field } from "@/components/form-kit";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   isRateLimitError,
@@ -225,15 +225,12 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <div className="flex flex-col gap-2.5 border-t border-line pt-4">
-        <p className="text-center text-[13.5px] text-fg-secondary">
-          {t("authPage.haveAccount")}{" "}
-          <Link href="/login" className="font-semibold text-brand-ink hover:underline">
-            {t("auth.login")}
-          </Link>
-        </p>
-        <InfoNote icon={Info}>{t("authPage.registerNote")}</InfoNote>
-      </div>
+      <p className="border-t border-line pt-4 text-center text-[13.5px] text-fg-secondary">
+        {t("authPage.haveAccount")}{" "}
+        <Link href="/login" className="font-semibold text-brand-ink hover:underline">
+          {t("auth.login")}
+        </Link>
+      </p>
     </AuthShell>
   );
 }
