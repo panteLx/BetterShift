@@ -269,7 +269,10 @@ export function useAdminUsers(params: UserListParams) {
     users: data?.items ?? [],
     total: data?.total ?? 0,
     counts: data?.counts ?? null,
-    page: data?.page ?? params.page,
+    // While the previous page is still on screen its served number would make the
+    // pager target a page the user already asked for; the clamped one only counts
+    // once it belongs to the request in flight.
+    page: isPlaceholderData ? params.page : (data?.page ?? params.page),
     isLoading,
     isPlaceholderData,
   };

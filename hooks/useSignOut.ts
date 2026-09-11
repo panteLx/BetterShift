@@ -12,13 +12,21 @@ export function useSignOut() {
 
   return async () => {
     try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success(t("auth.logoutSuccess"));
-          },
-        },
-      });
+      // Better Auth resolves with `{ error }` instead of rejecting, so a failed
+      // sign-out must be caught here — navigating anyway would bounce the still
+      // signed-in user straight back from /login.
+      const { error } = await signOut();
+
+      if (error) {
+        if (error.status === 429) {
+          toast.error(t("rateLimit.title"), { description: t("rateLimit.fallback") });
+        } else {
+          toast.error(error.message || t("common.error"));
+        }
+        return;
+      }
+
+      toast.success(t("auth.logoutSuccess"));
       router.replace("/login");
     } catch (error) {
       console.error("Sign out error:", error);

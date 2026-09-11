@@ -11,6 +11,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { DangerZone, Field, inputClass, ListRow } from "@/components/form-kit";
 import { PanelBody } from "@/components/panel-dialog";
 import { accountContentClass } from "@/components/profile/account-layout";
+import { useSignOut } from "@/hooks/useSignOut";
 import { signOut } from "@/lib/auth/client";
 import {
   isRateLimitError,
@@ -21,25 +22,10 @@ import { cn } from "@/lib/utils";
 export function DangerSection({ hasPasswordAuth }: { hasPasswordAuth: boolean }) {
   const t = useTranslations();
   const router = useRouter();
+  const handleSignOut = useSignOut();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success(t("auth.logoutSuccess"));
-            router.replace("/login");
-          },
-        },
-      });
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast.error(t("common.error"));
-    }
-  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);

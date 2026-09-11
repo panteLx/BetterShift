@@ -14,6 +14,7 @@ import {
 } from "date-fns";
 import { CalendarDays, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useClientValue } from "@/hooks/useMediaQuery";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
@@ -177,7 +178,7 @@ function InstanceFacts() {
   const t = useTranslations();
   const version = useVersionInfo()?.version;
 
-  const host = typeof window === "undefined" ? "" : window.location.host;
+  const host = useClientValue(() => window.location.host, "");
   const facts = [
     { label: t("authPage.instance"), value: host },
     { label: t("admin.systemInfo.version"), value: version ?? "–" },

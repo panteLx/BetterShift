@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Info, Lock, UserRound } from "lucide-react";
+import { Info, Loader2, Lock, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import {
@@ -264,23 +264,44 @@ function ViewFields({
   );
 }
 
-/**
- * Settings section for a calendar's own view. Off by default; while off,
- * everyone with access sees their personal view instead.
- */
-export function CalendarViewPanel({
-  calendarId,
-  personal,
-  onClose,
-  onCancel,
-  onDirtyChange,
-}: {
+interface CalendarViewPanelProps {
   calendarId: string;
   personal: PersonalViewSettings;
   onClose: () => void;
   onCancel: () => void;
   onDirtyChange: (dirty: boolean) => void;
-}) {
+}
+
+/**
+ * Settings section for a calendar's own view. Off by default; while off,
+ * everyone with access sees their personal view instead.
+ */
+export function CalendarViewPanel(props: CalendarViewPanelProps) {
+  const { loading } = useCalendars();
+
+  // The body snapshots the saved view once, so it must not mount before the
+  // calendar is cached: it would read "off" and let a Save clear the pinned
+  // view for everyone with access.
+  if (loading) {
+    return (
+      <PanelBody>
+        <div className="flex justify-center py-6 text-fg-tertiary">
+          <Loader2 className="size-5 animate-spin" />
+        </div>
+      </PanelBody>
+    );
+  }
+
+  return <CalendarViewPanelBody {...props} />;
+}
+
+function CalendarViewPanelBody({
+  calendarId,
+  personal,
+  onClose,
+  onCancel,
+  onDirtyChange,
+}: CalendarViewPanelProps) {
   const t = useTranslations();
   const id = useId();
   const { calendars, updateCalendar } = useCalendars();

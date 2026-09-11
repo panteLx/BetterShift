@@ -20,6 +20,7 @@ import { useNoteActions } from "@/hooks/useNoteActions";
 import { useExternalSync } from "@/hooks/useExternalSync";
 import { useDialogStates } from "@/hooks/useDialogStates";
 import { useAuth } from "@/hooks/useAuth";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
@@ -88,6 +89,8 @@ function HomeContent() {
   } = usePresets(selectedCalendar);
 
   const { canEdit } = useCalendarPermission(selectedCalendar);
+  // Toasts are owned by CalendarWorkspace; this is only the stamping gate
+  const { isOnline } = useConnectionStatus({ toasts: false });
 
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -271,11 +274,28 @@ function HomeContent() {
     }
   };
 
+  // Compare mode shares one grid, so it always uses the personal view
+  const personalView = viewSettings.personal;
+  const calendarView = viewSettings.forCalendar(
+    calendars.find((c) => c.id === selectedCalendar)
+  );
+
+  // The armed preset is page state that outlives the stamp bar: it survives a
+  // calendar switch, going offline and the personal toggle, none of which render
+  // the dock. Derived here so a day click can never stamp without it on screen.
+  const armedPresetId =
+    canEdit &&
+    isOnline &&
+    calendarView.showStampBar &&
+    presets.some((p) => p.id === selectedPresetId)
+      ? selectedPresetId
+      : undefined;
+
   const handleDayClick = (day: Date) => {
     selectDay(day);
     if (!isSameMonth(day, currentDate)) setCurrentDate(day);
-    if (selectedPresetId) {
-      shiftActions.handleAddShift(day, selectedPresetId);
+    if (armedPresetId) {
+      shiftActions.handleAddShift(day, armedPresetId);
     } else if (!desktop) {
       setDaySheetOpen(true);
     }
@@ -442,12 +462,6 @@ function HomeContent() {
 
   const calendarDays = useMemo(() => getCalendarDays(currentDate), [currentDate]);
 
-  // Compare mode shares one grid, so it always uses the personal view
-  const personalView = viewSettings.personal;
-  const calendarView = viewSettings.forCalendar(
-    calendars.find((c) => c.id === selectedCalendar)
-  );
-
   if (
     (!hasLoadedOnce && loading) ||
     (!shiftsLoadedOnce && shiftsLoading) ||
@@ -559,7 +573,7 @@ function HomeContent() {
         highlightColor={calendarView.highlightColor}
         canEdit={canEdit}
         showStampBar={calendarView.showStampBar}
-        selectedPresetId={selectedPresetId}
+        selectedPresetId={armedPresetId}
         onSelectPreset={setSelectedPresetId}
         onManagePresets={() => dialogStates.setShowPresetManageDialog(true)}
         sheetOpen={daySheetOpen}

@@ -299,7 +299,12 @@ export function ExternalSyncPanel({
                     )
                   }
                   onSync={() => handleSync(sync.id)}
-                  onDelete={() => setDeleteTargetId(sync.id)}
+                  onDelete={() =>
+                    // Deleting the sync being edited closes the form; other rows leave it alone
+                    editingSync?.id === sync.id
+                      ? guardUnsaved(() => setDeleteTargetId(sync.id))
+                      : setDeleteTargetId(sync.id)
+                  }
                 />
               ))}
             </div>

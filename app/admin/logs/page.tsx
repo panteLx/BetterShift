@@ -58,7 +58,11 @@ export default function AdminAuditLogsPage() {
   const listKey = [search.query, filterValues.action, filterValues.severity, filterValues.startDate, filterValues.endDate].join("|");
   const [page, setPage] = useResettableState(listKey, 0);
   const [expandedRows, setExpandedRows] = useResettableState<Set<string>>(listKey, EMPTY_ROWS);
-  const [selectedLogIds, setSelectedLogIds] = useResettableState<string[]>(listKey, EMPTY_IDS);
+  // Selection is per page: bulk delete is irreversible, so it must never reach rows off screen
+  const [selectedLogIds, setSelectedLogIds] = useResettableState<string[]>(
+    `${listKey}|${sort.column}|${sort.direction}|${page}`,
+    EMPTY_IDS
+  );
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -102,7 +106,13 @@ export default function AdminAuditLogsPage() {
     setSelectedLogIds((prev) => (prev.includes(logId) ? prev.filter((id) => id !== logId) : [...prev, logId]));
   };
 
-  const isAllSelected = logs.length > 0 && selectedLogIds.length === logs.length;
+  // Guards the window between a page change and the new rows arriving
+  const selectedIds = useMemo(
+    () => selectedLogIds.filter((id) => logs.some((log) => log.id === id)),
+    [selectedLogIds, logs]
+  );
+
+  const isAllSelected = logs.length > 0 && selectedIds.length === logs.length;
   const toggleSelectAll = () => setSelectedLogIds(isAllSelected ? [] : logs.map((log) => log.id));
 
   const openDetails = (log: AuditLog) => {
@@ -214,11 +224,11 @@ export default function AdminAuditLogsPage() {
       </div>
       <AuditFilterChips filters={filterValues} onOpen={() => setShowFilterSheet(true)} />
 
-      {selectedLogIds.length > 0 && isSuperAdmin && (
+      {selectedIds.length > 0 && isSuperAdmin && (
         <div className="hidden items-center justify-between gap-3 rounded-[11px] border border-line bg-surface-panel px-3.5 py-2.5 lg:flex">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold text-fg-strong">
-              {t("admin.selectedLogs", { count: selectedLogIds.length })}
+              {t("admin.selectedLogs", { count: selectedIds.length })}
             </span>
             <Button variant="ghost" size="sm" onClick={() => setSelectedLogIds([])} className="h-8 text-fg-secondary">
               <X className="size-4" />
@@ -278,7 +288,7 @@ export default function AdminAuditLogsPage() {
                   {isSuperAdmin && (
                     <div onClick={stop} onKeyDown={stop} className="flex">
                       <Checkbox
-                        checked={selectedLogIds.includes(log.id)}
+                        checked={selectedIds.includes(log.id)}
                         onCheckedChange={() => toggleLogSelection(log.id)}
                         aria-label={t("adminAudit.selectEntry")}
                       />
@@ -375,7 +385,7 @@ export default function AdminAuditLogsPage() {
       <AuditLogDeleteDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        selectedLogIds={selectedLogIds}
+        selectedLogIds={selectedIds}
         onSuccess={() => {
           setPage(0);
           setSelectedLogIds([]);

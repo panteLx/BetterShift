@@ -234,7 +234,8 @@ export function useAdminCalendars(params: CalendarListParams) {
     calendars: data?.items ?? [],
     total: data?.total ?? 0,
     counts: data?.counts ?? null,
-    page: data?.page ?? params.page,
+    // See useAdminUsers: the served page is only authoritative for the current request
+    page: isPlaceholderData ? params.page : (data?.page ?? params.page),
     isLoading,
     isPlaceholderData,
   };

@@ -129,10 +129,15 @@ export function containsPattern(search: string): string {
   return `%${search.toLowerCase().replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
+/**
+ * Filter defaults are sent explicitly rather than omitted: the endpoints accept
+ * "all" as a value, and skipping it here would also swallow a free-text search
+ * for the literal "all".
+ */
 export function toSearchParams(params: object): URLSearchParams {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "" && value !== "all") {
+    if (value !== undefined && value !== "") {
       searchParams.set(key, String(value));
     }
   }

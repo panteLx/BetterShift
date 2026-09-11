@@ -19,11 +19,17 @@ import { useConnectedAccounts } from "@/hooks/useConnectedAccounts";
 import { useSessions } from "@/hooks/useSessions";
 import { useProfileForm } from "@/hooks/useProfileForm";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
+import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { PanelBody } from "@/components/panel-dialog";
+import { StatusBanner } from "@/components/status-banner";
 import { UserMenu } from "@/components/user-menu";
-import { AccountPageHeader } from "@/components/profile/account-layout";
+import {
+  accountContentClass,
+  AccountPageHeader,
+  SectionHeading,
+} from "@/components/profile/account-layout";
 import { ProfileDetailsSection } from "@/components/profile/profile-details-section";
 import { PasswordSection } from "@/components/profile/password-section";
 import {
@@ -68,6 +74,8 @@ function ProfileContent() {
   const {
     sessions,
     isLoading: sessionsLoading,
+    error: sessionsError,
+    refetch: refetchSessions,
     revokeAllSessions,
     revokeSession,
   } = useSessions();
@@ -165,6 +173,37 @@ function ProfileContent() {
       case "accounts":
         return <ConnectedAccountsSection accounts={accounts} />;
       case "sessions":
+        // A failed fetch leaves `sessions` empty, which would otherwise read as
+        // "no device is signed in anywhere" on the security screen
+        if (sessionsError) {
+          return (
+            <PanelBody>
+              <div className={cn(accountContentClass, "flex flex-col gap-4")}>
+                <SectionHeading
+                  title={t("profile.sessionsTitle")}
+                  description={t("profile.sessionsHint")}
+                />
+                <StatusBanner
+                  tone="danger"
+                  icon={TriangleAlert}
+                  title={t("common.error")}
+                  action={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 font-semibold"
+                      onClick={() => refetchSessions()}
+                    >
+                      {t("calendarView.retry")}
+                    </Button>
+                  }
+                >
+                  {t("common.fetchError", { item: t("common.auth.activeSessions") })}
+                </StatusBanner>
+              </div>
+            </PanelBody>
+          );
+        }
         return (
           <SessionsSection
             sessions={sessions}

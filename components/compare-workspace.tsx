@@ -35,6 +35,7 @@ import {
 import { formatDateToLocal } from "@/lib/date-utils";
 import { getDateLocale } from "@/lib/locales";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useStampShortcuts } from "@/hooks/useStampShortcuts";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
@@ -101,11 +102,17 @@ export function CompareWorkspace(props: CompareWorkspaceProps) {
   const activeColumnId = presetOwner ?? props.calendars[0]?.id;
   const activePresets = orderStampPresets(props.presetsMap.get(activeColumnId ?? "") ?? []);
 
+  // Each column carries its own permission, and only an editable one renders the
+  // presets the shortcuts arm — without this a key press stamps into a read-only
+  // calendar and the write is rejected server-side.
+  const { canEdit: canEditActiveColumn } = useCalendarPermission(activeColumnId);
+  const { isOnline } = useConnectionStatus({ toasts: false });
+
   useStampShortcuts({
     presetIds: activePresets.map((p) => p.id),
     selectedPresetId: props.selectedPresetId,
     onSelectPreset: props.onSelectPreset,
-    enabled: desktop,
+    enabled: desktop && canEditActiveColumn && isOnline,
   });
 
   const managed = props.calendars.find((c) => c.id === manageCalendarId);

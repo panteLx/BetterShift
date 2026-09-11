@@ -93,9 +93,12 @@ function GeneralPanel({
     if (!calendar) return;
     setSaving(true);
     try {
+      // Only the changed keys: the optimistic patch spreads this over the cached
+      // calendar, so an explicit `undefined` would blank the field until the
+      // server responds.
       await updateCalendar(calendarId, {
-        name: name !== calendar.name ? name.trim() : undefined,
-        color: color !== calendar.color ? color : undefined,
+        ...(name !== calendar.name && { name: name.trim() }),
+        ...(color !== calendar.color && { color }),
       });
       onClose();
     } finally {

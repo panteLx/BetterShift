@@ -62,7 +62,10 @@ export function useSessions() {
   }> => {
     try {
       // Use Better Auth's built-in revokeOtherSessions
-      await authClient.revokeOtherSessions();
+      const { error } = await authClient.revokeOtherSessions();
+      if (error) {
+        throw new Error(error.message || "Failed to revoke sessions");
+      }
 
       // Count sessions before refresh
       const beforeCount = sessions.length - 1; // -1 for current session
