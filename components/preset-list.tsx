@@ -99,7 +99,7 @@ function SortablePresetRow({
                 ? t("presetSheet.allDayShort")
                 : `${preset.startTime.slice(0, 5)} – ${preset.endTime.slice(0, 5)}`}
             </span>
-            {preset.isSecondary && <Pill tone="warning">{t("preset.secondary")}</Pill>}
+            {preset.isSecondary && <Pill>{t("preset.secondary")}</Pill>}
             {preset.hideFromStats && (
               <Pill tone="warning">{t("presetSheet.notInStats")}</Pill>
             )}

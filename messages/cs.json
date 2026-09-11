@@ -203,7 +203,7 @@
     "presetNamePlaceholder": "např. Ranní směna, večerní směna...",
     "noPresets": "Zatím žádné předvolby směn",
     "deleteConfirm": "Smazat tuto předvolbu? Tím se smažou i všechny směny vytvořené z této předvolby.",
-    "secondary": "Sekundární",
+    "secondary": "Další",
     "hideFromStats": "Skrýt ze statistik"
   },
   "view": {
@@ -243,7 +243,7 @@
     "highlightColor": "Barva zvýraznění",
     "density": "Hustota",
     "showPresetBar": "Zobrazit lištu šablon",
-    "showPresetBarHint": "Lišta razítek pod nebo nad kalendářem"
+    "showPresetBarHint": "Lišta šablon pod nebo nad kalendářem"
   },
   "stats": {
     "title": "Statistiky směn",
@@ -685,7 +685,7 @@
     "external": "externí",
     "syncedReadOnly": "Z externího kalendáře, jen pro čtení",
     "changedOn": "změněno {date}",
-    "stamp": "Razítko",
+    "stamp": "Šablony",
     "managePresets": "Spravovat šablony",
     "createPreset": "Vytvořit šablonu",
     "manage": "Spravovat",
@@ -714,8 +714,8 @@
     "title": "Porovnání",
     "exit": "Ukončit",
     "addCalendar": "Třetí kalendář",
-    "stampActive": "Razítko aktivní",
-    "tapToMoveStamp": "Klepnutím přesunete razítko do tohoto sloupce",
+    "stampActive": "Šablona aktivní",
+    "tapToMoveStamp": "Klikněte na šablonu a vložte ji do tohoto sloupce",
     "subtitle": "{count, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}",
     "laneHintTwo": "Horní řada {top}, dolní {bottom} — poznáte podle pruhu vlevo. Prázdný rámeček znamená volno.",
     "laneHintMany": "Řady shora: {order} — poznáte podle pruhu vlevo. Prázdný rámeček znamená volno.",
@@ -731,7 +731,7 @@
     "general": "Název a barva",
     "generalHint": "Zobrazovaný název, barva kalendáře, smazání",
     "presets": "Šablony",
-    "presetsHint": "{count, plural, =0 {Zatím žádné šablony} one {# šablona, primární a sekundární} few {# šablony, primární a sekundární} other {# šablon, primární a sekundární}}",
+    "presetsHint": "{count, plural, =0 {Zatím žádné šablony} one {# šablona} few {# šablony} other {# šablon}}",
     "external": "Externí kalendáře",
     "externalHint": "{count, plural, =0 {Odběr, zobrazení, interval} one {# odběr, zobrazení, interval} few {# odběry, zobrazení, interval} other {# odběrů, zobrazení, interval}}",
     "sharing": "Sdílení",
@@ -755,20 +755,22 @@
   },
   "presetSheet": {
     "title": "Předvolby",
-    "description": "Pořadí určuje lištu razítek",
-    "primary": "Primární",
+    "description": "Pořadí určuje lištu šablon",
+    "primary": "V liště",
     "newPreset": "Nová předvolba",
     "titlePlaceholder": "např. Pohotovost",
     "start": "Začátek",
     "end": "Konec",
     "allDay": "Celý den",
     "allDayShort": "celý den",
-    "markAsSecondary": "Označit jako sekundární",
+    "markAsSecondary": "Sbalit pod „Další“",
     "hideFromStatsHint": "Nezapočítává se do hodin ani statistik",
     "notInStats": "Mimo statistiky",
     "save": "Uložit předvolbu",
     "delete": "Smazat předvolbu",
-    "dragHandle": "Přetažením změníte pořadí"
+    "dragHandle": "Přetažením změníte pořadí",
+    "secondarySection": "Pod „Další“",
+    "markAsSecondaryHint": "V liště šablon se zobrazí až po kliknutí na „Další“"
   },
   "syncSheet": {
     "title": "Externí kalendáře",

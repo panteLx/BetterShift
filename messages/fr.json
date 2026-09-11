@@ -203,7 +203,7 @@
     "presetNamePlaceholder": "ex. : Créneau matin, Créneau soir...",
     "noPresets": "Aucun modèle de créneau pour l'instant",
     "deleteConfirm": "Supprimer ce modèle ? Tous les créneaux créés à partir de ce modèle seront également supprimés.",
-    "secondary": "Secondaire",
+    "secondary": "Plus",
     "hideFromStats": "Exclure des statistiques"
   },
   "view": {
@@ -243,7 +243,7 @@
     "highlightColor": "Couleur de mise en évidence",
     "density": "Densité",
     "showPresetBar": "Afficher la barre de modèles",
-    "showPresetBarHint": "Barre de tampons sous ou au-dessus du calendrier"
+    "showPresetBarHint": "Barre de modèles sous ou au-dessus du calendrier"
   },
   "stats": {
     "title": "Statistiques des créneaux",
@@ -685,7 +685,7 @@
     "external": "externe",
     "syncedReadOnly": "Depuis un calendrier externe, lecture seule",
     "changedOn": "modifié le {date}",
-    "stamp": "Tampon",
+    "stamp": "Modèles",
     "managePresets": "Gérer les modèles",
     "createPreset": "Créer un modèle",
     "manage": "Gérer",
@@ -714,8 +714,8 @@
     "title": "Comparer",
     "exit": "Quitter",
     "addCalendar": "Troisième calendrier",
-    "stampActive": "Tampon actif",
-    "tapToMoveStamp": "Touchez pour déplacer le tampon dans cette colonne",
+    "stampActive": "Modèle actif",
+    "tapToMoveStamp": "Cliquez sur un modèle pour le placer dans cette colonne",
     "subtitle": "{count} calendriers",
     "laneHintTwo": "Ligne du haut {top}, du bas {bottom} — repérable à la barre de gauche. Un cadre vide signifie libre.",
     "laneHintMany": "Lignes depuis le haut : {order} — repérables à la barre de gauche. Un cadre vide signifie libre.",
@@ -731,7 +731,7 @@
     "general": "Nom et couleur",
     "generalHint": "Nom affiché, couleur du calendrier, suppression",
     "presets": "Modèles",
-    "presetsHint": "{count, plural, =0 {Aucun modèle} one {# modèle, principal et secondaire} other {# modèles, principaux et secondaires}}",
+    "presetsHint": "{count, plural, =0 {Aucun modèle} one {# modèle} other {# modèles}}",
     "external": "Calendriers externes",
     "externalHint": "{count, plural, =0 {Abonnement, affichage, intervalle} one {# abonnement, affichage, intervalle} other {# abonnements, affichage, intervalle}}",
     "sharing": "Partage",
@@ -755,20 +755,22 @@
   },
   "presetSheet": {
     "title": "Modèles",
-    "description": "L’ordre définit la barre de tampons",
-    "primary": "Principal",
+    "description": "L’ordre définit la barre de modèles",
+    "primary": "Dans la barre",
     "newPreset": "Nouveau modèle",
     "titlePlaceholder": "p. ex. Astreinte",
     "start": "Début",
     "end": "Fin",
     "allDay": "Toute la journée",
     "allDayShort": "toute la journée",
-    "markAsSecondary": "Marquer comme secondaire",
+    "markAsSecondary": "Ranger sous « Plus »",
     "hideFromStatsHint": "Non compté dans les heures ni les statistiques",
     "notInStats": "Hors statistiques",
     "save": "Enregistrer le modèle",
     "delete": "Supprimer le modèle",
-    "dragHandle": "Glisser pour réordonner"
+    "dragHandle": "Glisser pour réordonner",
+    "secondarySection": "Sous « Plus »",
+    "markAsSecondaryHint": "N’apparaît dans la barre de modèles qu’après un clic sur « Plus »"
   },
   "syncSheet": {
     "title": "Calendriers externes",

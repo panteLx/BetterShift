@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { MonthGrid } from "@/components/month-grid";
 import { MonthStepper } from "@/components/app-header";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
-import { orderStampPresets } from "@/components/stamp-dock";
+import { MorePresets, orderStampPresets, splitStampPresets } from "@/components/stamp-dock";
 import { MAX_COMPARE_CALENDARS } from "@/components/calendar-compare-sheet";
 import { useDayLabels } from "@/components/day-inspector";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
@@ -312,7 +312,7 @@ function CompareColumn({
   const t = useTranslations();
   const locale = useLocale();
   const { canEdit } = useCalendarPermission(calendar.id);
-  const presets = orderStampPresets(presetsMap.get(calendar.id) ?? []);
+  const { primary, secondary } = splitStampPresets(presetsMap.get(calendar.id) ?? []);
   const totals = monthTotals(shifts, currentDate);
 
   return (
@@ -333,31 +333,39 @@ function CompareColumn({
         </div>
         {canEdit && (
           <div className="mt-2.5 flex h-8 items-center gap-1.5 overflow-hidden">
-            {presets.map((preset, index) => {
-              const active = preset.id === selectedPresetId;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onSelectPreset(active ? undefined : preset.id)}
-                  className={cn(
-                    "flex h-7 shrink-0 items-center gap-[7px] rounded-[7px] border px-2.5 text-[12.5px] font-medium transition-colors",
-                    active
-                      ? "border-brand bg-brand-soft text-brand-ink"
-                      : "border-line bg-surface-card text-fg-body hover:bg-surface-panel"
-                  )}
-                >
-                  <span className="size-[7px] rounded-full" style={{ backgroundColor: preset.color }} />
-                  {preset.title}
-                  {keysActive && index < 9 && (
-                    <kbd className="rounded-[4px] bg-surface-sunken px-1 font-mono text-[10px] font-normal text-fg-tertiary">
-                      {index + 1}
-                    </kbd>
-                  )}
-                </button>
-              );
-            })}
+            <div className="flex min-w-0 items-center gap-1.5 overflow-hidden empty:hidden">
+              {primary.map((preset, index) => {
+                const active = preset.id === selectedPresetId;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onSelectPreset(active ? undefined : preset.id)}
+                    className={cn(
+                      "flex h-7 shrink-0 items-center gap-[7px] rounded-[7px] border px-2.5 text-[12.5px] font-medium transition-colors",
+                      active
+                        ? "border-brand bg-brand-soft text-brand-ink"
+                        : "border-line bg-surface-card text-fg-body hover:bg-surface-panel"
+                    )}
+                  >
+                    <span className="size-[7px] rounded-full" style={{ backgroundColor: preset.color }} />
+                    {preset.title}
+                    {keysActive && index < 9 && (
+                      <kbd className="rounded-[4px] bg-surface-sunken px-1 font-mono text-[10px] font-normal text-fg-tertiary">
+                        {index + 1}
+                      </kbd>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <MorePresets
+              variant="compare"
+              presets={secondary}
+              selectedPresetId={selectedPresetId}
+              onSelectPreset={onSelectPreset}
+            />
             <button
               type="button"
               onClick={onManagePresets}
@@ -366,8 +374,8 @@ function CompareColumn({
             >
               <SlidersHorizontal className="size-3.5" />
             </button>
-            {!keysActive && presets.length > 0 && (
-              <span className="min-w-0 truncate pl-1 text-[12px] text-fg-tertiary">
+            {!keysActive && primary.length + secondary.length > 0 && (
+              <span className="min-w-0 flex-1 truncate pl-1 text-[12px] text-fg-tertiary">
                 {t("calendarCompare.tapToMoveStamp")}
               </span>
             )}
@@ -418,7 +426,8 @@ function CompareMobile({
   const legend = useMemo(() => {
     const seen = new Map<string, string>();
     for (const calendar of calendars) {
-      for (const preset of orderStampPresets(presetsMap.get(calendar.id) ?? [])) {
+      const { primary, secondary } = splitStampPresets(presetsMap.get(calendar.id) ?? []);
+      for (const preset of [...primary, ...secondary]) {
         if (!seen.has(preset.title)) seen.set(preset.title, preset.color);
       }
     }

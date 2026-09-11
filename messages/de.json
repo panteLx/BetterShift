@@ -203,7 +203,7 @@
     "presetNamePlaceholder": "z.B. Frühschicht, Spätschicht...",
     "noPresets": "Noch keine Schichtvorlagen",
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
-    "secondary": "Sekundär",
+    "secondary": "Weitere",
     "hideFromStats": "Aus Statistik ausblenden"
   },
   "view": {
@@ -243,7 +243,7 @@
     "highlightColor": "Hervorhebungsfarbe",
     "density": "Dichte",
     "showPresetBar": "Vorlagenleiste anzeigen",
-    "showPresetBarHint": "Stempelleiste unter bzw. über dem Kalender"
+    "showPresetBarHint": "Vorlagenleiste unter bzw. über dem Kalender"
   },
   "stats": {
     "title": "Schichtenstatistik",
@@ -685,7 +685,7 @@
     "external": "extern",
     "syncedReadOnly": "Aus einem externen Kalender, nur lesbar",
     "changedOn": "geändert {date}",
-    "stamp": "Stempel",
+    "stamp": "Vorlagen",
     "managePresets": "Vorlagen verwalten",
     "createPreset": "Vorlage anlegen",
     "manage": "Verwalten",
@@ -714,8 +714,8 @@
     "title": "Vergleich",
     "exit": "Beenden",
     "addCalendar": "Dritter Kalender",
-    "stampActive": "Stempel aktiv",
-    "tapToMoveStamp": "Antippen übernimmt den Stempel in diese Spalte",
+    "stampActive": "Vorlage aktiv",
+    "tapToMoveStamp": "Vorlage anklicken, um sie in dieser Spalte zu setzen",
     "subtitle": "{count} Kalender",
     "laneHintTwo": "Obere Reihe {top}, untere {bottom} — erkennbar am Balken links. Leerer Rahmen heißt frei.",
     "laneHintMany": "Reihen von oben: {order} — erkennbar am Balken links. Leerer Rahmen heißt frei.",
@@ -731,7 +731,7 @@
     "general": "Name und Farbe",
     "generalHint": "Anzeigename, Kalenderfarbe, Löschen",
     "presets": "Vorlagen",
-    "presetsHint": "{count, plural, =0 {Noch keine Vorlagen} one {# Vorlage, primär und sekundär} other {# Vorlagen, primär und sekundär}}",
+    "presetsHint": "{count, plural, =0 {Noch keine Vorlagen} one {# Vorlage} other {# Vorlagen}}",
     "external": "Externe Kalender",
     "externalHint": "{count, plural, =0 {Abo, Anzeigemodus, Intervall} one {# Abo, Anzeigemodus, Intervall} other {# Abos, Anzeigemodus, Intervall}}",
     "sharing": "Freigaben",
@@ -755,20 +755,22 @@
   },
   "presetSheet": {
     "title": "Vorlagen",
-    "description": "Reihenfolge bestimmt die Stempelleiste",
-    "primary": "Primär",
+    "description": "Reihenfolge bestimmt die Vorlagenleiste",
+    "primary": "In der Leiste",
     "newPreset": "Neue Vorlage",
     "titlePlaceholder": "z. B. Bereitschaft",
     "start": "Beginn",
     "end": "Ende",
     "allDay": "Ganztägig",
     "allDayShort": "ganztägig",
-    "markAsSecondary": "Als sekundär markieren",
+    "markAsSecondary": "Unter „Weitere“ einklappen",
     "hideFromStatsHint": "Zählt nicht in Stunden und Auswertung",
     "notInStats": "Nicht in Statistik",
     "save": "Vorlage speichern",
     "delete": "Vorlage löschen",
-    "dragHandle": "Zum Sortieren ziehen"
+    "dragHandle": "Zum Sortieren ziehen",
+    "secondarySection": "Unter „Weitere“",
+    "markAsSecondaryHint": "Erscheint in der Vorlagenleiste erst nach Klick auf „Weitere“"
   },
   "syncSheet": {
     "title": "Externe Kalender",

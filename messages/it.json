@@ -203,7 +203,7 @@
     "presetNamePlaceholder": "es., Turno Mattutino, Turno Serale...",
     "noPresets": "Ancora nessun preset turno",
     "deleteConfirm": "Eliminare questo preset? Verranno eliminati anche tutti i turni creati da questo preset.",
-    "secondary": "Secondario",
+    "secondary": "Altri",
     "hideFromStats": "Nascondi dalle statistiche"
   },
   "view": {
@@ -243,7 +243,7 @@
     "highlightColor": "Colore Evidenziazione",
     "density": "Densità",
     "showPresetBar": "Mostra barra dei modelli",
-    "showPresetBarHint": "Barra dei timbri sotto o sopra il calendario"
+    "showPresetBarHint": "Barra dei modelli sotto o sopra il calendario"
   },
   "stats": {
     "title": "Statistiche Turni",
@@ -685,7 +685,7 @@
     "external": "esterno",
     "syncedReadOnly": "Da un calendario esterno, sola lettura",
     "changedOn": "modificato il {date}",
-    "stamp": "Timbro",
+    "stamp": "Modelli",
     "managePresets": "Gestisci modelli",
     "createPreset": "Crea modello",
     "manage": "Gestisci",
@@ -714,8 +714,8 @@
     "title": "Confronto",
     "exit": "Esci",
     "addCalendar": "Terzo calendario",
-    "stampActive": "Timbro attivo",
-    "tapToMoveStamp": "Tocca per spostare il timbro in questa colonna",
+    "stampActive": "Modello attivo",
+    "tapToMoveStamp": "Clicca un modello per inserirlo in questa colonna",
     "subtitle": "{count} calendari",
     "laneHintTwo": "Riga in alto {top}, in basso {bottom}: si riconoscono dalla barra a sinistra. Un riquadro vuoto significa libero.",
     "laneHintMany": "Righe dall’alto: {order}: si riconoscono dalla barra a sinistra. Un riquadro vuoto significa libero.",
@@ -731,7 +731,7 @@
     "general": "Nome e colore",
     "generalHint": "Nome visualizzato, colore del calendario, eliminazione",
     "presets": "Modelli",
-    "presetsHint": "{count, plural, =0 {Nessun modello} one {# modello, primario e secondario} other {# modelli, primari e secondari}}",
+    "presetsHint": "{count, plural, =0 {Nessun modello} one {# modello} other {# modelli}}",
     "external": "Calendari esterni",
     "externalHint": "{count, plural, =0 {Abbonamento, visualizzazione, intervallo} one {# abbonamento, visualizzazione, intervallo} other {# abbonamenti, visualizzazione, intervallo}}",
     "sharing": "Condivisione",
@@ -755,20 +755,22 @@
   },
   "presetSheet": {
     "title": "Preset",
-    "description": "L’ordine determina la barra dei timbri",
-    "primary": "Primario",
+    "description": "L’ordine determina la barra dei modelli",
+    "primary": "Nella barra",
     "newPreset": "Nuovo preset",
     "titlePlaceholder": "es. Reperibilità",
     "start": "Inizio",
     "end": "Fine",
     "allDay": "Tutto il giorno",
     "allDayShort": "tutto il giorno",
-    "markAsSecondary": "Segna come secondario",
+    "markAsSecondary": "Raggruppa sotto «Altri»",
     "hideFromStatsHint": "Non conta nelle ore né nelle statistiche",
     "notInStats": "Escluso dalle statistiche",
     "save": "Salva preset",
     "delete": "Elimina preset",
-    "dragHandle": "Trascina per riordinare"
+    "dragHandle": "Trascina per riordinare",
+    "secondarySection": "Sotto «Altri»",
+    "markAsSecondaryHint": "Compare nella barra dei modelli solo dopo aver cliccato «Altri»"
   },
   "syncSheet": {
     "title": "Calendari esterni",

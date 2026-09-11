@@ -203,7 +203,7 @@
     "presetNamePlaceholder": "e.g., Morning Shift, Evening Shift...",
     "noPresets": "No shift presets yet",
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
-    "secondary": "Secondary",
+    "secondary": "More",
     "hideFromStats": "Hide from statistics"
   },
   "view": {
@@ -243,7 +243,7 @@
     "highlightColor": "Highlight Color",
     "density": "Density",
     "showPresetBar": "Show preset bar",
-    "showPresetBarHint": "Stamp bar below or above the calendar"
+    "showPresetBarHint": "Preset bar below or above the calendar"
   },
   "stats": {
     "title": "Shift Statistics",
@@ -685,7 +685,7 @@
     "external": "external",
     "syncedReadOnly": "From an external calendar, read-only",
     "changedOn": "changed {date}",
-    "stamp": "Stamp",
+    "stamp": "Presets",
     "managePresets": "Manage presets",
     "createPreset": "Create preset",
     "manage": "Manage",
@@ -714,8 +714,8 @@
     "title": "Compare",
     "exit": "Exit",
     "addCalendar": "Third calendar",
-    "stampActive": "Stamp active",
-    "tapToMoveStamp": "Tap to move the stamp to this column",
+    "stampActive": "Preset active",
+    "tapToMoveStamp": "Click a preset to place it in this column",
     "subtitle": "{count} calendars",
     "laneHintTwo": "Top row {top}, bottom row {bottom} — see the bar on the left. An empty frame means off.",
     "laneHintMany": "Rows from the top: {order} — see the bar on the left. An empty frame means off.",
@@ -731,7 +731,7 @@
     "general": "Name and color",
     "generalHint": "Display name, calendar color, delete",
     "presets": "Presets",
-    "presetsHint": "{count, plural, =0 {No presets yet} one {# preset, primary and secondary} other {# presets, primary and secondary}}",
+    "presetsHint": "{count, plural, =0 {No presets yet} one {# preset} other {# presets}}",
     "external": "External calendars",
     "externalHint": "{count, plural, =0 {Subscription, display mode, interval} one {# subscription, display mode, interval} other {# subscriptions, display mode, interval}}",
     "sharing": "Sharing",
@@ -755,20 +755,22 @@
   },
   "presetSheet": {
     "title": "Presets",
-    "description": "The order sets the stamp bar",
-    "primary": "Primary",
+    "description": "The order sets the preset bar",
+    "primary": "In the bar",
     "newPreset": "New preset",
     "titlePlaceholder": "e.g. On call",
     "start": "Start",
     "end": "End",
     "allDay": "All day",
     "allDayShort": "all day",
-    "markAsSecondary": "Mark as secondary",
+    "markAsSecondary": "Tuck under “More”",
     "hideFromStatsHint": "Not counted in hours and statistics",
     "notInStats": "Not in statistics",
     "save": "Save preset",
     "delete": "Delete preset",
-    "dragHandle": "Drag to reorder"
+    "dragHandle": "Drag to reorder",
+    "secondarySection": "Under “More”",
+    "markAsSecondaryHint": "Shows in the preset bar only after clicking “More”"
   },
   "syncSheet": {
     "title": "External calendars",

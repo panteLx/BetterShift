@@ -177,7 +177,7 @@ export function PresetsPanel({
         )}
         {secondary.length > 0 && (
           <PresetSection
-            label={t("preset.secondary")}
+            label={t("presetSheet.secondarySection")}
             presets={secondary}
             onReorder={(next) => saveOrder([...primary, ...next])}
             {...rowActions}

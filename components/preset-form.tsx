@@ -179,6 +179,7 @@ export function PresetFormCard({
           checked={value.isSecondary}
           onCheckedChange={(isSecondary) => onChange({ isSecondary })}
           disabled={disabled}
+          hint={t("presetSheet.markAsSecondaryHint")}
         >
           {t("presetSheet.markAsSecondary")}
         </CheckRow>
