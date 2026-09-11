@@ -956,7 +956,6 @@
   },
   "adminDashboard": {
     "title": "Panoramica",
-    "reload": "Ricarica",
     "attention": "{count, plural, one {Una cosa richiede attenzione} other {# cose richiedono attenzione}}",
     "allClear": "Al momento nulla richiede attenzione",
     "openCalendars": "Apri calendari",

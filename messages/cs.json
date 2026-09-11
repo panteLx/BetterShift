@@ -956,7 +956,6 @@
   },
   "adminDashboard": {
     "title": "Přehled",
-    "reload": "Znovu načíst",
     "attention": "{count, plural, one {Jedna věc vyžaduje pozornost} few {# věci vyžadují pozornost} other {# věcí vyžaduje pozornost}}",
     "allClear": "Nic teď nevyžaduje pozornost",
     "openCalendars": "Otevřít kalendáře",

@@ -956,7 +956,6 @@
   },
   "adminDashboard": {
     "title": "Overview",
-    "reload": "Reload",
     "attention": "{count, plural, one {One thing needs attention} other {# things need attention}}",
     "allClear": "Nothing needs attention right now",
     "openCalendars": "Open calendars",
