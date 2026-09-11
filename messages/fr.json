@@ -699,7 +699,7 @@
     "stampHint": "Touchez un jour pour ajouter {title}, touchez à nouveau pour le retirer.",
     "addShiftManually": "Ajouter un service manuellement",
     "tabDay": "Jour",
-    "tabMonth": "Mois",
+    "tabStats": "Statistiques",
     "tabNotes": "Notes",
     "sheetTabs": "Choisir la section",
     "sheetDescription": "Services, statistiques et notes du jour sélectionné",
