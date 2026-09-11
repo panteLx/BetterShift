@@ -47,11 +47,13 @@ export default function AdminCalendarsPage() {
   // Filtering happens client-side so the header can show totals of all calendars.
   const {
     calendars: allCalendars,
-    orphanedCount,
     isLoading,
     deleteCalendar,
     bulkDeleteCalendars,
   } = useAdminCalendars(FILTERS, SORT);
+
+  // The list endpoint returns no orphan count, so derive it from the full list
+  const orphanedCount = useMemo(() => allCalendars.filter(isOrphaned).length, [allCalendars]);
 
   const totalShifts = useMemo(
     () => allCalendars.reduce((sum, cal) => sum + cal.shiftsCount, 0),
