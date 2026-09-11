@@ -10,6 +10,8 @@ import { usePresets } from "@/hooks/usePresets";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ChoiceChips } from "@/components/form-kit";
 import { formatHours } from "@/lib/shift-display";
+import { countFreeDays } from "@/lib/free-days";
+import { cn } from "@/lib/utils";
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -168,6 +170,7 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
   const totalShifts = stats?.totalShifts || 0;
   const totalMinutes = stats?.totalMinutes || 0;
   const hasData = !!stats && Object.keys(stats.stats).length > 0;
+  const freeDays = stats ? countFreeDays(stats) : null;
 
   // Prepare data for charts
   const pieData = stats
@@ -240,13 +243,20 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
         <>
           {viewMode === "overview" && (
             <>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {/* Without timed shifts only four tiles remain, so keep them on one row */}
+              <div
+                className={cn(
+                  "grid grid-cols-2 gap-2",
+                  stats.maxDuration > 0 ? "sm:grid-cols-3" : "sm:grid-cols-4"
+                )}
+              >
                 <KpiTile label={t("stats.totalShifts")} value={totalShifts} />
                 <KpiTile label={t("stats.totalHours")} value={formatHours(totalMinutes, locale)} />
                 <KpiTile
                   label={t("stats.avgPerShift")}
                   value={formatHours(stats.avgMinutesPerShift, locale)}
                 />
+                <KpiTile label={t("calendarView.kpiFreeDays")} value={freeDays ?? "–"} />
                 {stats.minDuration > 0 && (
                   <KpiTile
                     label={t("stats.shortestShift")}
