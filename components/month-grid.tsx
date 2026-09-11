@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { isToday } from "date-fns";
 import { RefreshCw, StickyNote } from "lucide-react";
@@ -11,10 +11,11 @@ import { findNotesForDate } from "@/lib/event-utils";
 import {
   buildDayShiftLayout,
   DayLayoutOptions,
-  getShiftCode,
+  DayShiftLayout,
   getShiftsForDay,
   isSameLocalDay,
 } from "@/lib/shift-display";
+import { DESKTOP_QUERY } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_KEYS = [
@@ -27,8 +28,104 @@ const WEEKDAY_KEYS = [
   "sunday",
 ] as const;
 
-const MOBILE_MAX_BLOCKS = 2;
 const LONG_PRESS_MS = 500;
+
+// Phone cell geometry in px. These mirror the Tailwind sizes of the phone markup
+// below; change both together or the capacity math clips items.
+const PHONE_MIN_ROW = 86; // two shift rows fit: 86 - CHROME = 2 * ITEM + GAP
+const PHONE_CHROME = 31; // 3 padding + 22 day number + 3 gap + 3 padding
+const PHONE_GAP = 2;
+const PHONE_ITEM_PAD = 4;
+const PHONE_TITLE_LINE = 12;
+const PHONE_SUB_LINE = 10;
+const PHONE_PILL = 14;
+const PHONE_EVENT = 14;
+const PHONE_TEXT_INSET = 14; // cell padding 6 + rail 2 + item padding 6
+const PHONE_CHAR_PX = 6.2; // generous average for 10.5px semibold
+const PHONE_SYNC_ICON = 10;
+
+type MinimalGroup = DayShiftLayout["minimalGroups"][number];
+
+interface PhoneFit {
+  shifts: ShiftWithCalendar[];
+  groups: MinimalGroup[];
+  hidden: number;
+}
+
+/** Picks what fits into one phone cell, in layout order with minimal-sync pills last. */
+function fitPhoneCell(
+  { visible, hiddenCount, minimalGroups }: DayShiftLayout,
+  hasEvents: boolean,
+  rowHeight: number,
+  colWidth: number,
+  showFullTitles: boolean,
+  showShiftNotes: boolean
+): PhoneFit {
+  let space = rowHeight - PHONE_CHROME - (hasEvents ? PHONE_EVENT + PHONE_GAP : 0);
+  let placed = 0;
+  const place = (height: number) => {
+    const cost = placed === 0 ? height : height + PHONE_GAP;
+    if (cost > space) return false;
+    space -= cost;
+    placed++;
+    return true;
+  };
+
+  const textWidth = colWidth - PHONE_TEXT_INSET;
+  const shifts: ShiftWithCalendar[] = [];
+  for (const shift of visible) {
+    const titleWidth =
+      shift.title.length * PHONE_CHAR_PX + (shift.syncedFromExternal ? PHONE_SYNC_ICON : 0);
+    const titleLines = showFullTitles && titleWidth > textWidth ? 2 : 1;
+    const height =
+      PHONE_ITEM_PAD +
+      titleLines * PHONE_TITLE_LINE +
+      PHONE_SUB_LINE +
+      (showShiftNotes && shift.notes ? PHONE_SUB_LINE : 0);
+    if (!place(height)) break;
+    shifts.push(shift);
+  }
+
+  const groups: MinimalGroup[] = [];
+  if (shifts.length === visible.length) {
+    for (const group of minimalGroups) {
+      if (!place(PHONE_PILL)) break;
+      groups.push(group);
+    }
+  }
+
+  const droppedMinimal = minimalGroups
+    .slice(groups.length)
+    .reduce((sum, group) => sum + group.shifts.length, 0);
+  return {
+    shifts,
+    groups,
+    hidden: hiddenCount + visible.length - shifts.length + droppedMinimal,
+  };
+}
+
+/** Grid box size, tracked only below the desktop breakpoint where the phone cells need it. */
+function usePhoneGridSize(enabled: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!enabled || !el) return;
+    const observer = new ResizeObserver(() => {
+      if (window.matchMedia(DESKTOP_QUERY).matches) return;
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      setSize((prev) =>
+        prev.width === width && prev.height === height ? prev : { width, height }
+      );
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  return [ref, size] as const;
+}
 
 interface MonthGridProps {
   calendarDays: Date[];
@@ -75,6 +172,14 @@ export function MonthGrid({
   );
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
+  const [gridRef, gridSize] = usePhoneGridSize(full);
+  const rows = Math.max(1, Math.ceil(calendarDays.length / 7));
+  // Until measured this falls back to the minimum row height
+  const phoneRowHeight = Math.max(
+    PHONE_MIN_ROW,
+    Math.floor((gridSize.height - (rows - 1)) / rows)
+  );
+  const phoneColWidth = gridSize.width > 0 ? (gridSize.width - 6) / 7 : 48;
 
   useEffect(
     () => () => {
@@ -89,7 +194,8 @@ export function MonthGrid({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    // On phones the grid may not shrink below its minimum rows, so the page scrolls instead
+    <div className={cn("flex flex-1 flex-col", full ? "lg:min-h-0" : "min-h-0")}>
       <div
         className={cn(
           "grid grid-cols-7 border-b border-line",
@@ -115,11 +221,12 @@ export function MonthGrid({
       </div>
 
       <div
+        ref={gridRef}
         className={cn(
-          "grid min-h-0 flex-1 grid-cols-7 gap-px bg-line-grid",
+          "grid flex-1 grid-cols-7 gap-px bg-line-grid",
           full
-            ? "mx-2 auto-rows-[minmax(92px,auto)] lg:mx-[18px] lg:auto-rows-[minmax(0,1fr)]"
-            : "mx-4 auto-rows-[minmax(0,1fr)]"
+            ? "mx-2 auto-rows-[minmax(86px,1fr)] lg:mx-[18px] lg:min-h-0 lg:auto-rows-[minmax(0,1fr)]"
+            : "mx-4 min-h-0 auto-rows-[minmax(0,1fr)]"
         )}
       >
         {calendarDays.map((day) => {
@@ -136,14 +243,18 @@ export function MonthGrid({
           const events = dayNotes.filter((n) => n.type === "event");
           const plainNotes = dayNotes.length - events.length;
           const dayShifts = inMonth ? getShiftsForDay(shifts, day) : [];
-          const { visible, hiddenCount, minimalGroups } = buildDayShiftLayout(
-            dayShifts,
-            externalSyncs,
-            layout
-          );
-          const mobileVisible = visible.slice(0, MOBILE_MAX_BLOCKS);
-          const mobileHidden =
-            visible.length - mobileVisible.length + hiddenCount;
+          const dayLayout = buildDayShiftLayout(dayShifts, externalSyncs, layout);
+          const { visible, hiddenCount, minimalGroups } = dayLayout;
+          const phone = full
+            ? fitPhoneCell(
+                dayLayout,
+                events.length > 0,
+                phoneRowHeight,
+                phoneColWidth,
+                showFullTitles,
+                showShiftNotes
+              )
+            : null;
 
           return (
             <button
@@ -178,8 +289,9 @@ export function MonthGrid({
               }
               className={cn(
                 "relative flex min-h-0 min-w-0 select-none flex-col overflow-hidden text-left outline-none transition-colors [-webkit-touch-callout:none]",
+                // Size containment keeps phone cell content from growing the rows
                 full
-                  ? "items-center px-1 py-[5px] lg:items-stretch lg:px-[9px] lg:py-2"
+                  ? "items-stretch p-[3px] max-lg:[contain:size] lg:px-[9px] lg:py-2"
                   : "items-stretch px-[9px] py-2",
                 today
                   ? "bg-surface-today"
@@ -198,7 +310,7 @@ export function MonthGrid({
               <div
                 className={cn(
                   "flex w-full items-center gap-1.5",
-                  full ? "mb-1 justify-center lg:mb-1.5 lg:justify-between" : "mb-1.5 justify-between"
+                  full ? "mb-[3px] justify-between lg:mb-1.5" : "mb-1.5 justify-between"
                 )}
               >
                 <span
@@ -218,9 +330,20 @@ export function MonthGrid({
                     +{hiddenCount}
                   </span>
                 )}
-                {full && mobileHidden > 0 && (
-                  <span className="rounded-[4px] bg-brand-soft px-[3px] py-px font-mono text-[9.5px] font-bold text-brand-ink lg:hidden">
-                    +{mobileHidden}
+                {phone && (plainNotes > 0 || phone.hidden > 0) && (
+                  // Negative margin lets both indicators reach into the number box's empty side on narrow phones
+                  <span className="-ml-3.5 flex shrink-0 items-center gap-px lg:hidden">
+                    {plainNotes > 0 && (
+                      <StickyNote
+                        className="size-2.5 shrink-0 text-warning"
+                        aria-label={t("calendarView.hasNotes", { count: plainNotes })}
+                      />
+                    )}
+                    {phone.hidden > 0 && (
+                      <span className="rounded-[3px] bg-brand-soft px-[2px] font-mono text-[9px] font-bold leading-[12px] text-brand-ink">
+                        +{phone.hidden}
+                      </span>
+                    )}
                   </span>
                 )}
                 <span
@@ -247,16 +370,6 @@ export function MonthGrid({
                   )}
                 </span>
               </div>
-
-              {/* Mobile event tag */}
-              {full && events[0] && (
-                <span
-                  className="shift-chip mb-1 w-full truncate rounded-[4px] px-[3px] py-0.5 text-center text-[10px] font-semibold lg:hidden"
-                  style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
-                >
-                  {events[0].note}
-                </span>
-              )}
 
               {/* Desktop chips */}
               <div
@@ -328,31 +441,61 @@ export function MonthGrid({
                 )}
               </div>
 
-              {/* Mobile blocks */}
-              <div className={cn("w-full min-w-0 flex-col gap-[3px] lg:hidden", full ? "flex" : "hidden")}>
-                {mobileVisible.map((shift) => (
-                  <span
-                    key={shift.id}
-                    className="shift-solid flex min-w-0 flex-col items-center rounded-[5px] px-1 py-0.5 leading-[1.2]"
-                    style={{ "--shift": shift.color } as React.CSSProperties}
-                  >
-                    <span className="text-[11px] font-bold tracking-[0.02em]">
-                      {getShiftCode(shift.title)}
+              {/* Phone rows; heights must match the PHONE_* constants */}
+              {phone && (
+                <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-[2px] overflow-hidden lg:hidden">
+                  {phone.shifts.map((shift) => (
+                    <span
+                      key={shift.id}
+                      className="shift-chip flex min-w-0 shrink-0 flex-col rounded-[4px] border-l-2 border-l-[color:var(--shift-base)] px-[3px] py-[2px]"
+                      style={{ "--shift": shift.color } as React.CSSProperties}
+                    >
+                      <span
+                        className={cn(
+                          "text-[10.5px] font-semibold leading-[12px]",
+                          showFullTitles ? "line-clamp-2 break-words" : "truncate"
+                        )}
+                      >
+                        {shift.syncedFromExternal && (
+                          <RefreshCw className="mr-px inline size-2 align-baseline" />
+                        )}
+                        {shift.title}
+                      </span>
+                      <span className="font-mono text-[9.5px] leading-[10px] opacity-75">
+                        {shift.isAllDay
+                          ? t("calendarView.allDayTiny")
+                          : shift.startTime.slice(0, 5)}
+                      </span>
+                      {showShiftNotes && shift.notes && (
+                        <span className="truncate text-[9px] leading-[10px] opacity-70">
+                          {shift.notes}
+                        </span>
+                      )}
                     </span>
-                    <span className="font-mono text-[11px] font-medium">
-                      {shift.isAllDay
-                        ? t("calendarView.allDayTiny")
-                        : shift.startTime.slice(0, 5)}
+                  ))}
+                  {phone.groups.map(({ sync, shifts: syncShifts }) => (
+                    <span
+                      key={sync.id}
+                      className="shift-chip flex shrink-0 items-center gap-[2px] self-start rounded-[4px] px-[3px] py-px font-mono text-[9.5px] font-semibold leading-[12px]"
+                      style={{ "--shift": sync.color } as React.CSSProperties}
+                    >
+                      <RefreshCw className="size-2 shrink-0" />
+                      {syncShifts.length}
                     </span>
-                  </span>
-                ))}
-                {minimalGroups.length > 0 && mobileVisible.length < MOBILE_MAX_BLOCKS && (
-                  <span className="flex items-center justify-center gap-0.5 rounded-[5px] bg-surface-sunken py-0.5 text-[10px] font-semibold text-fg-secondary">
-                    <RefreshCw className="size-2.5" />
-                    {minimalGroups.reduce((sum, g) => sum + g.shifts.length, 0)}
-                  </span>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
+              {phone && events[0] && (
+                <span
+                  className="shift-chip mt-[2px] flex w-full min-w-0 shrink-0 items-center gap-px rounded-[4px] px-[3px] py-px text-[10px] font-semibold leading-[12px] lg:hidden"
+                  style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
+                >
+                  <span className="min-w-0 truncate">{events[0].note}</span>
+                  {events.length > 1 && (
+                    <span className="shrink-0 font-mono">+{events.length - 1}</span>
+                  )}
+                </span>
+              )}
             </button>
           );
         })}

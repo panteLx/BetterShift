@@ -138,7 +138,7 @@ export function getShiftMinutes(shift: ShiftWithCalendar): number {
     : calculateShiftDuration(shift.startTime, shift.endTime);
 }
 
-/** One-letter stamp code used where only a block fits (mobile grid, dock). */
+/** One-letter stamp code used where only a block fits (stamp dock, preset list, compare). */
 export function getShiftCode(title: string): string {
   const first = Array.from(title.trim())[0];
   return first ? first.toLocaleUpperCase() : "·";
