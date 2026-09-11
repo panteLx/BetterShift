@@ -214,13 +214,6 @@ export function useCompareData({
     },
   });
 
-  // Invalidate notes for a specific calendar (used after note mutations)
-  const invalidateNotes = (calendarId: string) => {
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.notes.byCalendar(calendarId),
-    });
-  };
-
   // Invalidate presets for a specific calendar
   const invalidatePresets = (calendarId: string) => {
     queryClient.invalidateQueries({
@@ -244,7 +237,6 @@ export function useCompareData({
     deleteShift: deleteShiftMutation.mutateAsync,
 
     // Invalidation helpers
-    invalidateNotes,
     invalidatePresets,
   };
 }

@@ -152,34 +152,6 @@ function HomeContent() {
     deleteShift: deleteShiftHook,
   });
 
-  const invalidateCompareNotes = () => {
-    if (isCompareMode && compareNoteCalendarId) {
-      compareData.invalidateNotes(compareNoteCalendarId);
-    }
-  };
-
-  const handleNoteSubmit = async (
-    noteText: string,
-    type: "note" | "event",
-    color?: string,
-    recurringPattern?: string,
-    recurringInterval?: number
-  ) => {
-    await noteActions.handleNoteSubmit(
-      noteText,
-      type,
-      color,
-      recurringPattern,
-      recurringInterval
-    );
-    invalidateCompareNotes();
-  };
-
-  const handleNoteDelete = async () => {
-    await noteActions.handleNoteDelete();
-    invalidateCompareNotes();
-  };
-
   const handleEditNoteFromList = (note: CalendarNote) => {
     dialogStates.setShowNotesListDialog(false);
     noteActions.openNoteDialog(dialogStates.selectedDayDate || new Date(), note);
@@ -193,7 +165,6 @@ function HomeContent() {
     if (updatedNotes.length === 0) {
       dialogStates.setShowNotesListDialog(false);
     }
-    invalidateCompareNotes();
   };
 
   const handleAddNewNoteFromList = () => {
@@ -431,8 +402,8 @@ function HomeContent() {
       onNoteDialogChange={noteActions.handleNoteDialogChange}
       selectedNote={noteActions.selectedNote}
       selectedNoteDate={noteActions.selectedDate}
-      onNoteSubmit={handleNoteSubmit}
-      onNoteDelete={noteActions.selectedNote ? handleNoteDelete : undefined}
+      onNoteSubmit={noteActions.handleNoteSubmit}
+      onNoteDelete={noteActions.selectedNote ? noteActions.handleNoteDelete : undefined}
       showNotesListDialog={dialogStates.showNotesListDialog}
       onNotesListDialogChange={dialogStates.setShowNotesListDialog}
       selectedDayNotes={dialogStates.selectedDayNotes}
