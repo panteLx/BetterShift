@@ -13,12 +13,16 @@ import {
   AccessLinkCreated,
 } from "@/components/calendar-token-create-dialog";
 import { useCalendarTokens, type CalendarAccessToken } from "@/hooks/useCalendarTokens";
-import { useAccessLinkForm } from "@/hooks/useAccessLinkForm";
+import type { useAccessLinkForm } from "@/hooks/useAccessLinkForm";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
 function isExpired(token: CalendarAccessToken) {
   return !!token.expiresAt && new Date(token.expiresAt) < new Date();
+}
+
+export function isUsableToken(token: CalendarAccessToken) {
+  return token.isActive && !isExpired(token);
 }
 
 function TokenRow({
@@ -102,8 +106,8 @@ export function CalendarTokenList({ calendarId }: { calendarId: string }) {
   const { tokens, updateToken, deleteToken } = useCalendarTokens(calendarId);
   const [tokenToRevoke, setTokenToRevoke] = useState<CalendarAccessToken | null>(null);
 
-  const active = tokens.filter((token) => token.isActive && !isExpired(token));
-  const inactive = tokens.filter((token) => !token.isActive || isExpired(token));
+  const active = tokens.filter(isUsableToken);
+  const inactive = tokens.filter((token) => !isUsableToken(token));
 
   const renderRows = (list: CalendarAccessToken[]) =>
     list.map((token) => (
@@ -155,20 +159,21 @@ export function CalendarTokenList({ calendarId }: { calendarId: string }) {
 }
 
 /**
- * Access links (screens 9a/9b) as a settings panel. `leading` renders above the
- * list, e.g. the tab switcher of the standalone sharing sheet.
+ * Access links (screens 9a/9b). The owner holds `form` so its input survives tab
+ * switches; `leading` renders above the list, e.g. a tab switcher.
  */
 export function AccessLinksPanel({
   calendarId,
+  form,
   onClose,
   leading,
 }: {
   calendarId: string;
+  form: ReturnType<typeof useAccessLinkForm>;
   onClose: () => void;
   leading?: ReactNode;
 }) {
   const t = useTranslations();
-  const form = useAccessLinkForm(calendarId);
 
   if (form.created) {
     return (

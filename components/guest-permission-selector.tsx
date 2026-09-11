@@ -7,18 +7,36 @@ import { cn } from "@/lib/utils";
 
 type GuestPermission = "none" | "read" | "write";
 
+/** Who a public-access level reaches; visitors without an account only with ALLOW_GUEST_ACCESS. */
+export function usePublicAccessNote() {
+  const t = useTranslations();
+  return (value: GuestPermission, allowGuest: boolean) => {
+    if (value === "none") return t("share.publicPermissionNoneDesc");
+    if (value === "read")
+      return allowGuest
+        ? t("share.publicPermissionReadDescGuestsOn")
+        : t("share.publicPermissionReadDescGuestsOff");
+    return allowGuest
+      ? t("share.publicPermissionWriteDescGuestsOn")
+      : t("share.publicPermissionWriteDescGuestsOff");
+  };
+}
+
 interface GuestPermissionSelectorProps {
   value: GuestPermission;
   onChange: (value: GuestPermission) => void;
+  allowGuest: boolean;
   disabled?: boolean;
 }
 
 export function GuestPermissionSelector({
   value,
   onChange,
+  allowGuest,
   disabled = false,
 }: GuestPermissionSelectorProps) {
   const t = useTranslations();
+  const publicAccessNote = usePublicAccessNote();
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -38,23 +56,21 @@ export function GuestPermissionSelector({
             {
               value: "read",
               title: t("sharingSheet.permRead"),
-              description: t("sharingSheet.guestReadShort"),
+              description: allowGuest
+                ? t("sharingSheet.guestReadShortGuestsOn")
+                : t("sharingSheet.guestReadShortGuestsOff"),
             },
             {
               value: "write",
               title: t("sharingSheet.permWrite"),
-              description: t("sharingSheet.guestWriteShort"),
+              description: allowGuest
+                ? t("sharingSheet.guestWriteShortGuestsOn")
+                : t("sharingSheet.guestWriteShortGuestsOff"),
             },
           ]}
         />
       </fieldset>
-      <InfoNote icon={Info}>
-        {value === "none"
-          ? t("share.publicPermissionNoneDesc")
-          : value === "read"
-            ? t("share.publicPermissionReadDesc")
-            : t("share.publicPermissionWriteDesc")}
-      </InfoNote>
+      <InfoNote icon={Info}>{publicAccessNote(value, allowGuest)}</InfoNote>
     </div>
   );
 }

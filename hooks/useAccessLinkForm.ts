@@ -44,6 +44,11 @@ export function useAccessLinkForm(calendarId: string) {
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreatedAccessLink | null>(null);
 
+  // A created link counts as saved; the one-time token view is not unsaved input.
+  const dirty =
+    !created &&
+    (name.trim() !== "" || permission !== "read" || validity !== DEFAULT_VALIDITY);
+
   const setValidity = (value: LinkValidity) => {
     setValidityState(value);
     setExpiresAt(expiryFor(value));
@@ -86,6 +91,7 @@ export function useAccessLinkForm(calendarId: string) {
     validity,
     setValidity,
     expiresAt,
+    dirty,
     creating,
     created,
     create,

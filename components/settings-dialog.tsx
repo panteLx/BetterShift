@@ -14,7 +14,6 @@ import {
   FileText,
   Languages,
   Layers,
-  Link2,
   LogOut,
   Palette,
   RefreshCw,
@@ -38,7 +37,7 @@ import { PresetsPanel } from "@/components/preset-manage-sheet";
 import { ExternalSyncPanel } from "@/components/external-sync-manage-sheet";
 import { SyncNotificationsPanel } from "@/components/sync-notification-dialog";
 import { SharingPanel } from "@/components/calendar-share-management-sheet";
-import { AccessLinksPanel } from "@/components/calendar-token-list";
+import { isUsableToken } from "@/components/calendar-token-list";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
 import { setLocaleCookie } from "@/components/app-preferences-menu-items";
@@ -61,7 +60,6 @@ export type SettingsSection =
   | "presets"
   | "external"
   | "sharing"
-  | "links"
   | "export"
   | "view"
   | "notifications"
@@ -315,14 +313,9 @@ export function SettingsDialog({
                 id: "sharing" as const,
                 icon: Users,
                 title: t("settings.sharing"),
-                description: t("settings.sharingHint"),
-              },
-              {
-                id: "links" as const,
-                icon: Link2,
-                title: t("settings.links"),
-                description: t("settings.linksHint", { count: tokens.length }),
-                value: tokens.length,
+                description: t("settings.sharingHint", {
+                  count: tokens.filter(isUsableToken).length,
+                }),
               },
             ]
           : []),
@@ -413,9 +406,13 @@ export function SettingsDialog({
           />
         );
       case "sharing":
-        return <SharingPanel calendarId={calendarId} onClose={close} />;
-      case "links":
-        return <AccessLinksPanel calendarId={calendarId} onClose={close} />;
+        return (
+          <SharingPanel
+            calendarId={calendarId}
+            onClose={() => requestClose(false)}
+            onDirtyChange={setDirty}
+          />
+        );
       case "export":
         return <ExportPanel calendarId={calendarId} onClose={close} />;
       case "notifications":
