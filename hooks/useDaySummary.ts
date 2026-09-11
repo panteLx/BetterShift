@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { getDaysInMonth, getDaysInYear } from "date-fns";
 import { ShiftWithCalendar } from "@/lib/types";
+import { countFreeDays } from "@/lib/free-days";
 import { CalendarNote } from "@/lib/db/schema";
 import { findNotesForDate } from "@/lib/event-utils";
 import { getShiftMinutes, getShiftsForDay, sortShifts } from "@/lib/shift-display";
@@ -78,15 +78,8 @@ export function usePeriodSummary({
           .sort((a, b) => b.count - a.count)
       : [];
 
-    let freeDays: number | null = null;
-    if (stats && period === "month") {
-      freeDays = getDaysInMonth(anchorDate) - stats.daysWithShifts;
-    } else if (stats && period === "week") {
-      freeDays = 7 - stats.daysWithShifts;
-    } else if (stats) {
-      freeDays = getDaysInYear(anchorDate) - stats.daysWithShifts;
-    }
+    const freeDays = stats ? countFreeDays(stats) : null;
 
     return { stats, freeDays, byType, loading };
-  }, [stats, loading, shifts, anchorDate, period]);
+  }, [stats, loading, shifts]);
 }
