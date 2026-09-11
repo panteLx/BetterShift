@@ -13,6 +13,8 @@ interface ShiftsOverviewDialogProps {
   shifts: ShiftWithCalendar[];
   onDeleteShift?: (shiftId: string) => void;
   onEditShift?: (shift: ShiftWithCalendar) => void;
+  /** Viewer's edit permission on the calendar the shifts belong to */
+  canEdit: boolean;
 }
 
 export function ShiftsOverviewDialog({
@@ -22,6 +24,7 @@ export function ShiftsOverviewDialog({
   shifts,
   onDeleteShift,
   onEditShift,
+  canEdit,
 }: ShiftsOverviewDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -57,7 +60,7 @@ export function ShiftsOverviewDialog({
             <ShiftDetailRow
               key={shift.id}
               shift={shift}
-              canEdit={!!onEditShift && !!onDeleteShift}
+              canEdit={canEdit && !!onEditShift && !!onDeleteShift}
               actions="menu"
               onEdit={(s) => {
                 onOpenChange(false);

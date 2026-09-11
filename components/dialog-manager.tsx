@@ -141,6 +141,7 @@ export function DialogManager(props: DialogManagerProps) {
         shifts={props.selectedDayShifts}
         onDeleteShift={props.onDeleteShiftFromDayDialog}
         onEditShift={props.onEditShiftFromDayDialog}
+        canEdit={props.canEditShifts}
       />
 
       {props.selectedDayDate && (

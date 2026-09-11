@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -89,11 +89,15 @@ interface SectionItem {
 function GeneralPanel({
   calendarId,
   onClose,
+  onCancel,
   onDeleteCalendar,
+  onDirtyChange,
 }: {
   calendarId: string;
   onClose: () => void;
+  onCancel: () => void;
   onDeleteCalendar: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const t = useTranslations();
   const { calendars, updateCalendar } = useCalendars();
@@ -105,6 +109,10 @@ function GeneralPanel({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dirty = !!calendar && (name !== calendar.name || color !== calendar.color);
+
+  useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
 
   const save = async () => {
     if (!calendar) return;
@@ -160,7 +168,7 @@ function GeneralPanel({
         <p className="hidden min-w-0 flex-1 text-[13px] text-fg-secondary lg:block">
           {t("settings.appliesToAll")}
         </p>
-        <Button variant="outline" className="h-10 flex-1 font-semibold lg:flex-none lg:px-4" onClick={onClose}>
+        <Button variant="outline" className="h-10 flex-1 font-semibold lg:flex-none lg:px-4" onClick={onCancel}>
           {t("common.cancel")}
         </Button>
         <Button
@@ -388,7 +396,9 @@ export function SettingsDialog({
             key={calendarId}
             calendarId={calendarId}
             onClose={close}
+            onCancel={() => requestClose(false)}
             onDeleteCalendar={onDeleteCalendar}
+            onDirtyChange={setDirty}
           />
         );
       case "presets":
