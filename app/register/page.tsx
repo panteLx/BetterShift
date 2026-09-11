@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -23,8 +23,8 @@ import {
   isRateLimitError,
   handleRateLimitError,
 } from "@/lib/rate-limit-client";
+import { useMounted } from "@/hooks/useMediaQuery";
 
-const subscribeNoop = () => () => {};
 
 export default function RegisterPage() {
   const t = useTranslations();
@@ -37,7 +37,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   // False during SSR and hydration, true afterwards
-  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const mounted = useMounted();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

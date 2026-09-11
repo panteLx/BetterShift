@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { signOut } from "@/lib/auth/client";
+import { useSignOut } from "@/hooks/useSignOut";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,22 +25,13 @@ import {
   Shield,
   SlidersHorizontal,
 } from "lucide-react";
-import { toast } from "sonner";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items";
 import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
+import { getUserInitials } from "@/lib/utils";
 
 interface MenuProps {
   onOpenViewSettings?: () => void;
@@ -51,6 +42,7 @@ interface MenuProps {
 /** Avatar menu for signed-in users: a dropdown on desktop, the settings sheet on phones. */
 export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
   const t = useTranslations();
+  const handleSignOut = useSignOut();
   const locale = useLocale();
   const router = useRouter();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
@@ -78,7 +70,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
           <Avatar className="absolute -bottom-1.5 -right-1.5 size-[18px] ring-2 ring-background">
             <AvatarImage src={user.image || undefined} alt="" />
             <AvatarFallback className="bg-fg-secondary text-[9px] font-semibold text-background">
-              {user.name ? getInitials(user.name).slice(0, 1) : <User className="size-2.5" />}
+              {user.name ? getUserInitials(user).slice(0, 1) : <User className="size-2.5" />}
             </AvatarFallback>
           </Avatar>
         </button>
@@ -86,22 +78,6 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
       </>
     );
   }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success(t("auth.logoutSuccess"));
-          },
-        },
-      });
-      router.replace("/login");
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast.error(t("common.error"));
-    }
-  };
 
   return (
     <>
@@ -115,7 +91,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
             <Avatar className="size-8">
               <AvatarImage src={user.image || undefined} alt={user.name || ""} />
               <AvatarFallback className="bg-line text-[12px] font-semibold text-fg-body">
-                {user.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+                {user.name ? getUserInitials(user) : <User className="h-4 w-4" />}
               </AvatarFallback>
             </Avatar>
           </button>

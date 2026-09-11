@@ -100,7 +100,7 @@ function MoreChip({ variant, count, active, open, className, ...props }: MoreChi
   const tone = dock
     ? active
       ? "bg-brand text-white"
-      : cn("text-[#e4e7ec] hover:bg-white/10", open && "bg-white/10")
+      : cn("text-dock-ink hover:bg-white/10", open && "bg-white/10")
     : active
       ? "border-brand bg-brand-soft text-brand-ink"
       : cn(
@@ -252,7 +252,7 @@ export function StampDock({ presets, selectedPresetId, onSelectPreset, onManage 
           <button
             type="button"
             onClick={onManage}
-            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-[#e4e7ec] hover:bg-white/10"
+            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-dock-ink hover:bg-white/10"
           >
             <Plus className="size-3.5" />
             {t("calendarView.createPreset")}
@@ -274,7 +274,7 @@ export function StampDock({ presets, selectedPresetId, onSelectPreset, onManage 
               }
               className={cn(
                 "flex h-[30px] shrink-0 items-center gap-[7px] rounded-lg px-2.5 text-[12.5px] font-medium transition-colors",
-                active ? "bg-brand text-white" : "text-[#e4e7ec] hover:bg-white/10"
+                active ? "bg-brand text-white" : "text-dock-ink hover:bg-white/10"
               )}
             >
               <span
@@ -286,7 +286,7 @@ export function StampDock({ presets, selectedPresetId, onSelectPreset, onManage 
                 <kbd
                   className={cn(
                     "rounded-[4px] bg-white/18 px-1 py-px font-mono text-[10px] font-normal",
-                    active ? "text-white" : "text-[#e4e7ec]"
+                    active ? "text-white" : "text-dock-ink"
                   )}
                 >
                   {key}

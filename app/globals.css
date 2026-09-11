@@ -92,6 +92,7 @@
   /* Stamp dock */
   --color-dock: var(--dock);
   --color-dock-line: var(--dock-line);
+  --color-dock-ink: var(--dock-ink);
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -155,6 +156,7 @@
 
   --dock: #101828;
   --dock-line: rgb(255 255 255 / 0.14);
+  --dock-ink: #e4e7ec;
 
   --elevation-window: 0 12px 32px -12px rgb(16 24 40 / 0.18);
   --elevation-sheet: 0 -14px 34px -14px rgb(16 24 40 / 0.34);
@@ -250,6 +252,7 @@
 
   --dock: #1b2333;
   --dock-line: #29334a;
+  --dock-ink: #e4e7ec;
 
   --elevation-window: 0 12px 32px -12px rgb(0 0 0 / 0.5);
   --elevation-sheet: 0 -14px 34px -14px rgb(0 0 0 / 0.6);

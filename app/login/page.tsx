@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
@@ -33,6 +33,7 @@ import {
   isRateLimitError,
   handleRateLimitError,
 } from "@/lib/rate-limit-client";
+import { useMounted } from "@/hooks/useMediaQuery";
 
 type SocialProvider = "google" | "github" | "discord";
 
@@ -45,7 +46,6 @@ const SOCIAL_ICONS = {
 const secondaryButtonClass =
   "h-10 rounded-[9px] text-[13.5px] font-medium text-fg-body";
 
-const subscribeNoop = () => () => {};
 
 export default function LoginPage() {
   const t = useTranslations();
@@ -60,7 +60,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   // False during SSR and hydration, true afterwards
-  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const mounted = useMounted();
   const [banInfo, setBanInfo] = useState<{
     reason?: string;
     expiresAt?: string;

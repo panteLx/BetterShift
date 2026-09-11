@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useSyncExternalStore } from "react";
+import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -16,8 +16,8 @@ import { useAdminStats } from "@/hooks/useAdminStats";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
+import { useClientValue } from "@/hooks/useMediaQuery";
 
-const noSubscribe = () => () => {};
 
 function ScaleValue({ value }: { value: number | undefined }) {
   return (
@@ -47,7 +47,7 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
   const describe = useAuditDescription();
-  const host = useSyncExternalStore(noSubscribe, () => window.location.host, () => "");
+  const host = useClientValue(() => window.location.host, "");
 
   const { stats, isLoading: statsLoading } = useAdminStats();
   const { versionInfo } = useVersionUpdateCheck();

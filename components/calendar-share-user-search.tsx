@@ -6,19 +6,7 @@ import { UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCalendarShares, type SearchUser } from "@/hooks/useCalendarShares";
-
-export function getUserInitials(user: { name: string | null; email: string }) {
-  const source = user.name?.trim();
-  if (source) {
-    return source
-      .split(/\s+/)
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  return user.email.slice(0, 2).toUpperCase() || "?";
-}
+import { getUserInitials } from "@/lib/utils";
 
 interface CalendarShareUserSearchProps {
   calendarId: string;

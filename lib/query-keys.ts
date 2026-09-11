@@ -50,6 +50,7 @@ export const queryKeys = {
       detail: (calendarId: string) =>
         ["admin", "calendars", "detail", calendarId] as const,
     },
+    auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
   },
 
@@ -71,5 +72,6 @@ export const queryKeys = {
   },
 
   // User Activity Logs
+  activityLogsAll: ["activity-logs"] as const,
   activityLogs: (filters?: object) => ["activity-logs", filters] as const,
 } as const;

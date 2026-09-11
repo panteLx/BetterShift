@@ -1,14 +1,13 @@
 "use client";
 
-import { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { CloudDownload, Eye, EyeOff, Link2, Pencil, Send, SquarePen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ListRow, Pill, SectionLabel } from "@/components/form-kit";
+import { ListRow, Pill } from "@/components/form-kit";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
-import { StatTile, UserAvatar } from "@/components/admin/admin-kit";
+import { DetailSection, StatTile, UserAvatar } from "@/components/admin/admin-kit";
 import { isOrphaned, ownerColor } from "@/components/admin/calendar-table";
 import { fetchAdminCalendarDetails } from "@/hooks/useAdminCalendars";
 import {
@@ -27,15 +26,6 @@ interface CalendarDetailsSheetProps {
   onEdit: () => void;
   onTransfer: () => void;
   onDelete: () => void;
-}
-
-function Section({ label, children }: { label: ReactNode; children: ReactNode }) {
-  return (
-    <section>
-      <SectionLabel>{label}</SectionLabel>
-      <div className="flex flex-col gap-2">{children}</div>
-    </section>
-  );
 }
 
 function PermissionPill({ permission }: { permission: string }) {
@@ -171,7 +161,7 @@ export function CalendarDetailsSheet({
             </div>
           </div>
 
-          <Section label={t("adminCalendars.content")}>
+          <DetailSection label={t("adminCalendars.content")}>
             <div className="grid grid-cols-2 gap-2.5">
               <StatTile label={t("common.labels.shifts")} value={calendar.shiftsCount} />
               <StatTile label={t("common.labels.presets")} value={calendar.presetsCount} />
@@ -183,9 +173,9 @@ export function CalendarDetailsSheet({
                 value={calendar.shares.length}
               />
             </div>
-          </Section>
+          </DetailSection>
 
-          <Section label={t("adminCalendars.publicAccess")}>
+          <DetailSection label={t("adminCalendars.publicAccess")}>
             <ListRow className="py-[11px]">
               <GuestIcon className="size-4 shrink-0 text-fg-secondary" />
               <div className="min-w-0 flex-1">
@@ -195,10 +185,10 @@ export function CalendarDetailsSheet({
                 <div className="mt-0.5 text-[11.5px] text-fg-tertiary">{guestHint}</div>
               </div>
             </ListRow>
-          </Section>
+          </DetailSection>
 
           {calendar.shares.length > 0 && (
-            <Section label={t("admin.calendars.userSharesList")}>
+            <DetailSection label={t("admin.calendars.userSharesList")}>
               {calendar.shares.map((share) => (
                 <ListRow key={share.userId} className="py-2.5">
                   <UserAvatar name={share.userName || share.userEmail} image={share.userImage} size={30} />
@@ -209,11 +199,11 @@ export function CalendarDetailsSheet({
                   <PermissionPill permission={share.permission} />
                 </ListRow>
               ))}
-            </Section>
+            </DetailSection>
           )}
 
           {calendar.shareTokens?.length > 0 && (
-            <Section label={t("admin.calendars.tokenSharesList")}>
+            <DetailSection label={t("admin.calendars.tokenSharesList")}>
               {calendar.shareTokens.map((token) => (
                 <ListRow key={token.id} className="py-2.5">
                   <Link2 className="size-4 shrink-0 text-fg-secondary" />
@@ -226,11 +216,11 @@ export function CalendarDetailsSheet({
                   <PermissionPill permission={token.permission} />
                 </ListRow>
               ))}
-            </Section>
+            </DetailSection>
           )}
 
           {calendar.externalSyncs?.length > 0 && (
-            <Section label={t("admin.calendars.externalSyncs")}>
+            <DetailSection label={t("admin.calendars.externalSyncs")}>
               {calendar.externalSyncs.map((sync) => (
                 <ListRow key={sync.id} className="items-start py-2.5">
                   <CloudDownload className="mt-0.5 size-4 shrink-0 text-fg-secondary" />
@@ -245,7 +235,7 @@ export function CalendarDetailsSheet({
                   </div>
                 </ListRow>
               ))}
-            </Section>
+            </DetailSection>
           )}
         </>
       )}

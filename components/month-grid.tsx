@@ -28,6 +28,9 @@ const WEEKDAY_KEYS = [
 
 const LONG_PRESS_MS = 500;
 
+// The filled day number of "today", shared by the desktop, phone and compare cells
+const TODAY_BADGE = "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]";
+
 // Cell geometry in px. These mirror the Tailwind sizes of the cell markup below;
 // change both together or the fitting clips rows.
 const DESKTOP_MAX_ROWS = 4;
@@ -468,7 +471,7 @@ export function MonthGrid({
             className={cn(
               "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
               today
-                ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
+                ? TODAY_BADGE
                 : inMonth
                   ? "text-fg-body"
                   : "text-fg-tertiary"
@@ -666,7 +669,7 @@ export function MonthGrid({
                     className={cn(
                       "inline-flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
                       today
-                        ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
+                        ? TODAY_BADGE
                         : inMonth
                           ? "text-fg-body dark:text-fg-secondary"
                           : "text-fg-faint"
@@ -685,7 +688,7 @@ export function MonthGrid({
                       className={cn(
                         "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full font-mono text-[14px] leading-none",
                         today
-                          ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
+                          ? TODAY_BADGE
                           : selected
                             ? "bg-cell-selected font-semibold text-fg-strong"
                             : !inMonth

@@ -15,12 +15,11 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ListRow, SectionLabel } from "@/components/form-kit";
 import {
   CalendarShareUserSearch,
-  getUserInitials,
 } from "@/components/calendar-share-user-search";
 import { useCalendarShares, type CalendarShare } from "@/hooks/useCalendarShares";
 import { useAuth } from "@/hooks/useAuth";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
-import { cn } from "@/lib/utils";
+import { cn, getUserInitials } from "@/lib/utils";
 
 type SharePermission = "admin" | "write" | "read";
 

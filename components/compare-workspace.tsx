@@ -2,11 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { addMonths, format, isSameDay, isSameMonth, isToday, subMonths } from "date-fns";
+import { format, isSameDay, isSameMonth, isToday } from "date-fns";
 import { toast } from "sonner";
 import {
-  ChevronLeft,
-  ChevronRight,
   Columns2,
   Info,
   Link2,
@@ -17,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MonthGrid } from "@/components/month-grid";
-import { MonthStepper } from "@/components/app-header";
+import { MonthArrows, MonthStepper } from "@/components/app-header";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
 import { MorePresets, orderStampPresets, splitStampPresets } from "@/components/stamp-dock";
 import { MAX_COMPARE_CALENDARS } from "@/components/calendar-compare-sheet";
@@ -530,25 +528,7 @@ function CompareMobile({
         </div>
 
         <div className="flex items-center justify-end gap-2 px-4 pt-2">
-          <div className="flex overflow-hidden rounded-[9px] border border-line">
-            <button
-              type="button"
-              className="flex size-9 items-center justify-center text-fg-secondary"
-              onClick={() => onDateChange(subMonths(currentDate, 1))}
-              aria-label={t("calendarView.previousMonth")}
-            >
-              <ChevronLeft className="size-[18px]" />
-            </button>
-            <span className="w-px bg-line" />
-            <button
-              type="button"
-              className="flex size-9 items-center justify-center text-fg-secondary"
-              onClick={() => onDateChange(addMonths(currentDate, 1))}
-              aria-label={t("calendarView.nextMonth")}
-            >
-              <ChevronRight className="size-[18px]" />
-            </button>
-          </div>
+          <MonthArrows currentDate={currentDate} onDateChange={onDateChange} />
         </div>
 
         <div className="grid grid-cols-7 px-2 pt-2">

@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Pill } from "@/components/form-kit";
-import { getInitials, UserMenu } from "@/components/user-menu";
+import { Pill, SectionLabel } from "@/components/form-kit";
+import { UserMenu } from "@/components/user-menu";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
-import { cn } from "@/lib/utils";
+import { cn, getUserInitials } from "@/lib/utils";
 
 /*
  * Shared admin building blocks (screens 13a–13k). Pages compose these; data
@@ -205,7 +205,7 @@ export function UserAvatar({
       )}
       style={{ ...style, backgroundColor: color }}
     >
-      {name ? getInitials(name) : "?"}
+      {name ? getUserInitials({ name }) : "?"}
     </span>
   );
 }
@@ -244,6 +244,16 @@ export function Count({ value, className }: { value: number; className?: string 
 }
 
 /** Labelled numbers used in mobile cards and detail panels. */
+/** Labelled block inside a detail side panel. */
+export function DetailSection({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <section>
+      <SectionLabel>{label}</SectionLabel>
+      <div className="flex flex-col gap-2">{children}</div>
+    </section>
+  );
+}
+
 export function StatTile({ label, value }: { label: ReactNode; value: number }) {
   return (
     <div className="rounded-[10px] border border-line bg-surface-card px-3 py-2.5">

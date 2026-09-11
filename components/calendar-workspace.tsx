@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { addMonths, format, startOfWeek, subMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, RefreshCw, WifiOff } from "lucide-react";
+import { format, startOfWeek } from "date-fns";
+import { RefreshCw, WifiOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { MonthArrows } from "@/components/app-header";
 import { MonthGrid } from "@/components/month-grid";
 import { DayInspector, DayActions, DayViewModel } from "@/components/day-inspector";
 import { MobileDayFooter, MobileDaySheet, MobileStatsSheet } from "@/components/mobile-day-sheet";
@@ -187,8 +188,6 @@ export function CalendarWorkspace({
   }
 
   const dateLocale = getDateLocale(locale);
-  const stepClass =
-    "flex size-9 items-center justify-center text-fg-secondary transition-colors hover:bg-surface-panel";
 
   return (
     <div className="flex h-dvh flex-col bg-background">
@@ -200,25 +199,7 @@ export function CalendarWorkspace({
             {format(currentDate, "LLLL yyyy", { locale: dateLocale })}
           </h1>
           {isOnline ? (
-            <div className="flex overflow-hidden rounded-[9px] border border-line">
-              <button
-                type="button"
-                className={stepClass}
-                onClick={() => onDateChange(subMonths(currentDate, 1))}
-                aria-label={t("calendarView.previousMonth")}
-              >
-                <ChevronLeft className="size-[18px]" />
-              </button>
-              <span className="w-px bg-line" />
-              <button
-                type="button"
-                className={stepClass}
-                onClick={() => onDateChange(addMonths(currentDate, 1))}
-                aria-label={t("calendarView.nextMonth")}
-              >
-                <ChevronRight className="size-[18px]" />
-              </button>
-            </div>
+            <MonthArrows currentDate={currentDate} onDateChange={onDateChange} />
           ) : (
             <Button
               variant="outline"

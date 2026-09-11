@@ -8,14 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, InfoNote, inputClass, SectionLabel } from "@/components/form-kit";
 import { PanelBody, PanelFooter } from "@/components/panel-dialog";
-import { getInitials } from "@/components/user-menu";
 import { accountContentClass } from "@/components/profile/account-layout";
 import {
   ConnectedAccountList,
   type ConnectedAccount,
 } from "@/components/profile/connected-accounts";
 import type { ProfileForm } from "@/hooks/useProfileForm";
-import { cn } from "@/lib/utils";
+import { cn, getUserInitials } from "@/lib/utils";
 
 const readOnlyInput = "read-only:bg-surface-panel read-only:text-fg-secondary";
 
@@ -50,7 +49,7 @@ export function ProfileDetailsSection({
             <Avatar className="size-16">
               <AvatarImage src={form.image ?? undefined} alt="" className="object-cover" />
               <AvatarFallback className="bg-brand-soft text-[20px] font-semibold text-brand-ink">
-                {form.name ? getInitials(form.name) : <User className="size-6" />}
+                {form.name ? getUserInitials({ name: form.name }) : <User className="size-6" />}
               </AvatarFallback>
             </Avatar>
             {canEdit && (

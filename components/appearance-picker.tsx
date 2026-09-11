@@ -1,10 +1,10 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Check, Moon, Sun, SunMoon, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/hooks/useMediaQuery";
 
 type ThemeOption = "system" | "light" | "dark";
 
@@ -14,7 +14,6 @@ const PREVIEWS: Record<ThemeOption, { icon: LucideIcon; preview: [string, string
   dark: { icon: Moon, preview: ["#0e141f", "#0e141f"] },
 };
 
-const subscribe = () => () => {};
 
 export function useThemeOptions() {
   const t = useTranslations();
@@ -41,11 +40,7 @@ export function AppearancePicker() {
   const t = useTranslations();
   const { theme, setTheme } = useTheme();
   // next-themes only knows the stored value after hydration
-  const mounted = useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false
-  );
+  const mounted = useMounted();
   const current = mounted ? (theme ?? "system") : undefined;
   const options = useThemeOptions();
 

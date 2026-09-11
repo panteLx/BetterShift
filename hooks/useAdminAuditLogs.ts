@@ -240,7 +240,7 @@ export function useAdminAuditLogs(
       toast.success(t("common.deletedCount", { count: data.deletedCount }));
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.auditLogsAll });
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
     },
   });
@@ -259,7 +259,7 @@ export function useAdminAuditLogs(
       toast.success(t("common.deletedCount", { count: data.deletedCount }));
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.auditLogsAll });
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
     },
   });

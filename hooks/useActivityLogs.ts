@@ -146,7 +146,7 @@ export function useActivityLogs(
     mutationFn: () => clearLogsApi(t),
     onSuccess: () => {
       toast.success(t("common.deleted", { item: t("activityLog.title") }));
-      queryClient.invalidateQueries({ queryKey: ["activity-logs"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activityLogsAll });
     },
     onError: (err) => {
       toast.error(

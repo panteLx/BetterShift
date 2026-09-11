@@ -62,6 +62,41 @@ export function HeaderIconButton({
   );
 }
 
+/** The phone month arrows: one bordered group, used by both workspaces. */
+export function MonthArrows({
+  currentDate,
+  onDateChange,
+}: {
+  currentDate: Date;
+  onDateChange: (date: Date) => void;
+}) {
+  const t = useTranslations();
+  const stepClass =
+    "flex size-9 items-center justify-center text-fg-secondary transition-colors hover:bg-surface-panel";
+
+  return (
+    <div className="flex overflow-hidden rounded-[9px] border border-line">
+      <button
+        type="button"
+        className={stepClass}
+        onClick={() => onDateChange(subMonths(currentDate, 1))}
+        aria-label={t("calendarView.previousMonth")}
+      >
+        <ChevronLeft className="size-[18px]" />
+      </button>
+      <span className="w-px bg-line" />
+      <button
+        type="button"
+        className={stepClass}
+        onClick={() => onDateChange(addMonths(currentDate, 1))}
+        aria-label={t("calendarView.nextMonth")}
+      >
+        <ChevronRight className="size-[18px]" />
+      </button>
+    </div>
+  );
+}
+
 export function MonthStepper({
   currentDate,
   onDateChange,

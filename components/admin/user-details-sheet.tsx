@@ -1,15 +1,14 @@
 "use client";
 
-import { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { ChevronRight, KeyRound, Lock, LockOpen, Pencil, Trash2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ListRow, Pill, SectionLabel } from "@/components/form-kit";
+import { ListRow, Pill } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
-import { RolePill, StatTile, StatusPill, UserAvatar } from "@/components/admin/admin-kit";
+import { DetailSection, RolePill, StatTile, StatusPill, UserAvatar } from "@/components/admin/admin-kit";
 import { fetchAdminUserDetails } from "@/hooks/useAdminUsers";
 import { useUserPermissions } from "@/hooks/useAdminAccess";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
@@ -71,15 +70,6 @@ function ActionRow({ icon: Icon, label, onClick }: { icon: LucideIcon; label: st
       <span className="flex-1 truncate text-[14px] font-semibold text-fg-body">{label}</span>
       <ChevronRight className="size-4 text-fg-faint" />
     </button>
-  );
-}
-
-function Section({ label, children }: { label: ReactNode; children: ReactNode }) {
-  return (
-    <section>
-      <SectionLabel>{label}</SectionLabel>
-      <div className="flex flex-col gap-2">{children}</div>
-    </section>
   );
 }
 
@@ -202,16 +192,16 @@ export function UserDetailsSheet({
             </StatusBanner>
           )}
 
-          <Section label={t("adminUsers.numbers")}>
+          <DetailSection label={t("adminUsers.numbers")}>
             <div className="grid grid-cols-3 gap-2.5">
               <StatTile label={t("admin.ownedCalendars")} value={user.ownedCalendars.length} />
               <StatTile label={t("common.labels.sharedCalendars")} value={user.sharedCalendars.length} />
               <StatTile label={t("common.auth.activeSessions")} value={user.sessionsCount} />
             </div>
-          </Section>
+          </DetailSection>
 
           {user.ownedCalendars.length > 0 && (
-            <Section label={t("admin.ownedCalendars")}>
+            <DetailSection label={t("admin.ownedCalendars")}>
               {user.ownedCalendars.map((calendar) => (
                 <ListRow key={calendar.id} className="py-2.5">
                   <span
@@ -223,11 +213,11 @@ export function UserDetailsSheet({
                   </span>
                 </ListRow>
               ))}
-            </Section>
+            </DetailSection>
           )}
 
           {user.sharedCalendars.length > 0 && (
-            <Section label={t("common.labels.sharedCalendars")}>
+            <DetailSection label={t("common.labels.sharedCalendars")}>
               {user.sharedCalendars.map((share) => (
                 <ListRow key={share.id} className="py-2.5">
                   <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-fg-strong">
@@ -242,11 +232,11 @@ export function UserDetailsSheet({
                   </Pill>
                 </ListRow>
               ))}
-            </Section>
+            </DetailSection>
           )}
 
           {user.accounts.length > 0 && (
-            <Section label={t("common.auth.connectedAccounts")}>
+            <DetailSection label={t("common.auth.connectedAccounts")}>
               {user.accounts.map((account) => (
                 <ListRow key={account.id} className="py-[11px]">
                   <KeyRound className="size-4 shrink-0 text-fg-secondary" />
@@ -256,11 +246,11 @@ export function UserDetailsSheet({
                   <span className="font-mono text-[12px] text-fg-tertiary">{date(account.createdAt)}</span>
                 </ListRow>
               ))}
-            </Section>
+            </DetailSection>
           )}
 
           {desktop && hasActions && (
-            <Section label={t("adminUsers.actions")}>
+            <DetailSection label={t("adminUsers.actions")}>
               <div className="grid grid-cols-2 gap-2">
                 {canEdit && <ActionButton icon={Pencil} label={t("adminUsers.edit")} onClick={onEdit} />}
                 {canResetPassword && (
@@ -271,7 +261,7 @@ export function UserDetailsSheet({
                   <ActionButton icon={Trash2} label={t("common.delete")} onClick={onDelete} danger />
                 )}
               </div>
-            </Section>
+            </DetailSection>
           )}
         </>
       )}

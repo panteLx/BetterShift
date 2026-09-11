@@ -4,7 +4,6 @@ import { ReactNode, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { toast } from "sonner";
 import {
   ArrowLeft,
   ChevronRight,
@@ -39,7 +38,7 @@ import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { useViewSettings } from "@/hooks/useViewSettings";
-import { signOut } from "@/lib/auth/client";
+import { useSignOut } from "@/hooks/useSignOut";
 import { locales } from "@/lib/locales";
 import { CalendarWithCount } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -219,6 +218,7 @@ function PhoneMenuSheet({
   calendarGroup?: CalendarGroup;
 }) {
   const t = useTranslations();
+  const handleSignOut = useSignOut();
   const locale = useLocale();
   const router = useRouter();
   const { theme } = useTheme();
@@ -258,21 +258,6 @@ function PhoneMenuSheet({
   const navigate = (href: string) => {
     close();
     router.push(href);
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success(t("auth.logoutSuccess"));
-          },
-        },
-      });
-      router.replace("/login");
-    } catch {
-      toast.error(t("common.error"));
-    }
   };
 
   const calendarItem = calendarGroup?.items.find((item) => item.id === section);
