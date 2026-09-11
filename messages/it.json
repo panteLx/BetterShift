@@ -323,8 +323,6 @@
     "viewOnGitHub": "Visualizza su GitHub"
   },
   "export": {
-    "title": "Esporta Calendario",
-    "description": "Esporta il tuo calendario come file ICS o PDF",
     "formatLabel": "Formato di esportazione",
     "icsFormat": "ICS (File Calendario)",
     "pdfFormat": "PDF (Documento)",
@@ -439,9 +437,7 @@
     "disable": "Disattiva",
     "revoke": "Revoca",
     "revokeConfirm": "Revocare Link di Accesso?",
-    "revokeConfirmDescription": "Sei sicuro di voler revocare \"{name}\"? Chiunque usi questo link perderà immediatamente l'accesso.",
-    "accessedViaLink": "Accesso tramite Link di Condivisione",
-    "linkName": "Nome Link"
+    "revokeConfirmDescription": "Sei sicuro di voler revocare \"{name}\"? Chiunque usi questo link perderà immediatamente l'accesso."
   },
   "rateLimit": {
     "title": "Troppe richieste",
@@ -778,8 +774,6 @@
     "markAsSecondaryHint": "Compare nella barra dei modelli solo dopo aver cliccato «Altri»"
   },
   "syncSheet": {
-    "title": "Calendari esterni",
-    "description": "Abbonati a Google, Outlook o iCal",
     "intervalPill": "Ogni {interval}",
     "intervalValue": "ogni {interval}",
     "lastSynced": "ultimo {time}",

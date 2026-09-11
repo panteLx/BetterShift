@@ -323,8 +323,6 @@
     "viewOnGitHub": "View on GitHub"
   },
   "export": {
-    "title": "Export Calendar",
-    "description": "Export your calendar as an ICS or PDF file",
     "formatLabel": "Export Format",
     "icsFormat": "ICS (Calendar File)",
     "pdfFormat": "PDF (Document)",
@@ -439,9 +437,7 @@
     "disable": "Disable",
     "revoke": "Revoke",
     "revokeConfirm": "Revoke Access Link?",
-    "revokeConfirmDescription": "Are you sure you want to revoke \"{name}\"? Anyone using this link will immediately lose access.",
-    "accessedViaLink": "Accessed via Share Link",
-    "linkName": "Link Name"
+    "revokeConfirmDescription": "Are you sure you want to revoke \"{name}\"? Anyone using this link will immediately lose access."
   },
   "rateLimit": {
     "title": "Too Many Requests",
@@ -778,8 +774,6 @@
     "markAsSecondaryHint": "Shows in the preset bar only after clicking “More”"
   },
   "syncSheet": {
-    "title": "External calendars",
-    "description": "Subscribe to Google, Outlook or iCal",
     "intervalPill": "Every {interval}",
     "intervalValue": "every {interval}",
     "lastSynced": "last {time}",

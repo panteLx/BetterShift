@@ -323,8 +323,6 @@
     "viewOnGitHub": "Zobrazit na GitHubu"
   },
   "export": {
-    "title": "Exportovat kalendář",
-    "description": "Exportujte svůj kalendář jako soubor ICS nebo PDF",
     "formatLabel": "Formát exportu",
     "icsFormat": "ICS (soubor kalendáře)",
     "pdfFormat": "PDF (dokument)",
@@ -439,9 +437,7 @@
     "disable": "Zakázat",
     "revoke": "Zrušit",
     "revokeConfirm": "Zrušit přístupový odkaz?",
-    "revokeConfirmDescription": "Opravdu chcete zrušit „{name}“? Kdokoli používající tento odkaz okamžitě ztratí přístup.",
-    "accessedViaLink": "Přístup přes odkaz pro sdílení",
-    "linkName": "Název odkazu"
+    "revokeConfirmDescription": "Opravdu chcete zrušit „{name}“? Kdokoli používající tento odkaz okamžitě ztratí přístup."
   },
   "rateLimit": {
     "title": "Příliš mnoho požadavků",
@@ -778,8 +774,6 @@
     "markAsSecondaryHint": "V liště šablon se zobrazí až po kliknutí na „Další“"
   },
   "syncSheet": {
-    "title": "Externí kalendáře",
-    "description": "Odebírat Google, Outlook nebo iCal",
     "intervalPill": "Každých {interval}",
     "intervalValue": "každých {interval}",
     "lastSynced": "naposledy {time}",
