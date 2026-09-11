@@ -95,7 +95,10 @@
     },
     "filters": {
       "allSeverities": "Alle Schweregrade",
-      "clearFilters": "Filter löschen"
+      "clearFilters": "Filter löschen",
+      "title": "Filter",
+      "done": "Fertig",
+      "remove": "{filter} entfernen"
     },
     "severity": {
       "info": "Info",
@@ -462,7 +465,7 @@
     "details": "Details",
     "clearAll": "Alle löschen",
     "confirmClear": "Bist du sicher, dass du alle Aktivitätsprotokolle löschen möchtest? Dies kann nicht rückgängig gemacht werden.",
-    "totalLogs": "{count} Protokolle insgesamt",
+    "totalLogs": "{count, plural, one {# Eintrag} other {# Einträge}}",
     "showingResults": "Zeige {start}-{end} von {total}",
     "searchPlaceholder": "Suche nach Aktion, Ressource oder ID...",
     "noMetadata": "Keine zusätzlichen Details verfügbar",

@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 /** Width cap for account section content, so fields don't stretch across wide screens. */
 export const accountContentClass = "w-full max-w-[680px]";
 
+/** Wider cap for sections that hold a table, such as the activity log. */
+export const accountWideContentClass = "w-full max-w-[960px]";
+
 const backClass =
   "-ml-1.5 flex size-[34px] shrink-0 items-center justify-center rounded-lg text-fg-secondary transition-colors hover:bg-surface-panel";
 

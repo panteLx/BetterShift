@@ -95,7 +95,10 @@
     },
     "filters": {
       "allSeverities": "Tutte le Gravità",
-      "clearFilters": "Cancella Filtri"
+      "clearFilters": "Cancella Filtri",
+      "title": "Filtri",
+      "done": "Fatto",
+      "remove": "Rimuovi {filter}"
     },
     "severity": {
       "info": "Info",
@@ -462,7 +465,7 @@
     "details": "Dettagli",
     "clearAll": "Cancella tutto",
     "confirmClear": "Sei sicuro di voler cancellare tutti i registri di attività? Questa azione non può essere annullata.",
-    "totalLogs": "{count} registri totali",
+    "totalLogs": "{count, plural, one {# voce} other {# voci}}",
     "showingResults": "Mostrando {start}-{end} di {total}",
     "searchPlaceholder": "Cerca per azione, risorsa o ID...",
     "noMetadata": "Nessun dettaglio aggiuntivo disponibile",

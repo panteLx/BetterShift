@@ -1,8 +1,7 @@
 "use client";
 
-import { MouseEvent, ReactNode, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { ReactNode, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   ChevronRight,
@@ -33,25 +32,35 @@ import {
 } from "@/components/profile/connected-accounts";
 import { SessionsSection } from "@/components/profile/sessions-section";
 import { DangerSection } from "@/components/profile/danger-section";
+import { ActivitySection } from "@/components/profile/activity-section";
 import { cn } from "@/lib/utils";
 
-type SectionId = "profile" | "password" | "accounts" | "sessions" | "danger";
+type SectionId = "profile" | "password" | "accounts" | "sessions" | "activity" | "danger";
 
 interface NavItem {
-  id: SectionId | "activity";
+  id: SectionId;
   icon: LucideIcon;
   title: string;
   description: string;
-  href?: string;
   danger?: boolean;
 }
 
-const ACTIVITY_HREF = "/profile/activity";
+// The URL is the source of truth, so /profile?section=<id> deep-links into a section
+const sectionHref = (id: SectionId | null) => (id ? `/profile?section=${id}` : "/profile");
 
 /** "Mein Konto" (screens 11b/11c): section list on desktop, two-level list on phones. */
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={<FullscreenLoader />}>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileContent() {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { user, session, isLoading, refetch } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
@@ -64,7 +73,6 @@ export default function ProfilePage() {
   } = useSessions();
   const profileForm = useProfileForm(user, refetch);
   const providerInfo = useProviderInfo();
-  const [section, setSection] = useState<SectionId | null>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
@@ -130,7 +138,6 @@ export default function ProfilePage() {
       icon: FileText,
       title: t("activityLog.title"),
       description: t("profile.navActivityHint"),
-      href: ACTIVITY_HREF,
     },
   ];
   const dangerItem: NavItem = {
@@ -142,12 +149,9 @@ export default function ProfilePage() {
   };
   const items = [...accountItems, ...securityItems, dangerItem];
 
+  const requested = searchParams.get("section");
   const active: SectionId | null =
-    section && items.some((item) => item.id === section)
-      ? section
-      : desktop
-        ? "profile"
-        : null;
+    items.find((item) => item.id === requested)?.id ?? (desktop ? "profile" : null);
   const activeItem = items.find((item) => item.id === active);
 
   const renderSection = (id: SectionId) => {
@@ -169,19 +173,18 @@ export default function ProfilePage() {
             revokeSession={revokeSession}
           />
         );
+      case "activity":
+        return <ActivitySection />;
       case "danger":
         return <DangerSection hasPasswordAuth={hasPasswordAuth} />;
     }
   };
 
-  const linkProps = (item: NavItem) => ({
-    href: item.href!,
-    onClick: (e: MouseEvent) => {
-      if (!profileForm.isDirty) return;
-      e.preventDefault();
-      setPendingHref(item.href!);
-    },
-  });
+  // Native replaceState syncs useSearchParams without history entries or a server round trip.
+  // Profile drafts live in this page, so switching sections needs no unsaved-changes prompt.
+  const selectSection = (id: SectionId | null) => {
+    window.history.replaceState(null, "", sectionHref(id));
+  };
 
   const renderSidebarItem = (item: NavItem) => {
     const selected = item.id === active;
@@ -222,18 +225,11 @@ export default function ProfilePage() {
         : "hover:bg-surface-sunken"
     );
 
-    if (item.href) {
-      return (
-        <Link key={item.id} {...linkProps(item)} className={className}>
-          {content}
-        </Link>
-      );
-    }
     return (
       <button
         key={item.id}
         type="button"
-        onClick={() => setSection(item.id as SectionId)}
+        onClick={() => selectSection(item.id)}
         aria-current={selected ? "page" : undefined}
         className={className}
       >
@@ -271,18 +267,11 @@ export default function ProfilePage() {
     );
     const className = "flex w-full items-center gap-3 px-3.5 py-3 text-left";
 
-    if (item.href) {
-      return (
-        <Link key={item.id} {...linkProps(item)} className={className}>
-          {content}
-        </Link>
-      );
-    }
     return (
       <button
         key={item.id}
         type="button"
-        onClick={() => setSection(item.id as SectionId)}
+        onClick={() => selectSection(item.id)}
         className={className}
       >
         {content}
@@ -313,7 +302,7 @@ export default function ProfilePage() {
       <AccountPageHeader
         title={inSection && activeItem ? activeItem.title : t("profile.title")}
         subtitle={inSection && activeItem ? activeItem.description : user.email}
-        onBack={inSection ? () => setSection(null) : () => leave("/")}
+        onBack={inSection ? () => selectSection(null) : () => leave("/")}
         actions={<UserMenu />}
       />
 

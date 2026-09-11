@@ -95,7 +95,10 @@
     },
     "filters": {
       "allSeverities": "Všechny závažnosti",
-      "clearFilters": "Vymazat filtry"
+      "clearFilters": "Vymazat filtry",
+      "title": "Filtry",
+      "done": "Hotovo",
+      "remove": "Odebrat {filter}"
     },
     "severity": {
       "info": "Informace",
@@ -462,7 +465,7 @@
     "details": "Podrobnosti",
     "clearAll": "Vymazat vše",
     "confirmClear": "Opravdu chcete vymazat všechny protokoly aktivity? Tuto akci nelze vrátit zpět.",
-    "totalLogs": "{count} protokolů celkem",
+    "totalLogs": "{count, plural, one {# záznam} few {# záznamy} other {# záznamů}}",
     "showingResults": "Zobrazeno {start}–{end} z {total}",
     "searchPlaceholder": "Hledat podle akce, zdroje nebo ID...",
     "noMetadata": "Nejsou k dispozici žádné další podrobnosti",
