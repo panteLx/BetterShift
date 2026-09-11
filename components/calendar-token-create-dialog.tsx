@@ -15,6 +15,7 @@ import type {
   LinkValidity,
   useAccessLinkForm,
 } from "@/hooks/useAccessLinkForm";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
@@ -144,6 +145,7 @@ export function AccessLinkCreatedHeader({ created }: { created: CreatedAccessLin
 /** The one-time view of a freshly created token. */
 export function AccessLinkCreated({ created }: { created: CreatedAccessLink }) {
   const t = useTranslations();
+  const { allowGuest } = useAuthFeatures();
   const linkInput = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -190,7 +192,9 @@ export function AccessLinkCreated({ created }: { created: CreatedAccessLink }) {
         </div>
       </Field>
 
-      <InfoNote icon={LinkIcon}>{t("sharingSheet.linkInfo")}</InfoNote>
+      <InfoNote icon={LinkIcon}>
+        {allowGuest ? t("sharingSheet.linkInfoGuestsOn") : t("sharingSheet.linkInfoGuestsOff")}
+      </InfoNote>
     </div>
   );
 }

@@ -58,10 +58,10 @@ BetterShift uses a four-level permission hierarchy for calendars:
 Owners and admins can share calendars with other registered users:
 
 1. Open the calendar settings
-2. Go to "Sharing" section
+2. Go to the "Sharing" section, "People" tab
 3. Search for users by name or email
 4. Select permission level (admin, write, or read)
-5. Click "Share"
+5. Click "Invite"
 
 ### Managing Shares
 
@@ -84,18 +84,17 @@ From calendar settings, you can:
 
 ## Access Tokens (Share Links)
 
-Access tokens provide a way to share calendars via a URL, without requiring the recipient to have an account.
+Access tokens provide a way to share calendars via a URL. With `ALLOW_GUEST_ACCESS=true` the recipient needs no account; otherwise they sign in first and the token applies afterwards.
 
 ### Creating Access Tokens
 
 1. Open calendar settings
-2. Navigate to "Access Tokens" section
-3. Click "Create Token"
-4. Configure:
+2. Go to the "Sharing" section, "Links" tab
+3. Configure:
    - **Name**: Description for your reference
    - **Permission**: read or write
    - **Expiration**: Optional expiry date
-5. Copy the generated link
+4. Click "Create link" and copy it; the token is shown only once
 
 ### Token Properties
 
@@ -117,20 +116,20 @@ Access tokens provide a way to share calendars via a URL, without requiring the 
 ### Security Considerations
 
 - Tokens are stored in cookies after first validation
-- Users with tokens can access the calendar without logging in
+- Users with tokens can access the calendar without logging in when `ALLOW_GUEST_ACCESS=true`
 - Treat share links like passwords - anyone with the link has access
 - Set expiration dates for temporary access
 - Monitor usage in token management
 
 ### Token vs. User Sharing
 
-| Aspect                   | Access Token            | User Sharing       |
-| ------------------------ | ----------------------- | ------------------ |
-| Requires account         | No                      | Yes                |
-| Trackable per-user       | No                      | Yes                |
-| Revocable per-person     | No (revoke token)       | Yes                |
-| Can set admin permission | No                      | Yes                |
-| Best for                 | Public/temporary access | Team collaboration |
+| Aspect                   | Access Token                | User Sharing       |
+| ------------------------ | --------------------------- | ------------------ |
+| Requires account         | Only if guest access is off | Yes                |
+| Trackable per-user       | No                          | Yes                |
+| Revocable per-person     | No (revoke token)           | Yes                |
+| Can set admin permission | No                          | Yes                |
+| Best for                 | Public/temporary access     | Team collaboration |
 
 ---
 
@@ -141,7 +140,9 @@ Guest access allows unauthenticated users to view or edit calendars without any 
 ### Configuration
 
 1. Enable globally: Set `ALLOW_GUEST_ACCESS=true` in environment
-2. Enable per-calendar: Set "Guest Permission" in calendar settings
+2. Enable per-calendar: Set public access in calendar settings, "Sharing" section, "Public" tab
+
+The per-calendar level applies to visitors without an account only while `ALLOW_GUEST_ACCESS=true`; otherwise they are sent to the login page. Signed-in users get it through [Calendar Discovery](#calendar-discovery), whatever the flag says. Access links work even with public access set to `none`, but with `ALLOW_GUEST_ACCESS=false` a recipient without a session is sent to the login page first; the link's grant applies once they sign in.
 
 ### Guest Permission Levels
 
@@ -165,12 +166,12 @@ Guest access allows unauthenticated users to view or edit calendars without any 
 
 ## Calendar Discovery
 
-When guest access is enabled and calendars are set to allow guests, authenticated users can discover and subscribe to public calendars.
+Signed-in users can discover and subscribe to any calendar whose public access is `read` or `write`. This does not depend on `ALLOW_GUEST_ACCESS`, which only governs visitors without an account.
 
 ### Finding Public Calendars
 
 1. Click your profile menu
-2. Select "Browse Calendars"
+2. Select "Shared Calendars"
 3. View available public calendars
 4. Click "Subscribe" to add to your calendar list
 
@@ -197,8 +198,8 @@ When a user accesses a calendar, BetterShift resolves permissions in this order:
 
 1. **Owner check**: Is user the calendar owner? → `owner`
 2. **Share check**: Is user explicitly shared? → Use share permission
-3. **Subscription check**: Is user subscribed to public calendar? → Use guest permission
-4. **Token check**: Valid access token in cookie? → Use token permission
+3. **Token check**: Valid access token in cookie? → Use token permission
+4. **Subscription check**: Is user subscribed to public calendar? → Use guest permission
 5. **Guest check**: Guest access enabled + calendar allows guests? → Use guest permission
 6. **No access**: None of the above → Access denied
 
@@ -213,4 +214,4 @@ The first matching rule determines the permission level.
 3. **Set token expiration**: Don't leave tokens valid indefinitely
 4. **Review shares periodically**: Remove access that's no longer needed
 5. **Use read permission by default**: Only grant write when editing is required
-6. **Consider guest access carefully**: Public calendars are visible to everyone
+6. **Consider public access carefully**: Public calendars are open to every signed-in user, and to everyone when `ALLOW_GUEST_ACCESS=true`
