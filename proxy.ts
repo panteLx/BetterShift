@@ -237,6 +237,7 @@ export async function proxy(request: NextRequest) {
     "/api/version", // Version info (always public)
     "/api/releases", // Changelog/releases (always public)
     "/api/health", // Health check endpoint
+    "/manifest.json", // Browsers fetch the PWA manifest without cookies
   ];
 
   // Check if the current route is public
