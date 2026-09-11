@@ -26,7 +26,7 @@ export interface DayShiftLayout {
   minimalGroups: { sync: ExternalSync; shifts: ShiftWithCalendar[] }[];
 }
 
-export function getShiftsForDay(
+function getShiftsForDay(
   shifts: ShiftWithCalendar[],
   day: Date
 ): ShiftWithCalendar[] {

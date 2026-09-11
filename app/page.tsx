@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { isSameDay, isSameMonth } from "date-fns";
@@ -102,8 +102,11 @@ function HomeContent() {
   const [selection, setSelection] = useState<{ calendarId?: string; day: Date }>(
     () => ({ day: new Date() })
   );
+  // A fresh Date per render would invalidate every memo keyed on the selected day
+  const todayKey = formatDateToLocal(new Date());
+  const today = useMemo(() => parseLocalDate(todayKey), [todayKey]);
   const selectedDay =
-    selection.calendarId === selectedCalendar ? selection.day : new Date();
+    selection.calendarId === selectedCalendar ? selection.day : today;
   const selectDay = useCallback(
     (day: Date) => setSelection({ calendarId: selectedCalendar, day }),
     [selectedCalendar]
@@ -466,6 +469,8 @@ function HomeContent() {
     />
   );
 
+  const calendarDays = useMemo(() => getCalendarDays(currentDate), [currentDate]);
+
   // Compare mode shares one grid, so it always uses the personal view
   const personalView = viewSettings.personal;
   const calendarView = viewSettings.forCalendar(
@@ -480,8 +485,6 @@ function HomeContent() {
   ) {
     return <FullscreenLoader message={t("common.loading")} />;
   }
-
-  const calendarDays = getCalendarDays(currentDate);
 
   if (isCompareMode) {
     if (compareData.isLoading) {

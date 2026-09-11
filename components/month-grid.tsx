@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { isSameDay, isToday } from "date-fns";
 import { CalendarClock, RefreshCw, StickyNote } from "lucide-react";
@@ -8,7 +8,12 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
-import { DayLayoutOptions, DayShiftLayout, buildDayShiftLayout, getShiftsForDay, shiftVars } from "@/lib/shift-display";
+import {
+  DayLayoutOptions,
+  DayShiftLayout,
+  buildDayShiftLayout,
+  shiftVars,
+} from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_KEYS = [
@@ -154,9 +159,10 @@ export function MonthGrid({
   const phone = variant === "phone";
   const desktop = variant === "desktop";
   // 2024-01-01 was a Monday
-  const longWeekdays = WEEKDAY_KEYS.map((_, i) =>
-    new Intl.DateTimeFormat(locale, { weekday: "long" }).format(new Date(2024, 0, 1 + i))
-  );
+  const longWeekdays = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: "long" });
+    return WEEKDAY_KEYS.map((_, i) => formatter.format(new Date(2024, 0, 1 + i)));
+  }, [locale]);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
   const [gridRef, gridSize] = useGridSize(variant !== "compare");
@@ -173,6 +179,48 @@ export function MonthGrid({
     },
     []
   );
+
+  // One pass over the month instead of scanning every shift and note per cell
+  const { maxShifts, maxExternalShifts, sortType, sortOrder, combinedSort } = layout;
+  const dayContents = useMemo(() => {
+    const month = currentDate.getMonth();
+    const shiftsByDay = new Map<string, ShiftWithCalendar[]>();
+    for (const shift of shifts) {
+      if (!shift.date) continue;
+      const key = formatDateToLocal(shift.date as Date);
+      const list = shiftsByDay.get(key);
+      if (list) list.push(shift);
+      else shiftsByDay.set(key, [shift]);
+    }
+
+    const contents = new Map<string, DayContent>();
+    for (const day of calendarDays) {
+      const key = formatDateToLocal(day);
+      const inMonth = day.getMonth() === month;
+      const dayNotes = inMonth ? findNotesForDate(notes, day) : [];
+      contents.set(key, {
+        layout: buildDayShiftLayout(
+          inMonth ? (shiftsByDay.get(key) ?? []) : [],
+          externalSyncs,
+          { maxShifts, maxExternalShifts, sortType, sortOrder, combinedSort }
+        ),
+        events: dayNotes.filter((n) => n.type === "event"),
+        notes: dayNotes.filter((n) => n.type !== "event"),
+      });
+    }
+    return contents;
+  }, [
+    calendarDays,
+    currentDate,
+    shifts,
+    notes,
+    externalSyncs,
+    maxShifts,
+    maxExternalShifts,
+    sortType,
+    sortOrder,
+    combinedSort,
+  ]);
 
   const cancelPress = () => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
@@ -557,12 +605,7 @@ export function MonthGrid({
             !phone && !!highlightColor && !today && highlightedWeekdays.includes(day.getDay());
           const toggling = togglingDates.has(key);
 
-          const dayNotes = inMonth ? findNotesForDate(notes, day) : [];
-          const content: DayContent = {
-            layout: buildDayShiftLayout(inMonth ? getShiftsForDay(shifts, day) : [], externalSyncs, layout),
-            events: dayNotes.filter((n) => n.type === "event"),
-            notes: dayNotes.filter((n) => n.type !== "event"),
-          };
+          const content = dayContents.get(key)!;
 
           return (
             <button

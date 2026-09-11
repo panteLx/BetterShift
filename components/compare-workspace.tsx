@@ -24,7 +24,17 @@ import { MAX_COMPARE_CALENDARS } from "@/components/calendar-compare-sheet";
 import { useDayLabels } from "@/components/day-inspector";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync, ShiftPreset } from "@/lib/db/schema";
-import { DayLayoutOptions, formatHours, getShiftCode, getShiftMinutes, getShiftsForDay, shiftVars, sortShifts } from "@/lib/shift-display";
+import {
+  DayLayoutOptions,
+  formatHours,
+  getDayShifts,
+  getShiftCode,
+  getShiftMinutes,
+  shiftVars,
+  sortShifts,
+  sumShiftMinutes,
+} from "@/lib/shift-display";
+import { formatDateToLocal } from "@/lib/date-utils";
 import { getDateLocale } from "@/lib/locales";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useStampShortcuts } from "@/hooks/useStampShortcuts";
@@ -225,11 +235,8 @@ function CompareDesktop({
           </div>
         </div>
         {calendars.map((calendar) => {
-          const dayShifts = sortShifts(
-            getShiftsForDay(shiftsMap.get(calendar.id) ?? [], selectedDay),
-            "startTime"
-          );
-          const minutes = dayShifts.reduce((sum, s) => sum + getShiftMinutes(s), 0);
+          const dayShifts = getDayShifts(shiftsMap.get(calendar.id) ?? [], selectedDay);
+          const minutes = sumShiftMinutes(dayShifts);
           return (
             <button
               key={calendar.id}
@@ -410,6 +417,24 @@ function CompareMobile({
   const share = useShareCompareLink(calendars.map((c) => c.id));
   const labels = useDayLabels(selectedDay);
 
+  // Grouped once per calendar instead of filtering the whole list in every day cell
+  const shiftsByDay = useMemo(() => {
+    const grouped = new Map<string, Map<string, ShiftWithCalendar[]>>();
+    for (const [calendarId, list] of shiftsMap) {
+      const byDay = new Map<string, ShiftWithCalendar[]>();
+      for (const shift of list) {
+        if (!shift.date) continue;
+        const key = formatDateToLocal(shift.date as Date);
+        const entry = byDay.get(key);
+        if (entry) entry.push(shift);
+        else byDay.set(key, [shift]);
+      }
+      for (const [key, entry] of byDay) byDay.set(key, sortShifts(entry, "startTime"));
+      grouped.set(calendarId, byDay);
+    }
+    return grouped;
+  }, [shiftsMap]);
+
   // One legend entry per shift title across all compared calendars
   const legend = useMemo(() => {
     const seen = new Map<string, string>();
@@ -540,6 +565,7 @@ function CompareMobile({
         </div>
         <div className="mx-2 mb-3 grid grid-cols-7 gap-px bg-line-grid">
           {calendarDays.map((day) => {
+            const dayKey = formatDateToLocal(day);
             const inMonth = isSameMonth(day, currentDate);
             const weekend = day.getDay() === 0 || day.getDay() === 6;
             const today = isToday(day);
@@ -570,7 +596,7 @@ function CompareMobile({
                 </span>
                 {calendars.map((calendar) => {
                   const dayShifts = inMonth
-                    ? sortShifts(getShiftsForDay(shiftsMap.get(calendar.id) ?? [], day), "startTime")
+                    ? (shiftsByDay.get(calendar.id)?.get(dayKey) ?? [])
                     : [];
                   const first = dayShifts[0];
                   return (
@@ -610,10 +636,7 @@ function CompareMobile({
         </div>
         <div className="flex flex-col gap-1.5">
           {calendars.map((calendar) => {
-            const dayShifts = sortShifts(
-              getShiftsForDay(shiftsMap.get(calendar.id) ?? [], selectedDay),
-              "startTime"
-            );
+            const dayShifts = getDayShifts(shiftsMap.get(calendar.id) ?? [], selectedDay);
             return (
               <button
                 key={calendar.id}

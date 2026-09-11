@@ -5,7 +5,7 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { countFreeDays } from "@/lib/free-days";
 import { CalendarNote } from "@/lib/db/schema";
 import { findNotesForDate } from "@/lib/event-utils";
-import { getShiftMinutes, getShiftsForDay, sortShifts } from "@/lib/shift-display";
+import { getDayShifts, sumShiftMinutes } from "@/lib/shift-display";
 import { useShiftStats, ShiftStatsData } from "@/hooks/useShiftStats";
 
 export type StatsPeriod = "week" | "month" | "year";
@@ -34,12 +34,11 @@ export function useDayData({
   notes: CalendarNote[];
 }) {
   return useMemo(() => {
-    const dayShifts = sortShifts(getShiftsForDay(shifts, selectedDay), "startTime");
-    const dayNotes = findNotesForDate(notes, selectedDay);
+    const dayShifts = getDayShifts(shifts, selectedDay);
     return {
       dayShifts,
-      dayNotes,
-      totalMinutes: dayShifts.reduce((sum, s) => sum + getShiftMinutes(s), 0),
+      dayNotes: findNotesForDate(notes, selectedDay),
+      totalMinutes: sumShiftMinutes(dayShifts),
     };
   }, [selectedDay, shifts, notes]);
 }

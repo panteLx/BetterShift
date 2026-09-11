@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { addMonths, format, startOfMonth, subMonths } from "date-fns";
+import { addMonths, format, startOfWeek, subMonths } from "date-fns";
 import { ChevronLeft, ChevronRight, RefreshCw, WifiOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -90,20 +90,25 @@ export function CalendarWorkspace({
   const dayData = useDayData({ selectedDay, shifts, notes });
   const monthSummary = usePeriodSummary({
     calendarId,
-    anchorDate: startOfMonth(currentDate),
+    anchorDate: currentDate,
     period: "month",
     shifts,
   });
+  // Anchored on the week, not the day, so tapping around inside a week reuses one cache entry
   const sheetSummary = usePeriodSummary({
-    calendarId,
-    anchorDate: period === "week" ? selectedDay : startOfMonth(currentDate),
+    calendarId: statsOpen ? calendarId : undefined,
+    anchorDate: period === "week" ? startOfWeek(selectedDay, { weekStartsOn: 1 }) : currentDate,
     period,
     shifts,
   });
 
   const stampingEnabled = canEdit && isOnline && showStampBar;
+  const stampPresetIds = useMemo(
+    () => orderStampPresets(presets).map((p) => p.id),
+    [presets]
+  );
   useStampShortcuts({
-    presetIds: orderStampPresets(presets).map((p) => p.id),
+    presetIds: stampPresetIds,
     selectedPresetId,
     onSelectPreset,
     enabled: stampingEnabled && desktop,
