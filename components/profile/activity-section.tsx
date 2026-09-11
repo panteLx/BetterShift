@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Trash2, TriangleAlert } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   type ActivityFilterValues,
 } from "@/components/profile/activity-filters";
 import { useActivityLogs, type UnifiedActivityLog } from "@/hooks/useActivityLogs";
+import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
@@ -77,10 +78,11 @@ export function ActivitySection() {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { types, severities } = useActivityLabels();
 
-  const [page, setPage] = useState(0);
+  const search = useDebouncedSearch(500);
   const [filterValues, setFilterValues] = useState<ActivityFilterValues>(EMPTY_ACTIVITY_FILTERS);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // Every filter or search change starts again on the first page
+  const listKey = [search.query, filterValues.type, filterValues.severity, filterValues.startDate, filterValues.endDate].join("|");
+  const [page, setPage] = useResettableState(listKey, 0);
   const [sortColumn, setSortColumn] = useState<SortColumn>("timestamp");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -90,38 +92,26 @@ export function ActivitySection() {
     () => ({
       type: filterValues.type !== "all" ? filterValues.type : undefined,
       severity: filterValues.severity !== "all" ? filterValues.severity : undefined,
-      search: debouncedSearch || undefined,
+      search: search.query || undefined,
       startDate: filterValues.startDate || undefined,
       endDate: filterValues.endDate || undefined,
     }),
-    [filterValues, debouncedSearch]
+    [filterValues, search.query]
   );
   const pagination = useMemo(() => ({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }), [page]);
 
   const { logs, total, isLoading, isPlaceholderData, error, clearLogs } = useActivityLogs(filters, pagination);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-      setPage(0);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  const hasActiveFilters = countActivityFilters(filterValues) > 0 || !!searchQuery;
+  const hasActiveFilters = countActivityFilters(filterValues) > 0 || !!search.input;
   const hasMore = (page + 1) * PAGE_SIZE < total;
 
-  // Every filter change starts again on the first page
   const updateFilters = (patch: Partial<ActivityFilterValues>) => {
     setFilterValues((prev) => ({ ...prev, ...patch }));
-    setPage(0);
   };
 
   const clearFilters = () => {
     setFilterValues(EMPTY_ACTIVITY_FILTERS);
-    setSearchQuery("");
-    setDebouncedSearch("");
-    setPage(0);
+    search.setInput("");
   };
 
   const toggleRow = (logId: string) => {
@@ -388,8 +378,8 @@ export function ActivitySection() {
 
         <ActivityToolbar
           desktop={desktop}
-          search={searchQuery}
-          onSearchChange={setSearchQuery}
+          search={search.input}
+          onSearchChange={search.setInput}
           filters={filterValues}
           onChange={updateFilters}
           onClear={clearFilters}

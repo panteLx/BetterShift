@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { Fragment, KeyboardEvent, MouseEvent, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { ChevronRight, SlidersHorizontal, Trash2, X } from "lucide-react";
@@ -29,12 +29,16 @@ import {
 import { useAuditDescription } from "@/components/admin/audit-describe";
 import { useAdminAuditLogs, type AuditLog, type AuditLogFilters } from "@/hooks/useAdminAuditLogs";
 import { useIsSuperAdmin } from "@/hooks/useAdminAccess";
+import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
 type SortColumn = "timestamp" | "action" | "severity" | "user" | "ipAddress";
 
 const PAGE_SIZE = 25;
+// Stable identities so the resettable state falls back to the same value
+const EMPTY_ROWS: Set<string> = new Set();
+const EMPTY_IDS: string[] = [];
 const COLUMNS = "18px 160px 180px minmax(0,140px) 96px minmax(0,1fr) 118px 64px";
 
 const stop = (e: MouseEvent | KeyboardEvent) => e.stopPropagation();
@@ -46,14 +50,15 @@ export default function AdminAuditLogsPage() {
   const isSuperAdmin = useIsSuperAdmin();
   const describe = useAuditDescription();
 
-  const [page, setPage] = useState(0);
+  const search = useDebouncedSearch(500);
   const [filterValues, setFilterValues] = useState<AuditFilterValues>(EMPTY_AUDIT_FILTERS);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sort, setSort] = useState<SortState<SortColumn>>({ column: "timestamp", direction: "desc" });
 
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
+  // Any change to search or filters starts over on the first page, with nothing selected
+  const listKey = [search.query, filterValues.action, filterValues.severity, filterValues.startDate, filterValues.endDate].join("|");
+  const [page, setPage] = useResettableState(listKey, 0);
+  const [expandedRows, setExpandedRows] = useResettableState<Set<string>>(listKey, EMPTY_ROWS);
+  const [selectedLogIds, setSelectedLogIds] = useResettableState<string[]>(listKey, EMPTY_IDS);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -64,44 +69,25 @@ export default function AdminAuditLogsPage() {
       action: filterValues.action !== "all" ? filterValues.action : undefined,
       severity:
         filterValues.severity !== "all" ? (filterValues.severity as AuditLogFilters["severity"]) : undefined,
-      search: debouncedSearch || undefined,
+      search: search.query || undefined,
       startDate: filterValues.startDate || undefined,
       endDate: filterValues.endDate || undefined,
     }),
-    [filterValues, debouncedSearch]
+    [filterValues, search.query]
   );
   const sortParams = useMemo(() => ({ field: sort.column, direction: sort.direction }), [sort]);
   const pagination = useMemo(() => ({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }), [page]);
 
   const { logs, total, isLoading } = useAdminAuditLogs(filters, sortParams, pagination);
 
-  const resetView = () => {
-    setPage(0);
-    setSelectedLogIds([]);
-    setExpandedRows(new Set());
-  };
-
   const updateFilters = (patch: Partial<AuditFilterValues>) => {
     setFilterValues((prev) => ({ ...prev, ...patch }));
-    resetView();
   };
 
   const clearFilters = () => {
     setFilterValues(EMPTY_AUDIT_FILTERS);
-    setSearchQuery("");
-    setDebouncedSearch("");
-    resetView();
+    search.setInput("");
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-      setPage(0);
-      setSelectedLogIds([]);
-      setExpandedRows(new Set());
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const toggleRow = (logId: string) => {
     setExpandedRows((prev) => {
@@ -217,8 +203,8 @@ export default function AdminAuditLogsPage() {
 
       <div className="flex flex-wrap items-center gap-[9px]">
         <AdminSearch
-          value={searchQuery}
-          onChange={setSearchQuery}
+          value={search.input}
+          onChange={search.setInput}
           placeholder={t("admin.searchLogs")}
           className="lg:w-[340px]"
         />
