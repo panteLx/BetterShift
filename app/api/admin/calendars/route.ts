@@ -10,7 +10,7 @@ import {
   calendarAccessTokens,
   externalSyncs,
 } from "@/lib/db/schema";
-import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, or, sql, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import { isAdmin } from "@/lib/auth/admin";
 import {
@@ -47,12 +47,9 @@ function toDate(value: unknown): Date {
   return new Date();
 }
 
-function countByCalendar(table: SQLiteTable, column: SQLiteColumn, ids: string[]) {
-  return db
-    .select({ calendarId: sql<string>`${column}`, count: count() })
-    .from(table)
-    .where(inArray(column, ids))
-    .groupBy(column);
+/** Per-row count as a correlated subquery, so one page is one statement. */
+function countFor(table: SQLiteTable, column: SQLiteColumn) {
+  return sql<number>`(select count(*) from ${table} where ${column} = ${calendars.id})`;
 }
 
 /**
@@ -159,6 +156,12 @@ export async function GET(request: NextRequest) {
         ownerName: user.name,
         ownerEmail: user.email,
         ownerImage: user.image,
+        shiftsCount: countFor(shifts, shifts.calendarId),
+        notesCount: countFor(calendarNotes, calendarNotes.calendarId),
+        presetsCount: countFor(shiftPresets, shiftPresets.calendarId),
+        userSharesCount: countFor(calendarShares, calendarShares.calendarId),
+        tokenSharesCount: countFor(calendarAccessTokens, calendarAccessTokens.calendarId),
+        externalSyncsCount: countFor(externalSyncs, externalSyncs.calendarId),
       })
       .from(calendars)
       .leftJoin(user, eq(calendars.ownerId, user.id))
@@ -171,30 +174,6 @@ export async function GET(request: NextRequest) {
       .limit(paging.limit)
       .offset(offset);
 
-    const ids = rows.map((row) => row.id);
-    const [shiftCounts, noteCounts, presetCounts, shareCounts, tokenCounts, syncCounts] =
-      ids.length === 0
-        ? [[], [], [], [], [], []]
-        : await Promise.all([
-            countByCalendar(shifts, shifts.calendarId, ids),
-            countByCalendar(calendarNotes, calendarNotes.calendarId, ids),
-            countByCalendar(shiftPresets, shiftPresets.calendarId, ids),
-            countByCalendar(calendarShares, calendarShares.calendarId, ids),
-            countByCalendar(calendarAccessTokens, calendarAccessTokens.calendarId, ids),
-            countByCalendar(externalSyncs, externalSyncs.calendarId, ids),
-          ]);
-
-    const lookup = (list: { calendarId: string; count: number }[]) =>
-      new Map(list.map((entry) => [entry.calendarId, entry.count]));
-    const [shiftMap, noteMap, presetMap, shareMap, tokenMap, syncMap] = [
-      shiftCounts,
-      noteCounts,
-      presetCounts,
-      shareCounts,
-      tokenCounts,
-      syncCounts,
-    ].map(lookup);
-
     const items = rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -206,11 +185,11 @@ export async function GET(request: NextRequest) {
       guestPermission: row.guestPermission,
       createdAt: toDate(row.createdAt),
       updatedAt: toDate(row.updatedAt),
-      shiftsCount: shiftMap.get(row.id) ?? 0,
-      notesCount: noteMap.get(row.id) ?? 0,
-      presetsCount: presetMap.get(row.id) ?? 0,
-      sharesCount: (shareMap.get(row.id) ?? 0) + (tokenMap.get(row.id) ?? 0),
-      externalSyncsCount: syncMap.get(row.id) ?? 0,
+      shiftsCount: Number(row.shiftsCount),
+      notesCount: Number(row.notesCount),
+      presetsCount: Number(row.presetsCount),
+      sharesCount: Number(row.userSharesCount) + Number(row.tokenSharesCount),
+      externalSyncsCount: Number(row.externalSyncsCount),
     }));
 
     const counts: CalendarListCounts = {

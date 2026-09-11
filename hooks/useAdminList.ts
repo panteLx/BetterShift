@@ -26,6 +26,19 @@ export function useDebouncedSearch(delay = 300) {
   return { input, query, setInput };
 }
 
+/** Runs a mutation and reports success as a boolean instead of throwing. */
+export async function run<V>(
+  mutate: (variables: V) => Promise<unknown>,
+  variables: V
+): Promise<boolean> {
+  try {
+    await mutate(variables);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** State that falls back to `initial` whenever `resetKey` changes, without an effect. */
 export function useResettableState<T>(resetKey: string, initial: T) {
   const [state, setState] = useState({ key: resetKey, value: initial });

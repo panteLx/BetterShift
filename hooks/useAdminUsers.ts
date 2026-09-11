@@ -21,6 +21,7 @@ import {
 import {
   patchListPages,
   restoreListPages,
+  run,
   useAdminErrorToast,
 } from "@/hooks/useAdminList";
 
@@ -412,15 +413,6 @@ export function useAdminUserActions() {
       toast.success(t("common.passwordReset"));
     },
   });
-
-  const run = async <V,>(mutate: (variables: V) => Promise<unknown>, variables: V) => {
-    try {
-      await mutate(variables);
-      return true;
-    } catch {
-      return false;
-    }
-  };
 
   return {
     isUpdating: updateMutation.isPending,
