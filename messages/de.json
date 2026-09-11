@@ -251,7 +251,7 @@
     "overriddenByCalendar": "„{calendar}“ hat eine eigene Ansicht. Dort gilt deine persönliche Ansicht nicht.",
     "calendarOwn": "Eigene Ansicht für diesen Kalender",
     "calendarOwnHint": "Gilt für alle mit Zugriff auf diesen Kalender.",
-    "calendarOffNote": "Alle sehen hier ihre persönliche Ansicht. Deine findest du unter Benutzermenü → „Meine Ansicht“.",
+    "calendarOffNote": "Alle sehen hier ihre persönliche Ansicht. Deine stellst du unter „Meine Ansicht“ ein.",
     "calendarLocked": "Für diesen Kalender festgelegt. Ändern können das nur Personen, die den Kalender verwalten."
   },
   "stats": {
@@ -737,7 +737,7 @@
   },
   "settings": {
     "title": "Einstellungen",
-    "description": "Kalender, Vorlagen, Synchronisierung und Freigaben",
+    "description": "Gilt für alle mit Zugriff auf diesen Kalender",
     "general": "Name und Farbe",
     "generalHint": "Anzeigename, Kalenderfarbe, Löschen",
     "presets": "Vorlagen",
@@ -748,17 +748,19 @@
     "sharingHint": "{count, plural, =0 {Personen, öffentlicher Zugriff, Links} one {Personen, öffentlicher Zugriff, # aktiver Link} other {Personen, öffentlicher Zugriff, # aktive Links}}",
     "export": "Exportieren",
     "exportHint": "ICS-Datei oder PDF",
-    "view": "Ansicht",
+    "view": "Kalenderansicht",
     "viewHint": "Eigene Ansicht, Dichte, Sortierung",
     "notifications": "Benachrichtigungen",
     "notificationsHint": "Synchronisierung",
     "notificationsError": "Fehler bei der Synchronisierung",
     "deleteImpact": "{count, plural, =0 {Der Kalender wird endgültig gelöscht} one {# Schicht wird mitgelöscht} other {# Schichten werden mitgelöscht}}",
     "appliesToAll": "Änderungen werden sofort für alle Freigaben wirksam.",
-    "groupCalendar": "Kalender",
-    "groupNotifications": "Benachrichtigungen",
     "groupAccount": "Konto",
-    "groupApp": "App"
+    "groupApp": "App",
+    "viewOn": "an",
+    "viewOff": "aus",
+    "groupPersonal": "Nur für dich",
+    "personalCaption": "Gilt in allen Kalendern, andere sehen es nicht"
   },
   "presetSheet": {
     "title": "Vorlagen",

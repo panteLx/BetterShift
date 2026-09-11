@@ -251,7 +251,7 @@
     "overriddenByCalendar": "«{calendar}» ha una vista propria. Lì la tua vista personale non vale.",
     "calendarOwn": "Vista propria per questo calendario",
     "calendarOwnHint": "Vale per tutte le persone con accesso a questo calendario.",
-    "calendarOffNote": "Qui ognuno vede la propria vista personale. La tua si trova in menu utente → «La mia vista».",
+    "calendarOffNote": "Qui ognuno vede la propria vista personale. La tua si imposta in «La mia vista».",
     "calendarLocked": "Impostata per questo calendario. Solo chi gestisce il calendario può modificarla."
   },
   "stats": {
@@ -737,7 +737,7 @@
   },
   "settings": {
     "title": "Impostazioni",
-    "description": "Calendario, modelli, sincronizzazione e condivisione",
+    "description": "Vale per tutte le persone con accesso a questo calendario",
     "general": "Nome e colore",
     "generalHint": "Nome visualizzato, colore del calendario, eliminazione",
     "presets": "Modelli",
@@ -748,17 +748,19 @@
     "sharingHint": "{count, plural, =0 {Persone, accesso pubblico, link} one {Persone, accesso pubblico, # link attivo} other {Persone, accesso pubblico, # link attivi}}",
     "export": "Esporta",
     "exportHint": "File ICS o PDF",
-    "view": "Visualizzazione",
+    "view": "Vista del calendario",
     "viewHint": "Vista propria, densità, ordinamento",
     "notifications": "Notifiche",
     "notificationsHint": "Sincronizzazione",
     "notificationsError": "Errore di sincronizzazione",
     "deleteImpact": "{count, plural, =0 {Il calendario viene eliminato definitivamente} one {Verrà eliminato anche # turno} other {Verranno eliminati anche # turni}}",
     "appliesToAll": "Le modifiche valgono subito per tutte le persone con accesso.",
-    "groupCalendar": "Calendario",
-    "groupNotifications": "Notifiche",
     "groupAccount": "Account",
-    "groupApp": "App"
+    "groupApp": "App",
+    "viewOn": "attiva",
+    "viewOff": "disattiva",
+    "groupPersonal": "Solo per te",
+    "personalCaption": "Vale in tutti i calendari, gli altri non lo vedono"
   },
   "presetSheet": {
     "title": "Preset",

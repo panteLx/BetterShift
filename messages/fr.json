@@ -251,7 +251,7 @@
     "overriddenByCalendar": "« {calendar} » a son propre affichage. Votre affichage personnel ne s’y applique pas.",
     "calendarOwn": "Affichage propre à ce calendrier",
     "calendarOwnHint": "S’applique à toutes les personnes ayant accès à ce calendrier.",
-    "calendarOffNote": "Chacun voit ici son affichage personnel. Le vôtre se trouve dans menu utilisateur → « Mon affichage ».",
+    "calendarOffNote": "Chacun voit ici son affichage personnel. Le vôtre se règle dans « Mon affichage ».",
     "calendarLocked": "Défini pour ce calendrier. Seules les personnes qui gèrent le calendrier peuvent le modifier."
   },
   "stats": {
@@ -737,7 +737,7 @@
   },
   "settings": {
     "title": "Réglages",
-    "description": "Calendrier, modèles, synchronisation et partage",
+    "description": "S’applique à toutes les personnes ayant accès à ce calendrier",
     "general": "Nom et couleur",
     "generalHint": "Nom affiché, couleur du calendrier, suppression",
     "presets": "Modèles",
@@ -748,17 +748,19 @@
     "sharingHint": "{count, plural, =0 {Personnes, accès public, liens} one {Personnes, accès public, # lien actif} other {Personnes, accès public, # liens actifs}}",
     "export": "Exporter",
     "exportHint": "Fichier ICS ou PDF",
-    "view": "Affichage",
+    "view": "Affichage du calendrier",
     "viewHint": "Affichage propre, densité, tri",
     "notifications": "Notifications",
     "notificationsHint": "Synchronisation",
     "notificationsError": "Erreur de synchronisation",
     "deleteImpact": "{count, plural, =0 {Le calendrier est supprimé définitivement} one {# service sera aussi supprimé} other {# services seront aussi supprimés}}",
     "appliesToAll": "Les modifications s’appliquent immédiatement à toutes les personnes ayant accès.",
-    "groupCalendar": "Calendrier",
-    "groupNotifications": "Notifications",
     "groupAccount": "Compte",
-    "groupApp": "App"
+    "groupApp": "App",
+    "viewOn": "activé",
+    "viewOff": "désactivé",
+    "groupPersonal": "Rien que pour vous",
+    "personalCaption": "S’applique à tous les calendriers, invisible pour les autres"
   },
   "presetSheet": {
     "title": "Modèles",

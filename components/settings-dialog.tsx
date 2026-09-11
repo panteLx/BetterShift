@@ -1,27 +1,15 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
-  ArrowLeft,
   Bell,
-  ChevronRight,
-  Compass,
   Download,
-  FileText,
-  Languages,
   Layers,
-  LogOut,
   Palette,
   RefreshCw,
-  ScrollText,
   SlidersHorizontal,
-  SunMoon,
   TriangleAlert,
-  User,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -30,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import { ColorSwatches, DangerZone, Field, inputClass } from "@/components/form-kit";
-import { AppearancePicker } from "@/components/appearance-picker";
 import { ExportPanel } from "@/components/export-dialog";
 import { CalendarViewPanel, ViewSettingsState } from "@/components/view-settings-sheet";
 import { PresetsPanel } from "@/components/preset-manage-sheet";
@@ -38,21 +25,13 @@ import { ExternalSyncPanel } from "@/components/external-sync-manage-sheet";
 import { SyncNotificationsPanel } from "@/components/sync-notification-dialog";
 import { SharingPanel } from "@/components/calendar-share-management-sheet";
 import { isUsableToken } from "@/components/calendar-token-list";
-import { ChangelogDialog } from "@/components/changelog-dialog";
-import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
-import { setLocaleCookie } from "@/components/app-preferences-menu-items";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { usePresets } from "@/hooks/usePresets";
 import { useShifts } from "@/hooks/useShifts";
 import { useExternalSync } from "@/hooks/useExternalSync";
 import { useCalendarTokens } from "@/hooks/useCalendarTokens";
-import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
-import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
-import { useVersionInfo } from "@/hooks/useVersionInfo";
-import { signOut } from "@/lib/auth/client";
-import { locales } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
 export type SettingsSection =
@@ -62,26 +41,25 @@ export type SettingsSection =
   | "sharing"
   | "export"
   | "view"
-  | "notifications"
-  | "appearance"
-  | "language";
+  | "notifications";
+
+export interface SettingsItem {
+  id: SettingsSection;
+  icon: LucideIcon;
+  title: string;
+  description?: string;
+  /** Short value on the phone row */
+  meta?: string | number;
+  metaTone?: "danger";
+}
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string | null;
-  initialSection?: SettingsSection;
   viewSettings: ViewSettingsState;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
-}
-
-interface SectionItem {
-  id: SettingsSection;
-  icon: LucideIcon;
-  title: string;
-  description?: string;
-  value?: ReactNode;
 }
 
 function GeneralPanel({
@@ -194,62 +172,156 @@ function GeneralPanel({
   );
 }
 
-function LanguagePanel() {
+/** The calendar's settings sections the current user may open, in display order. */
+export function useCalendarSettings(calendarId: string | null) {
   const t = useTranslations();
-  const current = useLocale();
-  return (
-    <PanelBody>
-      <div className="flex flex-col gap-2">
-        {locales.map((locale) => (
-          <button
-            key={locale}
-            type="button"
-            onClick={() => locale !== current && setLocaleCookie(locale)}
-            className={cn(
-              "flex items-center justify-between rounded-[10px] border-[1.5px] px-3 py-3 text-left text-[14px] font-semibold",
-              locale === current
-                ? "border-brand bg-surface-today text-brand-ink"
-                : "border-line bg-surface-card text-fg-strong"
-            )}
-          >
-            {t(`language.${locale}`)}
-            <span className="font-mono text-[12px] uppercase text-fg-tertiary">{locale}</span>
-          </button>
-        ))}
-      </div>
-    </PanelBody>
-  );
-}
-
-export function SettingsDialog({
-  open,
-  onOpenChange,
-  calendarId,
-  initialSection,
-  viewSettings,
-  onDeleteCalendar,
-  onSyncComplete,
-}: SettingsDialogProps) {
-  const t = useTranslations();
-  const locale = useLocale();
-  const router = useRouter();
-  const { theme } = useTheme();
-  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { calendars } = useCalendars();
   const calendar = calendars.find((c) => c.id === calendarId);
   const permission = useCalendarPermission(calendarId);
+  const { isAuthEnabled } = useAuthFeatures();
   const { presets } = usePresets(calendarId ?? undefined);
   const { externalSyncs, hasSyncErrors } = useExternalSync(
     permission.canManage ? calendarId : null
   );
   const { tokens } = useCalendarTokens(permission.canShare ? calendarId : null);
-  const { user, isGuest } = useAuth();
-  const { isAuthEnabled } = useAuthFeatures();
-  const versionInfo = useVersionInfo();
-  const [section, setSection] = useState<SettingsSection | null>(initialSection ?? null);
-  const [changelogOpen, setChangelogOpen] = useState(false);
-  const [discoveryOpen, setDiscoveryOpen] = useState(false);
 
+  const items: SettingsItem[] = [];
+  if (!calendar) return { calendar, items };
+  if (permission.canManage)
+    items.push({
+      id: "general",
+      icon: Palette,
+      title: t("settings.general"),
+      description: t("settings.generalHint"),
+    });
+  if (permission.canEdit)
+    items.push({
+      id: "presets",
+      icon: Layers,
+      title: t("settings.presets"),
+      description: t("settings.presetsHint", { count: presets.length }),
+      meta: presets.length,
+    });
+  if (permission.canManage)
+    items.push({
+      id: "external",
+      icon: RefreshCw,
+      title: t("settings.external"),
+      description: t("settings.externalHint", { count: externalSyncs.length }),
+      meta: externalSyncs.length,
+    });
+  if (isAuthEnabled && permission.canShare)
+    items.push({
+      id: "sharing",
+      icon: Users,
+      title: t("settings.sharing"),
+      description: t("settings.sharingHint", { count: tokens.filter(isUsableToken).length }),
+    });
+  items.push(
+    {
+      id: "export",
+      icon: Download,
+      title: t("settings.export"),
+      description: t("settings.exportHint"),
+    },
+    {
+      id: "view",
+      icon: SlidersHorizontal,
+      title: t("settings.view"),
+      description: t("settings.viewHint"),
+      meta: calendar.viewSettings ? t("settings.viewOn") : t("settings.viewOff"),
+    },
+    {
+      id: "notifications",
+      icon: Bell,
+      title: t("settings.notifications"),
+      description: hasSyncErrors ? t("settings.notificationsError") : t("settings.notificationsHint"),
+      meta: hasSyncErrors ? t("common.error") : undefined,
+      metaTone: hasSyncErrors ? "danger" : undefined,
+    }
+  );
+  return { calendar, items };
+}
+
+export interface CalendarSettingsPanelProps {
+  section: SettingsSection;
+  calendarId: string;
+  viewSettings: ViewSettingsState;
+  /** Closes without asking, e.g. after saving */
+  onClose: () => void;
+  /** Closes, asking first when there are unsaved changes */
+  onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onDeleteCalendar: () => void;
+  onSyncComplete: () => void;
+}
+
+/** One calendar settings section, shared by the desktop dialog and the phone menu. */
+export function CalendarSettingsPanel({
+  section,
+  calendarId,
+  viewSettings,
+  onClose,
+  onCancel,
+  onDirtyChange,
+  onDeleteCalendar,
+  onSyncComplete,
+}: CalendarSettingsPanelProps) {
+  switch (section) {
+    case "general":
+      return (
+        <GeneralPanel
+          key={calendarId}
+          calendarId={calendarId}
+          onClose={onClose}
+          onCancel={onCancel}
+          onDeleteCalendar={onDeleteCalendar}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+    case "presets":
+      return <PresetsPanel calendarId={calendarId} onClose={onClose} onDirtyChange={onDirtyChange} />;
+    case "external":
+      return (
+        <ExternalSyncPanel
+          calendarId={calendarId}
+          onClose={onClose}
+          onSyncComplete={onSyncComplete}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+    case "sharing":
+      return <SharingPanel calendarId={calendarId} onClose={onCancel} onDirtyChange={onDirtyChange} />;
+    case "export":
+      return <ExportPanel calendarId={calendarId} onClose={onClose} />;
+    case "view":
+      return (
+        <CalendarViewPanel
+          key={calendarId}
+          calendarId={calendarId}
+          personal={viewSettings.personal}
+          onClose={onClose}
+          onCancel={onCancel}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+    case "notifications":
+      return <SyncNotificationsPanel calendarId={calendarId} onClose={onClose} />;
+  }
+}
+
+/** Desktop calendar settings; phones reach the same sections through the phone menu. */
+export function SettingsDialog({
+  open,
+  onOpenChange,
+  calendarId,
+  viewSettings,
+  onDeleteCalendar,
+  onSyncComplete,
+}: SettingsDialogProps) {
+  const t = useTranslations();
+  const { calendar, items } = useCalendarSettings(calendarId);
+  const [section, setSection] = useState<SettingsSection | null>(null);
   const [dirty, setDirty] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
@@ -262,7 +334,7 @@ export function SettingsDialog({
     if (dirty) setPendingAction(() => action);
     else action();
   };
-  const openSection = (id: SettingsSection | null) =>
+  const openSection = (id: SettingsSection) =>
     guarded(() => {
       setDirty(false);
       setSection(id);
@@ -271,187 +343,87 @@ export function SettingsDialog({
     if (next) onOpenChange(true);
     else guarded(close);
   };
-  const signedIn = isAuthEnabled && !!user && !isGuest;
 
-  const calendarItems: SectionItem[] = calendar
-    ? [
-        ...(permission.canManage
-          ? [
-              {
-                id: "general" as const,
-                icon: Palette,
-                title: t("settings.general"),
-                description: t("settings.generalHint"),
-              },
-            ]
-          : []),
-        ...(permission.canEdit
-          ? [
-              {
-                id: "presets" as const,
-                icon: Layers,
-                title: t("settings.presets"),
-                description: t("settings.presetsHint", { count: presets.length }),
-                value: presets.length,
-              },
-            ]
-          : []),
-        ...(permission.canManage
-          ? [
-              {
-                id: "external" as const,
-                icon: RefreshCw,
-                title: t("settings.external"),
-                description: t("settings.externalHint", { count: externalSyncs.length }),
-                value: externalSyncs.length,
-              },
-            ]
-          : []),
-        ...(isAuthEnabled && permission.canShare
-          ? [
-              {
-                id: "sharing" as const,
-                icon: Users,
-                title: t("settings.sharing"),
-                description: t("settings.sharingHint", {
-                  count: tokens.filter(isUsableToken).length,
-                }),
-              },
-            ]
-          : []),
-        {
-          id: "export" as const,
-          icon: Download,
-          title: t("settings.export"),
-          description: t("settings.exportHint"),
-          value: "ICS · PDF",
-        },
-      ]
-    : [];
+  const active = items.some((i) => i.id === section) ? section : items[0]?.id;
 
-  // The calendar's own view; the personal one lives in the user menu
-  const viewItems: SectionItem[] = calendar
-    ? [
-        {
-          id: "view",
-          icon: SlidersHorizontal,
-          title: t("settings.view"),
-          description: t("settings.viewHint"),
-        },
-      ]
-    : [];
-  const notificationItems: SectionItem[] = calendar
-    ? [
-        {
-          id: "notifications",
-          icon: Bell,
-          title: t("settings.notifications"),
-          description: hasSyncErrors ? t("settings.notificationsError") : t("settings.notificationsHint"),
-          value: hasSyncErrors ? t("settings.notificationsError") : undefined,
-        },
-      ]
-    : [];
-  const appItems: SectionItem[] = [
-    {
-      id: "language",
-      icon: Languages,
-      title: t("appMenu.language"),
-      value: t(`language.${locale}`),
-    },
-    {
-      id: "appearance",
-      icon: SunMoon,
-      title: t("appearance.title"),
-      value:
-        theme === "light"
-          ? t("appearance.light.title")
-          : theme === "dark"
-            ? t("appearance.dark.title")
-            : t("appearance.system.title"),
-    },
-  ];
-
-  const sidebarItems = [...calendarItems, ...viewItems, ...notificationItems];
-  const active = section ?? (desktop ? sidebarItems[0]?.id : null);
-  const activeItem = [...sidebarItems, ...appItems].find((i) => i.id === active);
-
-  const renderPanel = (id: SettingsSection) => {
-    if (id === "view")
-      return calendarId ? (
-        <CalendarViewPanel
-          key={calendarId}
-          calendarId={calendarId}
-          personal={viewSettings.personal}
-          onClose={close}
-          onCancel={() => requestClose(false)}
-          onDirtyChange={setDirty}
-        />
-      ) : null;
-    if (id === "appearance")
-      return (
-        <PanelBody>
-          <AppearancePicker />
-        </PanelBody>
-      );
-    if (id === "language") return <LanguagePanel />;
-    if (!calendarId) return null;
-    switch (id) {
-      case "general":
-        return (
-          <GeneralPanel
-            key={calendarId}
-            calendarId={calendarId}
-            onClose={close}
-            onCancel={() => requestClose(false)}
-            onDeleteCalendar={onDeleteCalendar}
-            onDirtyChange={setDirty}
-          />
-        );
-      case "presets":
-        return <PresetsPanel calendarId={calendarId} onClose={close} onDirtyChange={setDirty} />;
-      case "external":
-        return (
-          <ExternalSyncPanel
-            calendarId={calendarId}
-            onClose={close}
-            onSyncComplete={onSyncComplete}
-            onDirtyChange={setDirty}
-          />
-        );
-      case "sharing":
-        return (
-          <SharingPanel
-            calendarId={calendarId}
-            onClose={() => requestClose(false)}
-            onDirtyChange={setDirty}
-          />
-        );
-      case "export":
-        return <ExportPanel calendarId={calendarId} onClose={close} />;
-      case "notifications":
-        return <SyncNotificationsPanel calendarId={calendarId} onClose={close} />;
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success(t("auth.logoutSuccess"));
-          },
-        },
-      });
-      router.replace("/login");
-    } catch {
-      toast.error(t("common.error"));
-    }
-  };
-
-  const extras = (
+  return (
     <>
-      <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
-      <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />
+      <PanelDialog
+        bare
+        open={open}
+        onOpenChange={requestClose}
+        width="xl"
+        fixedHeight="min(640px, calc(100dvh - 48px))"
+        title={
+          <span className="flex items-center gap-2.5">
+            {calendar && (
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: calendar.color }} />
+            )}
+            {calendar?.name ?? t("settings.title")}
+          </span>
+        }
+        description={t("settings.description")}
+      >
+        <div className="flex min-h-0 flex-1">
+          <nav className="flex w-[278px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-line bg-surface-panel p-2.5">
+            {items.map((item) => {
+              const selected = item.id === active;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openSection(item.id)}
+                  aria-current={selected ? "page" : undefined}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
+                    selected
+                      ? "bg-brand-soft shadow-[inset_2px_0_0_var(--brand)]"
+                      : "hover:bg-surface-sunken"
+                  )}
+                >
+                  <item.icon
+                    className={cn("mt-0.5 size-4 shrink-0", selected ? "text-brand-ink" : "text-fg-secondary")}
+                  />
+                  <span className="min-w-0">
+                    <span
+                      className={cn(
+                        "block text-[13.5px] font-semibold",
+                        selected ? "text-brand-ink" : "text-fg-body"
+                      )}
+                    >
+                      {item.title}
+                    </span>
+                    {item.description && (
+                      <span
+                        className={cn(
+                          "block text-[12px]",
+                          selected ? "text-brand-ink/80" : "text-fg-tertiary"
+                        )}
+                      >
+                        {item.description}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+          <div key={active} className="flex min-w-0 flex-1 flex-col">
+            {active && calendarId && (
+              <CalendarSettingsPanel
+                section={active}
+                calendarId={calendarId}
+                viewSettings={viewSettings}
+                onClose={close}
+                onCancel={() => requestClose(false)}
+                onDirtyChange={setDirty}
+                onDeleteCalendar={onDeleteCalendar}
+                onSyncComplete={onSyncComplete}
+              />
+            )}
+          </div>
+        </div>
+      </PanelDialog>
       <ConfirmationDialog
         open={!!pendingAction}
         onOpenChange={(next) => !next && setPendingAction(null)}
@@ -462,185 +434,6 @@ export function SettingsDialog({
           action?.();
         }}
       />
-    </>
-  );
-
-  if (desktop) {
-    return (
-      <>
-        <PanelDialog
-          bare
-          open={open}
-          onOpenChange={requestClose}
-          width="xl"
-          fixedHeight="min(640px, calc(100dvh - 48px))"
-          title={
-            <span className="flex items-center gap-2.5">
-              {calendar && (
-                <span className="size-2.5 rounded-full" style={{ backgroundColor: calendar.color }} />
-              )}
-              {calendar?.name ?? t("settings.title")}
-            </span>
-          }
-          description={t("settings.description")}
-        >
-          <div className="flex min-h-0 flex-1">
-            <nav className="flex w-[278px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-line bg-surface-panel p-2.5">
-              {sidebarItems.map((item) => {
-                const selected = item.id === active;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => openSection(item.id)}
-                    aria-current={selected ? "page" : undefined}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
-                      selected
-                        ? "bg-brand-soft shadow-[inset_2px_0_0_var(--brand)]"
-                        : "hover:bg-surface-sunken"
-                    )}
-                  >
-                    <item.icon
-                      className={cn("mt-0.5 size-4 shrink-0", selected ? "text-brand-ink" : "text-fg-secondary")}
-                    />
-                    <span className="min-w-0">
-                      <span
-                        className={cn(
-                          "block text-[13.5px] font-semibold",
-                          selected ? "text-brand-ink" : "text-fg-body"
-                        )}
-                      >
-                        {item.title}
-                      </span>
-                      {item.description && (
-                        <span
-                          className={cn(
-                            "block text-[12px]",
-                            selected ? "text-brand-ink/80" : "text-fg-tertiary"
-                          )}
-                        >
-                          {item.description}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-            <div key={active} className="flex min-w-0 flex-1 flex-col">
-              {active && renderPanel(active)}
-            </div>
-          </div>
-        </PanelDialog>
-        {extras}
-      </>
-    );
-  }
-
-  // Phones: a grouped list first, each entry opens its section as a second level
-  const renderRow = (item: SectionItem, onClick?: () => void, key: string = item.id) => (
-    <button
-      key={key}
-      type="button"
-      onClick={onClick ?? (() => openSection(item.id))}
-      className="flex w-full items-center gap-3 px-3.5 py-3 text-left"
-    >
-      <item.icon className="size-[18px] shrink-0 text-fg-secondary" />
-      <span className="min-w-0 flex-1 truncate text-[14.5px] text-fg-strong">{item.title}</span>
-      {item.value !== undefined && (
-        <span className="shrink-0 font-mono text-[12.5px] text-fg-tertiary">{item.value}</span>
-      )}
-      <ChevronRight className="size-4 shrink-0 text-fg-tertiary" />
-    </button>
-  );
-  const renderGroup = (label: string, children: ReactNode) => (
-    <section key={label}>
-      <div className="eyebrow mb-2 px-1">{label}</div>
-      <div className="divide-y divide-line-subtle overflow-hidden rounded-[12px] border border-line bg-surface-card">
-        {children}
-      </div>
-    </section>
-  );
-
-  const accountRows: { icon: LucideIcon; title: string; onClick: () => void }[] = signedIn
-    ? [
-        { icon: User, title: t("auth.profile"), onClick: () => router.push("/profile") },
-        { icon: FileText, title: t("activityLog.title"), onClick: () => router.push("/profile/activity") },
-        { icon: Compass, title: t("calendar.browseCalendars"), onClick: () => setDiscoveryOpen(true) },
-        { icon: LogOut, title: t("auth.logout"), onClick: handleSignOut },
-      ]
-    : [];
-
-  return (
-    <>
-      <PanelDialog
-        bare
-        open={open}
-        onOpenChange={(next) => {
-          if (next) return onOpenChange(true);
-          guarded(() => {
-            close();
-            setSection(initialSection ?? null);
-          });
-        }}
-        headerLeading={
-          section ? (
-            <button
-              type="button"
-              onClick={() => openSection(null)}
-              aria-label={t("common.previous")}
-              className="-ml-1 flex size-[34px] shrink-0 items-center justify-center rounded-lg text-fg-secondary"
-            >
-              <ArrowLeft className="size-5" />
-            </button>
-          ) : undefined
-        }
-        title={activeItem && section ? activeItem.title : t("settings.title")}
-        description={section ? activeItem?.description : calendar?.name}
-      >
-        {section ? (
-          <div key={section} className="flex min-h-0 flex-1 flex-col">
-            {renderPanel(section)}
-          </div>
-        ) : (
-          <PanelBody className="bg-surface-panel px-4">
-            <div className="flex flex-col gap-5">
-              {calendarItems.length > 0 &&
-                renderGroup(
-                  t("settings.groupCalendar"),
-                  [...calendarItems, ...viewItems].map((item) => renderRow(item))
-                )}
-              {notificationItems.length > 0 &&
-                renderGroup(
-                  t("settings.groupNotifications"),
-                  notificationItems.map((item) => renderRow(item))
-                )}
-              {accountRows.length > 0 &&
-                renderGroup(
-                  t("settings.groupAccount"),
-                  accountRows.map((row) =>
-                    renderRow({ id: "view", icon: row.icon, title: row.title }, row.onClick, row.title)
-                  )
-                )}
-              {renderGroup(t("settings.groupApp"), [
-                ...appItems.map((item) => renderRow(item)),
-                renderRow(
-                  {
-                    id: "view",
-                    icon: ScrollText,
-                    title: t("changelog.title"),
-                    value: versionInfo?.version,
-                  },
-                  () => setChangelogOpen(true),
-                  "changelog"
-                ),
-              ])}
-            </div>
-          </PanelBody>
-        )}
-      </PanelDialog>
-      {extras}
     </>
   );
 }

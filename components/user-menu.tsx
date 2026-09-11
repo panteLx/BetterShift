@@ -21,6 +21,7 @@ import {
   LogOut,
   Compass,
   FileText,
+  Settings,
   Shield,
   SlidersHorizontal,
 } from "lucide-react";
@@ -28,7 +29,9 @@ import { toast } from "sonner";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items";
+import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 
 export function getInitials(name: string) {
   return name
@@ -39,18 +42,51 @@ export function getInitials(name: string) {
     .slice(0, 2);
 }
 
-/** Avatar menu for signed-in users: account links plus app preferences. */
-export function UserMenu({ onOpenViewSettings }: { onOpenViewSettings?: () => void }) {
+interface MenuProps {
+  onOpenViewSettings?: () => void;
+  /** Phones: opens the page's own settings sheet instead of the built-in one */
+  onOpenPhoneMenu?: () => void;
+}
+
+/** Avatar menu for signed-in users: a dropdown on desktop, the settings sheet on phones. */
+export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isAdmin = useIsAdmin();
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
 
   if (isLoading || !isAuthenticated || !user) {
     return null;
+  }
+
+  const avatar = (
+    <Avatar className="size-9 lg:size-8">
+      <AvatarImage src={user.image || undefined} alt={user.name || ""} />
+      <AvatarFallback className="bg-line text-[12px] font-semibold text-fg-body">
+        {user.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+      </AvatarFallback>
+    </Avatar>
+  );
+
+  if (!desktop) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={onOpenPhoneMenu ?? (() => setPhoneMenuOpen(true))}
+          className="shrink-0 rounded-full"
+          aria-label={t("settings.title")}
+        >
+          {avatar}
+        </button>
+        {!onOpenPhoneMenu && <PhoneMenu open={phoneMenuOpen} onOpenChange={setPhoneMenuOpen} />}
+      </>
+    );
   }
 
   const handleSignOut = async () => {
@@ -78,12 +114,7 @@ export function UserMenu({ onOpenViewSettings }: { onOpenViewSettings?: () => vo
             className="shrink-0 rounded-full"
             aria-label={t("appMenu.account")}
           >
-            <Avatar className="size-9 lg:size-8">
-              <AvatarImage src={user.image || undefined} alt={user.name || ""} />
-              <AvatarFallback className="bg-line text-[12px] font-semibold text-fg-body">
-                {user.name ? getInitials(user.name) : <User className="h-4 w-4" />}
-              </AvatarFallback>
-            </Avatar>
+            {avatar}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
@@ -98,7 +129,7 @@ export function UserMenu({ onOpenViewSettings }: { onOpenViewSettings?: () => vo
             <User className="mr-2 h-4 w-4" />
             {t("auth.profile")}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/profile/activity")}>
+          <DropdownMenuItem onClick={() => router.push("/profile?section=activity")}>
             <FileText className="mr-2 h-4 w-4" />
             {t("activityLog.title")}
           </DropdownMenuItem>
@@ -142,13 +173,37 @@ export function UserMenu({ onOpenViewSettings }: { onOpenViewSettings?: () => vo
 export function GuestMenu({
   showLogin,
   onOpenViewSettings,
-}: {
-  showLogin: boolean;
-  onOpenViewSettings?: () => void;
-}) {
+  onOpenPhoneMenu,
+}: MenuProps & { showLogin: boolean }) {
   const t = useTranslations();
   const locale = useLocale();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
+
+  const loginButton = showLogin && (
+    <Button asChild size="sm" className="h-9 font-semibold lg:h-8">
+      <Link href="/login">{t("auth.login")}</Link>
+    </Button>
+  );
+
+  if (!desktop) {
+    return (
+      <>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-9 rounded-lg"
+          aria-label={t("settings.title")}
+          onClick={onOpenPhoneMenu ?? (() => setPhoneMenuOpen(true))}
+        >
+          <Settings className="h-4 w-4 text-fg-secondary" />
+        </Button>
+        {loginButton}
+        {!onOpenPhoneMenu && <PhoneMenu open={phoneMenuOpen} onOpenChange={setPhoneMenuOpen} />}
+      </>
+    );
+  }
 
   return (
     <>
@@ -170,11 +225,7 @@ export function GuestMenu({
           />
         </DropdownMenuContent>
       </DropdownMenu>
-      {showLogin && (
-        <Button asChild size="sm" className="h-9 font-semibold lg:h-8">
-          <Link href="/login">{t("auth.login")}</Link>
-        </Button>
-      )}
+      {loginButton}
       <ChangelogDialog
         open={changelogOpen}
         onOpenChange={setChangelogOpen}
