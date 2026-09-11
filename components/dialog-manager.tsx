@@ -50,8 +50,10 @@ interface DialogManagerProps {
   selectedDayDate: Date | null;
   selectedDayShifts: ShiftWithCalendar[];
   locale: string;
-  onDeleteShiftFromDayDialog: (id: string) => void;
+  onDeleteShiftFromDayDialog?: (id: string) => void;
   onEditShiftFromDayDialog?: (shift: ShiftWithCalendar) => void; // Edit shift from day dialog
+  /** Calendar the note dialogs act on when it differs from the selected one (compare mode) */
+  noteCalendarId?: string;
 
   // Synced Shifts Overview
   showSyncedShiftsDialog: boolean;
@@ -255,7 +257,7 @@ export function DialogManager(props: DialogManagerProps) {
           onEditNote={props.onEditNoteFromList}
           onDeleteNote={props.onDeleteNoteFromList}
           onAddNew={props.onAddNewNote}
-          calendarId={props.selectedCalendar || undefined}
+          calendarId={props.noteCalendarId ?? (props.selectedCalendar || undefined)}
         />
       )}
       <MonthStatsDialog
@@ -289,7 +291,7 @@ export function DialogManager(props: DialogManagerProps) {
         onDelete={props.onNoteDelete}
         selectedDate={props.selectedNoteDate}
         note={props.selectedNote}
-        calendarId={props.selectedCalendar || undefined}
+        calendarId={props.noteCalendarId ?? (props.selectedCalendar || undefined)}
       />
     </>
   );

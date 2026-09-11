@@ -413,8 +413,10 @@ function HomeContent() {
       selectedDayDate={dialogStates.selectedDayDate}
       selectedDayShifts={dialogStates.selectedDayShifts}
       locale={locale}
-      onDeleteShiftFromDayDialog={handleDeleteShiftFromDayDialog}
-      onEditShiftFromDayDialog={handleEditShift}
+      // In compare mode the day list mixes calendars the shift hooks aren't bound to
+      onDeleteShiftFromDayDialog={isCompareMode ? undefined : handleDeleteShiftFromDayDialog}
+      onEditShiftFromDayDialog={isCompareMode ? undefined : handleEditShift}
+      noteCalendarId={isCompareMode ? compareNoteCalendarId : undefined}
       showSyncedShiftsDialog={dialogStates.showSyncedShiftsDialog}
       onSyncedShiftsDialogChange={dialogStates.setShowSyncedShiftsDialog}
       selectedSyncedShifts={dialogStates.selectedSyncedShifts}
@@ -499,7 +501,7 @@ function HomeContent() {
           calendars={calendars.filter((c) => selectedCompareIds.includes(c.id))}
           calendarDays={calendarDays}
           currentDate={currentDate}
-          onDateChange={setCurrentDate}
+          onDateChange={handleDateChange}
           selectedDay={selectedDay}
           onSelectDay={selectDay}
           shiftsMap={compareData.shiftsMap}
