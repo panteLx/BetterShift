@@ -699,10 +699,7 @@
     "manage": "Gestisci",
     "stampHint": "Tocca un giorno per aggiungere {title}, tocca di nuovo per rimuoverlo.",
     "addShiftManually": "Aggiungi turno manualmente",
-    "tabDay": "Giorno",
-    "tabStats": "Statistiche",
-    "sheetTabs": "Scegli sezione",
-    "sheetDescription": "Turni, statistiche e note del giorno selezionato",
+    "sheetDescription": "Turni e note del giorno selezionato",
     "sheetExpand": "Espandi",
     "sheetShrink": "Riduci",
     "periodLabel": "Periodo",
@@ -716,7 +713,8 @@
     "retry": "Riprova",
     "note": "Nota",
     "event": "Evento",
-    "eventCount": "{count, plural, one {# evento} other {# eventi}}"
+    "eventCount": "{count, plural, one {# evento} other {# eventi}}",
+    "statsSheetDescription": "Turni, ore e giorni liberi per settimana, mese o anno"
   },
   "calendarCompare": {
     "title": "Confronto",

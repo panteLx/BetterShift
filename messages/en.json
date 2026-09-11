@@ -699,10 +699,7 @@
     "manage": "Manage",
     "stampHint": "Tap a day to add {title}, tap again to remove it.",
     "addShiftManually": "Add shift manually",
-    "tabDay": "Day",
-    "tabStats": "Statistics",
-    "sheetTabs": "Choose section",
-    "sheetDescription": "Shifts, statistics and notes for the selected day",
+    "sheetDescription": "Shifts and notes for the selected day",
     "sheetExpand": "Expand",
     "sheetShrink": "Shrink",
     "periodLabel": "Period",
@@ -716,7 +713,8 @@
     "retry": "Try again",
     "note": "Note",
     "event": "Event",
-    "eventCount": "{count, plural, one {# event} other {# events}}"
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "statsSheetDescription": "Shifts, hours and free days for the week, month or year"
   },
   "calendarCompare": {
     "title": "Compare",

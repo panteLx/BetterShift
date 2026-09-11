@@ -699,10 +699,7 @@
     "manage": "Gérer",
     "stampHint": "Touchez un jour pour ajouter {title}, touchez à nouveau pour le retirer.",
     "addShiftManually": "Ajouter un service manuellement",
-    "tabDay": "Jour",
-    "tabStats": "Statistiques",
-    "sheetTabs": "Choisir la section",
-    "sheetDescription": "Services, statistiques et notes du jour sélectionné",
+    "sheetDescription": "Services et notes du jour sélectionné",
     "sheetExpand": "Agrandir",
     "sheetShrink": "Réduire",
     "periodLabel": "Période",
@@ -716,7 +713,8 @@
     "retry": "Réessayer",
     "note": "Note",
     "event": "Événement",
-    "eventCount": "{count, plural, one {# événement} other {# événements}}"
+    "eventCount": "{count, plural, one {# événement} other {# événements}}",
+    "statsSheetDescription": "Services, heures et jours libres pour la semaine, le mois ou l'année"
   },
   "calendarCompare": {
     "title": "Comparer",

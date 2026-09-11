@@ -699,10 +699,7 @@
     "manage": "Verwalten",
     "stampHint": "Tag antippen setzt {title}, nochmal antippen entfernt ihn.",
     "addShiftManually": "Schicht manuell anlegen",
-    "tabDay": "Tag",
-    "tabStats": "Statistik",
-    "sheetTabs": "Bereich wählen",
-    "sheetDescription": "Schichten, Auswertung und Notizen des gewählten Tages",
+    "sheetDescription": "Schichten und Notizen des gewählten Tages",
     "sheetExpand": "Aufziehen",
     "sheetShrink": "Verkleinern",
     "periodLabel": "Zeitraum",
@@ -716,7 +713,8 @@
     "retry": "Erneut versuchen",
     "note": "Notiz",
     "event": "Event",
-    "eventCount": "{count, plural, one {# Event} other {# Events}}"
+    "eventCount": "{count, plural, one {# Event} other {# Events}}",
+    "statsSheetDescription": "Schichten, Stunden und freie Tage für Woche, Monat oder Jahr"
   },
   "calendarCompare": {
     "title": "Vergleich",

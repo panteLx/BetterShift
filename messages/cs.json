@@ -699,10 +699,7 @@
     "manage": "Spravovat",
     "stampHint": "Klepnutím na den přidáte {title}, dalším klepnutím ji odeberete.",
     "addShiftManually": "Přidat směnu ručně",
-    "tabDay": "Den",
-    "tabStats": "Statistiky",
-    "sheetTabs": "Vybrat oblast",
-    "sheetDescription": "Směny, statistiky a poznámky vybraného dne",
+    "sheetDescription": "Směny a poznámky vybraného dne",
     "sheetExpand": "Rozbalit",
     "sheetShrink": "Zmenšit",
     "periodLabel": "Období",
@@ -716,7 +713,8 @@
     "retry": "Zkusit znovu",
     "note": "Poznámka",
     "event": "Událost",
-    "eventCount": "{count, plural, one {# událost} few {# události} other {# událostí}}"
+    "eventCount": "{count, plural, one {# událost} few {# události} other {# událostí}}",
+    "statsSheetDescription": "Směny, hodiny a volné dny za týden, měsíc nebo rok"
   },
   "calendarCompare": {
     "title": "Porovnání",
