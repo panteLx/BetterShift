@@ -58,15 +58,6 @@
     "deleteSelected": "Smazat vybrané",
     "viewAll": "Zobrazit vše",
     "viewDetails": "Zobrazit podrobnosti",
-    "weekday": {
-      "monday": "Po",
-      "tuesday": "Út",
-      "wednesday": "St",
-      "thursday": "Čt",
-      "friday": "Pá",
-      "saturday": "So",
-      "sunday": "Ne"
-    },
     "labels": {
       "name": "Jméno",
       "email": "E-mail",
@@ -168,14 +159,11 @@
     "settingsDescription": "Přizpůsobte název a barvu",
     "compare": "Porovnat kalendáře",
     "compareMode": "Režim porovnání",
-    "exitCompare": "Ukončit porovnání",
     "selectToCompare": "Vyberte kalendáře k porovnání",
     "selectToCompareDescription": "Vyberte 2–3 kalendáře pro zobrazení vedle sebe",
     "compareSelected": "{count} vybráno",
     "startComparing": "Zahájit porovnání",
-    "mobileNotOptimized": "Zobrazení porovnání není optimalizováno pro mobil. Pro nejlepší zážitek použijte prosím větší obrazovku.",
     "shareLink": "Sdílet odkaz",
-    "shareLinkDescription": "Zkopírovat odkaz na zobrazení porovnání",
     "browseCalendars": "Sdílené kalendáře",
     "browseCalendarsDescription": "Objevujte a spravujte odběry kalendářů",
     "subscribe": "Odebírat",
@@ -203,8 +191,6 @@
     "edit": "Upravit {item}",
     "note": "Poznámka",
     "placeholder": "např. Ranní směna kvůli odpolední schůzce...",
-    "hintMobile": "Pro přidání nebo úpravu poznámky či události podržte prst na dni v kalendáři.",
-    "hintDesktop": "Pro přidání nebo úpravu poznámky či události klikněte na den v kalendáři pravým tlačítkem.",
     "type": "Typ",
     "typeNote": "Poznámky",
     "typeEvent": "Události",
@@ -220,7 +206,6 @@
     "every": "Každé",
     "weeks": "týdny",
     "months": "měsíce",
-    "multipleEntries": "{count} záznamů",
     "noEntries": "Nejsou k dispozici žádné poznámky ani události",
     "recurringEditWarning": "Toto je opakující se událost. Změny se projeví u všech výskytů."
   },
@@ -237,7 +222,6 @@
     "allDay": "Celý den",
     "allDayShift": "Celodenní směna",
     "noShiftsInMonth": "Tento měsíc žádné směny",
-    "noShiftsInMonthDescription": "Přidejte směny kliknutím na dny v kalendáři výše.",
     "shift_one": "směna",
     "selectPreset": "Vybrat předvolbu",
     "none": "Žádná"
@@ -245,7 +229,6 @@
   "preset": {
     "preset": "Předvolba",
     "createNew": "Vytvořit novou předvolbu",
-    "createYourFirst": "Vytvořte svou první předvolbu",
     "edit": "Upravit předvolbu",
     "manage": "Spravovat předvolby",
     "manageDescription": "Upravte nebo smažte své předvolby směn",
@@ -253,7 +236,6 @@
     "presetName": "Název předvolby",
     "presetNamePlaceholder": "např. Ranní směna, večerní směna...",
     "noPresets": "Zatím žádné předvolby směn",
-    "createFirstDescription": "Vytvořte svou první předvolbu pro rychlé přidávání směn do kalendáře. Předvolby uloží vaše často používané časy a podrobnosti směn.",
     "deleteConfirm": "Smazat tuto předvolbu? Tím se smažou i všechny směny vytvořené z této předvolby.",
     "primaryPresets": "Primární předvolby",
     "secondaryPresets": "Sekundární předvolby",
@@ -261,10 +243,7 @@
     "markAsSecondary": "Označit jako sekundární (ve výchozím stavu sbalené)",
     "hideFromStats": "Skrýt ze statistik",
     "hideFromStatsHint": "Vyloučit směny z této předvolby ze statistik",
-    "showPresets": "Zobrazit předvolby",
-    "hidePresets": "Skrýt předvolby",
-    "hiddenFromStats": "Skryto ze statistik",
-    "cannotAddPresetHint": "Tato předvolba patří jinému kalendáři a nelze ji sem přidat."
+    "hiddenFromStats": "Skryto ze statistik"
   },
   "view": {
     "settingsTitle": "Nastavení zobrazení",
@@ -897,5 +876,16 @@
     "offlineMessage": "Vidíte naposledy načtený stav. Změny budou znovu možné po obnovení spojení; mezitím se neukládají.",
     "retry": "Zkusit znovu",
     "note": "Poznámka"
+  },
+  "calendarCompare": {
+    "title": "Porovnání",
+    "exit": "Ukončit",
+    "addCalendar": "Třetí kalendář",
+    "stampActive": "Razítko aktivní",
+    "tapToMoveStamp": "Klepnutím přesunete razítko do tohoto sloupce",
+    "subtitle": "{count, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}",
+    "laneHintTwo": "Horní řada {top}, dolní {bottom} — poznáte podle pruhu vlevo. Prázdný rámeček znamená volno.",
+    "laneHintMany": "Řady shora: {order} — poznáte podle pruhu vlevo. Prázdný rámeček znamená volno.",
+    "maxHint": "nejvýše {max}"
   }
 }

@@ -45,6 +45,8 @@ interface MonthGridProps {
   highlightColor?: string;
   onDayClick: (date: Date) => void;
   onDayContextMenu?: (date: Date) => void;
+  /** "compare" is the narrow desktop column used side by side in compare mode */
+  variant?: "full" | "compare";
 }
 
 export function MonthGrid({
@@ -62,8 +64,10 @@ export function MonthGrid({
   highlightColor,
   onDayClick,
   onDayContextMenu,
+  variant = "full",
 }: MonthGridProps) {
   const t = useTranslations();
+  const full = variant === "full";
   const locale = useLocale();
   // 2024-01-01 was a Monday
   const longWeekdays = WEEKDAY_KEYS.map((_, i) =>
@@ -86,19 +90,38 @@ export function MonthGrid({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="grid grid-cols-7 border-b border-line px-2 lg:px-[18px] lg:pt-3.5">
+      <div
+        className={cn(
+          "grid grid-cols-7 border-b border-line",
+          full ? "px-2 lg:px-[18px] lg:pt-3.5" : "px-4 pt-3"
+        )}
+      >
         {WEEKDAY_KEYS.map((key, index) => (
           <div
             key={key}
-            className="py-2 text-center text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary lg:px-2.5 lg:pb-2 lg:pt-0 lg:text-left lg:text-[11.5px]"
+            className={cn(
+              "font-semibold uppercase tracking-[0.06em] text-fg-tertiary",
+              full
+                ? "py-2 text-center text-[11px] lg:px-2.5 lg:pb-2 lg:pt-0 lg:text-left lg:text-[11.5px]"
+                : "px-2.5 pb-2 text-[11px]"
+            )}
           >
-            <span className="lg:hidden">{t(`calendarView.weekdayShort.${key}`)}</span>
-            <span className="hidden lg:inline">{longWeekdays[index]}</span>
+            <span className={full ? "lg:hidden" : ""}>
+              {t(`calendarView.weekdayShort.${key}`)}
+            </span>
+            {full && <span className="hidden lg:inline">{longWeekdays[index]}</span>}
           </div>
         ))}
       </div>
 
-      <div className="grid flex-1 auto-rows-[minmax(92px,auto)] grid-cols-7 gap-px bg-line-grid mx-2 lg:mx-[18px] lg:auto-rows-[minmax(0,1fr)]">
+      <div
+        className={cn(
+          "grid min-h-0 flex-1 grid-cols-7 gap-px bg-line-grid",
+          full
+            ? "mx-2 auto-rows-[minmax(92px,auto)] lg:mx-[18px] lg:auto-rows-[minmax(0,1fr)]"
+            : "mx-4 auto-rows-[minmax(0,1fr)]"
+        )}
+      >
         {calendarDays.map((day) => {
           const key = formatDateToLocal(day);
           const inMonth = day.getMonth() === currentDate.getMonth();
@@ -158,7 +181,9 @@ export function MonthGrid({
               }
               className={cn(
                 "relative flex min-h-0 min-w-0 select-none flex-col overflow-hidden text-left outline-none transition-colors [-webkit-touch-callout:none]",
-                "items-center px-1 py-[5px] lg:items-stretch lg:px-[9px] lg:py-2",
+                full
+                  ? "items-center px-1 py-[5px] lg:items-stretch lg:px-[9px] lg:py-2"
+                  : "items-stretch px-[9px] py-2",
                 today
                   ? "bg-surface-today"
                   : weekend
@@ -172,7 +197,12 @@ export function MonthGrid({
               )}
             >
               {/* Day number row */}
-              <div className="mb-1 flex w-full items-center justify-center gap-1.5 lg:mb-1.5 lg:justify-between">
+              <div
+                className={cn(
+                  "flex w-full items-center gap-1.5",
+                  full ? "mb-1 justify-center lg:mb-1.5 lg:justify-between" : "mb-1.5 justify-between"
+                )}
+              >
                 <span
                   className={cn(
                     "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
@@ -185,12 +215,22 @@ export function MonthGrid({
                 >
                   {day.getDate()}
                 </span>
-                {mobileHidden > 0 && (
+                {!full && hiddenCount > 0 && (
+                  <span className="ml-auto rounded-[4px] bg-brand-soft px-1 py-px font-mono text-[10px] font-bold text-brand-ink">
+                    +{hiddenCount}
+                  </span>
+                )}
+                {full && mobileHidden > 0 && (
                   <span className="rounded-[4px] bg-brand-soft px-[3px] py-px font-mono text-[9.5px] font-bold text-brand-ink lg:hidden">
                     +{mobileHidden}
                   </span>
                 )}
-                <span className="hidden min-w-0 items-center gap-1 lg:flex">
+                <span
+                  className={cn(
+                    "min-w-0 items-center gap-1",
+                    full ? "hidden lg:flex" : "flex"
+                  )}
+                >
                   {plainNotes > 0 && (
                     <StickyNote
                       className="size-3.5 shrink-0 text-warning"
@@ -211,7 +251,7 @@ export function MonthGrid({
               </div>
 
               {/* Mobile event tag */}
-              {events[0] && (
+              {full && events[0] && (
                 <span
                   className="shift-chip mb-1 w-full truncate rounded-[4px] px-[3px] py-0.5 text-center text-[10px] font-semibold lg:hidden"
                   style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
@@ -221,8 +261,29 @@ export function MonthGrid({
               )}
 
               {/* Desktop chips */}
-              <div className="hidden min-w-0 flex-col gap-[3px] lg:flex">
-                {visible.map((shift) => (
+              <div
+                className={cn(
+                  "min-w-0 flex-col gap-[3px]",
+                  full ? "hidden lg:flex" : "flex"
+                )}
+              >
+                {!full &&
+                  visible.map((shift) => (
+                    <span
+                      key={shift.id}
+                      className="flex min-w-0 items-center gap-1.5 rounded-sm bg-surface-sunken/70 px-1.5 py-[3px] text-[11.5px] text-fg-body"
+                      title={`${shift.title} · ${
+                        shift.isAllDay ? t("shift.allDayShift") : `${shift.startTime}–${shift.endTime}`
+                      }`}
+                    >
+                      <span
+                        className="shift-rail h-[13px] w-[3px] shrink-0 rounded-full"
+                        style={{ "--shift": shift.color } as React.CSSProperties}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{shift.title}</span>
+                    </span>
+                  ))}
+                {full && visible.map((shift) => (
                   <span
                     key={shift.id}
                     className="shift-chip flex min-w-0 items-center gap-1.5 rounded-sm px-[7px] py-[3px] text-[11.5px]"
@@ -262,7 +323,7 @@ export function MonthGrid({
                     </span>
                   </span>
                 ))}
-                {hiddenCount > 0 && (
+                {full && hiddenCount > 0 && (
                   <span className="pl-0.5 text-[11.5px] font-medium text-brand-ink">
                     {t("calendarView.moreShifts", { count: hiddenCount })}
                   </span>
@@ -270,7 +331,7 @@ export function MonthGrid({
               </div>
 
               {/* Mobile blocks */}
-              <div className="flex w-full min-w-0 flex-col gap-[3px] lg:hidden">
+              <div className={cn("w-full min-w-0 flex-col gap-[3px] lg:hidden", full ? "flex" : "hidden")}>
                 {mobileVisible.map((shift) => (
                   <span
                     key={shift.id}

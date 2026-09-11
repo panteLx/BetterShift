@@ -58,15 +58,6 @@
     "no": "Nein",
     "viewAll": "Alle anzeigen",
     "viewDetails": "Details anzeigen",
-    "weekday": {
-      "monday": "Mo",
-      "tuesday": "Di",
-      "wednesday": "Mi",
-      "thursday": "Do",
-      "friday": "Fr",
-      "saturday": "Sa",
-      "sunday": "So"
-    },
     "labels": {
       "name": "Name",
       "email": "E-Mail",
@@ -168,14 +159,11 @@
     "settingsDescription": "Passe Name und Farbe an",
     "compare": "Vergleichen",
     "compareMode": "Vergleichsmodus",
-    "exitCompare": "Vergleich beenden",
     "selectToCompare": "Wähle Kalender zum Vergleichen",
     "selectToCompareDescription": "Wähle 2-3 Kalender aus, um sie nebeneinander zu vergleichen",
     "compareSelected": "{count} ausgewählt",
     "startComparing": "Vergleich starten",
-    "mobileNotOptimized": "Die Vergleichsansicht ist nicht für Mobile optimiert. Für die beste Erfahrung nutze bitte einen größeren Bildschirm.",
     "shareLink": "Link teilen",
-    "shareLinkDescription": "Kopiere den Link zur Vergleichsansicht",
     "browseCalendars": "Geteilte Kalender",
     "browseCalendarsDescription": "Kalender-Abonnements entdecken und verwalten",
     "subscribe": "Abonnieren",
@@ -203,8 +191,6 @@
     "edit": "{item} bearbeiten",
     "note": "Notiz",
     "placeholder": "z.B. Frühdienst weil nachmittags Termin...",
-    "hintMobile": "Um eine Notiz oder ein Event hinzuzufügen oder zu bearbeiten, drücke lange auf einen Tag im Kalender.",
-    "hintDesktop": "Um eine Notiz oder ein Event hinzuzufügen oder zu bearbeiten, mache einen Rechtsklick auf einen Tag im Kalender.",
     "type": "Typ",
     "typeNote": "Notizen",
     "typeEvent": "Events",
@@ -220,7 +206,6 @@
     "every": "Alle",
     "weeks": "Wochen",
     "months": "Monate",
-    "multipleEntries": "{count} Einträge",
     "noEntries": "Keine Notizen oder Events vorhanden",
     "recurringEditWarning": "Dies ist ein wiederkehrendes Event. Änderungen wirken sich auf alle Wiederholungen aus."
   },
@@ -237,7 +222,6 @@
     "allDay": "GT",
     "allDayShift": "Ganztägige Schicht",
     "noShiftsInMonth": "Keine Schichten in diesem Monat",
-    "noShiftsInMonthDescription": "Füge Schichten hinzu, indem du auf Tage im Kalender oben klickst.",
     "shift_one": "Schicht",
     "selectPreset": "Vorlage auswählen",
     "none": "Keine"
@@ -245,7 +229,6 @@
   "preset": {
     "preset": "Vorlage",
     "createNew": "Neue Vorlage erstellen",
-    "createYourFirst": "Erstelle deine erste Vorlage",
     "edit": "Vorlage bearbeiten",
     "manage": "Vorlagen verwalten",
     "manageDescription": "Bearbeite oder lösche deine Schichtvorlagen",
@@ -253,7 +236,6 @@
     "presetName": "Vorlagenname",
     "presetNamePlaceholder": "z.B. Frühschicht, Spätschicht...",
     "noPresets": "Noch keine Schichtvorlagen",
-    "createFirstDescription": "Erstelle deine erste Vorlage, um Schichten schnell zu deinem Kalender hinzuzufügen. Vorlagen speichern deine häufig genutzten Schichtzeiten und Details.",
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
     "primaryPresets": "Primäre Vorlagen",
     "secondaryPresets": "Sekundäre Vorlagen",
@@ -261,10 +243,7 @@
     "markAsSecondary": "Als sekundär markieren (standardmäßig eingeklappt)",
     "hideFromStats": "Aus Statistik ausblenden",
     "hideFromStatsHint": "Schichten dieser Vorlage aus der Statistik ausschließen",
-    "showPresets": "Vorlagen anzeigen",
-    "hidePresets": "Vorlagen ausblenden",
-    "hiddenFromStats": "Aus Statistik ausgeblendet",
-    "cannotAddPresetHint": "Diese Vorlage gehört zu einem anderen Kalender und kann hier nicht hinzugefügt werden."
+    "hiddenFromStats": "Aus Statistik ausgeblendet"
   },
   "view": {
     "settingsTitle": "Ansichtseinstellungen",
@@ -897,5 +876,16 @@
     "offlineMessage": "Du siehst den zuletzt geladenen Stand. Änderungen sind erst wieder möglich, wenn die Verbindung steht — sie werden nicht zwischengespeichert.",
     "retry": "Erneut versuchen",
     "note": "Notiz"
+  },
+  "calendarCompare": {
+    "title": "Vergleich",
+    "exit": "Beenden",
+    "addCalendar": "Dritter Kalender",
+    "stampActive": "Stempel aktiv",
+    "tapToMoveStamp": "Antippen übernimmt den Stempel in diese Spalte",
+    "subtitle": "{count} Kalender",
+    "laneHintTwo": "Obere Reihe {top}, untere {bottom} — erkennbar am Balken links. Leerer Rahmen heißt frei.",
+    "laneHintMany": "Reihen von oben: {order} — erkennbar am Balken links. Leerer Rahmen heißt frei.",
+    "maxHint": "höchstens {max}"
   }
 }

@@ -58,15 +58,6 @@
     "deleteSelected": "Eliminar seleccionados",
     "viewAll": "Ver todo",
     "viewDetails": "Ver detalles",
-    "weekday": {
-      "monday": "Lun",
-      "tuesday": "Mar",
-      "wednesday": "Mié",
-      "thursday": "Jue",
-      "friday": "Vie",
-      "saturday": "Sáb",
-      "sunday": "Dom"
-    },
     "labels": {
       "name": "Nombre",
       "email": "Correo electrónico",
@@ -168,14 +159,11 @@
     "settingsDescription": "Personalizar nombre y color",
     "compare": "Comparar calendarios",
     "compareMode": "Modo comparación",
-    "exitCompare": "Salir de comparación",
     "selectToCompare": "Seleccionar calendarios para comparar",
     "selectToCompareDescription": "Elige 2-3 calendarios para verlos lado a lado",
     "compareSelected": "{count} seleccionados",
     "startComparing": "Empezar a comparar",
-    "mobileNotOptimized": "La vista de comparación no está optimizada para móviles. Por favor, usa una pantalla más grande para una mejor experiencia.",
     "shareLink": "Compartir enlace",
-    "shareLinkDescription": "Copiar enlace a la vista de comparación",
     "browseCalendars": "Calendarios compartidos",
     "browseCalendarsDescription": "Descubre y gestiona suscripciones a calendarios",
     "subscribe": "Suscribirse",
@@ -203,8 +191,6 @@
     "edit": "Editar {item}",
     "note": "Nota",
     "placeholder": "ej., Turno de mañana porque tengo cita por la tarde...",
-    "hintMobile": "Para añadir o editar una nota o evento, mantén pulsado un día en el calendario.",
-    "hintDesktop": "Para añadir o editar una nota o evento, haz clic derecho en un día en el calendario.",
     "type": "Tipo",
     "typeNote": "Notas",
     "typeEvent": "Eventos",
@@ -220,7 +206,6 @@
     "every": "Cada",
     "weeks": "semanas",
     "months": "meses",
-    "multipleEntries": "{count} entradas",
     "noEntries": "No hay notas ni eventos disponibles",
     "recurringEditWarning": "Este es un evento recurrente. Los cambios afectarán a todas las ocurrencias."
   },
@@ -237,7 +222,6 @@
     "allDay": "Todo el día",
     "allDayShift": "Turno de todo el día",
     "noShiftsInMonth": "No hay turnos este mes",
-    "noShiftsInMonthDescription": "Añade turnos haciendo clic en los días del calendario superior.",
     "shift_one": "turno",
     "selectPreset": "Seleccionar preajuste",
     "none": "Ninguno"
@@ -245,7 +229,6 @@
   "preset": {
     "preset": "Preajuste",
     "createNew": "Crear nuevo preajuste",
-    "createYourFirst": "Crea tu primer preajuste",
     "edit": "Editar preajuste",
     "manage": "Gestionar preajustes",
     "manageDescription": "Edita o elimina tus preajustes de turno",
@@ -253,7 +236,6 @@
     "presetName": "Nombre del preajuste",
     "presetNamePlaceholder": "ej., Turno de mañana, Turno de tarde...",
     "noPresets": "Aún no hay preajustes de turno",
-    "createFirstDescription": "Crea tu primer preajuste para añadir turnos rápidamente a tu calendario. Los preajustes guardan tus horarios y detalles de turno más frecuentes.",
     "deleteConfirm": "¿Eliminar este preajuste? Esto también eliminará todos los turnos creados a partir de él.",
     "primaryPresets": "Preajustes primarios",
     "secondaryPresets": "Preajustes secundarios",
@@ -261,10 +243,7 @@
     "markAsSecondary": "Marcar como secundario (colapsado por defecto)",
     "hideFromStats": "Ocultar de las estadísticas",
     "hideFromStatsHint": "Excluir turnos de este preajuste de las estadísticas",
-    "showPresets": "Mostrar preajustes",
-    "hidePresets": "Ocultar preajustes",
-    "hiddenFromStats": "Oculto de las estadísticas",
-    "cannotAddPresetHint": "Este preajuste pertenece a un calendario diferente y no se puede añadir aquí."
+    "hiddenFromStats": "Oculto de las estadísticas"
   },
   "view": {
     "settingsTitle": "Ajustes de vista",
@@ -897,5 +876,16 @@
     "offlineMessage": "Ves el último estado cargado. Podrás hacer cambios cuando vuelva la conexión; no se guardan entretanto.",
     "retry": "Reintentar",
     "note": "Nota"
+  },
+  "calendarCompare": {
+    "title": "Comparar",
+    "exit": "Salir",
+    "addCalendar": "Tercer calendario",
+    "stampActive": "Sello activo",
+    "tapToMoveStamp": "Toca para mover el sello a esta columna",
+    "subtitle": "{count} calendarios",
+    "laneHintTwo": "Fila superior {top}, inferior {bottom}; se distinguen por la barra izquierda. Un marco vacío significa libre.",
+    "laneHintMany": "Filas desde arriba: {order}; se distinguen por la barra izquierda. Un marco vacío significa libre.",
+    "maxHint": "como máximo {max}"
   }
 }

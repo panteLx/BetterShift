@@ -58,15 +58,6 @@
     "deleteSelected": "Supprimer la sélection",
     "viewAll": "Tout afficher",
     "viewDetails": "Voir les détails",
-    "weekday": {
-      "monday": "Lun",
-      "tuesday": "Mar",
-      "wednesday": "Mer",
-      "thursday": "Jeu",
-      "friday": "Ven",
-      "saturday": "Sam",
-      "sunday": "Dim"
-    },
     "labels": {
       "name": "Nom",
       "email": "E-mail",
@@ -168,14 +159,11 @@
     "settingsDescription": "Personnalisez le nom et la couleur",
     "compare": "Comparer les calendriers",
     "compareMode": "Mode comparaison",
-    "exitCompare": "Quitter la comparaison",
     "selectToCompare": "Sélectionner les calendriers à comparer",
     "selectToCompareDescription": "Choisissez 2 à 3 calendriers pour les afficher côte à côte",
     "compareSelected": "{count} sélectionné(s)",
     "startComparing": "Lancer la comparaison",
-    "mobileNotOptimized": "La vue comparaison n'est pas optimisée pour mobile. Veuillez utiliser un écran plus grand pour une meilleure expérience.",
     "shareLink": "Lien de partage",
-    "shareLinkDescription": "Copier le lien vers la vue comparaison",
     "browseCalendars": "Calendriers partagés",
     "browseCalendarsDescription": "Découvrez et gérez vos abonnements aux calendriers",
     "subscribe": "S'abonner",
@@ -203,8 +191,6 @@
     "edit": "Modifier {item}",
     "note": "Note",
     "placeholder": "ex. : Créneau matinal car rendez-vous l'après-midi...",
-    "hintMobile": "Pour ajouter ou modifier une note ou un événement, appuyez longuement sur un jour dans le calendrier.",
-    "hintDesktop": "Pour ajouter ou modifier une note ou un événement, faites un clic droit sur un jour dans le calendrier.",
     "type": "Type",
     "typeNote": "Notes",
     "typeEvent": "Événements",
@@ -220,7 +206,6 @@
     "every": "Tous les",
     "weeks": "semaines",
     "months": "mois",
-    "multipleEntries": "{count} entrées",
     "noEntries": "Aucune note ou événement disponible",
     "recurringEditWarning": "Cet événement est récurrent. Les modifications s'appliqueront à toutes les occurrences."
   },
@@ -237,7 +222,6 @@
     "allDay": "Toute la journée",
     "allDayShift": "Créneau sur toute la journée",
     "noShiftsInMonth": "Aucun créneau ce mois-ci",
-    "noShiftsInMonthDescription": "Ajoutez des créneaux en cliquant sur les jours dans le calendrier ci-dessus.",
     "shift_one": "créneau",
     "selectPreset": "Sélectionner un modèle",
     "none": "Aucun"
@@ -245,7 +229,6 @@
   "preset": {
     "preset": "Modèle",
     "createNew": "Créer un nouveau modèle",
-    "createYourFirst": "Créez votre premier modèle",
     "edit": "Modifier le modèle",
     "manage": "Gérer les modèles",
     "manageDescription": "Modifier ou supprimer vos modèles de créneaux",
@@ -253,7 +236,6 @@
     "presetName": "Nom du modèle",
     "presetNamePlaceholder": "ex. : Créneau matin, Créneau soir...",
     "noPresets": "Aucun modèle de créneau pour l'instant",
-    "createFirstDescription": "Créez votre premier modèle pour ajouter rapidement des créneaux à votre calendrier. Les modèles mémorisent vos horaires et détails de créneaux fréquemment utilisés.",
     "deleteConfirm": "Supprimer ce modèle ? Tous les créneaux créés à partir de ce modèle seront également supprimés.",
     "primaryPresets": "Modèles principaux",
     "secondaryPresets": "Modèles secondaires",
@@ -261,10 +243,7 @@
     "markAsSecondary": "Marquer comme secondaire (réduit par défaut)",
     "hideFromStats": "Exclure des statistiques",
     "hideFromStatsHint": "Exclure les créneaux de ce modèle des statistiques",
-    "showPresets": "Afficher les modèles",
-    "hidePresets": "Masquer les modèles",
-    "hiddenFromStats": "Exclu des statistiques",
-    "cannotAddPresetHint": "Ce modèle appartient à un autre calendrier et ne peut pas être ajouté ici."
+    "hiddenFromStats": "Exclu des statistiques"
   },
   "view": {
     "settingsTitle": "Paramètres d'affichage",
@@ -897,5 +876,16 @@
     "offlineMessage": "Vous voyez le dernier état chargé. Les modifications seront de nouveau possibles une fois la connexion rétablie ; elles ne sont pas mises en attente.",
     "retry": "Réessayer",
     "note": "Note"
+  },
+  "calendarCompare": {
+    "title": "Comparer",
+    "exit": "Quitter",
+    "addCalendar": "Troisième calendrier",
+    "stampActive": "Tampon actif",
+    "tapToMoveStamp": "Touchez pour déplacer le tampon dans cette colonne",
+    "subtitle": "{count} calendriers",
+    "laneHintTwo": "Ligne du haut {top}, du bas {bottom} — repérable à la barre de gauche. Un cadre vide signifie libre.",
+    "laneHintMany": "Lignes depuis le haut : {order} — repérables à la barre de gauche. Un cadre vide signifie libre.",
+    "maxHint": "au maximum {max}"
   }
 }

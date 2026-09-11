@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { isSameDay, isSameMonth } from "date-fns";
 import { toast } from "sonner";
-import { getDateLocale } from "@/lib/locales";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 import { useCalendars } from "@/hooks/useCalendars";
@@ -20,7 +19,6 @@ import { useShiftActions } from "@/hooks/useShiftActions";
 import { useNoteActions } from "@/hooks/useNoteActions";
 import { useExternalSync } from "@/hooks/useExternalSync";
 import { useDialogStates } from "@/hooks/useDialogStates";
-import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { useAuth } from "@/hooks/useAuth";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
@@ -28,16 +26,14 @@ import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { GuestEmptyState } from "@/components/guest-empty-state";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { CalendarCompareSheet } from "@/components/calendar-compare-sheet";
-import { CalendarCompareView } from "@/components/calendar-compare-view";
+import { CompareWorkspace } from "@/components/compare-workspace";
 import { CalendarWorkspace } from "@/components/calendar-workspace";
-import { AppFooter } from "@/components/app-footer";
 import { AppHeader } from "@/components/app-header";
 import { DialogManager } from "@/components/dialog-manager";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { getCalendarDays } from "@/lib/calendar-utils";
 import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
-import { AnimatePresence } from "motion/react";
 
 function toDate(date: Date | string): Date {
   return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -49,7 +45,6 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
   const t = useTranslations();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
@@ -107,6 +102,8 @@ function HomeContent() {
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [showCompareSelector, setShowCompareSelector] = useState(false);
   const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([]);
+  // Selection before the picker opened, restored on cancel
+  const [compareSnapshot, setCompareSnapshot] = useState<string[]>([]);
   const [compareTogglingDates, setCompareTogglingDates] = useState<
     Map<string, Set<string>>
   >(new Map());
@@ -128,7 +125,6 @@ function HomeContent() {
 
   const viewSettings = useViewSettings();
   const dialogStates = useDialogStates();
-  const versionInfo = useVersionInfo();
 
   const noteActions = useNoteActions({
     createNote: createNoteHook,
@@ -207,12 +203,6 @@ function HomeContent() {
     dialogStates.setSelectedDayDate(date);
     dialogStates.setSelectedDayShifts(dayShifts);
     dialogStates.setShowDayShiftsDialog(true);
-  };
-
-  const openSyncedShifts = (date: Date, syncedShifts: ShiftWithCalendar[]) => {
-    dialogStates.setSelectedDayDate(date);
-    dialogStates.setSelectedSyncedShifts(syncedShifts);
-    dialogStates.setShowSyncedShiftsDialog(true);
   };
 
   // Load compare mode from URL on initial load
@@ -336,17 +326,16 @@ function HomeContent() {
     });
   };
 
+  const openComparePicker = () => {
+    setCompareSnapshot(isCompareMode ? selectedCompareIds : []);
+    setShowCompareSelector(true);
+  };
+
   const handleCompareDayClick = async (calendarId: string, date: Date | string) => {
     const targetDate = toDate(date);
-
-    if (!selectedPresetId) {
-      const calendarShifts = compareData.shiftsMap.get(calendarId) || [];
-      const dayShifts = calendarShifts.filter(
-        (shift) => shift.date && isSameDay(shift.date as Date, targetDate)
-      );
-      if (dayShifts.length > 0) openDayShifts(targetDate, dayShifts);
-      return;
-    }
+    selectDay(targetDate);
+    if (!isSameMonth(targetDate, currentDate)) setCurrentDate(targetDate);
+    if (!selectedPresetId) return;
 
     const calendarPresets = compareData.presetsMap.get(calendarId) || [];
     const calendarShifts = compareData.shiftsMap.get(calendarId) || [];
@@ -459,6 +448,31 @@ function HomeContent() {
     />
   );
 
+  const comparePicker = (
+    <CalendarCompareSheet
+      open={showCompareSelector}
+      calendars={calendars}
+      selectedIds={selectedCompareIds}
+      onToggleCalendar={handleToggleCompareCalendar}
+      onStartCompare={() => {
+        setShowCompareSelector(false);
+        setIsCompareMode(true);
+      }}
+      onCancel={() => {
+        setShowCompareSelector(false);
+        setSelectedCompareIds(compareSnapshot);
+      }}
+    />
+  );
+
+  const dayLayout = {
+    maxShifts: viewSettings.shiftsPerDay ?? undefined,
+    maxExternalShifts: viewSettings.externalShiftsPerDay ?? undefined,
+    sortType: viewSettings.shiftSortType,
+    sortOrder: viewSettings.shiftSortOrder,
+    combinedSort: viewSettings.combinedSortMode,
+  };
+
   if (
     (!hasLoadedOnce && loading) ||
     (!shiftsLoadedOnce && shiftsLoading) ||
@@ -481,63 +495,40 @@ function HomeContent() {
 
     return (
       <>
-        <CalendarCompareView
-          calendars={calendars}
-          selectedIds={selectedCompareIds}
-          allCalendars={calendars}
+        <CompareWorkspace
+          calendars={calendars.filter((c) => selectedCompareIds.includes(c.id))}
           calendarDays={calendarDays}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
+          selectedDay={selectedDay}
+          onSelectDay={selectDay}
           shiftsMap={compareData.shiftsMap}
           notesMap={compareData.notesMap}
           externalSyncsMap={compareData.externalSyncsMap}
           presetsMap={compareData.presetsMap}
-          selectedPresetId={selectedPresetId}
-          onSelectPreset={setSelectedPresetId}
           togglingDatesMap={togglingDatesMap}
-          maxShiftsToShow={viewSettings.shiftsPerDay ?? undefined}
-          maxExternalShiftsToShow={viewSettings.externalShiftsPerDay ?? undefined}
+          layout={dayLayout}
           showShiftNotes={viewSettings.showShiftNotes}
           showFullTitles={viewSettings.showFullTitles}
-          shiftSortType={viewSettings.shiftSortType}
-          shiftSortOrder={viewSettings.shiftSortOrder}
-          combinedSortMode={viewSettings.combinedSortMode}
           highlightedWeekdays={viewSettings.highlightedWeekdays}
           highlightColor={viewSettings.highlightColor}
-          locale={dateLocale}
+          selectedPresetId={selectedPresetId}
+          onSelectPreset={setSelectedPresetId}
           onDayClick={handleCompareDayClick}
-          onDayRightClick={(calendarId, e, date) => {
-            e.preventDefault();
-            openCompareNotes(calendarId, date);
-          }}
-          onNoteIconClick={(calendarId, e, date) => {
-            e.stopPropagation();
-            openCompareNotes(calendarId, date);
-          }}
-          onLongPress={openCompareNotes}
-          onShowAllShifts={(_calendarId, date, dayShifts) => openDayShifts(date, dayShifts)}
-          onShowSyncedShifts={(_calendarId, date, synced) => openSyncedShifts(date, synced)}
-          onViewSettingsClick={() => dialogStates.setShowViewSettingsDialog(true)}
-          onExit={handleExitCompare}
-          hidePresetHeader={viewSettings.hidePresetHeader}
-          onHidePresetHeaderChange={viewSettings.handleHidePresetHeaderChange}
+          onDayContextMenu={openCompareNotes}
+          onOpenDayShifts={openDayShifts}
           onPresetsChange={(calendarId: string) => {
             compareData.invalidatePresets(calendarId);
             queryClient.invalidateQueries({
               queryKey: queryKeys.shifts.byCalendar(calendarId),
             });
           }}
-          onShiftsChange={() => {
-            selectedCompareIds.forEach((calendarId) => {
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.shifts.byCalendar(calendarId),
-              });
-            });
-          }}
-          presetsLoadingMap={compareData.presetsLoadingMap}
+          onAddCalendar={openComparePicker}
+          onViewSettings={() => dialogStates.setShowViewSettingsDialog(true)}
+          onExit={handleExitCompare}
         />
+        {comparePicker}
         {dialogManager}
-        <AppFooter versionInfo={versionInfo} />
       </>
     );
   }
@@ -566,30 +557,14 @@ function HomeContent() {
       onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
       onSettings={() => dialogStates.setShowCalendarSettingsDialog(true)}
       onSyncNotifications={() => dialogStates.setShowSyncNotificationDialog(true)}
-      onCompare={() => setShowCompareSelector(true)}
+      onCompare={openComparePicker}
       onViewSettings={() => dialogStates.setShowViewSettingsDialog(true)}
     />
   );
 
   return (
     <>
-      <AnimatePresence>
-        {showCompareSelector && (
-          <CalendarCompareSheet
-            calendars={calendars}
-            selectedIds={selectedCompareIds}
-            onToggleCalendar={handleToggleCompareCalendar}
-            onStartCompare={() => {
-              setShowCompareSelector(false);
-              setIsCompareMode(true);
-            }}
-            onCancel={() => {
-              setShowCompareSelector(false);
-              setSelectedCompareIds([]);
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {comparePicker}
 
       <CalendarWorkspace
         header={header}
@@ -605,13 +580,7 @@ function HomeContent() {
         presets={presets}
         externalSyncs={externalSyncs}
         togglingDates={shiftActions.togglingDates}
-        layout={{
-          maxShifts: viewSettings.shiftsPerDay ?? undefined,
-          maxExternalShifts: viewSettings.externalShiftsPerDay ?? undefined,
-          sortType: viewSettings.shiftSortType,
-          sortOrder: viewSettings.shiftSortOrder,
-          combinedSort: viewSettings.combinedSortMode,
-        }}
+        layout={dayLayout}
         showShiftNotes={viewSettings.showShiftNotes}
         showFullTitles={viewSettings.showFullTitles}
         highlightedWeekdays={viewSettings.highlightedWeekdays}

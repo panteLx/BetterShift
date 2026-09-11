@@ -58,15 +58,6 @@
     "deleteSelected": "Delete Selected",
     "viewAll": "View All",
     "viewDetails": "View Details",
-    "weekday": {
-      "monday": "Mon",
-      "tuesday": "Tue",
-      "wednesday": "Wed",
-      "thursday": "Thu",
-      "friday": "Fri",
-      "saturday": "Sat",
-      "sunday": "Sun"
-    },
     "labels": {
       "name": "Name",
       "email": "Email",
@@ -168,14 +159,11 @@
     "settingsDescription": "Customize name and color",
     "compare": "Compare Calendars",
     "compareMode": "Comparison Mode",
-    "exitCompare": "Exit Comparison",
     "selectToCompare": "Select calendars to compare",
     "selectToCompareDescription": "Choose 2-3 calendars to view them side by side",
     "compareSelected": "{count} selected",
     "startComparing": "Start Comparing",
-    "mobileNotOptimized": "The comparison view is not optimized for mobile. Please use a larger screen for the best experience.",
     "shareLink": "Share Link",
-    "shareLinkDescription": "Copy link to comparison view",
     "browseCalendars": "Shared Calendars",
     "browseCalendarsDescription": "Discover and manage calendar subscriptions",
     "subscribe": "Subscribe",
@@ -203,8 +191,6 @@
     "edit": "Edit {item}",
     "note": "Note",
     "placeholder": "e.g., Early shift because appointment in the afternoon...",
-    "hintMobile": "To add or edit a note or event, long press on a day in the calendar.",
-    "hintDesktop": "To add or edit a note or event, right-click on a day in the calendar.",
     "type": "Type",
     "typeNote": "Notes",
     "typeEvent": "Events",
@@ -220,7 +206,6 @@
     "every": "Every",
     "weeks": "weeks",
     "months": "months",
-    "multipleEntries": "{count} entries",
     "noEntries": "No notes or events available",
     "recurringEditWarning": "This is a recurring event. Changes will affect all occurrences."
   },
@@ -237,7 +222,6 @@
     "allDay": "All Day",
     "allDayShift": "All-day shift",
     "noShiftsInMonth": "No shifts this month",
-    "noShiftsInMonthDescription": "Add shifts by clicking on days in the calendar above.",
     "shift_one": "shift",
     "selectPreset": "Select Preset",
     "none": "None"
@@ -245,7 +229,6 @@
   "preset": {
     "preset": "Preset",
     "createNew": "Create New Preset",
-    "createYourFirst": "Create Your First Preset",
     "edit": "Edit Preset",
     "manage": "Manage Presets",
     "manageDescription": "Edit or delete your shift presets",
@@ -253,7 +236,6 @@
     "presetName": "Preset name",
     "presetNamePlaceholder": "e.g., Morning Shift, Evening Shift...",
     "noPresets": "No shift presets yet",
-    "createFirstDescription": "Create your first preset to quickly add shifts to your calendar. Presets save your frequently used shift times and details.",
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
     "primaryPresets": "Primary Presets",
     "secondaryPresets": "Secondary Presets",
@@ -261,10 +243,7 @@
     "markAsSecondary": "Mark as secondary (collapsed by default)",
     "hideFromStats": "Hide from statistics",
     "hideFromStatsHint": "Exclude shifts from this preset from statistics",
-    "showPresets": "Show presets",
-    "hidePresets": "Hide presets",
-    "hiddenFromStats": "Hidden from statistics",
-    "cannotAddPresetHint": "This preset belongs to a different calendar and cannot be added here."
+    "hiddenFromStats": "Hidden from statistics"
   },
   "view": {
     "settingsTitle": "View Settings",
@@ -897,5 +876,16 @@
     "offlineMessage": "You are looking at the last loaded state. Changes are possible again once the connection is back — they are not stored in between.",
     "retry": "Try again",
     "note": "Note"
+  },
+  "calendarCompare": {
+    "title": "Compare",
+    "exit": "Exit",
+    "addCalendar": "Third calendar",
+    "stampActive": "Stamp active",
+    "tapToMoveStamp": "Tap to move the stamp to this column",
+    "subtitle": "{count} calendars",
+    "laneHintTwo": "Top row {top}, bottom row {bottom} — see the bar on the left. An empty frame means off.",
+    "laneHintMany": "Rows from the top: {order} — see the bar on the left. An empty frame means off.",
+    "maxHint": "at most {max}"
   }
 }
