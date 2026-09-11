@@ -79,6 +79,13 @@ async function getCachedHealthStatus(): Promise<"healthy" | "unhealthy"> {
   return status;
 }
 
+function redirectToLogin(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("returnUrl", pathname + search);
+  return NextResponse.redirect(loginUrl);
+}
+
 /**
  * Proxy for authentication and route protection (Next.js 16)
  *
@@ -262,9 +269,7 @@ export async function proxy(request: NextRequest) {
 
     if (!sessionToken) {
       // Not authenticated - redirect to login
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("returnUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectToLogin(request);
     }
 
     // Validate session and check admin role
@@ -273,9 +278,7 @@ export async function proxy(request: NextRequest) {
 
       if (!session?.user) {
         // Invalid session - redirect to login
-        const loginUrl = new URL("/login", request.url);
-        loginUrl.searchParams.set("returnUrl", pathname);
-        return NextResponse.redirect(loginUrl);
+        return redirectToLogin(request);
       }
 
       // Check if user is admin
@@ -304,9 +307,7 @@ export async function proxy(request: NextRequest) {
     } catch (error) {
       console.error("[Proxy] Admin access check failed:", error);
       // Session validation failed - redirect to login
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("returnUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectToLogin(request);
     }
   }
 
@@ -324,9 +325,7 @@ export async function proxy(request: NextRequest) {
     }
 
     // Otherwise, redirect to login with return URL
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("returnUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    return redirectToLogin(request);
   }
 
   // Session token validation happens in API routes via getSessionUser()
