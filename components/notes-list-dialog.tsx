@@ -1,20 +1,13 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
+import { CalendarClock, Keyboard, Pencil, Plus, StickyNote, Trash2 } from "lucide-react";
 import { CalendarNote } from "@/lib/db/schema";
-import { useTranslations, useLocale } from "next-intl";
-import { format } from "date-fns";
-import { getDateLocale } from "@/lib/locales";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { PanelDialog } from "@/components/panel-dialog";
+import { InfoNote, ListRow, Pill, RowIconButton } from "@/components/form-kit";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
+import { parseRecurrence } from "@/components/note-sheet";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
 interface NotesListDialogProps {
@@ -27,6 +20,73 @@ interface NotesListDialogProps {
   onAddNew: () => void;
   calendarId?: string;
   readOnly?: boolean;
+}
+
+// Plain notes carry no color of their own
+const NOTE_COLOR = "#d97706";
+
+function NoteRow({
+  note,
+  editable,
+  onEdit,
+  onDelete,
+}: {
+  note: CalendarNote;
+  editable: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations();
+  const isEvent = note.type === "event";
+  const Icon = isEvent ? CalendarClock : StickyNote;
+  const [title, ...rest] = note.note.trim().split("\n");
+  const subtitle = rest.join(" ").trim();
+  const color = { "--shift": isEvent ? note.color || "var(--brand)" : NOTE_COLOR } as React.CSSProperties;
+
+  const { repeat, interval } = parseRecurrence(note.recurringPattern, note.recurringInterval);
+  const recurrence = !isEvent
+    ? null
+    : repeat === "weeks"
+      ? t("noteSheet.recurrenceWeeks", { count: interval })
+      : repeat === "months"
+        ? t("noteSheet.recurrenceMonths", { count: interval })
+        : repeat === "years"
+          ? t("noteSheet.recurrenceYears", { count: interval })
+          : null;
+
+  const pills = (
+    <>
+      {recurrence && <Pill className="text-[11px]">{recurrence}</Pill>}
+      <span
+        className="shift-chip whitespace-nowrap rounded-full px-[7px] py-0.5 text-[11px] font-semibold"
+        style={color}
+      >
+        {isEvent ? t("noteSheet.typeEvent") : t("noteSheet.typeNote")}
+      </span>
+    </>
+  );
+
+  return (
+    <ListRow className="gap-[11px] px-3 py-[11px]">
+      <span className="shift-rail h-[30px] w-[3px] shrink-0 rounded-full" style={color} />
+      <Icon className="shift-text size-4 shrink-0" style={color} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[14px] font-semibold text-fg-strong">{title}</div>
+        {subtitle && (
+          <div className="mt-0.5 truncate text-[12px] text-fg-tertiary">{subtitle}</div>
+        )}
+        {/* Narrow rows move the pills under the text so the title keeps its room */}
+        <div className="mt-1.5 flex flex-wrap gap-1.5 sm:hidden">{pills}</div>
+      </div>
+      <div className="hidden shrink-0 items-center gap-1.5 sm:flex">{pills}</div>
+      {editable && (
+        <div className="-mr-1.5 flex shrink-0 items-center">
+          <RowIconButton icon={Pencil} label={t("noteSheet.editTitle")} onClick={onEdit} />
+          <RowIconButton icon={Trash2} label={t("common.delete")} onClick={onDelete} tone="danger" />
+        </div>
+      )}
+    </ListRow>
+  );
 }
 
 export function NotesListDialog({
@@ -42,201 +102,76 @@ export function NotesListDialog({
 }: NotesListDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
   const permission = useCalendarPermission(calendarId);
-
-  // Determine if dialog should be in read-only mode
   const isReadOnly = readOnly || !permission.canEdit;
 
-  const formattedDate = format(date, "EEEE, dd. MMMM yyyy", {
-    locale: dateLocale,
-  });
+  const formattedDate = new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
 
-  const events = notes.filter((n) => n.type === "event");
-  const regularNotes = notes.filter((n) => n.type !== "event");
+  // Events first, then plain notes
+  const entries = [
+    ...notes.filter((n) => n.type === "event"),
+    ...notes.filter((n) => n.type !== "event"),
+  ];
 
-  const getRecurringLabel = (note: CalendarNote) => {
-    if (!note.recurringPattern || note.recurringPattern === "none") {
-      return null;
-    }
-
-    if (note.recurringPattern === "custom-weeks") {
-      return t("note.recurringEveryWeeks", {
-        count: note.recurringInterval || 1,
-      });
-    }
-
-    if (note.recurringPattern === "custom-months") {
-      return t("note.recurringEveryMonths", {
-        count: note.recurringInterval || 1,
-      });
-    }
-
-    return null;
+  const handleAdd = () => {
+    onOpenChange(false);
+    onAddNew();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 border border-border/50 bg-gradient-to-b from-background via-background to-muted/30 backdrop-blur-xl shadow-2xl">
-        <DialogHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 pb-5 space-y-1.5">
-          <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("note.typeNote")} & {t("note.typeEvent")}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {formattedDate}
-          </DialogDescription>
-        </DialogHeader>
+    <PanelDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("noteSheet.listTitle")}
+      description={`${formattedDate} · ${t("noteSheet.entryCount", { count: notes.length })}`}
+      width="md"
+      bodyClassName="flex flex-col gap-[9px] py-4"
+      footer={
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          className="h-10 flex-1 font-semibold"
+        >
+          {t("common.close")}
+        </Button>
+      }
+    >
+      {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
-        {/* Read-Only Banner */}
-        {isReadOnly && (
-          <div className="px-6 pt-6">
-            <ReadOnlyBanner message={t("guest.cannotEdit")} />
-          </div>
-        )}
+      {entries.length === 0 && (
+        <p className="py-6 text-center text-[13px] text-fg-tertiary">{t("note.noEntries")}</p>
+      )}
 
-        <div className="space-y-6 overflow-y-auto flex-1 p-6">
-          {/* Events Section */}
-          {events.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t("note.typeEvent")} ({events.length})
-              </h3>
-              <div className="space-y-2">
-                {events.map((event) => (
-                  <div
-                    key={event.id}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
-                    style={{
-                      borderLeftColor: event.color || "#3b82f6",
-                      borderLeftWidth: 4,
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-1 h-4 rounded-full"
-                            style={{
-                              backgroundColor: event.color || "#3b82f6",
-                            }}
-                          />
-                          <h4 className="font-semibold text-base truncate">
-                            {event.note}
-                          </h4>
-                          {getRecurringLabel(event) && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs shrink-0"
-                            >
-                              {getRecurringLabel(event)}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      {!isReadOnly && (
-                        <div className="flex gap-1.5 shrink-0 ml-auto">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEditNote(event)}
-                            className="h-8 w-8 hover:bg-background/50"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDeleteNote(event.id)}
-                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {entries.map((note) => (
+        <NoteRow
+          key={note.id}
+          note={note}
+          editable={!isReadOnly}
+          onEdit={() => onEditNote(note)}
+          onDelete={() => onDeleteNote(note.id)}
+        />
+      ))}
 
-          {/* Notes Section */}
-          {regularNotes.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t("note.typeNote")} ({regularNotes.length})
-              </h3>
-              <div className="space-y-2">
-                {regularNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-                          {note.note}
-                        </p>
-                      </div>
-                      {!isReadOnly && (
-                        <div className="flex gap-1.5 shrink-0 ml-auto">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEditNote(note)}
-                            className="h-8 w-8"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDeleteNote(note.id)}
-                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {!isReadOnly && (
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="flex items-center justify-center gap-2 rounded-[10px] border border-dashed border-control p-[11px] text-[13.5px] font-medium text-fg-secondary transition-colors hover:bg-surface-panel"
+        >
+          <Plus className="size-4" />
+          {entries.length > 0 ? t("noteSheet.addAnother") : t("noteSheet.createAction")}
+        </button>
+      )}
 
-          {/* Empty State */}
-          {notes.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">{t("note.noEntries")}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer with Add Button */}
-        <div className="flex justify-between items-center gap-3 p-6 pt-4 border-t border-border/50 bg-gradient-to-r from-muted/20 via-muted/10 to-transparent">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-border/50"
-          >
-            {t("common.cancel")}
-          </Button>
-          {!isReadOnly && (
-            <Button
-              onClick={() => {
-                onOpenChange(false);
-                onAddNew();
-              }}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {t("common.add")}
-            </Button>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+      <InfoNote icon={Keyboard} className="mt-2">
+        {t("noteSheet.shortcutHint")}
+      </InfoNote>
+    </PanelDialog>
   );
 }

@@ -7,11 +7,9 @@ export function useDialogStates() {
   const [showShiftDialog, setShowShiftDialog] = useState(false);
   const [showCalendarSettingsDialog, setShowCalendarSettingsDialog] =
     useState(false);
-  const [showExternalSyncDialog, setShowExternalSyncDialog] = useState(false);
   const [showSyncNotificationDialog, setShowSyncNotificationDialog] =
     useState(false);
   const [showDayShiftsDialog, setShowDayShiftsDialog] = useState(false);
-  const [showSyncedShiftsDialog, setShowSyncedShiftsDialog] = useState(false);
   const [showViewSettingsDialog, setShowViewSettingsDialog] = useState(false);
   const [showNotesListDialog, setShowNotesListDialog] = useState(false);
   const [showMonthStatsDialog, setShowMonthStatsDialog] = useState(false);
@@ -20,9 +18,6 @@ export function useDialogStates() {
 
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [selectedDayShifts, setSelectedDayShifts] = useState<
-    ShiftWithCalendar[]
-  >([]);
-  const [selectedSyncedShifts, setSelectedSyncedShifts] = useState<
     ShiftWithCalendar[]
   >([]);
   const [selectedDayNotes, setSelectedDayNotes] = useState<CalendarNote[]>([]);
@@ -34,14 +29,10 @@ export function useDialogStates() {
     setShowShiftDialog,
     showCalendarSettingsDialog,
     setShowCalendarSettingsDialog,
-    showExternalSyncDialog,
-    setShowExternalSyncDialog,
     showSyncNotificationDialog,
     setShowSyncNotificationDialog,
     showDayShiftsDialog,
     setShowDayShiftsDialog,
-    showSyncedShiftsDialog,
-    setShowSyncedShiftsDialog,
     showViewSettingsDialog,
     setShowViewSettingsDialog,
     showNotesListDialog,
@@ -56,8 +47,6 @@ export function useDialogStates() {
     setSelectedDayDate,
     selectedDayShifts,
     setSelectedDayShifts,
-    selectedSyncedShifts,
-    setSelectedSyncedShifts,
     selectedDayNotes,
     setSelectedDayNotes,
   };

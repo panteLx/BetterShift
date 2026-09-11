@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { BaseSheet } from "@/components/ui/base-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormFields } from "@/components/shift-form-fields";
@@ -9,7 +9,7 @@ import { PresetSelect } from "@/components/preset-select";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useShiftForm } from "@/hooks/useShiftForm";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
-import { formatDateToLocal } from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 
 interface ShiftSheetProps {
   open: boolean;
@@ -33,6 +33,19 @@ export interface ShiftFormData {
   isAllDay?: boolean;
 }
 
+// presetId is left out: the form never changes it and does not load it
+function snapshot(data: ShiftFormData) {
+  return JSON.stringify({
+    date: data.date,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    title: data.title,
+    notes: data.notes || "",
+    color: data.color,
+    isAllDay: data.isAllDay || false,
+  });
+}
+
 export function ShiftSheet({
   open,
   onOpenChange,
@@ -44,9 +57,9 @@ export function ShiftSheet({
   readOnly = false,
 }: ShiftSheetProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const permission = useCalendarPermission(calendarId);
   const [isSaving, setIsSaving] = useState(false);
-  const initialFormDataRef = useRef<string | null>(null);
 
   // Determine if sheet should be in read-only mode
   const isReadOnly = readOnly || !permission.canEdit;
@@ -60,49 +73,39 @@ export function ShiftSheet({
     presetName,
     setPresetName,
     applyPreset,
+    clearPreset,
     saveAsPresetHandler,
     resetForm,
   } = useShiftForm({ open, shift, selectedDate, calendarId });
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setSelectedPresetId(null);
+  }
 
-  // Store initial form data when sheet opens
-  useEffect(() => {
-    if (open && shift) {
-      // Store initial data matching formData structure
-      const initialData: ShiftFormData = {
-        date:
-          shift.date && shift.date instanceof Date
-            ? formatDateToLocal(shift.date)
-            : formatDateToLocal(new Date()),
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        title: shift.title,
-        notes: shift.notes || "",
-        color: shift.color,
-        isAllDay: shift.isAllDay || false,
-        presetId: shift.presetId || undefined,
-      };
-      initialFormDataRef.current = JSON.stringify(initialData);
-    } else if (!open) {
-      initialFormDataRef.current = null;
-    }
-  }, [open, shift]);
+  const initialSnapshot = useMemo(
+    () =>
+      shift
+        ? snapshot({
+            date:
+              shift.date && shift.date instanceof Date
+                ? formatDateToLocal(shift.date)
+                : formatDateToLocal(new Date()),
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            title: shift.title,
+            notes: shift.notes || "",
+            color: shift.color,
+            isAllDay: shift.isAllDay || false,
+          })
+        : null,
+    [shift]
+  );
 
   const hasChanges = () => {
-    // For existing shifts, compare with initial data
-    if (shift && initialFormDataRef.current) {
-      // Create comparable version of current formData
-      const currentData: ShiftFormData = {
-        date: formData.date,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        title: formData.title,
-        notes: formData.notes || "",
-        color: formData.color,
-        isAllDay: formData.isAllDay || false,
-        presetId: formData.presetId || undefined,
-      };
-
-      return JSON.stringify(currentData) !== initialFormDataRef.current;
+    if (shift && initialSnapshot) {
+      return snapshot(formData) !== initialSnapshot;
     }
 
     // For new shifts, check if user has entered any data
@@ -145,35 +148,51 @@ export function ShiftSheet({
     }
   };
 
-  const handlePresetSelect = async (
-    preset: Parameters<typeof applyPreset>[0]
-  ) => {
+  const handlePresetSelect = (preset: Parameters<typeof applyPreset>[0]) => {
+    setSelectedPresetId(preset.id);
     applyPreset(preset);
   };
+
+  const handlePresetClear = () => {
+    if (selectedPresetId === null) return;
+    setSelectedPresetId(null);
+    clearPreset();
+  };
+
+  const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(formData.date)
+    ? new Intl.DateTimeFormat(locale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(parseLocalDate(formData.date))
+    : undefined;
 
   return (
     <BaseSheet
       open={open}
       onOpenChange={onOpenChange}
       title={shift ? t("shift.edit") : t("shift.create")}
-      description={
-        shift ? t("shift.editDescription") : t("shift.createDescription")
-      }
+      description={dateLabel}
       showSaveButton={!isReadOnly}
       showCancelButton
       onSave={handleSave}
       isSaving={isSaving}
       saveDisabled={!formData.title.trim() || (shift && !hasChanges())}
+      saveLabel={shift ? undefined : t("shiftSheet.createAction")}
       hasUnsavedChanges={!isReadOnly && hasChanges()}
       maxWidth="md"
     >
-      <div className="space-y-5">
-        {/* Read-only banner */}
+      <div className="flex flex-col gap-4">
         {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
-        {/* Preset Selection */}
         {!shift && !isReadOnly && (
-          <PresetSelect presets={presets} onPresetSelect={handlePresetSelect} />
+          <PresetSelect
+            presets={presets}
+            value={selectedPresetId}
+            onPresetSelect={handlePresetSelect}
+            onClear={handlePresetClear}
+          />
         )}
 
         <ShiftFormFields

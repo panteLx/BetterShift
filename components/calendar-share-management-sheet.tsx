@@ -2,29 +2,150 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Users, Shield, Link as LinkIcon } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
+import { Globe, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
+import { SegmentedControl } from "@/components/segmented-control";
+import { StatusBanner } from "@/components/status-banner";
 import { CalendarShareList } from "@/components/calendar-share-list";
-import { CalendarTokenList } from "@/components/calendar-token-list";
+import { AccessLinksPanel } from "@/components/calendar-token-list";
 import { GuestPermissionSelector } from "@/components/guest-permission-selector";
 import { useCalendars } from "@/hooks/useCalendars";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+
+type GuestPermission = "none" | "read" | "write";
+export type SharingTab = "people" | "public" | "links";
+
+interface SharingPanelProps {
+  calendarId: string;
+  onClose: () => void;
+  /** Defaults to the current user's share permission on the calendar */
+  canManageShares?: boolean;
+  /** Fallback until the calendar is in the query cache */
+  calendarGuestPermission?: GuestPermission;
+  /** Adds a "Links" segment rendering AccessLinksPanel (standalone sheet only) */
+  showLinksTab?: boolean;
+  tab?: SharingTab;
+  onTabChange?: (tab: SharingTab) => void;
+}
+
+/** Sharing (screen 4d): people with access and public access. */
+export function SharingPanel({
+  calendarId,
+  onClose,
+  canManageShares: canManageSharesProp,
+  calendarGuestPermission,
+  showLinksTab = false,
+  tab: tabProp,
+  onTabChange,
+}: SharingPanelProps) {
+  const t = useTranslations();
+  const { calendars, updateCalendar } = useCalendars();
+  const { canShare } = useCalendarPermission(calendarId);
+  const { isAuthEnabled } = useAuthFeatures();
+  const canManageShares = canManageSharesProp ?? canShare;
+
+  const [ownTab, setOwnTab] = useState<SharingTab>("people");
+  const tab = tabProp ?? ownTab;
+  const setTab = (next: SharingTab) => {
+    setOwnTab(next);
+    onTabChange?.(next);
+  };
+
+  const [optimisticGuest, setOptimisticGuest] = useState<GuestPermission | null>(null);
+  const [saving, setSaving] = useState(false);
+  const calendar = calendars.find((c) => c.id === calendarId);
+  const guestPermission =
+    optimisticGuest ?? calendar?.guestPermission ?? calendarGuestPermission ?? "none";
+
+  // guestPermission also governs signed-in users without a share, so it is offered whenever auth is on.
+  const showPublicTab = isAuthEnabled;
+
+  const handleGuestPermissionChange = async (value: GuestPermission) => {
+    if (!canManageShares || value === guestPermission) return;
+    setOptimisticGuest(value);
+    setSaving(true);
+    try {
+      await updateCalendar(calendarId, { guestPermission: value });
+    } catch {
+      // updateCalendar already reported the error and rolled back the cache.
+    } finally {
+      setSaving(false);
+      setOptimisticGuest(null);
+    }
+  };
+
+  const tabs: { value: SharingTab; label: string }[] = [
+    { value: "people", label: t("sharingSheet.tabPeople") },
+    ...(showPublicTab ? [{ value: "public" as const, label: t("share.public") }] : []),
+    ...(showLinksTab ? [{ value: "links" as const, label: t("share.links") }] : []),
+  ];
+  const activeTab = tabs.some((option) => option.value === tab) ? tab : "people";
+
+  const switcher =
+    tabs.length > 1 ? (
+      <SegmentedControl<SharingTab>
+        label={t("common.labels.shares")}
+        size="lg"
+        value={activeTab}
+        onChange={setTab}
+        options={tabs}
+      />
+    ) : null;
+
+  if (activeTab === "links") {
+    return <AccessLinksPanel calendarId={calendarId} onClose={onClose} leading={switcher} />;
+  }
+
+  return (
+    <>
+      <PanelBody className="flex flex-col gap-3.5">
+        {switcher}
+
+        {activeTab === "people" ? (
+          <>
+            <CalendarShareList calendarId={calendarId} canManageShares={canManageShares} />
+            {showPublicTab &&
+              (guestPermission === "none" ? (
+                <StatusBanner tone="info" icon={Shield} title={t("sharingSheet.publicOffTitle")}>
+                  {t("sharingSheet.publicOffBody")}
+                </StatusBanner>
+              ) : (
+                <StatusBanner tone="info" icon={Globe} title={t("sharingSheet.publicOnTitle")}>
+                  {guestPermission === "read"
+                    ? t("share.publicPermissionReadDesc")
+                    : t("share.publicPermissionWriteDesc")}
+                </StatusBanner>
+              ))}
+          </>
+        ) : (
+          <>
+            <p className="text-[13px] text-fg-secondary">{t("share.publicAccessDescription")}</p>
+            <GuestPermissionSelector
+              value={guestPermission}
+              onChange={handleGuestPermissionChange}
+              disabled={!canManageShares}
+            />
+            {saving && <p className="text-[12px] text-fg-tertiary">{t("common.saving")}</p>}
+          </>
+        )}
+      </PanelBody>
+      <PanelFooter>
+        <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose}>
+          {t("common.close")}
+        </Button>
+      </PanelFooter>
+    </>
+  );
+}
 
 interface CalendarShareManagementSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string;
   calendarName: string;
-  calendarGuestPermission?: "none" | "read" | "write";
+  calendarGuestPermission?: GuestPermission;
   canManageShares: boolean; // owner/admin permission
 }
 
@@ -37,143 +158,35 @@ export function CalendarShareManagementSheet({
   canManageShares,
 }: CalendarShareManagementSheetProps) {
   const t = useTranslations();
-  const { updateCalendar } = useCalendars();
-  const { isAuthEnabled } = useAuthFeatures();
-
-  const [activeTab, setActiveTab] = useState("users");
-  const [optimisticGuestPermission, setOptimisticGuestPermission] = useState<
-    "none" | "read" | "write" | null
-  >(null);
-  const [saving, setSaving] = useState(false);
-
-  // Use optimistic value during save, otherwise use prop value
-  // This avoids calling setState in an effect and potential cascading renders
-  const guestPermission = optimisticGuestPermission ?? calendarGuestPermission;
-
-  // Show public access tab when auth is enabled (allows sharing with authenticated users via guestPermission)
-  // This is separate from allowGuest which controls unauthenticated access
-  const showGuestTab = isAuthEnabled;
-
-  const handleGuestPermissionChange = async (
-    value: "none" | "read" | "write"
-  ) => {
-    if (!canManageShares) return;
-
-    setOptimisticGuestPermission(value);
-    setSaving(true);
-
-    await updateCalendar(calendarId, {
-      guestPermission: value,
-    });
-
-    setSaving(false);
-    setOptimisticGuestPermission(null);
-  };
+  const [tab, setTab] = useState<SharingTab>("people");
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setTab("people");
+  }
+  const links = tab === "links";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-[700px] p-0 flex flex-col gap-0 border-l border-border/50 overflow-hidden"
-      >
-        <SheetHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-5 space-y-1.5">
-          <SheetTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            {t("share.manageSharing")}
-          </SheetTitle>
-          <SheetDescription className="text-sm text-muted-foreground">
-            {t("share.manageSharingDescription", { name: calendarName })}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="h-full"
-          >
-            <div className="border-b border-border/50 px-6 pt-4">
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="users" className="gap-2">
-                  <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    {t("share.userShares")}
-                  </span>
-                  <span className="sm:hidden">{t("common.labels.users")}</span>
-                </TabsTrigger>
-                {showGuestTab && (
-                  <TabsTrigger value="public" className="gap-2">
-                    <Shield className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      {t("share.publicAccess")}
-                    </span>
-                    <span className="sm:hidden">{t("share.public")}</span>
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="links" className="gap-2">
-                  <LinkIcon className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    {t("share.accessLinks")}
-                  </span>
-                  <span className="sm:hidden">{t("share.links")}</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="px-6 py-6">
-              {/* User Shares Tab */}
-              <TabsContent value="users" className="mt-0 space-y-0">
-                <CalendarShareList
-                  calendarId={calendarId}
-                  canManageShares={canManageShares}
-                />
-              </TabsContent>
-
-              {/* Public Access Tab */}
-              {showGuestTab && (
-                <TabsContent value="public" className="mt-0 space-y-4">
-                  <div>
-                    <p className="text-sm font-medium mb-1">
-                      {t("share.publicAccess")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      {t("share.publicAccessDescription")}
-                    </p>
-                  </div>
-
-                  <GuestPermissionSelector
-                    value={guestPermission}
-                    onChange={handleGuestPermissionChange}
-                    idPrefix="share-management"
-                  />
-
-                  {saving && (
-                    <p className="text-xs text-muted-foreground italic">
-                      {t("common.saving")}
-                    </p>
-                  )}
-                </TabsContent>
-              )}
-
-              {/* Access Links Tab */}
-              <TabsContent value="links" className="mt-0">
-                <CalendarTokenList calendarId={calendarId} />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-
-        <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="h-11 border-border/50 hover:bg-muted/50"
-          >
-            {t("common.cancel")}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    <PanelDialog
+      bare
+      open={open}
+      onOpenChange={onOpenChange}
+      title={links ? t("token.accessLinks") : t("common.labels.shares")}
+      description={
+        links
+          ? t("sharingSheet.linksDescription")
+          : t("sharingSheet.description", { name: calendarName })
+      }
+    >
+      <SharingPanel
+        calendarId={calendarId}
+        onClose={() => onOpenChange(false)}
+        canManageShares={canManageShares}
+        calendarGuestPermission={calendarGuestPermission}
+        showLinksTab
+        tab={tab}
+        onTabChange={setTab}
+      />
+    </PanelDialog>
   );
 }

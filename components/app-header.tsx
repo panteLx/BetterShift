@@ -17,7 +17,6 @@ import { GuestMenu, UserMenu } from "@/components/user-menu";
 import { ChangelogDialog } from "@/components/changelog-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
-import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
@@ -120,8 +119,6 @@ export function AppHeader({
   const { isGuest } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
   const { versionInfo } = useVersionUpdateCheck();
-  const selected = calendars.find((c) => c.id === selectedCalendar);
-  const { canManage } = useCalendarPermission(selected);
   const [showChangelog, setShowChangelog] = useState(false);
 
   const signedIn = isAuthEnabled && !isGuest;
@@ -145,9 +142,9 @@ export function AppHeader({
           )}
         </HeaderIconButton>
       )}
-      {selectedCalendar && canManage && (
+      {selectedCalendar && (
         <HeaderIconButton
-          label={t("calendar.settings", { name: selected?.name ?? "" })}
+          label={t("settings.title")}
           onClick={onSettings}
         >
           <Settings className="size-4" />

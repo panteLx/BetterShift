@@ -43,6 +43,7 @@ interface CalendarWorkspaceProps {
   highlightedWeekdays: number[];
   highlightColor: string;
   canEdit: boolean;
+  showStampBar: boolean;
   selectedPresetId: string | undefined;
   onSelectPreset: (id: string | undefined) => void;
   onManagePresets: () => void;
@@ -71,6 +72,7 @@ export function CalendarWorkspace({
   highlightedWeekdays,
   highlightColor,
   canEdit,
+  showStampBar,
   selectedPresetId,
   onSelectPreset,
   onManagePresets,
@@ -100,7 +102,7 @@ export function CalendarWorkspace({
     shifts,
   });
 
-  const stampingEnabled = canEdit && isOnline;
+  const stampingEnabled = canEdit && isOnline && showStampBar;
   useStampShortcuts({
     presetIds: orderStampPresets(presets).map((p) => p.id),
     selectedPresetId,

@@ -1,12 +1,14 @@
-import { motion } from "motion/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ColorPicker } from "@/components/ui/color-picker";
+import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
 import { ShiftFormData } from "@/components/shift-sheet";
-import { PRESET_COLORS } from "@/lib/constants";
+import { DEFAULT_COLOR } from "@/lib/constants";
+import { calculateShiftDuration } from "@/lib/date-utils";
+import { formatHours } from "@/lib/shift-display";
+import { cn } from "@/lib/utils";
 
 interface ShiftFormFieldsProps {
   formData: ShiftFormData;
@@ -16,9 +18,38 @@ interface ShiftFormFieldsProps {
   presetName: string;
   onPresetNameChange: (value: string) => void;
   isEditing: boolean;
-  onBlur?: () => void;
-  showSaved?: boolean;
   readOnly?: boolean;
+}
+
+const TIME_PATTERN = /^\d{2}:\d{2}$/;
+
+function CheckRow({
+  id,
+  label,
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-[9px]">
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+        disabled={disabled}
+        className="size-[17px] rounded-[5px] border-control"
+      />
+      <Label htmlFor={id} className="cursor-pointer text-[13.5px] font-normal text-fg-body">
+        {label}
+      </Label>
+    </div>
+  );
 }
 
 export function ShiftFormFields({
@@ -29,182 +60,128 @@ export function ShiftFormFields({
   presetName,
   onPresetNameChange,
   isEditing,
-  onBlur,
   readOnly = false,
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
+  const locale = useLocale();
+
+  const validTimes =
+    !formData.isAllDay &&
+    TIME_PATTERN.test(formData.startTime) &&
+    TIME_PATTERN.test(formData.endTime);
+  const duration = validTimes
+    ? formatHours(calculateShiftDuration(formData.startTime, formData.endTime), locale)
+    : "–";
+  const timesDisabled = readOnly || formData.isAllDay;
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2.5">
-        <Label
-          htmlFor="date"
-          className="text-sm font-medium flex items-center gap-2"
-        >
-          <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-          {t("shift.date")}
-        </Label>
-        <Input
-          id="date"
-          type="date"
-          value={formData.date}
-          onChange={(e) =>
-            onFormDataChange({ ...formData, date: e.target.value })
-          }
-          onBlur={onBlur}
-          disabled={readOnly}
-          className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
-        />
-      </div>
+    <div className="flex flex-col gap-4">
+      {/* Creating uses the day shown in the header; editing may move the shift */}
+      {isEditing && (
+        <Field label={t("shift.date")} htmlFor="date">
+          <Input
+            id="date"
+            type="date"
+            value={formData.date}
+            onChange={(e) => onFormDataChange({ ...formData, date: e.target.value })}
+            disabled={readOnly}
+            className={cn(inputClass, "font-mono")}
+          />
+        </Field>
+      )}
 
-      <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/30">
-        <Checkbox
-          id="allDay"
-          checked={formData.isAllDay}
-          onCheckedChange={(checked) => {
-            onFormDataChange({ ...formData, isAllDay: !!checked });
-            setTimeout(() => onBlur?.(), 10);
-          }}
-          disabled={readOnly}
-        />
-        <Label htmlFor="allDay" className="text-sm font-medium cursor-pointer">
-          {t("shift.allDayShift")}
-        </Label>
-      </div>
-
-      {!formData.isAllDay && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-2 gap-3"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="startTime" className="text-sm font-medium">
-              {t("shift.startTime")}
-            </Label>
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2.5">
+          <Field label={t("shiftSheet.start")} htmlFor="startTime" className="min-w-0 flex-1">
             <Input
               id="startTime"
               type="time"
               value={formData.startTime}
-              onChange={(e) =>
-                onFormDataChange({ ...formData, startTime: e.target.value })
-              }
-              onBlur={onBlur}
-              disabled={readOnly}
-              className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
+              onChange={(e) => onFormDataChange({ ...formData, startTime: e.target.value })}
+              disabled={timesDisabled}
+              className={cn(inputClass, "font-mono")}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="endTime" className="text-sm font-medium">
-              {t("shift.endTime")}
-            </Label>
+          </Field>
+          <Field label={t("shiftSheet.end")} htmlFor="endTime" className="min-w-0 flex-1">
             <Input
               id="endTime"
               type="time"
               value={formData.endTime}
-              onChange={(e) =>
-                onFormDataChange({ ...formData, endTime: e.target.value })
-              }
-              onBlur={onBlur}
-              disabled={readOnly}
-              className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50"
+              onChange={(e) => onFormDataChange({ ...formData, endTime: e.target.value })}
+              disabled={timesDisabled}
+              className={cn(inputClass, "font-mono")}
             />
-          </div>
-        </motion.div>
-      )}
+          </Field>
+          <Field label={t("shiftSheet.duration")} className="w-[74px] shrink-0">
+            <output
+              aria-live="polite"
+              className="flex h-10 items-center justify-center rounded-[9px] bg-surface-sunken font-mono text-[14px] font-medium text-fg-body"
+            >
+              {duration}
+            </output>
+          </Field>
+        </div>
 
-      <div className="space-y-2.5">
-        <Label
-          htmlFor="title"
-          className="text-sm font-medium flex items-center gap-2"
-        >
-          <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-          {t("shift.titleLabel")}
-        </Label>
+        <CheckRow
+          id="allDay"
+          label={t("shiftSheet.allDay")}
+          checked={!!formData.isAllDay}
+          onCheckedChange={(checked) => onFormDataChange({ ...formData, isAllDay: checked })}
+          disabled={readOnly}
+        />
+      </div>
+
+      <Field label={t("shift.titleLabel")} htmlFor="title">
         <Input
           id="title"
           placeholder={t("shift.titlePlaceholder")}
           value={formData.title}
-          onChange={(e) =>
-            onFormDataChange({ ...formData, title: e.target.value })
-          }
-          onBlur={onBlur}
+          onChange={(e) => onFormDataChange({ ...formData, title: e.target.value })}
           disabled={readOnly}
-          className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm"
+          className={inputClass}
           autoFocus={!readOnly}
         />
-      </div>
+      </Field>
 
-      <div className="space-y-2.5">
-        <Label
-          htmlFor="notes"
-          className="text-sm font-medium flex items-center gap-2"
-        >
-          <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-          {t("form.notesLabel")}
-        </Label>
+      <Field label={t("form.colorLabel")}>
+        <ColorSwatches
+          value={formData.color || DEFAULT_COLOR}
+          onChange={(color) => onFormDataChange({ ...formData, color })}
+          allowCustom
+          disabled={readOnly}
+        />
+      </Field>
+
+      <Field label={t("calendarView.note")} htmlFor="notes" optional>
         <Textarea
           id="notes"
           placeholder={t("form.notesPlaceholder")}
           value={formData.notes}
-          onChange={(e) =>
-            onFormDataChange({ ...formData, notes: e.target.value })
-          }
-          onBlur={onBlur}
+          onChange={(e) => onFormDataChange({ ...formData, notes: e.target.value })}
           disabled={readOnly}
           rows={3}
-          className="border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 resize-none"
+          className="min-h-16 resize-none rounded-[9px] px-3 py-2.5 text-[14px] md:text-[14px]"
         />
-      </div>
+      </Field>
 
-      <ColorPicker
-        color={formData.color || "#3b82f6"}
-        onChange={(color) => onFormDataChange({ ...formData, color })}
-        label={t("form.colorLabel")}
-        presetColors={PRESET_COLORS}
-        disabled={readOnly}
-      />
-
-      {/* Auto-Save as Preset */}
       {!isEditing && !readOnly && (
-        <div className="space-y-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="savePreset"
-              checked={saveAsPreset}
-              onCheckedChange={(checked) =>
-                onSaveAsPresetChange(checked as boolean)
-              }
-            />
-            <Label
-              htmlFor="savePreset"
-              className="text-sm font-medium cursor-pointer flex items-center gap-2"
-            >
-              <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-              {t("preset.saveAsPreset")}
-            </Label>
-          </div>
+        <div className="flex flex-col gap-3">
+          <CheckRow
+            id="savePreset"
+            label={t("preset.saveAsPreset")}
+            checked={saveAsPreset}
+            onCheckedChange={onSaveAsPresetChange}
+          />
           {saveAsPreset && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-2 pt-1"
-            >
-              <Label htmlFor="presetName" className="text-sm">
-                {t("preset.presetName")}
-              </Label>
+            <Field label={t("preset.presetName")} htmlFor="presetName">
               <Input
                 id="presetName"
                 placeholder={t("preset.presetNamePlaceholder")}
                 value={presetName}
                 onChange={(e) => onPresetNameChange(e.target.value)}
-                className="h-10 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/80"
+                className={inputClass}
               />
-            </motion.div>
+            </Field>
           )}
         </div>
       )}

@@ -180,7 +180,7 @@ export function NoteDetailCard({
           {note.note}
         </div>
         <div className="mt-[3px] text-[11.5px] text-fg-tertiary">
-          {isEvent ? t("note.typeEvent") : t("note.typeNote")}
+          {isEvent ? t("calendarView.event") : t("calendarView.note")}
           {changed && ` · ${t("calendarView.changedOn", { date: changed })}`}
         </div>
       </div>

@@ -1,105 +1,60 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { AlertTriangle, Eye, Edit } from "lucide-react";
+import { Info } from "lucide-react";
+import { InfoNote, OptionCards } from "@/components/form-kit";
+import { cn } from "@/lib/utils";
+
+type GuestPermission = "none" | "read" | "write";
 
 interface GuestPermissionSelectorProps {
-  value: "none" | "read" | "write";
-  onChange: (value: "none" | "read" | "write") => void;
-  idPrefix?: string;
+  value: GuestPermission;
+  onChange: (value: GuestPermission) => void;
+  disabled?: boolean;
 }
 
 export function GuestPermissionSelector({
   value,
   onChange,
-  idPrefix = "guest",
+  disabled = false,
 }: GuestPermissionSelectorProps) {
   const t = useTranslations();
 
   return (
-    <div className="space-y-3">
-      <RadioGroup
-        value={value}
-        onValueChange={(val) => onChange(val as "none" | "read" | "write")}
-        className="space-y-3"
-      >
-        {/* No Access */}
-        <div className="group relative">
-          <Label
-            htmlFor={`${idPrefix}-none`}
-            className="flex items-start gap-3 p-4 rounded-xl border-2 border-border/50 hover:border-border hover:bg-muted/50 transition-all cursor-pointer"
-          >
-            <RadioGroupItem
-              value="none"
-              id={`${idPrefix}-none`}
-              className="mt-0.5"
-            />
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-                <span className="font-semibold text-sm">
-                  {t("common.labels.permissions.none")}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                {t("share.publicPermissionNoneDesc")}
-              </p>
-            </div>
-          </Label>
-        </div>
-
-        {/* Read Only */}
-        <div className="group relative">
-          <Label
-            htmlFor={`${idPrefix}-read`}
-            className="flex items-start gap-3 p-4 rounded-xl border-2 border-border/50 hover:border-border hover:bg-muted/50 transition-all cursor-pointer"
-          >
-            <RadioGroupItem
-              value="read"
-              id={`${idPrefix}-read`}
-              className="mt-0.5"
-            />
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-blue-500 shrink-0" />
-                <span className="font-semibold text-sm">
-                  {t("common.labels.permissions.read")}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                {t("share.publicPermissionReadDesc")}
-              </p>
-            </div>
-          </Label>
-        </div>
-
-        {/* Read & Write */}
-        <div className="group relative">
-          <Label
-            htmlFor={`${idPrefix}-write`}
-            className="flex items-start gap-3 p-4 rounded-xl border-2 border-border/50 hover:border-border hover:bg-muted/50 transition-all cursor-pointer"
-          >
-            <RadioGroupItem
-              value="write"
-              id={`${idPrefix}-write`}
-              className="mt-0.5"
-            />
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-2">
-                <Edit className="h-4 w-4 text-green-500 shrink-0" />
-                <span className="font-semibold text-sm">
-                  {t("common.labels.permissions.write")}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                {t("share.publicPermissionWriteDesc")}
-              </p>
-            </div>
-          </Label>
-        </div>
-      </RadioGroup>
+    <div className="flex flex-col gap-2.5">
+      {/* A disabled fieldset disables the option buttons natively. */}
+      <fieldset disabled={disabled} className={cn("m-0 min-w-0 border-0 p-0", disabled && "opacity-60")}>
+        <OptionCards<GuestPermission>
+          label={t("share.publicAccess")}
+          columns={3}
+          value={value}
+          onChange={onChange}
+          options={[
+            {
+              value: "none",
+              title: t("sharingSheet.accessNone"),
+              description: t("sharingSheet.guestNoneShort"),
+            },
+            {
+              value: "read",
+              title: t("sharingSheet.permRead"),
+              description: t("sharingSheet.guestReadShort"),
+            },
+            {
+              value: "write",
+              title: t("sharingSheet.permWrite"),
+              description: t("sharingSheet.guestWriteShort"),
+            },
+          ]}
+        />
+      </fieldset>
+      <InfoNote icon={Info}>
+        {value === "none"
+          ? t("share.publicPermissionNoneDesc")
+          : value === "read"
+            ? t("share.publicPermissionReadDesc")
+            : t("share.publicPermissionWriteDesc")}
+      </InfoNote>
     </div>
   );
 }

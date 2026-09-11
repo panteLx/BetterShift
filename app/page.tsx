@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { isSameDay, isSameMonth } from "date-fns";
 import { toast } from "sonner";
 import { ShiftWithCalendar } from "@/lib/types";
@@ -44,7 +44,6 @@ function toDate(date: Date | string): Date {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const locale = useLocale();
   const t = useTranslations();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
@@ -58,7 +57,6 @@ function HomeContent() {
     hasLoadedOnce,
     createCalendar: createCalendarHook,
     deleteCalendar: deleteCalendarHook,
-    refetchCalendars,
   } = useCalendars(searchParams.get("id"));
 
   const {
@@ -396,15 +394,10 @@ function HomeContent() {
       onShiftSubmit={handleShiftSubmit}
       selectedDate={selectedDate}
       selectedCalendar={selectedCalendar || null}
-      calendars={calendars}
       editingShift={editingShift}
-      showCalendarSettingsDialog={dialogStates.showCalendarSettingsDialog}
-      onCalendarSettingsDialogChange={dialogStates.setShowCalendarSettingsDialog}
-      onCalendarSettingsSuccess={refetchCalendars}
+      showSettingsDialog={dialogStates.showCalendarSettingsDialog}
+      onSettingsDialogChange={dialogStates.setShowCalendarSettingsDialog}
       onDeleteCalendar={handleDeleteCalendar}
-      onExternalSyncFromSettings={() => dialogStates.setShowExternalSyncDialog(true)}
-      showExternalSyncDialog={dialogStates.showExternalSyncDialog}
-      onExternalSyncDialogChange={dialogStates.setShowExternalSyncDialog}
       onSyncComplete={handleSyncComplete}
       showSyncNotificationDialog={dialogStates.showSyncNotificationDialog}
       onSyncNotificationDialogChange={dialogStates.setShowSyncNotificationDialog}
@@ -412,18 +405,13 @@ function HomeContent() {
       onDayShiftsDialogChange={dialogStates.setShowDayShiftsDialog}
       selectedDayDate={dialogStates.selectedDayDate}
       selectedDayShifts={dialogStates.selectedDayShifts}
-      locale={locale}
       // In compare mode the day list mixes calendars the shift hooks aren't bound to
       onDeleteShiftFromDayDialog={isCompareMode ? undefined : handleDeleteShiftFromDayDialog}
       onEditShiftFromDayDialog={isCompareMode ? undefined : handleEditShift}
       noteCalendarId={isCompareMode ? compareNoteCalendarId : undefined}
-      showSyncedShiftsDialog={dialogStates.showSyncedShiftsDialog}
-      onSyncedShiftsDialogChange={dialogStates.setShowSyncedShiftsDialog}
-      selectedSyncedShifts={dialogStates.selectedSyncedShifts}
       showViewSettingsDialog={dialogStates.showViewSettingsDialog}
       onViewSettingsDialogChange={dialogStates.setShowViewSettingsDialog}
       viewSettings={viewSettings}
-      onViewSettingsChange={viewSettings}
       showNoteDialog={noteActions.showNoteDialog}
       onNoteDialogChange={noteActions.handleNoteDialogChange}
       selectedNote={noteActions.selectedNote}
@@ -588,6 +576,7 @@ function HomeContent() {
         highlightedWeekdays={viewSettings.highlightedWeekdays}
         highlightColor={viewSettings.highlightColor}
         canEdit={canEdit}
+        showStampBar={!viewSettings.hidePresetHeader}
         selectedPresetId={selectedPresetId}
         onSelectPreset={setSelectedPresetId}
         onManagePresets={() => dialogStates.setShowPresetManageDialog(true)}

@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BaseSheet } from "@/components/ui/base-sheet";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { PRESET_COLORS } from "@/lib/constants";
+import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
+import { DEFAULT_COLOR } from "@/lib/constants";
 
 interface CalendarSheetProps {
   open: boolean;
@@ -20,7 +19,7 @@ export function CalendarSheet({
   onSubmit,
 }: CalendarSheetProps) {
   const t = useTranslations();
-  const initialColor = PRESET_COLORS[0].value;
+  const initialColor = DEFAULT_COLOR;
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(initialColor);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,9 +53,7 @@ export function CalendarSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={t("calendar.create")}
-      description={t("calendar.createDescription", {
-        default: "Create a new calendar to organize your shifts",
-      })}
+      description={t("calendar.createDescription")}
       showSaveButton
       onSave={handleSave}
       isSaving={isSaving}
@@ -64,15 +61,8 @@ export function CalendarSheet({
       hasUnsavedChanges={hasChanges()}
       maxWidth="md"
     >
-      <div className="space-y-6">
-        <div className="space-y-2.5">
-          <Label
-            htmlFor="name"
-            className="text-sm font-medium flex items-center gap-2"
-          >
-            <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-            {t("calendar.name")}
-          </Label>
+      <div className="flex flex-col gap-4">
+        <Field label={t("calendar.name")} htmlFor="name">
           <Input
             id="name"
             placeholder={t("form.namePlaceholder", {
@@ -80,17 +70,14 @@ export function CalendarSheet({
             })}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-11 border-border/50 focus:border-primary/50 focus:ring-primary/20 bg-background/50 backdrop-blur-sm transition-all"
+            className={inputClass}
             autoFocus
           />
-        </div>
+        </Field>
 
-        <ColorPicker
-          color={selectedColor}
-          onChange={setSelectedColor}
-          label={t("form.colorLabel")}
-          presetColors={PRESET_COLORS}
-        />
+        <Field label={t("form.colorLabel")}>
+          <ColorSwatches value={selectedColor} onChange={setSelectedColor} allowCustom />
+        </Field>
       </div>
     </BaseSheet>
   );

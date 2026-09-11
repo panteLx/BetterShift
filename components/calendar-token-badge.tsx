@@ -1,71 +1,51 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Link as LinkIcon, Eye, Edit } from "lucide-react";
+import { Link as LinkIcon } from "lucide-react";
+import { Pill } from "@/components/form-kit";
 
 interface CalendarTokenBadgeProps {
-  /**
-   * Token name (optional)
-   */
   tokenName?: string | null;
-
-  /**
-   * Permission level granted by token
-   */
   permission: "read" | "write";
-
-  /**
-   * Show full info or compact version
-   */
   variant?: "full" | "compact";
 }
 
-/**
- * Badge to indicate a calendar is being accessed via share link/token
- * Shown in calendar header when user has token-based access
- */
+/** Marks a calendar opened through an access link. */
 export function CalendarTokenBadge({
   tokenName,
   permission,
   variant = "full",
 }: CalendarTokenBadgeProps) {
   const t = useTranslations();
+  const tone = permission === "write" ? "warning" : "neutral";
+  const permissionLabel =
+    permission === "write" ? t("sharingSheet.permWrite") : t("sharingSheet.permRead");
 
   if (variant === "compact") {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="secondary" className="gap-1 cursor-help">
-              <LinkIcon className="h-3 w-3" />
-              {permission === "read" ? (
-                <Eye className="h-3 w-3" />
-              ) : (
-                <Edit className="h-3 w-3" />
-              )}
-            </Badge>
+            <span tabIndex={0} aria-label={t("token.accessedViaLink")} className="inline-flex">
+              <Pill tone={tone} className="cursor-help">
+                <LinkIcon className="size-3" />
+              </Pill>
+            </span>
           </TooltipTrigger>
           <TooltipContent>
-            <div className="space-y-1">
-              <p className="font-medium">{t("token.accessedViaLink")}</p>
-              {tokenName && (
-                <p className="text-xs text-muted-foreground">
-                  {t("token.linkName")}: {tokenName}
-                </p>
-              )}
-              <p className="text-xs">
-                {permission === "read"
-                  ? t("common.labels.permissions.read")
-                  : t("common.labels.permissions.write")}
+            <p className="font-semibold">{t("token.accessedViaLink")}</p>
+            {tokenName && (
+              <p className="text-xs opacity-80">
+                {t("token.linkName")}: {tokenName}
               </p>
-            </div>
+            )}
+            <p className="text-xs">{permissionLabel}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -73,23 +53,10 @@ export function CalendarTokenBadge({
   }
 
   return (
-    <Badge variant="secondary" className="gap-1.5">
-      <LinkIcon className="h-3.5 w-3.5" />
-      <span>{t("token.accessedViaLink")}</span>
-      {permission === "read" ? (
-        <>
-          <Eye className="h-3.5 w-3.5" />
-          <span>{t("common.labels.permissions.read")}</span>
-        </>
-      ) : (
-        <>
-          <Edit className="h-3.5 w-3.5" />
-          <span>{t("common.labels.permissions.write")}</span>
-        </>
-      )}
-      {tokenName && (
-        <span className="text-muted-foreground">({tokenName})</span>
-      )}
-    </Badge>
+    <Pill tone={tone}>
+      <LinkIcon className="size-3" />
+      {t("token.accessedViaLink")} · {permissionLabel}
+      {tokenName && <span className="font-normal opacity-80">({tokenName})</span>}
+    </Pill>
   );
 }

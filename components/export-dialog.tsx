@@ -1,16 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useTranslations, useLocale } from "next-intl";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { Check, Download } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,179 +12,101 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  isRateLimitError,
-  handleRateLimitError,
-} from "@/lib/rate-limit-client";
-import { Download, FileText, Calendar } from "lucide-react";
-import { toast } from "sonner";
+import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
+import { ChoiceChips, Field, OptionCards, ToggleRow } from "@/components/form-kit";
+import { isRateLimitError, handleRateLimitError } from "@/lib/rate-limit-client";
 import { CalendarWithCount } from "@/lib/types";
-import { motion } from "motion/react";
+import { useCalendars } from "@/hooks/useCalendars";
+import { cn } from "@/lib/utils";
 
-interface ExportDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  calendarId: string;
-  calendarName: string;
-  availableCalendars?: CalendarWithCount[];
+type Format = "ics" | "pdf";
+type Range = "all" | "month" | "year";
+
+function monthValue(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function ExportDialog({
-  open,
-  onOpenChange,
+export function ExportPanel({
   calendarId,
-  calendarName,
-  availableCalendars = [],
-}: ExportDialogProps) {
+  onClose,
+}: {
+  calendarId: string;
+  onClose: () => void;
+}) {
   const t = useTranslations();
   const locale = useLocale();
-  const [exportFormat, setExportFormat] = useState<"ics" | "pdf">("ics");
-  const [exportRange, setExportRange] = useState<"all" | "month" | "year">(
-    "all"
-  );
-  const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
+  const { calendars } = useCalendars();
+  const calendar = calendars.find((c) => c.id === calendarId);
+  const [format, setFormat] = useState<Format>("ics");
+  const [range, setRange] = useState<Range>("all");
+  const [month, setMonth] = useState(() => monthValue(new Date()));
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
+  const [multi, setMulti] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([calendarId]);
   const [loading, setLoading] = useState(false);
-  const [multiCalendar, setMultiCalendar] = useState(false);
-  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
 
-  // Generate month options (current month ± 12 months)
   const monthOptions = useMemo(() => {
-    const options = [];
     const today = new Date();
-    for (let i = -12; i <= 12; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      const value = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-      const label = date.toLocaleDateString(locale, {
-        month: "long",
-        year: "numeric",
-      });
-      options.push({ value, label });
-    }
-    return options;
+    return Array.from({ length: 25 }, (_, i) => {
+      const date = new Date(today.getFullYear(), today.getMonth() + i - 12, 1);
+      return {
+        value: monthValue(date),
+        label: date.toLocaleDateString(locale, { month: "long", year: "numeric" }),
+      };
+    });
   }, [locale]);
-
-  // Generate year options (current year ± 5 years)
   const yearOptions = useMemo(() => {
-    const options = [];
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    for (let i = -5; i <= 5; i++) {
-      const year = currentYear + i;
-      options.push({ value: year.toString(), label: year.toString() });
-    }
-    return options;
+    const current = new Date().getFullYear();
+    return Array.from({ length: 11 }, (_, i) => String(current - 5 + i));
   }, []);
 
-  // Initialize or reset state when dialog opens/closes
-  useEffect(() => {
-    if (open) {
-      // Set default selections when dialog opens
-      const today = new Date();
-      const defaultMonth = `${today.getFullYear()}-${String(
-        today.getMonth() + 1
-      ).padStart(2, "0")}`;
-      const currentYear = today.getFullYear();
-      setSelectedMonth(defaultMonth);
-      setSelectedYear(currentYear.toString());
-      setSelectedCalendarIds([calendarId]); // Pre-select current calendar
-    } else {
-      // Reset state when dialog closes
-      setExportFormat("ics");
-      setExportRange("all");
-      setSelectedMonth("");
-      setSelectedYear("");
-      setLoading(false);
-      setMultiCalendar(false);
-      setSelectedCalendarIds([]);
-    }
-  }, [open, calendarId]);
-
-  // Handle export action
   const handleExport = async () => {
-    // Validate calendar selection for multi-calendar export
-    if (multiCalendar && selectedCalendarIds.length === 0) {
+    if (multi && selectedIds.length === 0) {
       toast.error(t("export.selectAtLeastOne"));
       return;
     }
-
     setLoading(true);
-
     try {
-      // Unified API endpoint
-      const url = `/api/export/${exportFormat}`;
       const params = new URLSearchParams();
-
-      // Add PDF-specific params
-      if (exportFormat === "pdf") {
+      if (format === "pdf") {
         params.append("locale", locale);
-        if (exportRange === "month" && selectedMonth) {
-          params.append("month", selectedMonth);
-        } else if (exportRange === "year" && selectedYear) {
-          params.append("year", selectedYear);
-        }
+        if (range === "month") params.append("month", month);
+        if (range === "year") params.append("year", year);
       }
-
-      const urlWithParams = params.toString() ? `${url}?${params}` : url;
-
-      // Determine calendar IDs to export
-      const idsToExport = multiCalendar ? selectedCalendarIds : [calendarId];
-
-      const fetchOptions: RequestInit = {
+      const url = `/api/export/${format}${params.toString() ? `?${params}` : ""}`;
+      const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ calendarIds: idsToExport }),
-      };
-
-      // Fetch the file
-      const response = await fetch(urlWithParams, fetchOptions);
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ calendarIds: multi ? selectedIds : [calendarId] }),
+      });
 
       if (isRateLimitError(response)) {
         await handleRateLimitError(response, t);
-        setLoading(false);
         return;
       }
-
       if (!response.ok) {
         if (response.status === 401) {
           toast.error(t("validation.passwordRequired"));
-          setLoading(false);
           return;
         }
         throw new Error("Export failed");
       }
 
-      // Download the file
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
+      const match = response.headers.get("Content-Disposition")?.match(/filename="(.+)"/);
       const link = document.createElement("a");
       link.href = downloadUrl;
-
-      // Get filename from Content-Disposition header or create one
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${calendarName
-        .replace(/[^a-z0-9]/gi, "_")
-        .toLowerCase()}_export.${exportFormat}`;
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      link.download = filename;
+      link.download =
+        match?.[1] ??
+        `${(calendar?.name ?? "calendar").replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${format}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
 
       toast.success(t("common.success"));
-      onOpenChange(false);
+      onClose();
     } catch (error) {
       console.error("Export error:", error);
       toast.error(t("common.error"));
@@ -200,214 +116,148 @@ export function ExportDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Download className="size-5" />
-            {t("export.title")}
-          </DialogTitle>
-          <DialogDescription>{t("export.description")}</DialogDescription>
-        </DialogHeader>
+    <>
+      <PanelBody>
+        <div className="flex flex-col gap-5">
+          <Field label={t("export.formatLabel")}>
+            <OptionCards<Format>
+              value={format}
+              onChange={setFormat}
+              options={[
+                { value: "ics", title: t("export.icsFormat"), description: t("export.icsHint") },
+                { value: "pdf", title: t("export.pdfFormat"), description: t("export.pdfHint") },
+              ]}
+            />
+          </Field>
 
-        <div className="space-y-4">
-          {/* Multi-Calendar Export Toggle */}
-          {availableCalendars.length > 1 && (
-            <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="multi-calendar"
-                  checked={multiCalendar}
-                  onCheckedChange={(checked) => {
-                    setMultiCalendar(checked === true);
-                    if (checked) {
-                      setSelectedCalendarIds([calendarId]);
-                    }
-                  }}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label
-                    htmlFor="multi-calendar"
-                    className="cursor-pointer font-medium"
-                  >
-                    {t("export.multiCalendar")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t("export.multiCalendarHint")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Calendar Selection (shown when multi-calendar is enabled) */}
-          {multiCalendar && availableCalendars.length > 0 && (
-            <div className="space-y-2">
-              <Label>{t("export.selectCalendars")}</Label>
-              <p className="text-xs text-muted-foreground mb-3">
-                {t("export.selectCalendarsDescription")}
-              </p>
-              <div className="max-h-[200px] overflow-y-auto space-y-2 border border-border/50 rounded-md p-3 bg-background/50">
-                {availableCalendars.map((calendar) => {
-                  const isSelected = selectedCalendarIds.includes(calendar.id);
-                  return (
-                    <motion.div
-                      key={calendar.id}
-                      className="flex items-center gap-3 p-2 rounded-md hover:bg-accent/50 cursor-pointer transition-colors"
-                      onClick={() => {
-                        setSelectedCalendarIds((prev) =>
-                          prev.includes(calendar.id)
-                            ? prev.filter((id) => id !== calendar.id)
-                            : [...prev, calendar.id]
-                        );
-                      }}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        className="pointer-events-none"
-                      />
-                      <div
-                        className="w-4 h-4 rounded-full shrink-0"
-                        style={{ backgroundColor: calendar.color }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-sm">
-                          {calendar.name}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {t("export.selectedCount", {
-                  count: selectedCalendarIds.length,
-                })}
-              </p>
-            </div>
-          )}
-
-          {/* Export Format */}
-          <div className="space-y-2">
-            <Label>{t("export.formatLabel")}</Label>
-            <Select
-              value={exportFormat}
-              onValueChange={(value) => setExportFormat(value as "ics" | "pdf")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ics">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{t("export.icsFormat")}</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="pdf">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span>{t("export.pdfFormat")}</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {exportFormat === "ics"
-                ? t("export.icsHint")
-                : t("export.pdfHint")}
-            </p>
-          </div>
-
-          {/* Export Range (only for PDF) */}
-          {exportFormat === "pdf" && (
-            <>
-              <div className="space-y-2">
-                <Label>{t("export.rangeLabel")}</Label>
-                <Select
-                  value={exportRange}
-                  onValueChange={(value) =>
-                    setExportRange(value as "all" | "month" | "year")
-                  }
-                >
-                  <SelectTrigger>
+          {format === "pdf" && (
+            <Field label={t("export.rangeLabel")}>
+              <ChoiceChips<Range>
+                value={range}
+                onChange={setRange}
+                options={[
+                  { value: "all", label: t("export.rangeAll") },
+                  { value: "month", label: t("export.rangeMonth") },
+                  { value: "year", label: t("export.rangeYear") },
+                ]}
+              />
+              {range === "month" && (
+                <Select value={month} onValueChange={setMonth}>
+                  <SelectTrigger className="h-10 w-full rounded-[9px]" aria-label={t("export.monthLabel")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t("export.rangeAll")}</SelectItem>
-                    <SelectItem value="month">
-                      {t("export.rangeMonth")}
-                    </SelectItem>
-                    <SelectItem value="year">
-                      {t("export.rangeYear")}
-                    </SelectItem>
+                    {monthOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              {/* Month Selector */}
-              {exportRange === "month" && (
-                <div className="space-y-2">
-                  <Label>{t("export.monthLabel")}</Label>
-                  <Select
-                    value={selectedMonth}
-                    onValueChange={setSelectedMonth}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {monthOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               )}
-
-              {/* Year Selector */}
-              {exportRange === "year" && (
-                <div className="space-y-2">
-                  <Label>{t("export.yearLabel")}</Label>
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {range === "year" && (
+                <Select value={year} onValueChange={setYear}>
+                  <SelectTrigger className="h-10 w-full rounded-[9px]" aria-label={t("export.yearLabel")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-            </>
+            </Field>
           )}
 
-          {/* Export Button */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleExport} disabled={loading}>
-              <Download className="h-4 w-4 mr-2" />
-              {loading ? t("common.loading") : t("export.download")}
-            </Button>
-          </div>
+          {calendars.length > 1 && (
+            <div className="flex flex-col gap-2 border-t border-line pt-4">
+              <ToggleRow
+                id="export-multi"
+                title={t("export.multiCalendar")}
+                description={t("export.multiCalendarHint")}
+                checked={multi}
+                onCheckedChange={(checked) => {
+                  setMulti(checked);
+                  if (checked) setSelectedIds([calendarId]);
+                }}
+              />
+              {multi && (
+                <div className="flex flex-col gap-1.5">
+                  {calendars.map((c: CalendarWithCount) => {
+                    const selected = selectedIds.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={selected}
+                        onClick={() =>
+                          setSelectedIds((prev) =>
+                            prev.includes(c.id) ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                          )
+                        }
+                        className={cn(
+                          "flex items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left",
+                          selected ? "border-brand bg-surface-today" : "border-line bg-surface-card"
+                        )}
+                      >
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                        <span className="flex-1 truncate text-[13.5px] font-medium text-fg-strong">
+                          {c.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "flex size-5 items-center justify-center rounded-[6px] border",
+                            selected ? "border-brand bg-brand text-white" : "border-control"
+                          )}
+                        >
+                          {selected && <Check className="size-3.5" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <p className="text-[12px] text-fg-tertiary">
+                    {t("export.selectedCount", { count: selectedIds.length })}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </PanelBody>
+      <PanelFooter>
+        <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose} disabled={loading}>
+          {t("common.cancel")}
+        </Button>
+        <Button className="h-10 flex-1 gap-2 font-semibold" onClick={handleExport} disabled={loading}>
+          <Download className="size-4" />
+          {loading ? t("common.loading") : t("export.download")}
+        </Button>
+      </PanelFooter>
+    </>
+  );
+}
+
+interface ExportDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  calendarId: string;
+}
+
+export function ExportDialog({ open, onOpenChange, calendarId }: ExportDialogProps) {
+  const t = useTranslations();
+  return (
+    <PanelDialog
+      bare
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("export.title")}
+      description={t("export.description")}
+    >
+      <ExportPanel calendarId={calendarId} onClose={() => onOpenChange(false)} />
+    </PanelDialog>
   );
 }
