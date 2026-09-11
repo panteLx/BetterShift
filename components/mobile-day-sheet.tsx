@@ -23,7 +23,7 @@ import { getDateLocale } from "@/lib/locales";
 import { formatHours } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
-type SheetTab = "day" | "stats" | "notes";
+type SheetTab = "day" | "stats";
 
 interface MobileDaySheetProps {
   model: DayViewModel;
@@ -177,16 +177,6 @@ export function MobileDaySheet({
             options={[
               { value: "day", label: t("calendarView.tabDay") },
               { value: "stats", label: t("calendarView.tabStats") },
-              {
-                value: "notes",
-                label: t("calendarView.tabNotes"),
-                badge:
-                  dayNotes.length > 0 ? (
-                    <span className="rounded-full bg-line px-1.5 font-mono text-[11px] text-fg-secondary">
-                      {dayNotes.length}
-                    </span>
-                  ) : undefined,
-              },
             ]}
           />
         </div>
@@ -258,35 +248,17 @@ export function MobileDaySheet({
             </div>
           )}
 
-          {tab === "notes" && (
-            <div className="flex flex-col gap-2">
-              {dayNotes.map((note) => (
-                <NoteDetailCard
-                  key={note.id}
-                  note={note}
-                  onOpen={canEdit ? (n) => { close(); actions.onOpenNote(n); } : undefined}
-                />
-              ))}
-              {dayNotes.length === 0 && (
-                <p className="py-3 text-center text-[13px] text-fg-tertiary">
-                  {t("note.noEntries")}
-                </p>
-              )}
-            </div>
-          )}
         </div>
 
-        {canEdit && tab !== "stats" && (
+        {canEdit && tab === "day" && (
           <div className="flex gap-2 border-t border-line px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
-            {tab === "day" && (
-              <Button
-                onClick={run(actions.onAddShift)}
-                className="h-11 flex-1 gap-2 rounded-[10px] text-[14px] font-semibold"
-              >
-                <Plus className="size-[18px]" />
-                {t("calendarView.shift")}
-              </Button>
-            )}
+            <Button
+              onClick={run(actions.onAddShift)}
+              className="h-11 flex-1 gap-2 rounded-[10px] text-[14px] font-semibold"
+            >
+              <Plus className="size-[18px]" />
+              {t("calendarView.shift")}
+            </Button>
             <Button
               variant="outline"
               onClick={run(actions.onAddNote)}
