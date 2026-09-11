@@ -458,7 +458,7 @@
   },
   "activityLog": {
     "title": "Protokol aktivity",
-    "description": "Zobrazte aktivitu svého účtu a bezpečnostní události",
+    "description": "Přihlášení, změny a bezpečnostní události vašeho účtu",
     "noLogs": "Zatím nebyla zaznamenána žádná aktivita",
     "eventType": "Typ události",
     "resource": "Zdroj",
@@ -473,7 +473,8 @@
     "auth": "Ověřování",
     "sync": "Synchronizace",
     "security": "Zabezpečení",
-    "calendar": "Kalendář"
+    "calendar": "Kalendář",
+    "heading": "Události"
   },
   "admin": {
     "title": "Panel správce",

@@ -458,7 +458,7 @@
   },
   "activityLog": {
     "title": "Aktivitätsprotokoll",
-    "description": "Zeigt deine Kontoaktivität und Sicherheitsereignisse an",
+    "description": "Anmeldungen, Änderungen und Sicherheitsereignisse deines Kontos",
     "noLogs": "Noch keine Aktivität aufgezeichnet",
     "eventType": "Ereignistyp",
     "resource": "Ressource",
@@ -473,7 +473,8 @@
     "auth": "Authentifizierung",
     "sync": "Synchronisation",
     "security": "Sicherheit",
-    "calendar": "Kalender"
+    "calendar": "Kalender",
+    "heading": "Ereignisse"
   },
   "admin": {
     "title": "Admin-Panel",

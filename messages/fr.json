@@ -458,7 +458,7 @@
   },
   "activityLog": {
     "title": "Journal d'activité",
-    "description": "Consultez l'activité de votre compte et les événements de sécurité",
+    "description": "Connexions, modifications et événements de sécurité de votre compte",
     "noLogs": "Aucune activité enregistrée pour l'instant",
     "eventType": "Type d'événement",
     "resource": "Ressource",
@@ -473,7 +473,8 @@
     "auth": "Authentification",
     "sync": "Synchronisation",
     "security": "Sécurité",
-    "calendar": "Calendrier"
+    "calendar": "Calendrier",
+    "heading": "Événements"
   },
   "admin": {
     "title": "Panneau d'administration",

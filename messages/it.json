@@ -458,7 +458,7 @@
   },
   "activityLog": {
     "title": "Registro Attività",
-    "description": "Visualizza l'attività del tuo account e gli eventi di sicurezza",
+    "description": "Accessi, modifiche ed eventi di sicurezza del tuo account",
     "noLogs": "Nessuna attività registrata ancora",
     "eventType": "Tipo Evento",
     "resource": "Risorsa",
@@ -473,7 +473,8 @@
     "auth": "Autenticazione",
     "sync": "Sincronizzazione",
     "security": "Sicurezza",
-    "calendar": "Calendario"
+    "calendar": "Calendario",
+    "heading": "Eventi"
   },
   "admin": {
     "title": "Pannello Admin",

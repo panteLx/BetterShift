@@ -365,7 +365,7 @@ export function ActivitySection() {
     <PanelBody>
       <div className={cn(accountWideContentClass, "flex flex-col gap-4")}>
         <SectionHeading
-          title={t("activityLog.title")}
+          title={t("activityLog.heading")}
           description={t("activityLog.description")}
           action={
             <Button

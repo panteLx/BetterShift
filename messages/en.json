@@ -458,7 +458,7 @@
   },
   "activityLog": {
     "title": "Activity Log",
-    "description": "View your account activity and security events",
+    "description": "Sign-ins, changes and security events of your account",
     "noLogs": "No activity recorded yet",
     "eventType": "Event Type",
     "resource": "Resource",
@@ -473,7 +473,8 @@
     "auth": "Authentication",
     "sync": "Sync",
     "security": "Security",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "heading": "Events"
   },
   "admin": {
     "title": "Admin Panel",
