@@ -207,8 +207,8 @@
     "hideFromStats": "Aus Statistik ausblenden"
   },
   "view": {
-    "settingsTitle": "Ansichtseinstellungen",
-    "settingsDescription": "Passe an, wie Schichten in allen Kalendern angezeigt werden",
+    "settingsTitle": "Meine Ansicht",
+    "settingsDescription": "Deine persönliche Ansicht. Gilt für alle Kalender ohne eigene Ansicht und ist nur für dich sichtbar.",
     "shiftsPerDay": "Normale Schichten pro Tag",
     "shiftsPerDayHint": "Maximale Anzahl der normalen Schichten pro Tag",
     "externalShiftsPerDay": "Externe Schichten pro Tag",
@@ -243,7 +243,13 @@
     "highlightColor": "Hervorhebungsfarbe",
     "density": "Dichte",
     "showPresetBar": "Vorlagenleiste anzeigen",
-    "showPresetBarHint": "Vorlagenleiste unter bzw. über dem Kalender"
+    "showPresetBarHint": "Vorlagenleiste unter bzw. über dem Kalender",
+    "settingsDescriptionLocal": "Deine persönliche Ansicht auf diesem Gerät. Gilt für alle Kalender ohne eigene Ansicht.",
+    "overriddenByCalendar": "„{calendar}“ hat eine eigene Ansicht. Dort gilt deine persönliche Ansicht nicht.",
+    "calendarOwn": "Eigene Ansicht für diesen Kalender",
+    "calendarOwnHint": "Gilt für alle mit Zugriff auf diesen Kalender.",
+    "calendarOffNote": "Alle sehen hier ihre persönliche Ansicht. Deine findest du unter Benutzermenü → „Meine Ansicht“.",
+    "calendarLocked": "Für diesen Kalender festgelegt. Ändern können das nur Personen, die den Kalender verwalten."
   },
   "stats": {
     "title": "Schichtenstatistik",
@@ -269,8 +275,6 @@
     "connected": "Server Verbindung hergestellt",
     "disconnected": "Server Verbindung verloren"
   },
-  "onboarding": {},
-  "guestEmptyState": {},
   "externalSync": {
     "noSyncs": "Noch keine externen Kalender hinzugefügt",
     "syncTypeICloud": "iCloud",
@@ -647,7 +651,7 @@
     "account": "Konto",
     "language": "Sprache",
     "preferences": "Einstellungen",
-    "viewSettings": "Ansicht"
+    "viewSettings": "Meine Ansicht"
   },
   "calendarView": {
     "previousMonth": "Vorheriger Monat",
@@ -742,14 +746,13 @@
     "export": "Exportieren",
     "exportHint": "ICS-Datei oder PDF",
     "view": "Ansicht",
-    "viewHint": "Dichte, Sortierung, Hervorhebung",
+    "viewHint": "Eigene Ansicht, Dichte, Sortierung",
     "notifications": "Benachrichtigungen",
     "notificationsHint": "Synchronisierung",
     "notificationsError": "Fehler bei der Synchronisierung",
     "deleteImpact": "{count, plural, =0 {Der Kalender wird endgültig gelöscht} one {# Schicht wird mitgelöscht} other {# Schichten werden mitgelöscht}}",
     "appliesToAll": "Änderungen werden sofort für alle Freigaben wirksam.",
     "groupCalendar": "Kalender",
-    "groupView": "Ansicht",
     "groupNotifications": "Benachrichtigungen",
     "groupAccount": "Konto",
     "groupApp": "App"

@@ -207,8 +207,8 @@
     "hideFromStats": "Ocultar de las estadísticas"
   },
   "view": {
-    "settingsTitle": "Ajustes de vista",
-    "settingsDescription": "Personaliza cómo se muestran los turnos en todos los calendarios",
+    "settingsTitle": "Mi vista",
+    "settingsDescription": "Tu vista personal. Se aplica a todos los calendarios sin vista propia y solo tú la ves.",
     "shiftsPerDay": "Turnos regulares por día",
     "shiftsPerDayHint": "Número máximo de turnos regulares a mostrar por día",
     "externalShiftsPerDay": "Turnos externos por día",
@@ -243,7 +243,13 @@
     "highlightColor": "Color de resaltado",
     "density": "Densidad",
     "showPresetBar": "Mostrar barra de plantillas",
-    "showPresetBarHint": "Barra de plantillas debajo o encima del calendario"
+    "showPresetBarHint": "Barra de plantillas debajo o encima del calendario",
+    "settingsDescriptionLocal": "Tu vista personal en este dispositivo. Se aplica a todos los calendarios sin vista propia.",
+    "overriddenByCalendar": "«{calendar}» tiene su propia vista. Allí no se aplica tu vista personal.",
+    "calendarOwn": "Vista propia para este calendario",
+    "calendarOwnHint": "Se aplica a todas las personas con acceso a este calendario.",
+    "calendarOffNote": "Aquí cada persona ve su vista personal. La tuya está en menú de usuario → «Mi vista».",
+    "calendarLocked": "Definida para este calendario. Solo quienes gestionan el calendario pueden cambiarla."
   },
   "stats": {
     "title": "Estadísticas de turnos",
@@ -269,8 +275,6 @@
     "connected": "Conectado al servidor",
     "disconnected": "Conexión al servidor perdida"
   },
-  "onboarding": {},
-  "guestEmptyState": {},
   "externalSync": {
     "noSyncs": "Aún no se han añadido calendarios externos",
     "syncTypeICloud": "iCloud",
@@ -647,7 +651,7 @@
     "account": "Cuenta",
     "language": "Idioma",
     "preferences": "Preferencias",
-    "viewSettings": "Vista"
+    "viewSettings": "Mi vista"
   },
   "calendarView": {
     "previousMonth": "Mes anterior",
@@ -742,14 +746,13 @@
     "export": "Exportar",
     "exportHint": "Archivo ICS o PDF",
     "view": "Vista",
-    "viewHint": "Densidad, orden, resaltado",
+    "viewHint": "Vista propia, densidad, orden",
     "notifications": "Notificaciones",
     "notificationsHint": "Sincronización",
     "notificationsError": "Error de sincronización",
     "deleteImpact": "{count, plural, =0 {El calendario se elimina definitivamente} one {También se eliminará # turno} other {También se eliminarán # turnos}}",
     "appliesToAll": "Los cambios se aplican de inmediato para todas las personas con acceso.",
     "groupCalendar": "Calendario",
-    "groupView": "Vista",
     "groupNotifications": "Notificaciones",
     "groupAccount": "Cuenta",
     "groupApp": "App"

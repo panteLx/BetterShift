@@ -56,6 +56,13 @@ export const queryKeys = {
     all: ["subscriptions"] as const,
   },
 
+  // Per-account preferences
+  userPreferences: {
+    all: ["user-preferences"] as const,
+    viewSettings: (userId: string) =>
+      ["user-preferences", userId, "view-settings"] as const,
+  },
+
   // User Activity Logs
   activityLogs: (filters?: object) => ["activity-logs", filters] as const,
 } as const;

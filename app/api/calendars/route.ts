@@ -38,6 +38,7 @@ export async function GET(request: Request) {
         color: calendars.color,
         ownerId: calendars.ownerId,
         guestPermission: calendars.guestPermission,
+        viewSettings: calendars.viewSettings,
         createdAt: calendars.createdAt,
         updatedAt: calendars.updatedAt,
         _count:

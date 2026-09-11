@@ -14,6 +14,10 @@ import {
   canDeleteCalendar,
 } from "@/lib/auth/permissions";
 import {
+  calendarViewSettingsEqual,
+  sanitizeCalendarViewSettings,
+} from "@/lib/view-settings";
+import {
   logUserAction,
   type CalendarUpdatedMetadata,
   type CalendarDeletedMetadata,
@@ -75,7 +79,18 @@ export async function PATCH(
     const { id } = await params;
     const user = await getSessionUser(request.headers);
     const body = await request.json();
-    const { name, color, guestPermission } = body;
+    const { name, color, guestPermission, viewSettings } = body;
+
+    if (
+      viewSettings !== undefined &&
+      viewSettings !== null &&
+      (typeof viewSettings !== "object" || Array.isArray(viewSettings))
+    ) {
+      return NextResponse.json(
+        { error: "viewSettings must be an object or null" },
+        { status: 400 }
+      );
+    }
 
     // Fetch current calendar
     const [existingCalendar] = await db
@@ -103,6 +118,7 @@ export async function PATCH(
     const changes: string[] = [];
     let guestPermissionChanged = false;
     let oldGuestPermission: string | undefined;
+    let viewSettingsChange: CalendarUpdatedMetadata["viewSettings"];
 
     if (name && name !== existingCalendar.name) {
       updateData.name = name;
@@ -124,6 +140,30 @@ export async function PATCH(
         oldGuestPermission = existingCalendar.guestPermission;
       }
     }
+    if (viewSettings === null && existingCalendar.viewSettings !== null) {
+      updateData.viewSettings = null;
+      changes.push("viewSettings");
+      viewSettingsChange = "disabled";
+    } else if (viewSettings) {
+      const next = sanitizeCalendarViewSettings({
+        ...(existingCalendar.viewSettings ?? {}),
+        ...viewSettings,
+      });
+      if (
+        !existingCalendar.viewSettings ||
+        !calendarViewSettingsEqual(existingCalendar.viewSettings, next)
+      ) {
+        updateData.viewSettings = next;
+        changes.push("viewSettings");
+        viewSettingsChange = existingCalendar.viewSettings
+          ? "updated"
+          : "enabled";
+      }
+    }
+
+    if (changes.length === 0) {
+      return NextResponse.json(existingCalendar);
+    }
 
     const [calendar] = await db
       .update(calendars)
@@ -141,6 +181,7 @@ export async function PATCH(
         metadata: {
           calendarName: calendar.name,
           changes,
+          ...(viewSettingsChange && { viewSettings: viewSettingsChange }),
         },
         request,
       });

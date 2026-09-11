@@ -32,7 +32,7 @@ import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import { ColorSwatches, DangerZone, Field, inputClass } from "@/components/form-kit";
 import { AppearancePicker } from "@/components/appearance-picker";
 import { ExportPanel } from "@/components/export-dialog";
-import { ViewPanel, ViewSettingsState } from "@/components/view-settings-sheet";
+import { CalendarViewPanel, ViewSettingsState } from "@/components/view-settings-sheet";
 import { PresetsPanel } from "@/components/preset-manage-sheet";
 import { ExternalSyncPanel } from "@/components/external-sync-manage-sheet";
 import { SyncNotificationsPanel } from "@/components/sync-notification-dialog";
@@ -329,14 +329,17 @@ export function SettingsDialog({
       ]
     : [];
 
-  const viewItems: SectionItem[] = [
-    {
-      id: "view",
-      icon: SlidersHorizontal,
-      title: t("settings.view"),
-      description: t("settings.viewHint"),
-    },
-  ];
+  // The calendar's own view; the personal one lives in the user menu
+  const viewItems: SectionItem[] = calendar
+    ? [
+        {
+          id: "view",
+          icon: SlidersHorizontal,
+          title: t("settings.view"),
+          description: t("settings.viewHint"),
+        },
+      ]
+    : [];
   const notificationItems: SectionItem[] = calendar
     ? [
         {
@@ -373,7 +376,17 @@ export function SettingsDialog({
   const activeItem = [...sidebarItems, ...appItems].find((i) => i.id === active);
 
   const renderPanel = (id: SettingsSection) => {
-    if (id === "view") return <ViewPanel settings={viewSettings} />;
+    if (id === "view")
+      return calendarId ? (
+        <CalendarViewPanel
+          key={calendarId}
+          calendarId={calendarId}
+          personal={viewSettings.personal}
+          onClose={close}
+          onCancel={() => requestClose(false)}
+          onDirtyChange={setDirty}
+        />
+      ) : null;
     if (id === "appearance")
       return (
         <PanelBody>
@@ -596,12 +609,8 @@ export function SettingsDialog({
               {calendarItems.length > 0 &&
                 renderGroup(
                   t("settings.groupCalendar"),
-                  calendarItems.map((item) => renderRow(item))
+                  [...calendarItems, ...viewItems].map((item) => renderRow(item))
                 )}
-              {renderGroup(
-                t("settings.groupView"),
-                viewItems.map((item) => renderRow(item))
-              )}
               {notificationItems.length > 0 &&
                 renderGroup(
                   t("settings.groupNotifications"),
