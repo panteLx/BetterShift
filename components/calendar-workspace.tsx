@@ -189,7 +189,7 @@ export function CalendarWorkspace({
   return (
     <div className="flex h-dvh flex-col bg-background">
       {header}
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {hasBanner && <div className="flex flex-col gap-2 px-3 pt-3">{banners}</div>}
         <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
           <h1 className="text-[17px] font-semibold tracking-[-0.01em] text-fg-strong">
@@ -227,7 +227,7 @@ export function CalendarWorkspace({
             </Button>
           )}
         </div>
-        <div className={isOnline ? "pb-2" : "pb-2 opacity-60"}>{grid}</div>
+        <div className={`flex flex-1 flex-col pb-2${isOnline ? "" : " opacity-60"}`}>{grid}</div>
       </main>
       <div className="shrink-0">
         <MobileDayPeek model={model} onOpen={() => onSheetOpenChange(true)} />

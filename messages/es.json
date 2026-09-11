@@ -702,7 +702,7 @@
     "stampHint": "Toca un día para añadir {title}; vuelve a tocar para quitarlo.",
     "addShiftManually": "Añadir turno manualmente",
     "tabDay": "Día",
-    "tabMonth": "Mes",
+    "tabStats": "Estadísticas",
     "tabNotes": "Notas",
     "sheetTabs": "Elegir sección",
     "sheetDescription": "Turnos, estadísticas y notas del día seleccionado",

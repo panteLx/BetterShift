@@ -23,7 +23,7 @@ import { getDateLocale } from "@/lib/locales";
 import { formatHours } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
-type SheetTab = "day" | "month" | "notes";
+type SheetTab = "day" | "stats" | "notes";
 
 interface MobileDaySheetProps {
   model: DayViewModel;
@@ -109,7 +109,7 @@ export function MobileDaySheet({
           };
 
   const heading =
-    tab === "month" ? periodHeading : { eyebrow: labels.eyebrow, title: labels.long };
+    tab === "stats" ? periodHeading : { eyebrow: labels.eyebrow, title: labels.long };
 
   const close = () => onOpenChange(false);
   const run = (fn: () => void) => () => {
@@ -146,7 +146,7 @@ export function MobileDaySheet({
             <div
               className={cn(
                 "eyebrow",
-                tab !== "month" && labels.isToday && "text-brand-ink"
+                tab !== "stats" && labels.isToday && "text-brand-ink"
               )}
             >
               {heading.eyebrow}
@@ -176,7 +176,7 @@ export function MobileDaySheet({
             onChange={setTab}
             options={[
               { value: "day", label: t("calendarView.tabDay") },
-              { value: "month", label: t("calendarView.tabMonth") },
+              { value: "stats", label: t("calendarView.tabStats") },
               {
                 value: "notes",
                 label: t("calendarView.tabNotes"),
@@ -222,7 +222,7 @@ export function MobileDaySheet({
             </div>
           )}
 
-          {tab === "month" && (
+          {tab === "stats" && (
             <div className="flex flex-col gap-3">
               <SegmentedControl<StatsPeriod>
                 label={t("calendarView.periodLabel")}
@@ -235,17 +235,19 @@ export function MobileDaySheet({
                 ]}
               />
               <PeriodSummaryView summary={periodSummary} columns="cards" />
-              <button
-                type="button"
-                onClick={run(actions.onOpenMonthShifts)}
-                className="flex items-center gap-2.5 rounded-lg border border-line bg-surface-card px-3 py-3 text-left"
-              >
-                <List className="size-4 text-fg-secondary" />
-                <span className="flex-1 text-[13.5px] font-semibold text-fg-strong">
-                  {t("calendarView.allShiftsIn", { month: monthName })}
-                </span>
-                <ChevronRight className="size-4 text-fg-tertiary" />
-              </button>
+              {period === "month" && (
+                <button
+                  type="button"
+                  onClick={run(actions.onOpenMonthShifts)}
+                  className="flex items-center gap-2.5 rounded-lg border border-line bg-surface-card px-3 py-3 text-left"
+                >
+                  <List className="size-4 text-fg-secondary" />
+                  <span className="flex-1 text-[13.5px] font-semibold text-fg-strong">
+                    {t("calendarView.allShiftsIn", { month: monthName })}
+                  </span>
+                  <ChevronRight className="size-4 text-fg-tertiary" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={run(actions.onOpenStats)}
@@ -274,7 +276,7 @@ export function MobileDaySheet({
           )}
         </div>
 
-        {canEdit && tab !== "month" && (
+        {canEdit && tab !== "stats" && (
           <div className="flex gap-2 border-t border-line px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
             {tab === "day" && (
               <Button
