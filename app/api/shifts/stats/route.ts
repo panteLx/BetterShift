@@ -9,7 +9,11 @@ import {
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
-import { calculateShiftDuration } from "@/lib/date-utils";
+import {
+  calculateShiftDuration,
+  formatDateToLocal,
+  parseLocalDate,
+} from "@/lib/date-utils";
 import {
   startOfWeek,
   endOfWeek,
@@ -58,7 +62,17 @@ export async function GET(request: Request) {
       );
     }
 
-    const referenceDate = date ? new Date(date) : new Date();
+    let referenceDate = new Date();
+    if (date) {
+      try {
+        referenceDate = parseLocalDate(date);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        );
+      }
+    }
 
     let startDate: Date;
     let endDate: Date;
@@ -157,7 +171,7 @@ export async function GET(request: Request) {
               : new Date(shiftDate);
 
           if (!isNaN(date.getTime())) {
-            const dateKey = date.toISOString().split("T")[0];
+            const dateKey = formatDateToLocal(date);
             const dailyExisting = dailyStats.get(dateKey) || {
               count: 0,
               totalMinutes: 0,
@@ -212,8 +226,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       period,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: formatDateToLocal(startDate),
+      endDate: formatDateToLocal(endDate),
       stats,
       totalMinutes,
       totalShifts,

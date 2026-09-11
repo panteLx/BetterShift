@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
       .slice(0, 3); // Max 3 calendar names
 
     const filename = `${calendarNamesParts.join("_")}_${
-      new Date().toISOString().split("T")[0]
+      formatDateToLocal(new Date())
     }.ics`;
 
     return new NextResponse(icsContent, {
