@@ -179,6 +179,8 @@ export function useAdminAuditLogs(
   filters: AuditLogFilters = {},
   sort: AuditLogSort = { field: "timestamp", direction: "desc" },
   pagination: AuditLogPagination = { limit: 25, offset: 0 },
+  /** Callers that only need the delete actions skip the polling list query */
+  { listEnabled = true }: { listEnabled?: boolean } = {},
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -192,6 +194,7 @@ export function useAdminAuditLogs(
   } = useQuery({
     queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination, t }),
     queryFn: () => fetchAuditLogsApi(filters, sort, pagination, t),
+    enabled: listEnabled,
     refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
   });
@@ -267,7 +270,7 @@ export function useAdminAuditLogs(
     total: logsData?.total || 0,
     limit: logsData?.limit || pagination.limit,
     offset: logsData?.offset || pagination.offset,
-    isLoading,
+    isLoading: isLoading || deleteByIdsMutation.isPending || deleteByDateMutation.isPending,
     error,
 
     // Functions

@@ -31,7 +31,12 @@ export function AuditLogDeleteDialog({
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
-  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAdminAuditLogs();
+  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAdminAuditLogs(
+    undefined,
+    undefined,
+    undefined,
+    { listEnabled: false }
+  );
 
   const [beforeDate, setBeforeDate] = useState("");
   const [confirmed, setConfirmed] = useState(false);

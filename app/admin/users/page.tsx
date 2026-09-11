@@ -222,7 +222,6 @@ export default function AdminUsersPage() {
             open={showEditSheet}
             onOpenChange={setShowEditSheet}
             user={selectedUser}
-            onSuccess={() => {}}
           />
           <UserDetailsSheet
             key={`details-${selectedUser.id}`}

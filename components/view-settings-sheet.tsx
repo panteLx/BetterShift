@@ -21,7 +21,6 @@ import {
   CalendarViewSettings,
   PersonalViewSettings,
   calendarViewSettingsEqual,
-  pickCalendarViewSettings,
   sanitizeCalendarViewSettings,
 } from "@/lib/view-settings";
 import { cn } from "@/lib/utils";
@@ -287,7 +286,7 @@ export function CalendarViewPanel({
   const { canManage } = useCalendarPermission(calendarId);
   const calendar = calendars.find((c) => c.id === calendarId);
   const saved = calendar?.viewSettings ? sanitizeCalendarViewSettings(calendar.viewSettings) : null;
-  const personalFields = pickCalendarViewSettings(personal);
+  const personalFields = sanitizeCalendarViewSettings(personal);
 
   const [enabled, setEnabled] = useState(!!saved);
   const [draft, setDraft] = useState<CalendarViewSettings>(() => saved ?? personalFields);

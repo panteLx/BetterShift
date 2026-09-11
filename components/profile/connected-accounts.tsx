@@ -40,7 +40,7 @@ export function useProviderInfo() {
   };
 }
 
-export function ConnectedAccountRow({
+function ConnectedAccountRow({
   account,
   detailed = false,
 }: {

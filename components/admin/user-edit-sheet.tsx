@@ -13,10 +13,9 @@ interface UserEditSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: AdminUser;
-  onSuccess: () => void;
 }
 
-export function UserEditSheet({ open, onOpenChange, user, onSuccess }: UserEditSheetProps) {
+export function UserEditSheet({ open, onOpenChange, user }: UserEditSheetProps) {
   const t = useTranslations();
   const { updateUser, isUpdating } = useAdminUserActions();
   const canEdit = useCanEditUser(user);
@@ -41,10 +40,7 @@ export function UserEditSheet({ open, onOpenChange, user, onSuccess }: UserEditS
     if (canChangeRole && role !== user.role) updates.role = role;
 
     const success = await updateUser(user.id, updates);
-    if (success) {
-      onSuccess();
-      onOpenChange(false);
-    }
+    if (success) onOpenChange(false);
   };
 
   return (

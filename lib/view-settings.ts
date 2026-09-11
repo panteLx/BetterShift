@@ -105,11 +105,6 @@ export function sanitizePersonalViewSettings(input: unknown): PersonalViewSettin
   };
 }
 
-/** The calendar-level subset of a personal view, e.g. to seed a calendar's own view. */
-export function pickCalendarViewSettings(settings: CalendarViewSettings): CalendarViewSettings {
-  return sanitizeCalendarViewSettings(settings);
-}
-
 export function calendarViewSettingsEqual(a: CalendarViewSettings, b: CalendarViewSettings): boolean {
   const x = sanitizeCalendarViewSettings(a);
   const y = sanitizeCalendarViewSettings(b);

@@ -79,7 +79,7 @@ export interface CalendarDetails extends AdminCalendar {
 export type CalendarsListResponse = AdminListResponse<AdminCalendar, CalendarListCounts>;
 
 /** One page of calendars; omitted params fall back to the API defaults. */
-export async function fetchAdminCalendars(
+async function fetchAdminCalendars(
   params: Partial<CalendarListParams>,
 ): Promise<CalendarsListResponse> {
   const response = await fetch(`/api/admin/calendars?${toSearchParams(params)}`);

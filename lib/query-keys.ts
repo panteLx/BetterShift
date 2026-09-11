@@ -66,7 +66,6 @@ export const queryKeys = {
 
   // Per-account preferences
   userPreferences: {
-    all: ["user-preferences"] as const,
     viewSettings: (userId: string) =>
       ["user-preferences", userId, "view-settings"] as const,
   },

@@ -82,7 +82,7 @@ export function isOrphaned(calendar: Pick<AdminCalendar, "ownerId" | "owner">) {
   return !calendar.ownerId || !calendar.owner;
 }
 
-export function GuestPermissionPill({ permission }: { permission: AdminCalendar["guestPermission"] }) {
+function GuestPermissionPill({ permission }: { permission: AdminCalendar["guestPermission"] }) {
   const t = useTranslations();
   if (permission === "write") return <Pill tone="brand">{t("common.labels.permissions.write")}</Pill>;
   if (permission === "read") return <Pill>{t("common.labels.permissions.read")}</Pill>;

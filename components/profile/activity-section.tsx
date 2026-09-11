@@ -148,21 +148,25 @@ export function ActivitySection() {
   };
 
   // Sorting only reorders the loaded page; the API always returns newest first
-  const sortedLogs = [...logs].sort((a, b) => {
-    let comparison = 0;
-    switch (sortColumn) {
-      case "timestamp":
-        comparison = a.timestamp.getTime() - b.timestamp.getTime();
-        break;
-      case "type":
-        comparison = a.type.localeCompare(b.type);
-        break;
-      case "severity":
-        comparison = (SEVERITY_ORDER[a.severity] ?? 0) - (SEVERITY_ORDER[b.severity] ?? 0);
-        break;
-    }
-    return sortDirection === "asc" ? comparison : -comparison;
-  });
+  const sortedLogs = useMemo(
+    () =>
+      [...logs].sort((a, b) => {
+        let comparison = 0;
+        switch (sortColumn) {
+          case "timestamp":
+            comparison = a.timestamp.getTime() - b.timestamp.getTime();
+            break;
+          case "type":
+            comparison = a.type.localeCompare(b.type);
+            break;
+          case "severity":
+            comparison = (SEVERITY_ORDER[a.severity] ?? 0) - (SEVERITY_ORDER[b.severity] ?? 0);
+            break;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      }),
+    [logs, sortColumn, sortDirection]
+  );
 
   const formatTimestamp = (timestamp: Date) =>
     timestamp instanceof Date && !isNaN(timestamp.getTime()) ? (
@@ -234,7 +238,7 @@ export function ActivitySection() {
     </div>
   );
 
-  const table = (
+  const renderTable = () => (
     <div className="overflow-hidden rounded-[12px] border border-line bg-surface-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
@@ -319,7 +323,7 @@ export function ActivitySection() {
     </div>
   );
 
-  const cards = (
+  const renderCards = () => (
     <div className="flex flex-col gap-2.5">
       {sortedLogs.map((log) => {
         const expanded = expandedRows.has(log.id);
@@ -403,7 +407,7 @@ export function ActivitySection() {
             {hasActiveFilters ? t("common.noResults") : t("activityLog.noLogs")}
           </div>
         ) : (
-          <div className={cn(isPlaceholderData && "opacity-60")}>{desktop ? table : cards}</div>
+          <div className={cn(isPlaceholderData && "opacity-60")}>{desktop ? renderTable() : renderCards()}</div>
         )}
       </div>
 

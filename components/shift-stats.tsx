@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { useShifts } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ChoiceChips } from "@/components/form-kit";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { formatHours } from "@/lib/shift-display";
 import { countFreeDays } from "@/lib/free-days";
 import { cn } from "@/lib/utils";
@@ -30,25 +31,6 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
-
-// Hook for responsive radius that's SSR-safe
-function useResponsiveRadius() {
-  const [radius, setRadius] = useState(120); // Safe default for SSR
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateRadius = () => {
-      setRadius(window.innerWidth < 640 ? 80 : 120);
-    };
-
-    updateRadius();
-    window.addEventListener("resize", updateRadius);
-    return () => window.removeEventListener("resize", updateRadius);
-  }, []);
-
-  return radius;
-}
 
 /** Mirrors the dark-mode lightening of `.shift-rail`, which SVG fills can't inherit. */
 function lightenForDark(color: string): string {
@@ -133,7 +115,7 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
   const { resolvedTheme } = useTheme();
   const [period, setPeriod] = useState<Period>("month");
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
-  const outerRadius = useResponsiveRadius();
+  const outerRadius = useMediaQuery("(min-width: 640px)", true) ? 120 : 80;
 
   const { stats, loading } = useShiftStats({
     calendarId,
@@ -164,24 +146,18 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
     return colors;
   }, [stats, shifts, presets, resolvedTheme]);
 
-  if (!calendarId) return null;
-
-  const colorFor = (title: string) => colorByTitle.get(title) ?? "var(--chart-1)";
-  const totalShifts = stats?.totalShifts || 0;
-  const totalMinutes = stats?.totalMinutes || 0;
-  const hasData = !!stats && Object.keys(stats.stats).length > 0;
-  const freeDays = stats ? countFreeDays(stats) : null;
-
   // Prepare data for charts
-  const pieData = stats
+  const pieData = useMemo(() =>
+    stats
     ? Object.entries(stats.stats).map(([title, data]) => ({
         name: title,
         value: data.count,
         hours: Math.round((data.totalMinutes / 60) * 10) / 10,
       }))
-    : [];
+    : [], [stats]);
 
-  const barData = stats
+  const barData = useMemo(() =>
+    stats
     ? Object.entries(stats.stats)
         .map(([title, data]) => ({
           name: title.length > 15 ? title.substring(0, 15) + "..." : title,
@@ -190,10 +166,11 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
           hours: Math.round((data.totalMinutes / 60) * 10) / 10,
         }))
         .sort((a, b) => b.shifts - a.shifts)
-    : [];
+    : [], [stats]);
 
   // Prepare data for radar chart (top shift types by hours)
-  const radarData = stats
+  const radarData = useMemo(() =>
+    stats
     ? Object.entries(stats.stats)
         .sort(([, a], [, b]) => b.totalMinutes - a.totalMinutes)
         .slice(0, 6) // Top 6 shift types
@@ -206,7 +183,16 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
             ? Math.round((data.totalMinutes / data.count / 60) * 10) / 10
             : 0,
         }))
-    : [];
+    : [], [stats]);
+
+
+  if (!calendarId) return null;
+
+  const colorFor = (title: string) => colorByTitle.get(title) ?? "var(--chart-1)";
+  const totalShifts = stats?.totalShifts || 0;
+  const totalMinutes = stats?.totalMinutes || 0;
+  const hasData = !!stats && Object.keys(stats.stats).length > 0;
+  const freeDays = stats ? countFreeDays(stats) : null;
 
   return (
     <div className="flex flex-col gap-4">

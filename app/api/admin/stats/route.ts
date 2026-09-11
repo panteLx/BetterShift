@@ -8,7 +8,7 @@ import {
   shifts,
   auditLogs,
 } from "@/lib/db/schema";
-import { sql, eq, and, gte, count, desc } from "drizzle-orm";
+import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { isAdmin } from "@/lib/auth/admin";
 
@@ -133,18 +133,19 @@ export async function GET(request: NextRequest) {
 
     const totalShifts = Number(totalShiftsResult?.count || 0);
 
-    // 6. Recent activity count (last 7 days)
-    const [recentActivityResult] = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(auditLogs)
-      .where(and(gte(auditLogs.timestamp, sevenDaysAgo)));
-
-    const recentActivity = Number(recentActivityResult?.count || 0);
-
-    // 7. Dashboard feed: admin actions plus security events, with metadata for the summaries
+    // 6./7./8. One pass over the fastest-growing table: all entries, the dashboard
+    // feed's subset and the last seven days — this endpoint is polled every few seconds.
     const feedScope = sql`(${auditLogs.action} LIKE 'admin.%' OR ${auditLogs.action} LIKE 'security.%')`;
+
+    const [logCounts] = await db
+      .select({
+        total: count(),
+        feed: sql<number>`coalesce(sum(${feedScope}), 0)`,
+        recent: sql<number>`coalesce(sum(${gte(auditLogs.timestamp, sevenDaysAgo)}), 0)`,
+      })
+      .from(auditLogs);
+
+    const recentActivity = Number(logCounts?.recent || 0);
 
     const recentLogs = await db
       .select({
@@ -163,14 +164,6 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(auditLogs.timestamp), desc(sql`rowid`))
       .limit(RECENT_LOG_LIMIT);
 
-    const [feedTotal] = await db
-      .select({ count: count() })
-      .from(auditLogs)
-      .where(feedScope);
-
-    // 8. All audit log entries, for the sidebar and area links
-    const [auditLogTotal] = await db.select({ count: count() }).from(auditLogs);
-
     const stats = {
       users: usersByRole,
       calendars: {
@@ -187,14 +180,14 @@ export async function GET(request: NextRequest) {
       },
       activity: {
         recent: recentActivity,
-        total: feedTotal?.count ?? 0,
+        total: Number(logCounts?.feed || 0),
         logs: recentLogs.map((log) => ({
           ...log,
           metadata: parseMetadata(log.metadata),
         })),
       },
       auditLogs: {
-        total: auditLogTotal?.count ?? 0,
+        total: Number(logCounts?.total || 0),
       },
     };
 

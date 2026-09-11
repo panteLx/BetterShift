@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auditLogs, user } from "@/lib/db/schema";
-import { sql, eq, desc, and, or, lt } from "drizzle-orm";
+import { sql, eq, desc, and, or, lt, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
@@ -310,15 +310,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete logs by IDs
-    const deletePromises = logIds.map((id) =>
-      db
-        .delete(auditLogs)
-        .where(eq(auditLogs.id, id))
-        .returning({ id: auditLogs.id })
-    );
+    const deleted = await db
+      .delete(auditLogs)
+      .where(inArray(auditLogs.id, logIds))
+      .returning({ id: auditLogs.id });
 
-    const results = await Promise.all(deletePromises);
-    deletedCount = results.filter((r) => r.length > 0).length;
+    deletedCount = deleted.length;
 
     // Log admin action
     await logAdminAction({

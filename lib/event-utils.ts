@@ -63,40 +63,6 @@ export function matchesRecurringEvent(
   }
 }
 
-// Find all events for a specific date (including recurring)
-export function findEventsForDate(
-  notes: CalendarNote[],
-  date: Date
-): CalendarNote[] {
-  return notes.filter((note) => {
-    if (note.type !== "event" || !note.date) return false;
-    const dateValue = note.date;
-    const noteDate =
-      dateValue instanceof Date
-        ? dateValue
-        : typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-        ? parseLocalDate(dateValue)
-        : new Date(dateValue);
-
-    // Exact date match
-    if (
-      noteDate.getFullYear() === date.getFullYear() &&
-      noteDate.getMonth() === date.getMonth() &&
-      noteDate.getDate() === date.getDate()
-    ) {
-      return true;
-    }
-
-    // Recurring match
-    return matchesRecurringEvent(
-      noteDate,
-      date,
-      note.recurringPattern,
-      note.recurringInterval
-    );
-  });
-}
-
 // Find all notes for a specific date (both notes and events, including recurring)
 export function findNotesForDate(
   notes: CalendarNote[],
