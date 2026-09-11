@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -37,14 +36,25 @@ import {
   nextSort,
   type SortState,
 } from "@/components/admin/admin-table-controls";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { getDateLocale } from "@/lib/locales";
+import type { UserSortField } from "@/lib/admin-list";
 import type { AdminUser } from "@/hooks/useAdminUsers";
 import { useUserPermissions } from "@/hooks/useAdminAccess";
+import { cn } from "@/lib/utils";
 
 interface UserTableProps {
+  /** One page of users, already sorted by the API */
   users: AdminUser[];
-  /** All accounts before filtering, for the "n of m" footer */
+  /** Accounts matching the current search and filters */
   total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  sort: SortState<UserSortField>;
+  onSortChange: (sort: SortState<UserSortField>) => void;
+  /** Dims the rows while the next page loads */
+  isStale?: boolean;
   onUserClick: (user: AdminUser) => void;
   onEditUser: (user: AdminUser) => void;
   onResetPassword: (user: AdminUser) => void;
@@ -53,12 +63,12 @@ interface UserTableProps {
   onDeleteUser: (user: AdminUser) => void;
 }
 
-type RowHandlers = Omit<UserTableProps, "users" | "total">;
-
-type SortColumn = "name" | "role" | "status" | "createdAt" | "lastActivity" | "calendarCount";
+type RowHandlers = Pick<
+  UserTableProps,
+  "onUserClick" | "onEditUser" | "onResetPassword" | "onBanUser" | "onUnbanUser" | "onDeleteUser"
+>;
 
 const TEMPLATE = "minmax(0,2.4fr) 120px 110px 130px 150px 90px 102px";
-const ROLE_ORDER: Record<string, number> = { user: 0, admin: 1, superadmin: 2 };
 
 function useDateFormatters() {
   const t = useTranslations();
@@ -210,54 +220,46 @@ function UserCard({ user, onClick }: { user: AdminUser; onClick: () => void }) {
   );
 }
 
-export function UserTable({ users, total, ...handlers }: UserTableProps) {
+export function UserTable({
+  users,
+  total,
+  page,
+  pageSize,
+  onPageChange,
+  sort,
+  onSortChange,
+  isStale,
+  ...handlers
+}: UserTableProps) {
   const t = useTranslations();
-  const [sort, setSort] = useState<SortState<SortColumn>>({
-    column: "createdAt",
-    direction: "desc",
-  });
 
-  const sortedUsers = [...users].sort((a, b) => {
-    let comparison = 0;
-    switch (sort.column) {
-      case "name":
-        comparison = (a.name || "").localeCompare(b.name || "");
-        break;
-      case "role":
-        comparison = (ROLE_ORDER[a.role ?? "user"] ?? 0) - (ROLE_ORDER[b.role ?? "user"] ?? 0);
-        break;
-      case "status":
-        comparison = Number(a.banned) - Number(b.banned);
-        break;
-      case "createdAt":
-        comparison = a.createdAt.getTime() - b.createdAt.getTime();
-        break;
-      case "lastActivity":
-        comparison = (a.lastActivity?.getTime() ?? 0) - (b.lastActivity?.getTime() ?? 0);
-        break;
-      case "calendarCount":
-        comparison = a.calendarCount - b.calendarCount;
-        break;
-    }
-    return sort.direction === "asc" ? comparison : -comparison;
-  });
-
-  const onSort = (column: SortColumn) => setSort((prev) => nextSort(prev, column));
-  const header = (column: SortColumn, label: string) => (
-    <SortHeader column={column} label={label} sort={sort} onSort={onSort} />
+  const header = (column: UserSortField, label: string) => (
+    <SortHeader
+      column={column}
+      label={label}
+      sort={sort}
+      onSort={(next) => onSortChange(nextSort(sort, next))}
+    />
   );
   const empty = (
     <p className="px-4 py-10 text-center text-[13px] text-fg-tertiary">
       {t("common.empty.noUsersFound")}
     </p>
   );
+  const pagination = (className?: string) => (
+    <AdminPagination
+      page={page}
+      pageSize={pageSize}
+      shown={users.length}
+      total={total}
+      onPageChange={onPageChange}
+      className={className}
+    />
+  );
 
   return (
-    <>
-      <AdminTableCard
-        className="hidden lg:block"
-        footer={<span>{t("adminUsers.shownOf", { shown: users.length, total })}</span>}
-      >
+    <div aria-busy={isStale || undefined} className={cn(isStale && "opacity-60")}>
+      <AdminTableCard className="hidden lg:block" footer={total > 0 && pagination()}>
         <AdminTableHead
           template={TEMPLATE}
           columns={[
@@ -272,20 +274,21 @@ export function UserTable({ users, total, ...handlers }: UserTableProps) {
             </span>,
           ]}
         />
-        {sortedUsers.length === 0
+        {users.length === 0
           ? empty
-          : sortedUsers.map((user) => <UserRow key={user.id} user={user} {...handlers} />)}
+          : users.map((user) => <UserRow key={user.id} user={user} {...handlers} />)}
       </AdminTableCard>
 
       <div className="flex flex-col gap-[9px] lg:hidden">
-        {sortedUsers.length === 0 ? (
+        {users.length === 0 ? (
           <div className="rounded-[11px] border border-line">{empty}</div>
         ) : (
-          sortedUsers.map((user) => (
+          users.map((user) => (
             <UserCard key={user.id} user={user} onClick={() => handlers.onUserClick(user)} />
           ))
         )}
+        {total > pageSize && pagination("pt-1 text-[12px] text-fg-tertiary")}
       </div>
-    </>
+    </div>
   );
 }

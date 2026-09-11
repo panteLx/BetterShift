@@ -36,12 +36,20 @@ export const queryKeys = {
 
   // Admin Data
   admin: {
-    stats: (deps?: object) => ["admin", "stats", deps] as const,
-    users: (filters?: object) => ["admin", "users", filters] as const,
-    userDetails: (userId: string) => ["admin", "users", userId] as const,
-    calendars: (filters?: object) => ["admin", "calendars", filters] as const,
-    calendarDetails: (calendarId: string) =>
-      ["admin", "calendars", calendarId] as const,
+    stats: ["admin", "stats"] as const,
+    users: {
+      all: ["admin", "users"] as const,
+      lists: ["admin", "users", "list"] as const,
+      list: (params: object) => ["admin", "users", "list", params] as const,
+      detail: (userId: string) => ["admin", "users", "detail", userId] as const,
+    },
+    calendars: {
+      all: ["admin", "calendars"] as const,
+      lists: ["admin", "calendars", "list"] as const,
+      list: (params: object) => ["admin", "calendars", "list", params] as const,
+      detail: (calendarId: string) =>
+        ["admin", "calendars", "detail", calendarId] as const,
+    },
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
   },
 

@@ -238,7 +238,7 @@ export function useAdminAuditLogs(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
     },
   });
 
@@ -257,7 +257,7 @@ export function useAdminAuditLogs(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
     },
   });
 

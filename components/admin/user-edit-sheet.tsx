@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field, inputClass } from "@/components/form-kit";
 import { AdminFormPanel } from "@/components/admin/admin-form-panel";
-import { useAdminUsers, type AdminUser } from "@/hooks/useAdminUsers";
+import { useAdminUserActions, type AdminUser } from "@/hooks/useAdminUsers";
 import { useCanEditUser, useCanChangeUserRole } from "@/hooks/useAdminAccess";
 
 interface UserEditSheetProps {
@@ -18,7 +18,7 @@ interface UserEditSheetProps {
 
 export function UserEditSheet({ open, onOpenChange, user, onSuccess }: UserEditSheetProps) {
   const t = useTranslations();
-  const { updateUser, isLoading } = useAdminUsers();
+  const { updateUser, isUpdating } = useAdminUserActions();
   const canEdit = useCanEditUser(user);
   const canChangeRole = useCanChangeUserRole(user);
 
@@ -54,7 +54,7 @@ export function UserEditSheet({ open, onOpenChange, user, onSuccess }: UserEditS
       title={t("admin.editUser")}
       subtitle={user.name || user.email}
       onSave={handleSave}
-      isSaving={isLoading}
+      isSaving={isUpdating}
       saveDisabled={!hasChanges}
       hasUnsavedChanges={hasChanges}
     >

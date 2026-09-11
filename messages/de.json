@@ -1039,7 +1039,6 @@
     "moreFilters": "Weitere Filter",
     "numbers": "Zahlen",
     "showPassword": "Passwort anzeigen",
-    "shownOf": "{shown} von {total}",
     "subtitle": "{count, plural, one {# Konto} other {# Konten}}{banned, plural, =0 {} other {, davon # gesperrt}}"
   },
   "adminCalendars": {
@@ -1059,5 +1058,9 @@
     "sharesAndLinks": "Freigaben, {links, plural, one {# Zugangslink} other {# Zugangslinks}}",
     "showOrphaned": "Anzeigen",
     "subtitle": "{count, plural, one {# Kalender} other {# Kalender}}, {shifts, plural, one {# Schicht} other {# Schichten}} insgesamt"
+  },
+  "adminPagination": {
+    "range": "{from}–{to} von {total}",
+    "label": "Seiten"
   }
 }

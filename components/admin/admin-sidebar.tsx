@@ -19,7 +19,6 @@ import { Pill } from "@/components/form-kit";
 import { UserAvatar } from "@/components/admin/admin-kit";
 import { useAdminLevel } from "@/hooks/useAdminAccess";
 import { useAdminStats } from "@/hooks/useAdminStats";
-import { useAdminAuditLogs } from "@/hooks/useAdminAuditLogs";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +28,6 @@ export interface AdminSection {
   shortLabel: string;
   icon: LucideIcon;
 }
-
-export const COUNT_PAGINATION = { limit: 1, offset: 0 };
 
 /** The four admin areas, shared by sidebar, tab bar, breadcrumb and dashboard. */
 export function useAdminSections(): AdminSection[] {
@@ -62,11 +59,10 @@ export function AdminSidebar() {
   const sections = useAdminSections();
   const [collapsed, setCollapsed] = useState(false);
   const { stats } = useAdminStats();
-  const { total: auditTotal, isLoading: auditLoading } = useAdminAuditLogs(undefined, undefined, COUNT_PAGINATION);
   const counts: Record<string, number | undefined> = {
     "/admin/users": stats?.users.total,
     "/admin/calendars": stats ? stats.calendars.total + stats.calendars.orphaned : undefined,
-    "/admin/logs": auditLoading ? undefined : auditTotal,
+    "/admin/logs": stats?.auditLogs.total,
   };
 
   return (

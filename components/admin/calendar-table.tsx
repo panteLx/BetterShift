@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { ChevronRight, Ellipsis, Eye, Pencil, Send, Trash2, X } from "lucide-react";
@@ -27,7 +26,9 @@ import {
   nextSort,
   type SortState,
 } from "@/components/admin/admin-table-controls";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { getDateLocale } from "@/lib/locales";
+import type { CalendarSortField } from "@/lib/admin-list";
 import type { AdminCalendar } from "@/hooks/useAdminCalendars";
 import {
   useCanEditCalendar,
@@ -37,9 +38,17 @@ import {
 import { cn } from "@/lib/utils";
 
 interface CalendarTableProps {
+  /** One page of calendars, already sorted by the API */
   calendars: AdminCalendar[];
-  /** All calendars before filtering, for the "n of m" footer */
+  /** Calendars matching the current search and filters */
   total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  sort: SortState<CalendarSortField>;
+  onSortChange: (sort: SortState<CalendarSortField>) => void;
+  /** Dims the rows while the next page loads */
+  isStale?: boolean;
   selectedIds: string[];
   onToggleSelect: (calendarId: string) => void;
   onToggleSelectAll: () => void;
@@ -54,18 +63,8 @@ interface CalendarTableProps {
   emptyMessage?: string;
 }
 
-type SortColumn =
-  | "name"
-  | "createdAt"
-  | "owner"
-  | "shiftsCount"
-  | "sharesCount"
-  | "externalSyncsCount"
-  | "guestPermission";
-
 const TEMPLATE =
   "18px minmax(0,1.2fr) minmax(0,2fr) 110px 90px 90px 70px 120px 102px";
-const PERMISSION_ORDER = { none: 0, read: 1, write: 2 };
 
 // Dark enough for white initials in both themes
 const OWNER_COLORS = ["#0f766e", "#6d28d9", "#344054", "#b45309", "#1d4ed8", "#be185d", "#15803d"];
@@ -350,6 +349,12 @@ function BulkActions({
 export function CalendarTable({
   calendars,
   total,
+  page,
+  pageSize,
+  onPageChange,
+  sort,
+  onSortChange,
+  isStale,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
@@ -361,47 +366,14 @@ export function CalendarTable({
   ...rowHandlers
 }: CalendarTableProps) {
   const t = useTranslations();
-  const [sort, setSort] = useState<SortState<SortColumn>>({
-    column: "createdAt",
-    direction: "desc",
-  });
 
-  const sortedCalendars = [...calendars].sort((a, b) => {
-    // Orphaned calendars always on top
-    const aOrphaned = !a.ownerId;
-    const bOrphaned = !b.ownerId;
-    if (aOrphaned !== bOrphaned) return aOrphaned ? -1 : 1;
-
-    let comparison = 0;
-    switch (sort.column) {
-      case "name":
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case "createdAt":
-        comparison = a.createdAt.getTime() - b.createdAt.getTime();
-        break;
-      case "owner":
-        comparison = (a.owner?.name || "").localeCompare(b.owner?.name || "");
-        break;
-      case "shiftsCount":
-        comparison = a.shiftsCount - b.shiftsCount;
-        break;
-      case "sharesCount":
-        comparison = a.sharesCount - b.sharesCount;
-        break;
-      case "externalSyncsCount":
-        comparison = (a.externalSyncsCount || 0) - (b.externalSyncsCount || 0);
-        break;
-      case "guestPermission":
-        comparison = PERMISSION_ORDER[a.guestPermission] - PERMISSION_ORDER[b.guestPermission];
-        break;
-    }
-    return sort.direction === "asc" ? comparison : -comparison;
-  });
-
-  const onSort = (column: SortColumn) => setSort((prev) => nextSort(prev, column));
-  const header = (column: SortColumn, label: string) => (
-    <SortHeader column={column} label={label} sort={sort} onSort={onSort} />
+  const header = (column: CalendarSortField, label: string) => (
+    <SortHeader
+      column={column}
+      label={label}
+      sort={sort}
+      onSort={(next) => onSortChange(nextSort(sort, next))}
+    />
   );
   const bulk = (
     <BulkActions
@@ -416,18 +388,21 @@ export function CalendarTable({
       {emptyMessage ?? t("admin.calendars.noCalendarsFound")}
     </p>
   );
+  const pagination = (className?: string, extra?: React.ReactNode) => (
+    <AdminPagination
+      page={page}
+      pageSize={pageSize}
+      shown={calendars.length}
+      total={total}
+      onPageChange={onPageChange}
+      extra={extra}
+      className={className}
+    />
+  );
 
   return (
-    <>
-      <AdminTableCard
-        className="hidden lg:block"
-        footer={
-          <>
-            <span>{t("adminUsers.shownOf", { shown: calendars.length, total })}</span>
-            {bulk}
-          </>
-        }
-      >
+    <div aria-busy={isStale || undefined} className={cn(isStale && "opacity-60")}>
+      <AdminTableCard className="hidden lg:block" footer={total > 0 && pagination(undefined, bulk)}>
         <AdminTableHead
           template={TEMPLATE}
           columns={[
@@ -450,9 +425,9 @@ export function CalendarTable({
             </span>,
           ]}
         />
-        {sortedCalendars.length === 0
+        {calendars.length === 0
           ? empty
-          : sortedCalendars.map((calendar) => (
+          : calendars.map((calendar) => (
               <CalendarRow
                 key={calendar.id}
                 calendar={calendar}
@@ -469,10 +444,10 @@ export function CalendarTable({
             {bulk}
           </div>
         )}
-        {sortedCalendars.length === 0 ? (
+        {calendars.length === 0 ? (
           <div className="rounded-[11px] border border-line">{empty}</div>
         ) : (
-          sortedCalendars.map((calendar) => (
+          calendars.map((calendar) => (
             <CalendarCard
               key={calendar.id}
               calendar={calendar}
@@ -482,7 +457,8 @@ export function CalendarTable({
             />
           ))
         )}
+        {total > pageSize && pagination("pt-1 text-[12px] text-fg-tertiary")}
       </div>
-    </>
+    </div>
   );
 }

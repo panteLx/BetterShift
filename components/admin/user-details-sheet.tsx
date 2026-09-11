@@ -10,7 +10,7 @@ import { ListRow, Pill, SectionLabel } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
 import { RolePill, StatTile, StatusPill, UserAvatar } from "@/components/admin/admin-kit";
-import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { fetchAdminUserDetails } from "@/hooks/useAdminUsers";
 import { useUserPermissions } from "@/hooks/useAdminAccess";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getDateLocale } from "@/lib/locales";
@@ -95,10 +95,9 @@ export function UserDetailsSheet({
   const t = useTranslations();
   const dateLocale = getDateLocale(useLocale());
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
-  const { fetchUserDetails } = useAdminUsers();
   const { data: userDetails = null, isError: loadFailed } = useQuery({
-    queryKey: queryKeys.admin.userDetails(userId),
-    queryFn: () => fetchUserDetails(userId),
+    queryKey: queryKeys.admin.users.detail(userId),
+    queryFn: () => fetchAdminUserDetails(userId),
     enabled: open,
     retry: false,
   });

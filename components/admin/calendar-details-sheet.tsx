@@ -10,7 +10,7 @@ import { ListRow, Pill, SectionLabel } from "@/components/form-kit";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
 import { StatTile, UserAvatar } from "@/components/admin/admin-kit";
 import { isOrphaned, ownerColor } from "@/components/admin/calendar-table";
-import { useAdminCalendars } from "@/hooks/useAdminCalendars";
+import { fetchAdminCalendarDetails } from "@/hooks/useAdminCalendars";
 import {
   useCanEditCalendar,
   useCanDeleteCalendar,
@@ -54,10 +54,9 @@ export function CalendarDetailsSheet({
 }: CalendarDetailsSheetProps) {
   const t = useTranslations();
   const dateLocale = getDateLocale(useLocale());
-  const { fetchCalendarDetails } = useAdminCalendars();
   const { data: calendar = null, isError: loadFailed } = useQuery({
-    queryKey: queryKeys.admin.calendarDetails(calendarId),
-    queryFn: () => fetchCalendarDetails(calendarId),
+    queryKey: queryKeys.admin.calendars.detail(calendarId),
+    queryFn: () => fetchAdminCalendarDetails(calendarId),
     enabled: open,
     retry: false,
   });

@@ -16,63 +16,60 @@ import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { SegmentedControl } from "@/components/segmented-control";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
-import { FilterMenuButton } from "@/components/admin/admin-table-controls";
-import { CalendarTable, isOrphaned } from "@/components/admin/calendar-table";
+import { FilterMenuButton, type SortState } from "@/components/admin/admin-table-controls";
+import { CalendarTable } from "@/components/admin/calendar-table";
 import { CalendarDetailsSheet } from "@/components/admin/calendar-details-sheet";
 import { CalendarEditSheet } from "@/components/admin/calendar-edit-sheet";
 import { CalendarTransferSheet } from "@/components/admin/calendar-transfer-sheet";
 import { CalendarDeleteDialog } from "@/components/admin/calendar-delete-dialog";
 import { CalendarBulkDeleteDialog } from "@/components/admin/calendar-bulk-delete-dialog";
 import {
+  useAdminCalendarActions,
   useAdminCalendars,
   type AdminCalendar,
-  type CalendarFilters,
-  type CalendarSort,
 } from "@/hooks/useAdminCalendars";
+import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
+import {
+  ADMIN_PAGE_SIZE,
+  type CalendarContentFilter,
+  type CalendarListParams,
+  type CalendarOwnerFilter,
+  type CalendarSortField,
+} from "@/lib/admin-list";
 
-type ContentFilter = "all" | "shared" | "synced";
-type OwnerFilter = "all" | "orphaned" | "with-owner";
-
-// Stable references so the query key does not change between renders
-const FILTERS: CalendarFilters = {};
-const SORT: CalendarSort = { field: "createdAt", direction: "desc" };
+const NO_SELECTION: string[] = [];
 
 export default function AdminCalendarsPage() {
   const t = useTranslations();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
-  const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
+  const search = useDebouncedSearch();
+  const [contentFilter, setContentFilter] = useState<CalendarContentFilter>("all");
+  const [ownerFilter, setOwnerFilter] = useState<CalendarOwnerFilter>("all");
+  const [sort, setSort] = useState<SortState<CalendarSortField>>({ column: "createdAt", direction: "desc" });
 
-  // Filtering happens client-side so the header can show totals of all calendars.
-  const {
-    calendars: allCalendars,
-    isLoading,
-    deleteCalendar,
-    bulkDeleteCalendars,
-  } = useAdminCalendars(FILTERS, SORT);
+  // Any change to search, filters or sort starts over on the first page
+  const listKey = [search.query, contentFilter, ownerFilter, sort.column, sort.direction].join("|");
+  const [requestedPage, setPage] = useResettableState(listKey, 1);
 
-  // The list endpoint returns no orphan count, so derive it from the full list
-  const orphanedCount = useMemo(() => allCalendars.filter(isOrphaned).length, [allCalendars]);
-
-  const totalShifts = useMemo(
-    () => allCalendars.reduce((sum, cal) => sum + cal.shiftsCount, 0),
-    [allCalendars]
+  const params = useMemo<CalendarListParams>(
+    () => ({
+      search: search.query,
+      content: contentFilter,
+      owner: ownerFilter,
+      sort: sort.column,
+      order: sort.direction,
+      page: requestedPage,
+      limit: ADMIN_PAGE_SIZE,
+    }),
+    [search.query, contentFilter, ownerFilter, sort, requestedPage]
   );
 
-  const calendars = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return allCalendars.filter(
-      (cal) =>
-        (!query || cal.name.toLowerCase().includes(query)) &&
-        (contentFilter === "all" ||
-          (contentFilter === "shared" ? cal.sharesCount > 0 : (cal.externalSyncsCount || 0) > 0)) &&
-        (ownerFilter === "all" || isOrphaned(cal) === (ownerFilter === "orphaned"))
-    );
-  }, [allCalendars, searchQuery, contentFilter, ownerFilter]);
+  const { calendars, total, counts, page, isLoading, isPlaceholderData } = useAdminCalendars(params);
+  const { deleteCalendar, bulkDeleteCalendars } = useAdminCalendarActions();
+  const orphanedCount = counts?.orphaned ?? 0;
 
-  // Selection only counts calendars that are currently visible
-  const [selection, setSelection] = useState<string[]>([]);
+  // Selection is per page: it clears when the page, search, filters or sort change
+  const [selection, setSelection] = useResettableState(`${listKey}|${page}`, NO_SELECTION);
   const selectedIds = useMemo(
     () => selection.filter((id) => calendars.some((cal) => cal.id === id)),
     [selection, calendars]
@@ -147,7 +144,7 @@ export default function AdminCalendarsPage() {
 
   const showOrphanedBanner = orphanedCount > 0 && ownerFilter !== "with-owner";
 
-  if (isLoading && allCalendars.length === 0) {
+  if (isLoading && !counts) {
     return <FullscreenLoader />;
   }
 
@@ -156,10 +153,11 @@ export default function AdminCalendarsPage() {
       <div className="flex flex-col gap-4">
         <AdminPageHeader
           title={t("admin.calendarsMenu")}
-          subtitle={t("adminCalendars.subtitle", {
-            count: allCalendars.length,
-            shifts: totalShifts,
-          })}
+          subtitle={
+            counts
+              ? t("adminCalendars.subtitle", { count: counts.total, shifts: counts.shifts })
+              : undefined
+          }
         />
 
         {showOrphanedBanner && (
@@ -184,8 +182,8 @@ export default function AdminCalendarsPage() {
 
         <div className="flex items-center gap-[9px] max-lg:flex-wrap">
           <AdminSearch
-            value={searchQuery}
-            onChange={setSearchQuery}
+            value={search.input}
+            onChange={search.setInput}
             placeholder={t("admin.calendars.searchPlaceholder")}
             className="lg:w-[340px]"
           />
@@ -211,7 +209,7 @@ export default function AdminCalendarsPage() {
               <DropdownMenuLabel>{t("admin.calendars.owner")}</DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={ownerFilter}
-                onValueChange={(value) => setOwnerFilter(value as OwnerFilter)}
+                onValueChange={(value) => setOwnerFilter(value as CalendarOwnerFilter)}
               >
                 <DropdownMenuRadioItem value="all">
                   {t("admin.calendars.allStatuses")}
@@ -229,7 +227,13 @@ export default function AdminCalendarsPage() {
 
         <CalendarTable
           calendars={calendars}
-          total={allCalendars.length}
+          total={total}
+          page={page}
+          pageSize={ADMIN_PAGE_SIZE}
+          onPageChange={setPage}
+          sort={sort}
+          onSortChange={setSort}
+          isStale={isPlaceholderData}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           onToggleSelectAll={handleToggleSelectAll}
@@ -241,7 +245,7 @@ export default function AdminCalendarsPage() {
           onBulkTransfer={handleBulkTransfer}
           onBulkDelete={handleBulkDelete}
           onClearSelection={() => setSelection([])}
-          emptyMessage={searchQuery ? t("admin.calendars.noSearchResults") : undefined}
+          emptyMessage={search.query ? t("admin.calendars.noSearchResults") : undefined}
         />
       </div>
 
