@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/client";
 import { useAuth } from "@/hooks/useAuth";
+import { safeReturnUrl } from "@/lib/safe-return-url";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,8 +69,8 @@ export default function LoginPage() {
   // Redirect authenticated users to home or returnUrl
   useEffect(() => {
     if (mounted && isAuthenticated) {
-      const returnUrl = searchParams.get("returnUrl");
-      router.replace(returnUrl || "/");
+      const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
+      router.replace(returnUrl);
     }
   }, [mounted, isAuthenticated, searchParams, router]);
 
@@ -175,7 +176,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const returnUrl = searchParams.get("returnUrl") || "/";
+      const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
       await signIn.social({
         provider,
         callbackURL: returnUrl,
@@ -191,7 +192,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const returnUrl = searchParams.get("returnUrl") || "/";
+      const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
       await signIn.oauth2({
         providerId: "custom-oidc",
         callbackURL: returnUrl,
@@ -335,7 +336,7 @@ export default function LoginPage() {
             type="button"
             className="flex h-10 items-center justify-center rounded-[9px] border border-dashed border-control text-[13.5px] font-medium text-fg-secondary transition-colors hover:bg-surface-panel disabled:pointer-events-none disabled:opacity-50"
             onClick={() => {
-              const returnUrl = searchParams.get("returnUrl") || "/";
+              const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
               // replace, not push, so Back does not loop into the login redirect
               router.replace(returnUrl);
             }}
