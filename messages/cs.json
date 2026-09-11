@@ -655,7 +655,8 @@
     "account": "Účet",
     "language": "Jazyk",
     "preferences": "Předvolby",
-    "viewSettings": "Moje zobrazení"
+    "viewSettings": "Moje zobrazení",
+    "settingsAndAccount": "Nastavení a účet"
   },
   "calendarView": {
     "previousMonth": "Předchozí měsíc",

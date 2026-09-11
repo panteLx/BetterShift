@@ -124,6 +124,16 @@ export function AppHeader({
   const signedIn = isAuthEnabled && !isGuest;
   const showUpdate = versionInfo?.hasUpdate && !versionInfo.isDev;
 
+  const brand = (
+    <Link
+      href="/"
+      aria-label={t("app.title")}
+      className="flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-brand"
+    >
+      <CalendarDays className="size-[15px] text-white" />
+    </Link>
+  );
+
   const actions = (
     <>
       {selectedCalendar && (
@@ -134,7 +144,6 @@ export function AppHeader({
               : t("syncNotifications.title")
           }
           onClick={onSyncNotifications}
-          className="hidden lg:flex"
         >
           <Bell className="size-4" />
           {hasSyncErrors && (
@@ -151,12 +160,14 @@ export function AppHeader({
           <Settings className="size-4" />
         </HeaderIconButton>
       )}
-      {/* Phones have no gear: the avatar opens the settings sheet with the calendar group */}
+      {/* On phones the menu button is the gear and opens the settings sheet with the calendar group */}
       {signedIn ? (
         <UserMenu onOpenViewSettings={onViewSettings} onOpenPhoneMenu={onSettings} />
       ) : (
         <GuestMenu
           showLogin={isAuthEnabled}
+          // The guest banner right below already offers the login on phones
+          loginOnPhone={false}
           onOpenViewSettings={onViewSettings}
           onOpenPhoneMenu={onSettings}
         />
@@ -169,13 +180,7 @@ export function AppHeader({
       <header className="sticky top-0 z-30 border-b border-line bg-background">
         {/* Desktop */}
         <div className="hidden h-14 items-center gap-3 px-[18px] lg:flex">
-          <Link
-            href="/"
-            aria-label={t("app.title")}
-            className="flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-brand"
-          >
-            <CalendarDays className="size-[15px] text-white" />
-          </Link>
+          {brand}
           <CalendarSwitcher
             calendars={calendars}
             selectedId={selectedCalendar}
@@ -203,6 +208,7 @@ export function AppHeader({
 
         {/* Mobile */}
         <div className="flex items-center gap-2.5 px-4 py-2.5 lg:hidden">
+          {brand}
           <div className="min-w-0 flex-1">
             <CalendarSwitcher
               size="mobile"
@@ -213,15 +219,6 @@ export function AppHeader({
               onCompare={onCompare}
             />
           </div>
-          {selectedCalendar && hasSyncErrors && (
-            <HeaderIconButton
-              label={t("syncNotifications.hasErrors")}
-              onClick={onSyncNotifications}
-            >
-              <Bell className="size-4" />
-              <span className="absolute -right-[3px] -top-[3px] size-2 rounded-full border-[1.5px] border-background bg-destructive" />
-            </HeaderIconButton>
-          )}
           {actions}
         </div>
         {showUpdate && (

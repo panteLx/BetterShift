@@ -64,25 +64,23 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
     return null;
   }
 
-  const avatar = (
-    <Avatar className="size-9 lg:size-8">
-      <AvatarImage src={user.image || undefined} alt={user.name || ""} />
-      <AvatarFallback className="bg-line text-[12px] font-semibold text-fg-body">
-        {user.name ? getInitials(user.name) : <User className="h-4 w-4" />}
-      </AvatarFallback>
-    </Avatar>
-  );
-
   if (!desktop) {
+    // Gear for settings; the corner avatar says the account lives there too
     return (
       <>
         <button
           type="button"
           onClick={onOpenPhoneMenu ?? (() => setPhoneMenuOpen(true))}
-          className="shrink-0 rounded-full"
-          aria-label={t("settings.title")}
+          className="relative flex size-9 shrink-0 items-center justify-center rounded-lg border border-line text-fg-secondary"
+          aria-label={t("appMenu.settingsAndAccount")}
         >
-          {avatar}
+          <Settings className="size-4" />
+          <Avatar className="absolute -bottom-1.5 -right-1.5 size-[18px] ring-2 ring-background">
+            <AvatarImage src={user.image || undefined} alt="" />
+            <AvatarFallback className="bg-fg-secondary text-[9px] font-semibold text-background">
+              {user.name ? getInitials(user.name).slice(0, 1) : <User className="size-2.5" />}
+            </AvatarFallback>
+          </Avatar>
         </button>
         {!onOpenPhoneMenu && <PhoneMenu open={phoneMenuOpen} onOpenChange={setPhoneMenuOpen} />}
       </>
@@ -114,7 +112,12 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
             className="shrink-0 rounded-full"
             aria-label={t("appMenu.account")}
           >
-            {avatar}
+            <Avatar className="size-8">
+              <AvatarImage src={user.image || undefined} alt={user.name || ""} />
+              <AvatarFallback className="bg-line text-[12px] font-semibold text-fg-body">
+                {user.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+              </AvatarFallback>
+            </Avatar>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
@@ -172,9 +175,10 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
 /** Guests and auth-less instances still need appearance, language and changelog. */
 export function GuestMenu({
   showLogin,
+  loginOnPhone = true,
   onOpenViewSettings,
   onOpenPhoneMenu,
-}: MenuProps & { showLogin: boolean }) {
+}: MenuProps & { showLogin: boolean; loginOnPhone?: boolean }) {
   const t = useTranslations();
   const locale = useLocale();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
@@ -199,7 +203,7 @@ export function GuestMenu({
         >
           <Settings className="h-4 w-4 text-fg-secondary" />
         </Button>
-        {loginButton}
+        {loginOnPhone && loginButton}
         {!onOpenPhoneMenu && <PhoneMenu open={phoneMenuOpen} onOpenChange={setPhoneMenuOpen} />}
       </>
     );

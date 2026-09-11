@@ -128,7 +128,7 @@ export function CalendarSwitcher({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex min-w-0 items-center outline-none transition-colors",
+          "flex min-w-0 max-w-full items-center outline-none transition-colors",
           mobile
             ? "gap-2 rounded-lg py-1 pr-1"
             : "h-[34px] gap-[9px] rounded-lg border border-line px-[11px] hover:bg-surface-panel"

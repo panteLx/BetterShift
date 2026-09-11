@@ -655,7 +655,8 @@
     "account": "Account",
     "language": "Language",
     "preferences": "Preferences",
-    "viewSettings": "My view"
+    "viewSettings": "My view",
+    "settingsAndAccount": "Settings and account"
   },
   "calendarView": {
     "previousMonth": "Previous month",
