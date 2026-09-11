@@ -157,13 +157,11 @@
     "title": "Calendario",
     "create": "Crea Nuovo Calendario",
     "createDescription": "Crea un nuovo calendario per organizzare i tuoi turni",
-    "selectDescription": "Scegli un calendario per gestire i tuoi turni",
     "name": "Nome Calendario",
     "myCalendars": "I Miei Calendari",
     "sharedCalendars": "Calendari Condivisi",
     "tokenCalendars": "Tramite Link di Accesso",
     "publicCalendars": "Calendari Pubblici",
-    "select": "Il tuo Calendario BetterShift",
     "deleteCalendar": "Elimina Calendario",
     "deleteWarning": "Anche tutti i turni, i preset e le note verranno eliminati.",
     "settings": "Impostazioni Calendario per \"{name}\"",
@@ -518,7 +516,6 @@
   "guest": {
     "viewingAsGuest": "Stai visualizzando come ospite",
     "bannerMessage": "Stai visualizzando questo calendario come ospite. Accedi per l'accesso completo.",
-    "loginForFullAccess": "Accedi per l'accesso completo",
     "cannotEdit": "Non puoi modificare in modalità sola lettura"
   },
   "share": {
@@ -815,5 +812,90 @@
     "clearSelection": "Cancella Selezione",
     "deleteSelectedLogsDescription": "Elimina {count, plural, one {# log selezionato} other {# log selezionati}}. Questa azione non può essere annullata.",
     "willDeleteSelectedLogs": "{count, plural, one {# log} other {# log}} verranno eliminati permanentemente"
+  },
+  "appearance": {
+    "title": "Aspetto",
+    "hint": "La scelta vale per questo dispositivo ed è salvata localmente. Il cambio è immediato, senza ricaricare.",
+    "system": {
+      "title": "Sistema",
+      "description": "Segue l’impostazione del dispositivo"
+    },
+    "light": {
+      "title": "Chiaro",
+      "description": "Sempre chiaro"
+    },
+    "dark": {
+      "title": "Scuro",
+      "description": "Sempre scuro"
+    }
+  },
+  "appMenu": {
+    "account": "Account",
+    "language": "Lingua",
+    "preferences": "Preferenze",
+    "viewSettings": "Visualizzazione"
+  },
+  "calendarView": {
+    "previousMonth": "Mese precedente",
+    "nextMonth": "Mese successivo",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "yesterday": "Ieri",
+    "calendarWeek": "Settimana {week}",
+    "weekdayShort": {
+      "monday": "Lu",
+      "tuesday": "Ma",
+      "wednesday": "Me",
+      "thursday": "Gi",
+      "friday": "Ve",
+      "saturday": "Sa",
+      "sunday": "Do"
+    },
+    "allDayShort": "giornata",
+    "allDayTiny": "gior.",
+    "moreShifts": "+{count} altri",
+    "externalCount": "{count} esterni",
+    "hasNotes": "{count, plural, one {# nota} other {# note}}",
+    "shift": "Turno",
+    "kpiShifts": "Turni",
+    "kpiHours": "Ore",
+    "kpiNotes": "Note",
+    "kpiAvgPerShift": "⌀ per turno",
+    "kpiFreeDays": "Giorni liberi",
+    "dayEmpty": "Nessuna voce in questo giorno.",
+    "dayFree": "libero",
+    "notesCount": "{count, plural, one {# nota} other {# note}}",
+    "addNoteOrEvent": "Nota o evento",
+    "monthTotal": "Totale di {month}",
+    "allShiftsIn": "Tutti i turni di {month}",
+    "openStats": "Grafici e statistiche",
+    "shiftCount": "{count, plural, one {# turno} other {# turni}}",
+    "shiftActions": "Azioni del turno",
+    "external": "esterno",
+    "syncedReadOnly": "Da un calendario esterno, sola lettura",
+    "changedOn": "modificato il {date}",
+    "stamp": "Timbro",
+    "managePresets": "Gestisci modelli",
+    "createPreset": "Crea modello",
+    "manage": "Gestisci",
+    "stampHint": "Tocca un giorno per aggiungere {title}, tocca di nuovo per rimuoverlo.",
+    "addShiftManually": "Aggiungi turno manualmente",
+    "tabDay": "Giorno",
+    "tabMonth": "Mese",
+    "tabNotes": "Note",
+    "sheetTabs": "Scegli sezione",
+    "sheetDescription": "Turni, statistiche e note del giorno selezionato",
+    "sheetExpand": "Espandi",
+    "sheetShrink": "Riduci",
+    "periodLabel": "Periodo",
+    "wholeWeek": "Settimana intera",
+    "wholeMonth": "Mese intero",
+    "wholeYear": "Anno intero",
+    "readOnlyTitle": "Sola lettura",
+    "readOnlyMessage": "Questo calendario è stato condiviso con te in sola lettura, quindi modelli e creazione sono nascosti.",
+    "offlineTitle": "Nessuna connessione al server",
+    "offlineMessage": "Stai vedendo l’ultimo stato caricato. Le modifiche torneranno possibili quando la connessione sarà ripristinata; non vengono salvate nel frattempo.",
+    "retry": "Riprova",
+    "note": "Nota"
   }
 }

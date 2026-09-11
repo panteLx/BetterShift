@@ -157,13 +157,11 @@
     "title": "Kalendář",
     "create": "Vytvořit nový kalendář",
     "createDescription": "Vytvořte nový kalendář pro organizaci svých směn",
-    "selectDescription": "Vyberte kalendář pro správu svých směn",
     "name": "Název kalendáře",
     "myCalendars": "Moje kalendáře",
     "sharedCalendars": "Sdílené kalendáře",
     "tokenCalendars": "Přes přístupový odkaz",
     "publicCalendars": "Veřejné kalendáře",
-    "select": "Váš kalendář BetterShift",
     "deleteCalendar": "Smazat kalendář",
     "deleteWarning": "Smazány budou také všechny směny, předvolby a poznámky.",
     "settings": "Nastavení kalendáře „{name}“",
@@ -518,7 +516,6 @@
   "guest": {
     "viewingAsGuest": "Prohlížíte si jako host",
     "bannerMessage": "Tento kalendář si prohlížíte jako host. Pro plný přístup se přihlaste.",
-    "loginForFullAccess": "Přihlaste se pro plný přístup",
     "cannotEdit": "V režimu pouze pro čtení nelze upravovat"
   },
   "share": {
@@ -815,5 +812,90 @@
     "clearSelection": "Zrušit výběr",
     "deleteSelectedLogsDescription": "Smazat {count, plural, one {# vybraný protokol} few {# vybrané protokoly} other {# vybraných protokolů}}. Tuto akci nelze vrátit zpět.",
     "willDeleteSelectedLogs": "{count, plural, one {# protokol} few {# protokoly} other {# protokolů}} bude trvale smazáno"
+  },
+  "appearance": {
+    "title": "Vzhled",
+    "hint": "Volba platí pro toto zařízení a ukládá se lokálně. Změna se projeví okamžitě, bez obnovení stránky.",
+    "system": {
+      "title": "Systém",
+      "description": "Řídí se nastavením zařízení"
+    },
+    "light": {
+      "title": "Světlý",
+      "description": "Vždy světlý"
+    },
+    "dark": {
+      "title": "Tmavý",
+      "description": "Vždy tmavý"
+    }
+  },
+  "appMenu": {
+    "account": "Účet",
+    "language": "Jazyk",
+    "preferences": "Předvolby",
+    "viewSettings": "Zobrazení"
+  },
+  "calendarView": {
+    "previousMonth": "Předchozí měsíc",
+    "nextMonth": "Další měsíc",
+    "today": "Dnes",
+    "tomorrow": "Zítra",
+    "yesterday": "Včera",
+    "calendarWeek": "Týden {week}",
+    "weekdayShort": {
+      "monday": "Po",
+      "tuesday": "Út",
+      "wednesday": "St",
+      "thursday": "Čt",
+      "friday": "Pá",
+      "saturday": "So",
+      "sunday": "Ne"
+    },
+    "allDayShort": "celý den",
+    "allDayTiny": "den",
+    "moreShifts": "+{count} další",
+    "externalCount": "{count} externí",
+    "hasNotes": "{count, plural, one {# poznámka} few {# poznámky} other {# poznámek}}",
+    "shift": "Směna",
+    "kpiShifts": "Směny",
+    "kpiHours": "Hodiny",
+    "kpiNotes": "Poznámky",
+    "kpiAvgPerShift": "⌀ na směnu",
+    "kpiFreeDays": "Volné dny",
+    "dayEmpty": "Na tento den není nic zapsáno.",
+    "dayFree": "volno",
+    "notesCount": "{count, plural, one {# poznámka} few {# poznámky} other {# poznámek}}",
+    "addNoteOrEvent": "Poznámka nebo událost",
+    "monthTotal": "{month} celkem",
+    "allShiftsIn": "Všechny směny: {month}",
+    "openStats": "Grafy a statistiky",
+    "shiftCount": "{count, plural, one {# směna} few {# směny} other {# směn}}",
+    "shiftActions": "Akce pro směnu",
+    "external": "externí",
+    "syncedReadOnly": "Z externího kalendáře, jen pro čtení",
+    "changedOn": "změněno {date}",
+    "stamp": "Razítko",
+    "managePresets": "Spravovat šablony",
+    "createPreset": "Vytvořit šablonu",
+    "manage": "Spravovat",
+    "stampHint": "Klepnutím na den přidáte {title}, dalším klepnutím ji odeberete.",
+    "addShiftManually": "Přidat směnu ručně",
+    "tabDay": "Den",
+    "tabMonth": "Měsíc",
+    "tabNotes": "Poznámky",
+    "sheetTabs": "Vybrat oblast",
+    "sheetDescription": "Směny, statistiky a poznámky vybraného dne",
+    "sheetExpand": "Rozbalit",
+    "sheetShrink": "Zmenšit",
+    "periodLabel": "Období",
+    "wholeWeek": "Celý týden",
+    "wholeMonth": "Celý měsíc",
+    "wholeYear": "Celý rok",
+    "readOnlyTitle": "Jen pro čtení",
+    "readOnlyMessage": "Tento kalendář s vámi byl sdílen jen pro čtení, proto jsou šablony a přidávání skryté.",
+    "offlineTitle": "Žádné spojení se serverem",
+    "offlineMessage": "Vidíte naposledy načtený stav. Změny budou znovu možné po obnovení spojení; mezitím se neukládají.",
+    "retry": "Zkusit znovu",
+    "note": "Poznámka"
   }
 }

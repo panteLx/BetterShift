@@ -7,8 +7,10 @@ import { ShiftsOverviewDialog } from "@/components/shifts-overview-dialog";
 import { ViewSettingsSheet } from "@/components/view-settings-sheet";
 import { NoteSheet } from "@/components/note-sheet";
 import { NotesListDialog } from "@/components/notes-list-dialog";
+import { PresetManageSheet } from "@/components/preset-manage-sheet";
+import { MonthShiftsDialog, MonthStatsDialog } from "@/components/month-dialogs";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
-import { CalendarNote } from "@/lib/db/schema";
+import { CalendarNote, ShiftPreset } from "@/lib/db/schema";
 
 interface DialogManagerProps {
   // Calendar Dialog
@@ -107,6 +109,21 @@ interface DialogManagerProps {
   onEditNoteFromList: (note: CalendarNote) => void;
   onDeleteNoteFromList: (noteId: string) => void;
   onAddNewNote: () => void;
+
+  // Month summary dialogs opened from the day inspector
+  currentDate: Date;
+  shifts: ShiftWithCalendar[];
+  canEditShifts: boolean;
+  showMonthStatsDialog: boolean;
+  onMonthStatsDialogChange: (open: boolean) => void;
+  showMonthShiftsDialog: boolean;
+  onMonthShiftsDialogChange: (open: boolean) => void;
+  onDeleteShift: (shift: ShiftWithCalendar) => void;
+
+  // Preset management opened from the stamp dock
+  presets: ShiftPreset[];
+  showPresetManageDialog: boolean;
+  onPresetManageDialogChange: (open: boolean) => void;
 }
 
 export function DialogManager(props: DialogManagerProps) {
@@ -239,6 +256,30 @@ export function DialogManager(props: DialogManagerProps) {
           onDeleteNote={props.onDeleteNoteFromList}
           onAddNew={props.onAddNewNote}
           calendarId={props.selectedCalendar || undefined}
+        />
+      )}
+      <MonthStatsDialog
+        open={props.showMonthStatsDialog}
+        onOpenChange={props.onMonthStatsDialogChange}
+        currentDate={props.currentDate}
+        calendarId={props.selectedCalendar || undefined}
+      />
+      <MonthShiftsDialog
+        open={props.showMonthShiftsDialog}
+        onOpenChange={props.onMonthShiftsDialogChange}
+        currentDate={props.currentDate}
+        shifts={props.shifts}
+        canEdit={props.canEditShifts}
+        onEditShift={(shift) => props.onEditShiftFromDayDialog?.(shift)}
+        onDeleteShift={props.onDeleteShift}
+      />
+      {props.selectedCalendar && (
+        <PresetManageSheet
+          open={props.showPresetManageDialog}
+          onOpenChange={props.onPresetManageDialogChange}
+          calendarId={props.selectedCalendar}
+          presets={props.presets}
+          onPresetsChange={props.onPresetsChange}
         />
       )}
       <NoteSheet

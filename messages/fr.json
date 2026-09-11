@@ -157,13 +157,11 @@
     "title": "Calendrier",
     "create": "Créer un nouveau calendrier",
     "createDescription": "Créez un nouveau calendrier pour organiser vos créneaux",
-    "selectDescription": "Choisissez un calendrier pour gérer vos créneaux",
     "name": "Nom du calendrier",
     "myCalendars": "Mes calendriers",
     "sharedCalendars": "Calendriers partagés",
     "tokenCalendars": "Via lien d'accès",
     "publicCalendars": "Calendriers publics",
-    "select": "Votre calendrier BetterShift",
     "deleteCalendar": "Supprimer le calendrier",
     "deleteWarning": "Tous les créneaux, modèles et notes seront également supprimés.",
     "settings": "Paramètres du calendrier \"{name}\"",
@@ -518,7 +516,6 @@
   "guest": {
     "viewingAsGuest": "Vous consultez en tant qu'invité",
     "bannerMessage": "Vous consultez ce calendrier en tant qu'invité. Connectez-vous pour un accès complet.",
-    "loginForFullAccess": "Se connecter pour un accès complet",
     "cannotEdit": "Vous ne pouvez pas modifier en mode lecture seule"
   },
   "share": {
@@ -815,5 +812,90 @@
     "clearSelection": "Effacer la sélection",
     "deleteSelectedLogsDescription": "Supprimer {count, plural, one {# journal sélectionné} other {# journaux sélectionnés}}. Cette action est irréversible.",
     "willDeleteSelectedLogs": "{count, plural, one {# journal} other {# journaux}} sera/seront supprimé(s) définitivement"
+  },
+  "appearance": {
+    "title": "Apparence",
+    "hint": "Le choix s’applique à cet appareil et est enregistré localement. Il prend effet immédiatement, sans rechargement.",
+    "system": {
+      "title": "Système",
+      "description": "Suit le réglage de l’appareil"
+    },
+    "light": {
+      "title": "Clair",
+      "description": "Toujours clair"
+    },
+    "dark": {
+      "title": "Sombre",
+      "description": "Toujours sombre"
+    }
+  },
+  "appMenu": {
+    "account": "Compte",
+    "language": "Langue",
+    "preferences": "Préférences",
+    "viewSettings": "Affichage"
+  },
+  "calendarView": {
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "today": "Aujourd’hui",
+    "tomorrow": "Demain",
+    "yesterday": "Hier",
+    "calendarWeek": "Semaine {week}",
+    "weekdayShort": {
+      "monday": "Lu",
+      "tuesday": "Ma",
+      "wednesday": "Me",
+      "thursday": "Je",
+      "friday": "Ve",
+      "saturday": "Sa",
+      "sunday": "Di"
+    },
+    "allDayShort": "journée",
+    "allDayTiny": "jour",
+    "moreShifts": "+{count} de plus",
+    "externalCount": "{count} externes",
+    "hasNotes": "{count, plural, one {# note} other {# notes}}",
+    "shift": "Service",
+    "kpiShifts": "Services",
+    "kpiHours": "Heures",
+    "kpiNotes": "Notes",
+    "kpiAvgPerShift": "⌀ par service",
+    "kpiFreeDays": "Jours libres",
+    "dayEmpty": "Rien n’est prévu ce jour-là.",
+    "dayFree": "libre",
+    "notesCount": "{count, plural, one {# note} other {# notes}}",
+    "addNoteOrEvent": "Note ou événement",
+    "monthTotal": "Total de {month}",
+    "allShiftsIn": "Tous les services de {month}",
+    "openStats": "Graphiques et statistiques",
+    "shiftCount": "{count, plural, one {# service} other {# services}}",
+    "shiftActions": "Actions du service",
+    "external": "externe",
+    "syncedReadOnly": "Depuis un calendrier externe, lecture seule",
+    "changedOn": "modifié le {date}",
+    "stamp": "Tampon",
+    "managePresets": "Gérer les modèles",
+    "createPreset": "Créer un modèle",
+    "manage": "Gérer",
+    "stampHint": "Touchez un jour pour ajouter {title}, touchez à nouveau pour le retirer.",
+    "addShiftManually": "Ajouter un service manuellement",
+    "tabDay": "Jour",
+    "tabMonth": "Mois",
+    "tabNotes": "Notes",
+    "sheetTabs": "Choisir la section",
+    "sheetDescription": "Services, statistiques et notes du jour sélectionné",
+    "sheetExpand": "Agrandir",
+    "sheetShrink": "Réduire",
+    "periodLabel": "Période",
+    "wholeWeek": "Semaine entière",
+    "wholeMonth": "Mois entier",
+    "wholeYear": "Année entière",
+    "readOnlyTitle": "Lecture seule",
+    "readOnlyMessage": "Ce calendrier vous a été partagé en lecture seule ; les modèles et l’ajout sont donc masqués.",
+    "offlineTitle": "Pas de connexion au serveur",
+    "offlineMessage": "Vous voyez le dernier état chargé. Les modifications seront de nouveau possibles une fois la connexion rétablie ; elles ne sont pas mises en attente.",
+    "retry": "Réessayer",
+    "note": "Note"
   }
 }

@@ -157,13 +157,11 @@
     "title": "Kalender",
     "create": "Neuen Kalender erstellen",
     "createDescription": "Erstelle einen neuen Kalender, um deine Schichten zu organisieren",
-    "selectDescription": "Wähle einen Kalender aus, um deine Schichten zu verwalten",
     "name": "Kalendername",
     "myCalendars": "Meine Kalender",
     "sharedCalendars": "Geteilte Kalender",
     "tokenCalendars": "Via Zugangslink",
     "publicCalendars": "Öffentliche Kalender",
-    "select": "Dein BetterShift Kalender",
     "deleteCalendar": "Kalender löschen",
     "deleteWarning": "Alle Schichten, Presets und Notizen werden ebenfalls gelöscht.",
     "settings": "Kalendereinstellungen für \"{name}\"",
@@ -518,7 +516,6 @@
   "guest": {
     "viewingAsGuest": "Du betrachtest als Gast",
     "bannerMessage": "Du betrachtest diesen Kalender als Gast. Melde dich an für vollen Zugriff.",
-    "loginForFullAccess": "Anmelden für vollen Zugriff",
     "cannotEdit": "Du kannst im Nur-Lesen-Modus nicht bearbeiten"
   },
   "share": {
@@ -815,5 +812,90 @@
     "clearSelection": "Auswahl aufheben",
     "deleteSelectedLogsDescription": "{count, plural, one {# ausgewähltes Protokoll} other {# ausgewählte Protokolle}} löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
     "willDeleteSelectedLogs": "{count, plural, one {# Protokoll} other {# Protokolle}} werden dauerhaft gelöscht"
+  },
+  "appearance": {
+    "title": "Erscheinungsbild",
+    "hint": "Die Wahl gilt pro Gerät und wird lokal gespeichert. Der Wechsel greift sofort, ohne Neuladen.",
+    "system": {
+      "title": "System",
+      "description": "Folgt der Einstellung des Geräts"
+    },
+    "light": {
+      "title": "Hell",
+      "description": "Immer hell"
+    },
+    "dark": {
+      "title": "Dunkel",
+      "description": "Immer dunkel"
+    }
+  },
+  "appMenu": {
+    "account": "Konto",
+    "language": "Sprache",
+    "preferences": "Einstellungen",
+    "viewSettings": "Ansicht"
+  },
+  "calendarView": {
+    "previousMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "yesterday": "Gestern",
+    "calendarWeek": "KW {week}",
+    "weekdayShort": {
+      "monday": "Mo",
+      "tuesday": "Di",
+      "wednesday": "Mi",
+      "thursday": "Do",
+      "friday": "Fr",
+      "saturday": "Sa",
+      "sunday": "So"
+    },
+    "allDayShort": "ganztg.",
+    "allDayTiny": "ganzt.",
+    "moreShifts": "+{count} weitere",
+    "externalCount": "{count} extern",
+    "hasNotes": "{count, plural, one {# Notiz} other {# Notizen}}",
+    "shift": "Schicht",
+    "kpiShifts": "Schichten",
+    "kpiHours": "Stunden",
+    "kpiNotes": "Notizen",
+    "kpiAvgPerShift": "⌀ pro Schicht",
+    "kpiFreeDays": "Freie Tage",
+    "dayEmpty": "An diesem Tag ist nichts eingetragen.",
+    "dayFree": "frei",
+    "notesCount": "{count, plural, one {# Notiz} other {# Notizen}}",
+    "addNoteOrEvent": "Notiz oder Event",
+    "monthTotal": "{month} gesamt",
+    "allShiftsIn": "Alle Schichten im {month}",
+    "openStats": "Diagramme und Auswertung",
+    "shiftCount": "{count, plural, one {# Schicht} other {# Schichten}}",
+    "shiftActions": "Aktionen für die Schicht",
+    "external": "extern",
+    "syncedReadOnly": "Aus einem externen Kalender, nur lesbar",
+    "changedOn": "geändert {date}",
+    "stamp": "Stempel",
+    "managePresets": "Vorlagen verwalten",
+    "createPreset": "Vorlage anlegen",
+    "manage": "Verwalten",
+    "stampHint": "Tag antippen setzt {title}, nochmal antippen entfernt ihn.",
+    "addShiftManually": "Schicht manuell anlegen",
+    "tabDay": "Tag",
+    "tabMonth": "Monat",
+    "tabNotes": "Notizen",
+    "sheetTabs": "Bereich wählen",
+    "sheetDescription": "Schichten, Auswertung und Notizen des gewählten Tages",
+    "sheetExpand": "Aufziehen",
+    "sheetShrink": "Verkleinern",
+    "periodLabel": "Zeitraum",
+    "wholeWeek": "Ganze Woche",
+    "wholeMonth": "Ganzer Monat",
+    "wholeYear": "Ganzes Jahr",
+    "readOnlyTitle": "Nur lesen",
+    "readOnlyMessage": "Dieser Kalender wurde dir schreibgeschützt freigegeben. Vorlagen und Anlegen sind deshalb ausgeblendet.",
+    "offlineTitle": "Keine Verbindung zum Server",
+    "offlineMessage": "Du siehst den zuletzt geladenen Stand. Änderungen sind erst wieder möglich, wenn die Verbindung steht — sie werden nicht zwischengespeichert.",
+    "retry": "Erneut versuchen",
+    "note": "Notiz"
   }
 }

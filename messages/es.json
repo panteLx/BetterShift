@@ -157,13 +157,11 @@
     "title": "Calendario",
     "create": "Crear nuevo calendario",
     "createDescription": "Crea un nuevo calendario para organizar tus turnos",
-    "selectDescription": "Elige un calendario para gestionar tus turnos",
     "name": "Nombre del calendario",
     "myCalendars": "Mis calendarios",
     "sharedCalendars": "Calendarios compartidos",
     "tokenCalendars": "Vía enlace de acceso",
     "publicCalendars": "Calendarios públicos",
-    "select": "Tu calendario BetterShift",
     "deleteCalendar": "Eliminar calendario",
     "deleteWarning": "Todos los turnos, preajustes y notas también se eliminarán.",
     "settings": "Ajustes del calendario para \"{name}\"",
@@ -518,7 +516,6 @@
   "guest": {
     "viewingAsGuest": "Estás viendo como invitado",
     "bannerMessage": "Estás viendo este calendario como invitado. Inicia sesión para tener acceso completo.",
-    "loginForFullAccess": "Iniciar sesión para acceso completo",
     "cannotEdit": "No puedes editar en modo de solo lectura"
   },
   "share": {
@@ -815,5 +812,90 @@
     "clearSelection": "Limpiar selección",
     "deleteSelectedLogsDescription": "Eliminar {count, plural, one {# registro seleccionado} other {# registros seleccionados}}. Esta acción no se puede deshacer.",
     "willDeleteSelectedLogs": "{count, plural, one {# registro} other {# registros}} se borrarán permanentemente"
+  },
+  "appearance": {
+    "title": "Apariencia",
+    "hint": "La elección se aplica a este dispositivo y se guarda localmente. El cambio es inmediato, sin recargar.",
+    "system": {
+      "title": "Sistema",
+      "description": "Sigue la configuración del dispositivo"
+    },
+    "light": {
+      "title": "Claro",
+      "description": "Siempre claro"
+    },
+    "dark": {
+      "title": "Oscuro",
+      "description": "Siempre oscuro"
+    }
+  },
+  "appMenu": {
+    "account": "Cuenta",
+    "language": "Idioma",
+    "preferences": "Preferencias",
+    "viewSettings": "Vista"
+  },
+  "calendarView": {
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "yesterday": "Ayer",
+    "calendarWeek": "Semana {week}",
+    "weekdayShort": {
+      "monday": "Lu",
+      "tuesday": "Ma",
+      "wednesday": "Mi",
+      "thursday": "Ju",
+      "friday": "Vi",
+      "saturday": "Sá",
+      "sunday": "Do"
+    },
+    "allDayShort": "todo el día",
+    "allDayTiny": "día",
+    "moreShifts": "+{count} más",
+    "externalCount": "{count} externos",
+    "hasNotes": "{count, plural, one {# nota} other {# notas}}",
+    "shift": "Turno",
+    "kpiShifts": "Turnos",
+    "kpiHours": "Horas",
+    "kpiNotes": "Notas",
+    "kpiAvgPerShift": "⌀ por turno",
+    "kpiFreeDays": "Días libres",
+    "dayEmpty": "No hay nada registrado este día.",
+    "dayFree": "libre",
+    "notesCount": "{count, plural, one {# nota} other {# notas}}",
+    "addNoteOrEvent": "Nota o evento",
+    "monthTotal": "Total de {month}",
+    "allShiftsIn": "Todos los turnos de {month}",
+    "openStats": "Gráficos y estadísticas",
+    "shiftCount": "{count, plural, one {# turno} other {# turnos}}",
+    "shiftActions": "Acciones del turno",
+    "external": "externo",
+    "syncedReadOnly": "De un calendario externo, solo lectura",
+    "changedOn": "modificado {date}",
+    "stamp": "Sello",
+    "managePresets": "Gestionar plantillas",
+    "createPreset": "Crear plantilla",
+    "manage": "Gestionar",
+    "stampHint": "Toca un día para añadir {title}; vuelve a tocar para quitarlo.",
+    "addShiftManually": "Añadir turno manualmente",
+    "tabDay": "Día",
+    "tabMonth": "Mes",
+    "tabNotes": "Notas",
+    "sheetTabs": "Elegir sección",
+    "sheetDescription": "Turnos, estadísticas y notas del día seleccionado",
+    "sheetExpand": "Ampliar",
+    "sheetShrink": "Reducir",
+    "periodLabel": "Periodo",
+    "wholeWeek": "Semana completa",
+    "wholeMonth": "Mes completo",
+    "wholeYear": "Año completo",
+    "readOnlyTitle": "Solo lectura",
+    "readOnlyMessage": "Este calendario se compartió contigo en modo de solo lectura; por eso las plantillas y la creación están ocultas.",
+    "offlineTitle": "Sin conexión con el servidor",
+    "offlineMessage": "Ves el último estado cargado. Podrás hacer cambios cuando vuelva la conexión; no se guardan entretanto.",
+    "retry": "Reintentar",
+    "note": "Nota"
   }
 }

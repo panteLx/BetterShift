@@ -157,13 +157,11 @@
     "title": "Calendar",
     "create": "Create New Calendar",
     "createDescription": "Create a new calendar to organize your shifts",
-    "selectDescription": "Choose a calendar to manage your shifts",
     "name": "Calendar Name",
     "myCalendars": "My Calendars",
     "sharedCalendars": "Shared Calendars",
     "tokenCalendars": "Via Access Link",
     "publicCalendars": "Public Calendars",
-    "select": "Your BetterShift Calendar",
     "deleteCalendar": "Delete Calendar",
     "deleteWarning": "All shifts, presets and notes will also be deleted.",
     "settings": "Calendar Settings for \"{name}\"",
@@ -518,7 +516,6 @@
   "guest": {
     "viewingAsGuest": "You are viewing as guest",
     "bannerMessage": "You are viewing this calendar as a guest. Sign in for full access.",
-    "loginForFullAccess": "Sign in for full access",
     "cannotEdit": "You cannot edit in read-only mode"
   },
   "share": {
@@ -815,5 +812,90 @@
     "clearSelection": "Clear Selection",
     "deleteSelectedLogsDescription": "Delete {count, plural, one {# selected log} other {# selected logs}}. This action cannot be undone.",
     "willDeleteSelectedLogs": "{count, plural, one {# log} other {# logs}} will be permanently deleted"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "hint": "Your choice applies to this device and is stored locally. It takes effect immediately, without reloading.",
+    "system": {
+      "title": "System",
+      "description": "Follows your device setting"
+    },
+    "light": {
+      "title": "Light",
+      "description": "Always light"
+    },
+    "dark": {
+      "title": "Dark",
+      "description": "Always dark"
+    }
+  },
+  "appMenu": {
+    "account": "Account",
+    "language": "Language",
+    "preferences": "Preferences",
+    "viewSettings": "View"
+  },
+  "calendarView": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "calendarWeek": "Week {week}",
+    "weekdayShort": {
+      "monday": "Mo",
+      "tuesday": "Tu",
+      "wednesday": "We",
+      "thursday": "Th",
+      "friday": "Fr",
+      "saturday": "Sa",
+      "sunday": "Su"
+    },
+    "allDayShort": "all day",
+    "allDayTiny": "all day",
+    "moreShifts": "+{count} more",
+    "externalCount": "{count} external",
+    "hasNotes": "{count, plural, one {# note} other {# notes}}",
+    "shift": "Shift",
+    "kpiShifts": "Shifts",
+    "kpiHours": "Hours",
+    "kpiNotes": "Notes",
+    "kpiAvgPerShift": "⌀ per shift",
+    "kpiFreeDays": "Days off",
+    "dayEmpty": "Nothing is scheduled on this day.",
+    "dayFree": "off",
+    "notesCount": "{count, plural, one {# note} other {# notes}}",
+    "addNoteOrEvent": "Note or event",
+    "monthTotal": "{month} total",
+    "allShiftsIn": "All shifts in {month}",
+    "openStats": "Charts and statistics",
+    "shiftCount": "{count, plural, one {# shift} other {# shifts}}",
+    "shiftActions": "Shift actions",
+    "external": "external",
+    "syncedReadOnly": "From an external calendar, read-only",
+    "changedOn": "changed {date}",
+    "stamp": "Stamp",
+    "managePresets": "Manage presets",
+    "createPreset": "Create preset",
+    "manage": "Manage",
+    "stampHint": "Tap a day to add {title}, tap again to remove it.",
+    "addShiftManually": "Add shift manually",
+    "tabDay": "Day",
+    "tabMonth": "Month",
+    "tabNotes": "Notes",
+    "sheetTabs": "Choose section",
+    "sheetDescription": "Shifts, statistics and notes for the selected day",
+    "sheetExpand": "Expand",
+    "sheetShrink": "Shrink",
+    "periodLabel": "Period",
+    "wholeWeek": "Whole week",
+    "wholeMonth": "Whole month",
+    "wholeYear": "Whole year",
+    "readOnlyTitle": "Read-only",
+    "readOnlyMessage": "This calendar was shared with you as read-only, so presets and adding entries are hidden.",
+    "offlineTitle": "No connection to the server",
+    "offlineMessage": "You are looking at the last loaded state. Changes are possible again once the connection is back — they are not stored in between.",
+    "retry": "Try again",
+    "note": "Note"
   }
 }
