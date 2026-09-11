@@ -134,8 +134,7 @@
     "urlPlaceholder": "https://..."
   },
   "app": {
-    "title": "BetterShift",
-    "subtitle": "Organisez vos créneaux"
+    "title": "BetterShift"
   },
   "calendar": {
     "title": "Calendrier",
@@ -158,7 +157,6 @@
     "browseCalendars": "Calendriers partagés",
     "browseCalendarsDescription": "Découvrez et gérez vos abonnements aux calendriers",
     "subscribe": "S'abonner",
-    "subscribed": "Abonné",
     "noPublicCalendars": "Aucun calendrier public disponible",
     "noSharedCalendars": "Aucun calendrier partagé avec vous pour le moment",
     "noHiddenCalendars": "Aucun calendrier masqué",
@@ -273,21 +271,8 @@
     "connected": "Connecté au serveur",
     "disconnected": "Connexion au serveur perdue"
   },
-  "onboarding": {
-    "welcome": "Bienvenue sur BetterShift",
-    "description": "Créez votre premier calendrier pour gérer vos créneaux.",
-    "createCalendar": "Créer un calendrier"
-  },
-  "guestEmptyState": {
-    "title": "Aucun calendrier public disponible",
-    "description": "Aucun calendrier public n'est partagé pour l'instant. Connectez-vous pour créer et gérer vos propres calendriers.",
-    "loginButton": "Aller à la connexion"
-  },
-  "footer": {
-    "version": "Version",
-    "github": "GitHub",
-    "support": "Support"
-  },
+  "onboarding": {},
+  "guestEmptyState": {},
   "theme": {
     "switchToLight": "Passer en mode clair",
     "switchToDark": "Passer en mode sombre"
@@ -359,28 +344,15 @@
     "selectAtLeastOne": "Veuillez sélectionner au moins un calendrier"
   },
   "update": {
-    "available": "Mise à jour disponible",
-    "newVersion": "La version {version} est disponible",
-    "viewChangelog": "Voir le journal des modifications"
+    "newVersion": "La version {version} est disponible"
   },
   "auth": {
     "login": "Se connecter",
-    "loginTitle": "Connexion à BetterShift",
-    "loginDescription": "Connectez-vous avec votre compte ou utilisez l'un des fournisseurs ci-dessous",
     "register": "S'inscrire",
-    "registerTitle": "Créer un compte",
-    "registerDescription": "Créez un nouveau compte pour commencer",
     "logout": "Se déconnecter",
     "profile": "Profil",
-    "profileTitle": "Votre profil",
-    "profileDescription": "Gérez les paramètres et préférences de votre compte",
-    "profileBasicInfoDescription": "Les informations de base de votre compte",
-    "changePasswordDescription": "Mettez à jour votre mot de passe pour sécuriser votre compte",
-    "connectedAccountsDescription": "Gérez vos fournisseurs OAuth liés",
     "dangerZone": "Zone de danger",
-    "dangerZoneDescription": "Actions irréversibles affectant votre compte",
     "logoutDescription": "Se déconnecter de la session actuelle",
-    "deleteAccountDescription": "Supprimer définitivement votre compte et toutes vos données",
     "noConnectedAccounts": "Aucun compte lié pour l'instant",
     "emailPasswordAuth": "E-mail / Mot de passe",
     "emailPlaceholder": "votre@email.com",
@@ -389,13 +361,9 @@
     "confirmPasswordLabel": "Confirmation du mot de passe",
     "enterPassword": "Saisir le mot de passe",
     "namePlaceholder": "Votre nom",
-    "continueWith": "Continuer avec {provider}",
-    "alreadyHaveAccount": "Vous avez déjà un compte ?",
     "noAccountYet": "Pas encore de compte ?",
     "changePassword": "Modifier le mot de passe",
     "deleteAccount": "Supprimer le compte",
-    "editProfile": "Modifier le profil",
-    "editProfileDescription": "Mettez à jour votre nom, e-mail et photo de profil",
     "profileUpdated": "Profil mis à jour avec succès",
     "profilePicture": "Photo de profil",
     "avatarHint": "5 Mo maximum. Formats acceptés : JPEG, PNG, GIF, WebP",
@@ -424,17 +392,12 @@
       "discord": "Discord",
       "customOidc": "SSO"
     },
-    "activeSessionsDescription": "Gérez vos appareils et sessions connectés",
     "noActiveSessions": "Aucune session active",
-    "browser": "Navigateur",
-    "operatingSystem": "Système d'exploitation",
-    "logoutAllDevices": "Se déconnecter de tous les autres appareils",
     "sessionsRevokedCount": "Déconnecté de {count} appareil(s)"
   },
   "system": {
     "unavailable": "Système indisponible",
-    "unavailableDescription": "Le système est actuellement indisponible en raison d'une erreur critique. Veuillez réessayer ultérieurement ou contacter un administrateur.",
-    "unavailableRetry": "Veuillez actualiser cette page pour réessayer ou revenez plus tard."
+    "unavailableDescription": "Le système est actuellement indisponible en raison d'une erreur critique. Veuillez réessayer ultérieurement ou contacter un administrateur."
   },
   "guest": {
     "viewingAsGuest": "Vous consultez en tant qu'invité",
@@ -497,8 +460,6 @@
     "resource": "Ressource",
     "details": "Détails",
     "clearAll": "Tout effacer",
-    "refresh": "Actualiser",
-    "refreshed": "Journal d'activité actualisé",
     "confirmClear": "Voulez-vous vraiment effacer tous les journaux d'activité ? Cette action est irréversible.",
     "totalLogs": "{count} entrées au total",
     "showingResults": "Affichage de {start} à {end} sur {total}",
@@ -947,5 +908,72 @@
     "entryCount": "{count, plural, one {# entrée} other {# entrées}}",
     "addAnother": "Ajouter une autre entrée",
     "shortcutHint": "Raccourci : clic droit sur un jour sur ordinateur, appui long sur mobile."
+  },
+  "authPage": {
+    "loginSubtitle": "Accéder à vos calendriers",
+    "signInWith": "Se connecter avec {provider}",
+    "registerTitle": "Créer un compte",
+    "registerSubtitle": "Vous serez connecté directement ensuite",
+    "passwordHint": "Au moins 8 caractères",
+    "repeatPassword": "Répéter le mot de passe",
+    "passwordsMatch": "Les mots de passe correspondent",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "registerNote": "L'inscription se fait uniquement par e-mail. Les fournisseurs comme Google ou le SSO sont disponibles lors de la connexion. Le premier compte d'une instance devient superadministrateur.",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "sampleMonth": "Mois d'exemple",
+    "instance": "Instance",
+    "data": "Données",
+    "dataValue": "local, SQLite",
+    "statusOk": "accessible",
+    "statusDown": "inaccessible",
+    "statusChecking": "vérification …"
+  },
+  "emptyState": {
+    "guestBadge": "Invité",
+    "noCalendarTitle": "Pas encore de calendrier",
+    "noCalendarDescription": "Un calendrier regroupe les services, modèles et partages d'un groupe. Vous pourrez ensuite en créer autant que vous voulez et passer de l'un à l'autre.",
+    "createCalendar": "Créer un calendrier",
+    "browseShared": "Parcourir les partagés",
+    "guestTitle": "Aucun calendrier partagé publiquement",
+    "guestDescription": "Sans compte, vous ne voyez que les calendriers explicitement ouverts aux invités. Si vous avez reçu un lien d'accès, ouvrez-le directement – le lien contient l'accès.",
+    "pasteAccessLink": "Coller un lien d'accès",
+    "registrationEnabled": "L'inscription est activée sur cette instance.",
+    "accessLinkDescription": "Collez le lien que vous avez reçu – ou seulement le jeton qu'il contient.",
+    "accessLinkLabel": "Lien d'accès",
+    "accessLinkInvalid": "Ce n'est pas un lien d'accès valide.",
+    "openAccessLink": "Ouvrir"
+  },
+  "discovery": {
+    "unsubscribe": "Se désabonner"
+  },
+  "profile": {
+    "title": "Mon compte",
+    "navProfileHint": "Nom, e-mail, photo de profil",
+    "navPasswordHint": "Confirmer le mot de passe actuel",
+    "navSessionsHint": "{count, plural, one {# appareil connecté} other {# appareils connectés}}",
+    "navActivityHint": "Ce qui a changé récemment",
+    "navDangerHint": "Déconnexion, suppression du compte",
+    "groupAccount": "Compte",
+    "groupSecurity": "Sécurité",
+    "chooseImage": "Choisir une image",
+    "removeImage": "Supprimer",
+    "appliesEverywhere": "Les modifications s'appliquent immédiatement à tous les appareils.",
+    "discard": "Ignorer",
+    "managedByProvider": "Votre nom et votre e-mail proviennent de votre fournisseur de connexion et ne peuvent pas être modifiés ici.",
+    "accountsTitle": "Méthodes de connexion",
+    "accountsHint": "Vous pouvez vous connecter avec ces comptes.",
+    "connectedSince": "Connecté depuis le {date}",
+    "passwordNote": "Les autres appareils restent connectés.",
+    "sessionsTitle": "Appareils connectés",
+    "sessionsHint": "La déconnexion met fin à la session immédiatement.",
+    "signOutOthers": "Déconnecter les autres",
+    "thisDevice": "cet appareil",
+    "activeNow": "actif maintenant",
+    "sessionRevoked": "Appareil déconnecté",
+    "unknownBrowser": "Navigateur inconnu",
+    "unknownOs": "Système inconnu",
+    "deleteImpact": "Les calendriers, créneaux et partages sont également supprimés.",
+    "deleteNeedsPassword": "Nécessite votre mot de passe."
   }
 }

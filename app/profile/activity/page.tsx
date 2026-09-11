@@ -1,92 +1,104 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Search,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useActivityLogs } from "@/hooks/useActivityLogs";
-import { useVersionInfo } from "@/hooks/useVersionInfo";
+import { useActivityLogs, type UnifiedActivityLog } from "@/hooks/useActivityLogs";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { AuthHeader } from "@/components/auth-header";
-import { AppFooter } from "@/components/app-footer";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Trash2,
-  Search,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-import { format } from "date-fns";
+import { ChoiceChips, inputClass, Pill } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
+import { UserMenu } from "@/components/user-menu";
+import { AccountPageHeader } from "@/components/profile/account-layout";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
-/**
- * Activity Log Page - Full-screen table view for user activity logs
- *
- * Features:
- * - Merged view of auditLogs + syncLogs
- * - Advanced filters (type, date range, severity, search)
- * - Sortable columns
- * - Expandable rows for metadata
- * - Pagination
- * - Actions: Clear all, Mark all as read, Refresh
- * - Responsive design
- */
+type TypeFilter = "all" | UnifiedActivityLog["type"];
+type SeverityFilter = "all" | UnifiedActivityLog["severity"];
+type SortColumn = "timestamp" | "type" | "severity";
+
+const SEVERITY_ORDER = { info: 0, warning: 1, error: 2, critical: 3 };
+
+const SEVERITY_TONE = {
+  info: "neutral",
+  warning: "warning",
+  error: "danger",
+  critical: "danger",
+} as const;
+
+// Chip rows scroll sideways on phones instead of wrapping into a tall block
+const chipRowClass =
+  "-mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0 [&_[role=radiogroup]]:flex-nowrap lg:[&_[role=radiogroup]]:flex-wrap [&_button]:shrink-0 [&_button]:whitespace-nowrap";
+
+function ActionCode({ action }: { action: string }) {
+  return (
+    <code className="inline-block max-w-full truncate rounded-md bg-surface-sunken px-1.5 py-0.5 align-middle font-mono text-[12px] font-medium text-fg-body">
+      {action}
+    </code>
+  );
+}
+
+function LogDetails({ log, surface }: { log: UnifiedActivityLog; surface: string }) {
+  const t = useTranslations();
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="eyebrow">{t("activityLog.details")}</div>
+      {log.metadata ? (
+        <pre
+          className={cn(
+            "max-w-full overflow-auto whitespace-pre-wrap break-words rounded-[9px] border border-line p-3 font-mono text-[12px] leading-relaxed text-fg-body",
+            surface
+          )}
+        >
+          {JSON.stringify(log.metadata, null, 2)}
+        </pre>
+      ) : (
+        <p className="text-[13px] text-fg-tertiary">{t("activityLog.noMetadata")}</p>
+      )}
+    </div>
+  );
+}
+
+/** Merged audit and sync log of the signed-in user, with filters, sorting and pagination. */
 export default function ActivityLogPage() {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
   const router = useRouter();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { isLoading: authLoading, isAuthenticated } = useAuth();
-  const versionInfo = useVersionInfo();
 
-  // Filter State (managed locally like admin audit log page)
   const [page, setPage] = useState(0);
   const limit = 50;
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Sort State
-  const [sortColumn, setSortColumn] = useState<
-    "timestamp" | "type" | "severity" | null
-  >("timestamp");
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>("timestamp");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  // Build filters and pagination with useMemo (like admin audit log page)
   const filters = useMemo(
     () => ({
-      type:
-        typeFilter !== "all"
-          ? (typeFilter as "sync" | "auth" | "calendar" | "security")
-          : undefined,
-      severity:
-        severityFilter !== "all"
-          ? (severityFilter as "info" | "warning" | "error" | "critical")
-          : undefined,
+      type: typeFilter !== "all" ? typeFilter : undefined,
+      severity: severityFilter !== "all" ? severityFilter : undefined,
       search: debouncedSearch || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
@@ -102,26 +114,20 @@ export default function ActivityLogPage() {
     [page, limit]
   );
 
-  // Use hook with filters and pagination
-  const { logs, total, isLoading, error, clearLogs } = useActivityLogs(
-    filters,
-    pagination
-  );
+  const { logs, total, isLoading, error, clearLogs } = useActivityLogs(filters, pagination);
 
-  // Calculate pagination info
   const hasMore = (page + 1) * limit < total;
 
-  // UI State (must be defined before any early returns)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
-  // Handler functions that combine filter changes with page reset
-  const handleTypeFilterChange = (value: string) => {
+  // Every filter change starts again on the first page
+  const handleTypeFilterChange = (value: TypeFilter) => {
     setTypeFilter(value);
     setPage(0);
   };
 
-  const handleSeverityFilterChange = (value: string) => {
+  const handleSeverityFilterChange = (value: SeverityFilter) => {
     setSeverityFilter(value);
     setPage(0);
   };
@@ -141,7 +147,6 @@ export default function ActivityLogPage() {
     setPage(0);
   }, []);
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       handleDebouncedSearchChange(searchQuery);
@@ -150,33 +155,29 @@ export default function ActivityLogPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, handleDebouncedSearchChange]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.replace("/login");
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Show fullscreen loader only during initial auth check
-  // Don't show loader during data refetches to prevent UI flashing
+  // Only the initial auth check blocks the page; refetches keep the table visible
   if (authLoading) {
     return <FullscreenLoader />;
   }
 
-  // Toggle row expansion
   const toggleRow = (logId: string) => {
     setExpandedRows((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(logId)) {
-        newSet.delete(logId);
+      const next = new Set(prev);
+      if (next.has(logId)) {
+        next.delete(logId);
       } else {
-        newSet.add(logId);
+        next.add(logId);
       }
-      return newSet;
+      return next;
     });
   };
 
-  // Sort logs
   const sortedLogs = [...logs].sort((a, b) => {
     if (!sortColumn) return 0;
 
@@ -190,18 +191,14 @@ export default function ActivityLogPage() {
         comparison = a.type.localeCompare(b.type);
         break;
       case "severity":
-        const severityOrder = { info: 0, warning: 1, error: 2, critical: 3 };
-        comparison =
-          (severityOrder[a.severity as keyof typeof severityOrder] ?? 0) -
-          (severityOrder[b.severity as keyof typeof severityOrder] ?? 0);
+        comparison = (SEVERITY_ORDER[a.severity] ?? 0) - (SEVERITY_ORDER[b.severity] ?? 0);
         break;
     }
 
     return sortDirection === "asc" ? comparison : -comparison;
   });
 
-  // Handle sort column click
-  const handleSort = (column: "timestamp" | "type" | "severity") => {
+  const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
@@ -210,45 +207,11 @@ export default function ActivityLogPage() {
     }
   };
 
-  // Severity badge color
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "info":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      case "warning":
-        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      case "error":
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-      case "critical":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      default:
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-    }
-  };
-
-  // Type badge color
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "auth":
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20";
-      case "calendar":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      case "sync":
-        return "bg-cyan-500/10 text-cyan-500 border-cyan-500/20";
-      case "security":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      default:
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-    }
-  };
-
-  // Clear all logs with confirmation
   const handleClearAll = async () => {
     setClearDialogOpen(false);
     await clearLogs();
   };
 
-  // Clear all filters
   const clearFilters = () => {
     setTypeFilter("all");
     setSeverityFilter("all");
@@ -259,348 +222,347 @@ export default function ActivityLogPage() {
     setPage(0);
   };
 
-  // Check if any filters are active
   const hasActiveFilters =
-    typeFilter !== "all" ||
-    severityFilter !== "all" ||
-    startDate ||
-    endDate ||
-    searchQuery;
+    typeFilter !== "all" || severityFilter !== "all" || startDate || endDate || searchQuery;
 
-  // Pagination handlers
   const goToNextPage = () => setPage((prev) => prev + 1);
   const goToPreviousPage = () => setPage((prev) => Math.max(0, prev - 1));
 
-  return (
-    <div className="flex min-h-screen flex-col">
-      <AuthHeader showUserMenu />
+  const typeLabels: Record<UnifiedActivityLog["type"], string> = {
+    auth: t("activityLog.auth"),
+    calendar: t("activityLog.calendar"),
+    sync: t("activityLog.sync"),
+    security: t("activityLog.security"),
+  };
+  const severityLabels: Record<UnifiedActivityLog["severity"], string> = {
+    info: t("common.severity.info"),
+    warning: t("common.severity.warning"),
+    error: t("common.severity.error"),
+    critical: t("common.severity.critical"),
+  };
 
-      <div className="flex-1 bg-gradient-to-br from-background via-background to-primary/5">
-        <main className="container py-4 sm:py-8 max-w-full sm:max-w-6xl mx-auto px-2 sm:px-4">
-          {/* Header */}
-          <div className="mb-6 sm:mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
-                {t("activityLog.title")}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {t("activityLog.description")}
-              </p>
+  const formatTimestamp = (timestamp: Date) =>
+    timestamp instanceof Date && !isNaN(timestamp.getTime()) ? (
+      <>
+        {format(timestamp, "PP", { locale: dateLocale })}{" "}
+        <span className="text-fg-tertiary">{format(timestamp, "HH:mm:ss", { locale: dateLocale })}</span>
+      </>
+    ) : (
+      "—"
+    );
+
+  const severityPill = (severity: UnifiedActivityLog["severity"]) => (
+    <Pill tone={SEVERITY_TONE[severity] ?? "neutral"}>{severityLabels[severity] ?? severity}</Pill>
+  );
+
+  const sortHeader = (column: SortColumn, label: string) => {
+    const sorted = sortColumn === column;
+    const SortIcon = sortDirection === "asc" ? ChevronUp : ChevronDown;
+    return (
+      <th
+        className="px-3 py-2.5 font-normal"
+        aria-sort={sorted ? (sortDirection === "asc" ? "ascending" : "descending") : undefined}
+      >
+        <button
+          type="button"
+          onClick={() => handleSort(column)}
+          className="eyebrow flex items-center gap-1 transition-colors hover:text-fg-strong"
+        >
+          {label}
+          {sorted && <SortIcon className="size-3.5" />}
+        </button>
+      </th>
+    );
+  };
+
+  const paginationFooter = (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <span className="text-[13px] text-fg-secondary">
+        {t("activityLog.showingResults", {
+          start: page * limit + 1,
+          end: Math.min((page + 1) * limit, total),
+          total,
+        })}
+      </span>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 font-semibold"
+          onClick={goToPreviousPage}
+          disabled={page === 0}
+        >
+          <ChevronLeft className="size-4" />
+          {t("common.previous")}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 font-semibold"
+          onClick={goToNextPage}
+          disabled={!hasMore}
+        >
+          {t("common.next")}
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const table = (
+    <div className="overflow-hidden rounded-[12px] border border-line bg-surface-card">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-surface-panel">
+            <tr className="border-b border-line">
+              <th className="w-10 px-3 py-2.5">
+                <span className="sr-only">{t("activityLog.details")}</span>
+              </th>
+              {sortHeader("timestamp", t("common.labels.time"))}
+              {sortHeader("type", t("activityLog.eventType"))}
+              <th className="eyebrow px-3 py-2.5">{t("common.labels.action")}</th>
+              <th className="eyebrow px-3 py-2.5">{t("activityLog.resource")}</th>
+              {sortHeader("severity", t("common.labels.severity"))}
+            </tr>
+          </thead>
+          <tbody className="[&>tr:last-child]:border-b-0">
+            {sortedLogs.map((log) => {
+              const expanded = expandedRows.has(log.id);
+              return (
+                <Fragment key={log.id}>
+                  <tr
+                    className={cn(
+                      "cursor-pointer border-b border-line-subtle transition-colors hover:bg-surface-panel",
+                      expanded && "bg-surface-panel"
+                    )}
+                    onClick={() => toggleRow(log.id)}
+                  >
+                    <td className="px-3 py-3">
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-label={t("activityLog.details")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleRow(log.id);
+                        }}
+                        className="flex size-6 items-center justify-center rounded-md text-fg-tertiary hover:text-fg-strong"
+                      >
+                        <ChevronRight
+                          className={cn("size-4 transition-transform", expanded && "rotate-90")}
+                        />
+                      </button>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 font-mono text-[12.5px] text-fg-body">
+                      {formatTimestamp(log.timestamp)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-[13px] text-fg-body">
+                      {typeLabels[log.type] ?? log.type}
+                    </td>
+                    <td className="max-w-[260px] px-3 py-3">
+                      <ActionCode action={log.action} />
+                    </td>
+                    <td className="px-3 py-3 text-[13px] text-fg-secondary">
+                      {log.resourceType ? (
+                        <>
+                          {log.resourceType}
+                          {log.resourceId && (
+                            <span className="block max-w-[180px] truncate font-mono text-[11.5px] text-fg-tertiary">
+                              {log.resourceId}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-fg-faint">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">{severityPill(log.severity)}</td>
+                  </tr>
+                  {expanded && (
+                    <tr className="border-b border-line-subtle bg-surface-panel">
+                      <td colSpan={6} className="px-4 pb-4 pt-1">
+                        <LogDetails log={log} surface="bg-surface-card" />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t border-line bg-surface-panel">{paginationFooter}</div>
+    </div>
+  );
+
+  const cards = (
+    <div className="flex flex-col gap-2.5">
+      {sortedLogs.map((log) => {
+        const expanded = expandedRows.has(log.id);
+        return (
+          <div key={log.id} className="overflow-hidden rounded-[12px] border border-line bg-surface-card">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => toggleRow(log.id)}
+              className="flex w-full flex-col gap-1.5 px-3.5 py-3 text-left"
+            >
+              <span className="flex w-full items-center gap-2">
+                <span className="min-w-0 flex-1">
+                  <ActionCode action={log.action} />
+                </span>
+                {severityPill(log.severity)}
+                <ChevronRight
+                  className={cn(
+                    "size-4 shrink-0 text-fg-tertiary transition-transform",
+                    expanded && "rotate-90"
+                  )}
+                />
+              </span>
+              <span className="truncate text-[13.5px] text-fg-body">
+                {typeLabels[log.type] ?? log.type}
+                {log.resourceType && <span className="text-fg-secondary"> · {log.resourceType}</span>}
+              </span>
+              <span className="font-mono text-[12px] text-fg-tertiary">
+                {formatTimestamp(log.timestamp)}
+              </span>
+            </button>
+            {expanded && (
+              <div className="border-t border-line-subtle px-3.5 pb-3.5 pt-3">
+                {log.resourceId && (
+                  <div className="mb-3 truncate font-mono text-[12px] text-fg-tertiary">
+                    {log.resourceId}
+                  </div>
+                )}
+                <LogDetails log={log} surface="bg-surface-panel" />
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="-mx-4">{paginationFooter}</div>
+    </div>
+  );
+
+  const placeholderClass =
+    "rounded-[12px] border border-dashed border-control px-4 py-12 text-center text-[13.5px] text-fg-tertiary";
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-background">
+      <AccountPageHeader
+        className="sticky top-0 z-20"
+        title={t("activityLog.title")}
+        subtitle={t("activityLog.description")}
+        backHref="/profile"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 font-semibold text-danger hover:bg-danger-soft hover:text-danger lg:h-8"
+              onClick={() => setClearDialogOpen(true)}
+              disabled={total === 0}
+              aria-label={t("activityLog.clearAll")}
+            >
+              <Trash2 className="size-4" />
+              <span className="hidden sm:inline">{t("activityLog.clearAll")}</span>
+            </Button>
+            <UserMenu />
+          </>
+        }
+      />
+
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-5 lg:px-[22px] lg:py-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative min-w-0 flex-1 sm:min-w-[240px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-tertiary" />
+              <Input
+                placeholder={t("activityLog.searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(inputClass, "pl-9")}
+              />
             </div>
             <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                aria-label={t("common.labels.startDate")}
+                className={cn(inputClass, "min-w-0 flex-1 font-mono text-[13px] sm:w-[150px] sm:flex-none")}
+              />
+              <span className="text-fg-tertiary">–</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => handleEndDateChange(e.target.value)}
+                aria-label={t("common.labels.endDate")}
+                className={cn(inputClass, "min-w-0 flex-1 font-mono text-[13px] sm:w-[150px] sm:flex-none")}
+              />
+            </div>
+            {hasActiveFilters && (
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setClearDialogOpen(true)}
-                disabled={total === 0}
+                variant="ghost"
+                className="h-10 self-start font-semibold text-fg-secondary sm:self-auto"
+                onClick={clearFilters}
               >
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">
-                  {t("activityLog.clearAll")}
-                </span>
+                <X className="size-4" />
+                {t("common.filters.clearFilters")}
               </Button>
-            </div>
+            )}
           </div>
 
-          {/* Filters Bar */}
-          <div className="mb-6 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Type Filter */}
-              <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder={t("activityLog.allTypes")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    {t("activityLog.allTypes")}
-                  </SelectItem>
-                  <SelectItem value="auth">{t("activityLog.auth")}</SelectItem>
-                  <SelectItem value="calendar">
-                    {t("common.labels.calendar")}
-                  </SelectItem>
-                  <SelectItem value="sync">{t("activityLog.sync")}</SelectItem>
-                  <SelectItem value="security">
-                    {t("activityLog.security")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Severity Filter */}
-              <Select
+          <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-5">
+            <div className={chipRowClass}>
+              <ChoiceChips
+                label={t("activityLog.eventType")}
+                value={typeFilter}
+                onChange={handleTypeFilterChange}
+                options={[
+                  { value: "all", label: t("activityLog.allTypes") },
+                  { value: "auth", label: typeLabels.auth },
+                  { value: "calendar", label: typeLabels.calendar },
+                  { value: "sync", label: typeLabels.sync },
+                  { value: "security", label: typeLabels.security },
+                ]}
+              />
+            </div>
+            <div className={chipRowClass}>
+              <ChoiceChips
+                label={t("common.labels.severity")}
                 value={severityFilter}
-                onValueChange={handleSeverityFilterChange}
-              >
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue
-                    placeholder={t("common.filters.allSeverities")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    {t("common.filters.allSeverities")}
-                  </SelectItem>
-                  <SelectItem value="info">
-                    {t("common.severity.info")}
-                  </SelectItem>
-                  <SelectItem value="warning">
-                    {t("common.severity.warning")}
-                  </SelectItem>
-                  <SelectItem value="error">
-                    {t("common.severity.error")}
-                  </SelectItem>
-                  <SelectItem value="critical">
-                    {t("common.severity.critical")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Date Range - Start Date */}
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  placeholder={t("common.labels.startDate")}
-                  className="w-full sm:w-[150px]"
-                />
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                  placeholder={t("common.labels.endDate")}
-                  className="w-full sm:w-[150px]"
-                />
-              </div>
-
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("activityLog.searchPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button variant="outline" onClick={clearFilters}>
-                  {t("common.filters.clearFilters")}
-                </Button>
-              )}
+                onChange={handleSeverityFilterChange}
+                options={[
+                  { value: "all", label: t("common.filters.allSeverities") },
+                  { value: "info", label: severityLabels.info },
+                  { value: "warning", label: severityLabels.warning },
+                  { value: "error", label: severityLabels.error },
+                  { value: "critical", label: severityLabels.critical },
+                ]}
+              />
             </div>
-
-            {/* Stats */}
-            <div className="text-sm text-muted-foreground">
+            <span className="text-[12.5px] text-fg-tertiary lg:ml-auto">
               {t("activityLog.totalLogs", { count: total })}
-            </div>
+            </span>
           </div>
+        </div>
 
-          {/* Table */}
-          {isLoading && logs.length === 0 && !authLoading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {t("common.loading")}
-            </div>
-          ) : error ? (
-            <div className="text-center py-12 text-red-500">
-              {t("common.error")}: {error?.message || String(error)}
-            </div>
-          ) : logs.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {t("activityLog.noLogs")}
-            </div>
-          ) : (
-            <div className="border border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm rounded-lg overflow-hidden shadow-sm">
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead className="w-8"></TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/80 transition-colors"
-                      onClick={() => handleSort("timestamp")}
-                    >
-                      <div className="flex items-center gap-2">
-                        {t("common.labels.time")}
-                        {sortColumn === "timestamp" &&
-                          (sortDirection === "asc" ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          ))}
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/80 transition-colors"
-                      onClick={() => handleSort("type")}
-                    >
-                      <div className="flex items-center gap-2">
-                        {t("activityLog.eventType")}
-                        {sortColumn === "type" &&
-                          (sortDirection === "asc" ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          ))}
-                      </div>
-                    </TableHead>
-                    <TableHead>{t("common.labels.action")}</TableHead>
-                    <TableHead>{t("activityLog.resource")}</TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/80 transition-colors"
-                      onClick={() => handleSort("severity")}
-                    >
-                      <div className="flex items-center gap-2">
-                        {t("common.labels.severity")}
-                        {sortColumn === "severity" &&
-                          (sortDirection === "asc" ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          ))}
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedLogs.map((log) => (
-                    <React.Fragment key={log.id}>
-                      <TableRow
-                        className="cursor-pointer"
-                        onClick={() => toggleRow(log.id)}
-                      >
-                        <TableCell className="text-center">
-                          {expandedRows.has(log.id) ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.timestamp &&
-                          log.timestamp instanceof Date &&
-                          !isNaN(log.timestamp.getTime()) ? (
-                            <>
-                              {format(log.timestamp, "MMM dd, yyyy", {
-                                locale: dateLocale,
-                              })}
-                              <br />
-                              <span className="text-xs text-muted-foreground">
-                                {format(log.timestamp, "HH:mm:ss", {
-                                  locale: dateLocale,
-                                })}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Invalid date
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn("text-xs", getTypeColor(log.type))}
-                          >
-                            {t(`activityLog.${log.type}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm font-mono text-xs">
-                          {log.action}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {log.resourceType ? (
-                            <span>
-                              {log.resourceType}
-                              {log.resourceId && (
-                                <span className="text-xs block truncate max-w-[150px]">
-                                  {log.resourceId}
-                                </span>
-                              )}
-                            </span>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              getSeverityColor(log.severity)
-                            )}
-                          >
-                            {t(`common.severity.${log.severity}`)}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
+        {isLoading && logs.length === 0 ? (
+          <div className={placeholderClass}>{t("common.loading")}</div>
+        ) : error ? (
+          <StatusBanner tone="danger" icon={TriangleAlert} title={t("common.error")}>
+            {error?.message || String(error)}
+          </StatusBanner>
+        ) : logs.length === 0 ? (
+          <div className={placeholderClass}>{t("activityLog.noLogs")}</div>
+        ) : desktop ? (
+          table
+        ) : (
+          cards
+        )}
+      </main>
 
-                      {/* Expanded Row - Metadata */}
-                      {expandedRows.has(log.id) && (
-                        <TableRow className="bg-muted/20">
-                          <TableCell colSpan={6} className="p-4">
-                            <div className="space-y-2">
-                              <div className="text-sm font-semibold">
-                                {t("activityLog.details")}:
-                              </div>
-                              {log.metadata ? (
-                                <pre className="text-xs bg-background p-3 rounded border whitespace-pre-wrap break-words overflow-auto max-w-full">
-                                  {JSON.stringify(log.metadata, null, 2)}
-                                </pre>
-                              ) : (
-                                <p className="text-sm text-muted-foreground">
-                                  {t("activityLog.noMetadata")}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between p-4 border-t bg-muted/20">
-                <div className="text-sm text-muted-foreground">
-                  {t("activityLog.showingResults", {
-                    start: page * limit + 1,
-                    end: Math.min((page + 1) * limit, total),
-                    total,
-                  })}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToPreviousPage}
-                    disabled={page === 0}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    {t("common.previous")}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToNextPage}
-                    disabled={!hasMore}
-                  >
-                    {t("common.next")}
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-
-      <AppFooter versionInfo={versionInfo} />
-
-      {/* Clear All Confirmation Dialog */}
       <ConfirmationDialog
         open={clearDialogOpen}
         onOpenChange={setClearDialogOpen}

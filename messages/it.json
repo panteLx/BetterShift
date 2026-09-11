@@ -134,8 +134,7 @@
     "urlPlaceholder": "https://..."
   },
   "app": {
-    "title": "BetterShift",
-    "subtitle": "Organizza i tuoi turni"
+    "title": "BetterShift"
   },
   "calendar": {
     "title": "Calendario",
@@ -158,7 +157,6 @@
     "browseCalendars": "Calendari Condivisi",
     "browseCalendarsDescription": "Scopri e gestisci gli abbonamenti ai calendari",
     "subscribe": "Iscriviti",
-    "subscribed": "Iscritto",
     "noPublicCalendars": "Nessun calendario pubblico disponibile",
     "subscriptionSuccess": "Iscritto a {name}",
     "unsubscribeSuccess": "Disiscritto da {name}",
@@ -273,21 +271,8 @@
     "connected": "Connesso al server",
     "disconnected": "Connessione al server persa"
   },
-  "onboarding": {
-    "welcome": "Benvenuto in BetterShift",
-    "description": "Crea il tuo primo calendario per gestire i tuoi turni.",
-    "createCalendar": "Crea Calendario"
-  },
-  "guestEmptyState": {
-    "title": "Nessun Calendario Pubblico Disponibile",
-    "description": "Al momento non ci sono calendari pubblici condivisi. Effettua il login per creare e gestire i tuoi calendari.",
-    "loginButton": "Vai al Login"
-  },
-  "footer": {
-    "version": "Versione",
-    "github": "GitHub",
-    "support": "Supporto"
-  },
+  "onboarding": {},
+  "guestEmptyState": {},
   "theme": {
     "switchToLight": "Passa alla modalità chiara",
     "switchToDark": "Passa alla modalità scura"
@@ -359,28 +344,15 @@
     "selectAtLeastOne": "Seleziona almeno un calendario"
   },
   "update": {
-    "available": "Aggiornamento disponibile",
-    "newVersion": "Versione {version} è disponibile",
-    "viewChangelog": "Visualizza changelog"
+    "newVersion": "Versione {version} è disponibile"
   },
   "auth": {
     "login": "Accedi",
-    "loginTitle": "Accedi a BetterShift",
-    "loginDescription": "Accedi con il tuo account o usa uno dei provider sotto",
     "register": "Registrati",
-    "registerTitle": "Crea Account",
-    "registerDescription": "Crea un nuovo account per iniziare",
     "logout": "Disconnetti",
     "profile": "Profilo",
-    "profileTitle": "Il Tuo Profilo",
-    "profileDescription": "Gestisci le impostazioni e le preferenze del tuo account",
-    "profileBasicInfoDescription": "Le tue informazioni di base dell'account",
-    "changePasswordDescription": "Aggiorna la tua password per mantenere il tuo account sicuro",
-    "connectedAccountsDescription": "Gestisci i tuoi provider OAuth connessi",
     "dangerZone": "Zona Pericolosa",
-    "dangerZoneDescription": "Azioni irreversibili che influenzano il tuo account",
     "logoutDescription": "Disconnettiti dalla tua sessione corrente",
-    "deleteAccountDescription": "Elimina permanentemente il tuo account e tutti i dati",
     "noConnectedAccounts": "Nessun account connesso ancora",
     "emailPasswordAuth": "Email/Password",
     "emailPlaceholder": "tua@email.it",
@@ -389,14 +361,10 @@
     "confirmPasswordLabel": "Conferma Password",
     "enterPassword": "Inserisci password",
     "namePlaceholder": "Il tuo nome",
-    "continueWith": "Continua con {provider}",
     "continueAsGuest": "Continua come Ospite",
-    "alreadyHaveAccount": "Hai già un account?",
     "noAccountYet": "Non hai ancora un account?",
     "changePassword": "Cambia Password",
     "deleteAccount": "Elimina Account",
-    "editProfile": "Modifica Profilo",
-    "editProfileDescription": "Aggiorna il tuo nome, email e immagine del profilo",
     "profileUpdated": "Profilo aggiornato con successo",
     "profilePicture": "Immagine del Profilo",
     "avatarHint": "Max 5MB. Formati supportati: JPEG, PNG, GIF, WebP",
@@ -424,17 +392,12 @@
       "discord": "Discord",
       "customOidc": "SSO"
     },
-    "activeSessionsDescription": "Gestisci i tuoi dispositivi e sessioni attive",
     "noActiveSessions": "Nessuna sessione attiva",
-    "browser": "Browser",
-    "operatingSystem": "Sistema Operativo",
-    "logoutAllDevices": "Disconnetti da tutti gli altri dispositivi",
     "sessionsRevokedCount": "Disconnesso da {count} dispositivo/i"
   },
   "system": {
     "unavailable": "Sistema non disponibile",
-    "unavailableDescription": "Il sistema è attualmente non disponibile a causa di un errore critico. Riprova più tardi o contatta un amministratore.",
-    "unavailableRetry": "Aggiorna questa pagina per riprovare o torna più tardi."
+    "unavailableDescription": "Il sistema è attualmente non disponibile a causa di un errore critico. Riprova più tardi o contatta un amministratore."
   },
   "guest": {
     "viewingAsGuest": "Stai visualizzando come ospite",
@@ -497,8 +460,6 @@
     "resource": "Risorsa",
     "details": "Dettagli",
     "clearAll": "Cancella tutto",
-    "refresh": "Aggiorna",
-    "refreshed": "Registro attività aggiornato",
     "confirmClear": "Sei sicuro di voler cancellare tutti i registri di attività? Questa azione non può essere annullata.",
     "totalLogs": "{count} registri totali",
     "showingResults": "Mostrando {start}-{end} di {total}",
@@ -947,5 +908,72 @@
     "entryCount": "{count, plural, one {# voce} other {# voci}}",
     "addAnother": "Aggiungi un'altra voce",
     "shortcutHint": "Scorciatoia: clic destro su un giorno dal computer, pressione prolungata sul telefono."
+  },
+  "authPage": {
+    "loginSubtitle": "Continua ai tuoi calendari",
+    "signInWith": "Accedi con {provider}",
+    "registerTitle": "Crea account",
+    "registerSubtitle": "Dopo sarai subito connesso",
+    "passwordHint": "Almeno 8 caratteri",
+    "repeatPassword": "Ripeti password",
+    "passwordsMatch": "Le password coincidono",
+    "haveAccount": "Hai già un account?",
+    "registerNote": "La registrazione avviene solo tramite e-mail. Provider come Google o SSO sono disponibili all'accesso. Il primo account di un'istanza diventa superadmin.",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
+    "sampleMonth": "Mese di esempio",
+    "instance": "Istanza",
+    "data": "Dati",
+    "dataValue": "locale, SQLite",
+    "statusOk": "raggiungibile",
+    "statusDown": "non raggiungibile",
+    "statusChecking": "verifica in corso …"
+  },
+  "emptyState": {
+    "guestBadge": "Ospite",
+    "noCalendarTitle": "Ancora nessun calendario",
+    "noCalendarDescription": "Un calendario raccoglie turni, modelli e condivisioni di un gruppo. In seguito puoi crearne quanti vuoi e passare dall'uno all'altro.",
+    "createCalendar": "Crea calendario",
+    "browseShared": "Sfoglia condivisi",
+    "guestTitle": "Nessun calendario condiviso pubblicamente",
+    "guestDescription": "Senza account vedi solo i calendari aperti esplicitamente agli ospiti. Se hai ricevuto un link di accesso, aprilo direttamente: il link contiene l'accesso.",
+    "pasteAccessLink": "Incolla link di accesso",
+    "registrationEnabled": "La registrazione è attiva su questa istanza.",
+    "accessLinkDescription": "Incolla il link che hai ricevuto, oppure solo il token che contiene.",
+    "accessLinkLabel": "Link di accesso",
+    "accessLinkInvalid": "Questo non è un link di accesso valido.",
+    "openAccessLink": "Apri"
+  },
+  "discovery": {
+    "unsubscribe": "Disiscriviti"
+  },
+  "profile": {
+    "title": "Il mio account",
+    "navProfileHint": "Nome, e-mail, immagine del profilo",
+    "navPasswordHint": "Conferma la password attuale",
+    "navSessionsHint": "{count, plural, one {# dispositivo connesso} other {# dispositivi connessi}}",
+    "navActivityHint": "Cosa è cambiato di recente",
+    "navDangerHint": "Esci, elimina account",
+    "groupAccount": "Account",
+    "groupSecurity": "Sicurezza",
+    "chooseImage": "Scegli immagine",
+    "removeImage": "Rimuovi",
+    "appliesEverywhere": "Le modifiche si applicano subito a tutti i dispositivi.",
+    "discard": "Scarta",
+    "managedByProvider": "Nome ed e-mail provengono dal tuo provider di accesso e non possono essere modificati qui.",
+    "accountsTitle": "Metodi di accesso",
+    "accountsHint": "Puoi accedere con questi account.",
+    "connectedSince": "Collegato dal {date}",
+    "passwordNote": "Gli altri dispositivi restano connessi.",
+    "sessionsTitle": "Dispositivi connessi",
+    "sessionsHint": "La disconnessione termina subito la sessione.",
+    "signOutOthers": "Disconnetti gli altri",
+    "thisDevice": "questo dispositivo",
+    "activeNow": "attivo ora",
+    "sessionRevoked": "Dispositivo disconnesso",
+    "unknownBrowser": "Browser sconosciuto",
+    "unknownOs": "Sistema sconosciuto",
+    "deleteImpact": "Vengono eliminati anche calendari, turni e condivisioni.",
+    "deleteNeedsPassword": "Richiede la tua password."
   }
 }

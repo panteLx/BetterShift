@@ -134,8 +134,7 @@
     "urlPlaceholder": "https://..."
   },
   "app": {
-    "title": "BetterShift",
-    "subtitle": "Organize your shifts"
+    "title": "BetterShift"
   },
   "calendar": {
     "title": "Calendar",
@@ -158,7 +157,6 @@
     "browseCalendars": "Shared Calendars",
     "browseCalendarsDescription": "Discover and manage calendar subscriptions",
     "subscribe": "Subscribe",
-    "subscribed": "Subscribed",
     "noPublicCalendars": "No public calendars available",
     "noSharedCalendars": "No calendars shared with you yet",
     "noHiddenCalendars": "No hidden calendars",
@@ -273,21 +271,8 @@
     "connected": "Connected to server",
     "disconnected": "Connection to server lost"
   },
-  "onboarding": {
-    "welcome": "Welcome to BetterShift",
-    "description": "Create your first calendar to manage your shifts.",
-    "createCalendar": "Create Calendar"
-  },
-  "guestEmptyState": {
-    "title": "No Public Calendars Available",
-    "description": "There are currently no public calendars shared. Please log in to create and manage your own calendars.",
-    "loginButton": "Go to Login"
-  },
-  "footer": {
-    "version": "Version",
-    "github": "GitHub",
-    "support": "Support"
-  },
+  "onboarding": {},
+  "guestEmptyState": {},
   "theme": {
     "switchToLight": "Switch to light mode",
     "switchToDark": "Switch to dark mode"
@@ -359,28 +344,15 @@
     "selectAtLeastOne": "Please select at least one calendar"
   },
   "update": {
-    "available": "Update Available",
-    "newVersion": "Version {version} is available",
-    "viewChangelog": "View Changelog"
+    "newVersion": "Version {version} is available"
   },
   "auth": {
     "login": "Sign In",
-    "loginTitle": "Sign in to BetterShift",
-    "loginDescription": "Sign in with your account or use one of the providers below",
     "register": "Sign Up",
-    "registerTitle": "Create Account",
-    "registerDescription": "Create a new account to get started",
     "logout": "Sign Out",
     "profile": "Profile",
-    "profileTitle": "Your Profile",
-    "profileDescription": "Manage your account settings and preferences",
-    "profileBasicInfoDescription": "Your basic account information",
-    "changePasswordDescription": "Update your password to keep your account secure",
-    "connectedAccountsDescription": "Manage your connected OAuth providers",
     "dangerZone": "Danger Zone",
-    "dangerZoneDescription": "Irreversible actions that affect your account",
     "logoutDescription": "Sign out from your current session",
-    "deleteAccountDescription": "Permanently delete your account and all data",
     "noConnectedAccounts": "No connected accounts yet",
     "emailPasswordAuth": "Email/Password",
     "emailPlaceholder": "your@email.com",
@@ -389,13 +361,9 @@
     "confirmPasswordLabel": "Password Confirmation",
     "enterPassword": "Enter password",
     "namePlaceholder": "Your name",
-    "continueWith": "Continue with {provider}",
-    "alreadyHaveAccount": "Already have an account?",
     "noAccountYet": "Don't have an account yet?",
     "changePassword": "Change Password",
     "deleteAccount": "Delete Account",
-    "editProfile": "Edit Profile",
-    "editProfileDescription": "Update your name, email, and profile picture",
     "profileUpdated": "Profile updated successfully",
     "profilePicture": "Profile Picture",
     "avatarHint": "Max 5MB. Supported formats: JPEG, PNG, GIF, WebP",
@@ -424,17 +392,12 @@
       "discord": "Discord",
       "customOidc": "SSO"
     },
-    "activeSessionsDescription": "Manage your logged-in devices and sessions",
     "noActiveSessions": "No active sessions",
-    "browser": "Browser",
-    "operatingSystem": "OS",
-    "logoutAllDevices": "Logout from all other devices",
     "sessionsRevokedCount": "Logged out from {count} device(s)"
   },
   "system": {
     "unavailable": "System Unavailable",
-    "unavailableDescription": "The system is currently unavailable due to a critical error. Please try again later or contact an administrator.",
-    "unavailableRetry": "Please refresh this page to try again or check back later."
+    "unavailableDescription": "The system is currently unavailable due to a critical error. Please try again later or contact an administrator."
   },
   "guest": {
     "viewingAsGuest": "You are viewing as guest",
@@ -497,8 +460,6 @@
     "resource": "Resource",
     "details": "Details",
     "clearAll": "Clear All",
-    "refresh": "Refresh",
-    "refreshed": "Activity log refreshed",
     "confirmClear": "Are you sure you want to clear all activity logs? This cannot be undone.",
     "totalLogs": "{count} total logs",
     "showingResults": "Showing {start}-{end} of {total}",
@@ -947,5 +908,72 @@
     "entryCount": "{count, plural, one {# entry} other {# entries}}",
     "addAnother": "Add another entry",
     "shortcutHint": "Shortcut: right-click a day on desktop, long-press it on your phone."
+  },
+  "authPage": {
+    "loginSubtitle": "Continue to your calendars",
+    "signInWith": "Sign in with {provider}",
+    "registerTitle": "Create account",
+    "registerSubtitle": "You'll be signed in right away",
+    "passwordHint": "At least 8 characters",
+    "repeatPassword": "Repeat password",
+    "passwordsMatch": "Passwords match",
+    "haveAccount": "Already have an account?",
+    "registerNote": "Registration works by email only. Sign-in providers such as Google or SSO are available when signing in. The first account on an instance becomes superadmin.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "sampleMonth": "Sample month",
+    "instance": "Instance",
+    "data": "Data",
+    "dataValue": "local, SQLite",
+    "statusOk": "reachable",
+    "statusDown": "unreachable",
+    "statusChecking": "checking …"
+  },
+  "emptyState": {
+    "guestBadge": "Guest",
+    "noCalendarTitle": "No calendar yet",
+    "noCalendarDescription": "A calendar brings together a group's shifts, templates and shares. You can create as many as you like later and switch between them.",
+    "createCalendar": "Create calendar",
+    "browseShared": "Browse shared calendars",
+    "guestTitle": "No calendar is shared publicly",
+    "guestDescription": "Without an account you only see calendars that were explicitly opened to guests. If you received an access link, open it directly – the link carries the access.",
+    "pasteAccessLink": "Paste access link",
+    "registrationEnabled": "Registration is enabled on this instance.",
+    "accessLinkDescription": "Paste the link you received – or just the token from it.",
+    "accessLinkLabel": "Access link",
+    "accessLinkInvalid": "This is not a valid access link.",
+    "openAccessLink": "Open"
+  },
+  "discovery": {
+    "unsubscribe": "Unsubscribe"
+  },
+  "profile": {
+    "title": "My account",
+    "navProfileHint": "Name, email, profile picture",
+    "navPasswordHint": "Confirm your current password",
+    "navSessionsHint": "{count, plural, one {# device signed in} other {# devices signed in}}",
+    "navActivityHint": "What changed recently",
+    "navDangerHint": "Sign out, delete account",
+    "groupAccount": "Account",
+    "groupSecurity": "Security",
+    "chooseImage": "Choose image",
+    "removeImage": "Remove",
+    "appliesEverywhere": "Changes apply to all devices immediately.",
+    "discard": "Discard",
+    "managedByProvider": "Your name and email come from your sign-in provider and can't be changed here.",
+    "accountsTitle": "Sign-in methods",
+    "accountsHint": "You can sign in with these accounts.",
+    "connectedSince": "Connected since {date}",
+    "passwordNote": "Other devices stay signed in.",
+    "sessionsTitle": "Signed-in devices",
+    "sessionsHint": "Signing out ends the session immediately.",
+    "signOutOthers": "Sign out all others",
+    "thisDevice": "this device",
+    "activeNow": "active now",
+    "sessionRevoked": "Device signed out",
+    "unknownBrowser": "Unknown browser",
+    "unknownOs": "Unknown system",
+    "deleteImpact": "Calendars, shifts and shares are deleted as well.",
+    "deleteNeedsPassword": "Requires your password."
   }
 }

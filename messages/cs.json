@@ -134,8 +134,7 @@
     "urlPlaceholder": "https://..."
   },
   "app": {
-    "title": "BetterShift",
-    "subtitle": "Organizujte své směny"
+    "title": "BetterShift"
   },
   "calendar": {
     "title": "Kalendář",
@@ -158,7 +157,6 @@
     "browseCalendars": "Sdílené kalendáře",
     "browseCalendarsDescription": "Objevujte a spravujte odběry kalendářů",
     "subscribe": "Odebírat",
-    "subscribed": "Odebíráno",
     "noPublicCalendars": "Nejsou k dispozici žádné veřejné kalendáře",
     "noSharedCalendars": "Zatím s vámi nebyly sdíleny žádné kalendáře",
     "noHiddenCalendars": "Žádné skryté kalendáře",
@@ -273,21 +271,8 @@
     "connected": "Připojeno k serveru",
     "disconnected": "Spojení se serverem bylo ztraceno"
   },
-  "onboarding": {
-    "welcome": "Vítejte v BetterShift",
-    "description": "Vytvořte svůj první kalendář pro správu směn.",
-    "createCalendar": "Vytvořit kalendář"
-  },
-  "guestEmptyState": {
-    "title": "Nejsou k dispozici žádné veřejné kalendáře",
-    "description": "Momentálně nejsou sdíleny žádné veřejné kalendáře. Pro vytváření a správu vlastních kalendářů se prosím přihlaste.",
-    "loginButton": "Přejít na přihlášení"
-  },
-  "footer": {
-    "version": "Verze",
-    "github": "GitHub",
-    "support": "Podpora"
-  },
+  "onboarding": {},
+  "guestEmptyState": {},
   "theme": {
     "switchToLight": "Přepnout na světlý režim",
     "switchToDark": "Přepnout na tmavý režim"
@@ -359,28 +344,15 @@
     "selectAtLeastOne": "Vyberte prosím alespoň jeden kalendář"
   },
   "update": {
-    "available": "Dostupná aktualizace",
-    "newVersion": "Je dostupná verze {version}",
-    "viewChangelog": "Zobrazit seznam změn"
+    "newVersion": "Je dostupná verze {version}"
   },
   "auth": {
     "login": "Přihlásit se",
-    "loginTitle": "Přihlaste se do BetterShift",
-    "loginDescription": "Přihlaste se svým účtem nebo použijte jednoho z poskytovatelů níže",
     "register": "Registrovat se",
-    "registerTitle": "Vytvořit účet",
-    "registerDescription": "Vytvořte si nový účet a začněte",
     "logout": "Odhlásit se",
     "profile": "Profil",
-    "profileTitle": "Váš profil",
-    "profileDescription": "Spravujte nastavení a předvolby svého účtu",
-    "profileBasicInfoDescription": "Základní informace o vašem účtu",
-    "changePasswordDescription": "Aktualizujte své heslo pro zabezpečení účtu",
-    "connectedAccountsDescription": "Spravujte své propojené poskytovatele OAuth",
     "dangerZone": "Nebezpečná zóna",
-    "dangerZoneDescription": "Nevratné akce, které ovlivňují váš účet",
     "logoutDescription": "Odhlásit se z aktuální relace",
-    "deleteAccountDescription": "Trvale smazat váš účet a všechna data",
     "noConnectedAccounts": "Zatím žádné propojené účty",
     "emailPasswordAuth": "E-mail/heslo",
     "emailPlaceholder": "vas@email.cz",
@@ -389,13 +361,9 @@
     "confirmPasswordLabel": "Potvrzení hesla",
     "enterPassword": "Zadejte heslo",
     "namePlaceholder": "Vaše jméno",
-    "continueWith": "Pokračovat přes {provider}",
-    "alreadyHaveAccount": "Už máte účet?",
     "noAccountYet": "Ještě nemáte účet?",
     "changePassword": "Změnit heslo",
     "deleteAccount": "Smazat účet",
-    "editProfile": "Upravit profil",
-    "editProfileDescription": "Aktualizujte své jméno, e-mail a profilový obrázek",
     "profileUpdated": "Profil byl úspěšně aktualizován",
     "profilePicture": "Profilový obrázek",
     "avatarHint": "Max. 5 MB. Podporované formáty: JPEG, PNG, GIF, WebP",
@@ -424,17 +392,12 @@
       "discord": "Discord",
       "customOidc": "SSO"
     },
-    "activeSessionsDescription": "Spravujte svá přihlášená zařízení a relace",
     "noActiveSessions": "Žádné aktivní relace",
-    "browser": "Prohlížeč",
-    "operatingSystem": "OS",
-    "logoutAllDevices": "Odhlásit ze všech ostatních zařízení",
     "sessionsRevokedCount": "Odhlášeno z {count} zařízení"
   },
   "system": {
     "unavailable": "Systém není dostupný",
-    "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce.",
-    "unavailableRetry": "Obnovte prosím tuto stránku a zkuste to znovu, nebo se vraťte později."
+    "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce."
   },
   "guest": {
     "viewingAsGuest": "Prohlížíte si jako host",
@@ -497,8 +460,6 @@
     "resource": "Zdroj",
     "details": "Podrobnosti",
     "clearAll": "Vymazat vše",
-    "refresh": "Obnovit",
-    "refreshed": "Protokol aktivity byl obnoven",
     "confirmClear": "Opravdu chcete vymazat všechny protokoly aktivity? Tuto akci nelze vrátit zpět.",
     "totalLogs": "{count} protokolů celkem",
     "showingResults": "Zobrazeno {start}–{end} z {total}",
@@ -947,5 +908,72 @@
     "entryCount": "{count, plural, one {# záznam} few {# záznamy} other {# záznamů}}",
     "addAnother": "Přidat další záznam",
     "shortcutHint": "Zkratka: pravým tlačítkem na den na počítači, dlouhým stiskem na telefonu."
+  },
+  "authPage": {
+    "loginSubtitle": "Pokračovat ke kalendářům",
+    "signInWith": "Přihlásit se přes {provider}",
+    "registerTitle": "Vytvořit účet",
+    "registerSubtitle": "Poté budete rovnou přihlášeni",
+    "passwordHint": "Alespoň 8 znaků",
+    "repeatPassword": "Zopakovat heslo",
+    "passwordsMatch": "Hesla se shodují",
+    "haveAccount": "Už máte účet?",
+    "registerNote": "Registrace probíhá pouze e-mailem. Poskytovatelé jako Google nebo SSO jsou k dispozici při přihlášení. První účet instance se stane superadministrátorem.",
+    "showPassword": "Zobrazit heslo",
+    "hidePassword": "Skrýt heslo",
+    "sampleMonth": "Ukázkový měsíc",
+    "instance": "Instance",
+    "data": "Data",
+    "dataValue": "lokálně, SQLite",
+    "statusOk": "dostupná",
+    "statusDown": "nedostupná",
+    "statusChecking": "ověřuje se …"
+  },
+  "emptyState": {
+    "guestBadge": "Host",
+    "noCalendarTitle": "Zatím žádný kalendář",
+    "noCalendarDescription": "Kalendář sdružuje směny, šablony a sdílení jedné skupiny. Později si jich můžete vytvořit libovolně mnoho a přepínat mezi nimi.",
+    "createCalendar": "Vytvořit kalendář",
+    "browseShared": "Procházet sdílené",
+    "guestTitle": "Žádný kalendář není veřejně sdílen",
+    "guestDescription": "Bez účtu vidíte jen kalendáře, které byly výslovně otevřeny pro hosty. Pokud jste dostali přístupový odkaz, otevřete ho přímo – odkaz obsahuje přístup.",
+    "pasteAccessLink": "Vložit přístupový odkaz",
+    "registrationEnabled": "Registrace je na této instanci povolena.",
+    "accessLinkDescription": "Vložte odkaz, který jste dostali – nebo jen token z něj.",
+    "accessLinkLabel": "Přístupový odkaz",
+    "accessLinkInvalid": "Toto není platný přístupový odkaz.",
+    "openAccessLink": "Otevřít"
+  },
+  "discovery": {
+    "unsubscribe": "Zrušit odběr"
+  },
+  "profile": {
+    "title": "Můj účet",
+    "navProfileHint": "Jméno, e-mail, profilový obrázek",
+    "navPasswordHint": "Potvrzení aktuálního hesla",
+    "navSessionsHint": "{count, plural, one {# přihlášené zařízení} few {# přihlášená zařízení} other {# přihlášených zařízení}}",
+    "navActivityHint": "Co se naposledy změnilo",
+    "navDangerHint": "Odhlášení, smazání účtu",
+    "groupAccount": "Účet",
+    "groupSecurity": "Zabezpečení",
+    "chooseImage": "Vybrat obrázek",
+    "removeImage": "Odebrat",
+    "appliesEverywhere": "Změny platí okamžitě pro všechna zařízení.",
+    "discard": "Zahodit",
+    "managedByProvider": "Jméno a e-mail pocházejí od vašeho poskytovatele přihlášení a zde je nelze změnit.",
+    "accountsTitle": "Způsoby přihlášení",
+    "accountsHint": "Pomocí těchto účtů se můžete přihlásit.",
+    "connectedSince": "Propojeno od {date}",
+    "passwordNote": "Ostatní zařízení zůstanou přihlášená.",
+    "sessionsTitle": "Přihlášená zařízení",
+    "sessionsHint": "Odhlášení relaci okamžitě ukončí.",
+    "signOutOthers": "Odhlásit ostatní",
+    "thisDevice": "toto zařízení",
+    "activeNow": "právě aktivní",
+    "sessionRevoked": "Zařízení odhlášeno",
+    "unknownBrowser": "Neznámý prohlížeč",
+    "unknownOs": "Neznámý systém",
+    "deleteImpact": "Smažou se i kalendáře, směny a sdílení.",
+    "deleteNeedsPassword": "Vyžaduje vaše heslo."
   }
 }
