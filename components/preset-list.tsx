@@ -20,7 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
-import { getShiftCode } from "@/lib/shift-display";
+import { getShiftCode, presetTime, shiftVars } from "@/lib/shift-display";
 import { ListRow, Pill, RowIconButton, SectionLabel } from "@/components/form-kit";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +85,7 @@ function SortablePresetRow({
         )}
         <span
           className="shift-solid flex size-[22px] shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold"
-          style={{ "--shift": preset.color } as React.CSSProperties}
+          style={shiftVars(preset.color)}
         >
           {getShiftCode(preset.title)}
         </span>
@@ -95,9 +95,7 @@ function SortablePresetRow({
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             <span className="font-mono text-[12px] text-fg-tertiary">
-              {preset.isAllDay
-                ? t("presetSheet.allDayShort")
-                : `${preset.startTime.slice(0, 5)} – ${preset.endTime.slice(0, 5)}`}
+              {presetTime(preset, t("presetSheet.allDayShort"))}
             </span>
             {preset.isSecondary && <Pill>{t("preset.secondary")}</Pill>}
             {preset.hideFromStats && (

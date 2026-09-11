@@ -24,14 +24,7 @@ import { MAX_COMPARE_CALENDARS } from "@/components/calendar-compare-sheet";
 import { useDayLabels } from "@/components/day-inspector";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync, ShiftPreset } from "@/lib/db/schema";
-import {
-  DayLayoutOptions,
-  formatHours,
-  getShiftCode,
-  getShiftMinutes,
-  getShiftsForDay,
-  sortShifts,
-} from "@/lib/shift-display";
+import { DayLayoutOptions, formatHours, getShiftCode, getShiftMinutes, getShiftsForDay, shiftVars, sortShifts } from "@/lib/shift-display";
 import { getDateLocale } from "@/lib/locales";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useStampShortcuts } from "@/hooks/useStampShortcuts";
@@ -500,7 +493,7 @@ function CompareMobile({
                 <span key={title} className="flex items-center gap-1.5 text-[12px] text-fg-body">
                   <span
                     className="shift-solid flex size-[17px] items-center justify-center rounded-[4px] text-[10px] font-bold"
-                    style={{ "--shift": color } as React.CSSProperties}
+                    style={shiftVars(color)}
                   >
                     {getShiftCode(title)}
                   </span>
@@ -589,7 +582,7 @@ function CompareMobile({
                       {first ? (
                         <span
                           className="shift-solid flex h-[18px] min-w-0 flex-1 items-center justify-center rounded-[4px] text-[10.5px] font-bold"
-                          style={{ "--shift": first.color } as React.CSSProperties}
+                          style={shiftVars(first.color)}
                         >
                           {getShiftCode(first.title)}
                           {dayShifts.length > 1 && (

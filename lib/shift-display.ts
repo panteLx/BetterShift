@@ -173,6 +173,13 @@ export function formatHours(
   return unit ? `${hours}h` : hours;
 }
 
+export function presetTime(
+  preset: { isAllDay: boolean; startTime: string; endTime: string },
+  allDayLabel: string
+): string {
+  return preset.isAllDay ? allDayLabel : formatTimeRange(preset);
+}
+
 export function formatTimeRange(times: {
   startTime: string;
   endTime: string;

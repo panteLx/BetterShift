@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { formatLongDate } from "@/lib/date-utils";
 import { CalendarClock, Keyboard, Pencil, Plus, StickyNote, Trash2 } from "lucide-react";
 import { CalendarNote } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { InfoNote, ListRow, Pill, RowIconButton } from "@/components/form-kit";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { parseRecurrence } from "@/components/note-sheet";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { shiftVars } from "@/lib/shift-display";
 
 interface NotesListDialogProps {
   open: boolean;
@@ -41,7 +43,7 @@ function NoteRow({
   const Icon = isEvent ? CalendarClock : StickyNote;
   const [title, ...rest] = note.note.trim().split("\n");
   const subtitle = rest.join(" ").trim();
-  const color = { "--shift": isEvent ? note.color || "var(--brand)" : NOTE_COLOR } as React.CSSProperties;
+  const color = shiftVars(isEvent ? note.color : NOTE_COLOR);
 
   const { repeat, interval } = parseRecurrence(note.recurringPattern, note.recurringInterval);
   const recurrence = !isEvent
@@ -105,12 +107,7 @@ export function NotesListDialog({
   const permission = useCalendarPermission(calendarId);
   const isReadOnly = readOnly || !permission.canEdit;
 
-  const formattedDate = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
+  const formattedDate = formatLongDate(date, locale, { year: true });
 
   // Events first, then plain notes
   const entries = [

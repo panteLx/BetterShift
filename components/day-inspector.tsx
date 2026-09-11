@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { formatLongDate } from "@/lib/date-utils";
 import { format, getISOWeek, isToday, isTomorrow, isYesterday } from "date-fns";
 import { ArrowUpRight, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,16 +48,8 @@ export function useDayLabels(day: Date) {
       : isYesterday(day)
         ? t("calendarView.yesterday")
         : t("calendarView.calendarWeek", { week: getISOWeek(day) });
-  const long = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(day);
-  const short = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-  }).format(day);
+  const long = formatLongDate(day, locale);
+  const short = formatLongDate(day, locale, { month: "short" });
   return { eyebrow, long, short, isToday: isToday(day) };
 }
 

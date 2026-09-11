@@ -19,7 +19,7 @@ import {
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 import { getDateLocale } from "@/lib/locales";
-import { formatHours, formatTimeRange, getShiftMinutes } from "@/lib/shift-display";
+import { formatHours, formatTimeRange, getShiftMinutes, shiftVars } from "@/lib/shift-display";
 import { PeriodSummary } from "@/hooks/useDaySummary";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +77,7 @@ export function ShiftDetailRow({
     <div className="flex items-center gap-[11px] rounded-lg border border-line bg-surface-card px-3 py-[11px]">
       <span
         className="shift-rail h-[34px] w-1 shrink-0 rounded-full"
-        style={{ "--shift": shift.color } as React.CSSProperties}
+        style={shiftVars(shift.color)}
       />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13.5px] font-semibold text-fg-strong">
@@ -256,7 +256,7 @@ export function PeriodSummaryView({
             <div key={row.title} className="flex items-center gap-[9px]">
               <span
                 className="shift-rail size-[7px] shrink-0 rounded-full"
-                style={{ "--shift": row.color } as React.CSSProperties}
+                style={shiftVars(row.color)}
               />
               <span className="min-w-0 flex-1 truncate text-[12.5px] text-fg-body">
                 {row.title}
@@ -269,12 +269,10 @@ export function PeriodSummaryView({
               >
                 <span
                   className="shift-rail block h-full rounded-full"
-                  style={
-                    {
-                      "--shift": row.color,
-                      width: `${max ? Math.round((row.count / max) * 100) : 0}%`,
-                    } as React.CSSProperties
-                  }
+                  style={{
+                    ...shiftVars(row.color),
+                    width: `${max ? Math.round((row.count / max) * 100) : 0}%`,
+                  }}
                 />
               </span>
               <span className="w-[22px] text-right font-mono text-xs text-fg-tertiary">

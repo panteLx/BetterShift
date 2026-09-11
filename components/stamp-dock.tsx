@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ShiftPreset } from "@/lib/db/schema";
-import { getShiftCode } from "@/lib/shift-display";
+import { getShiftCode, presetTime, shiftVars } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
 export function splitStampPresets(presets: ShiftPreset[]) {
@@ -26,12 +26,6 @@ export function splitStampPresets(presets: ShiftPreset[]) {
 /** Presets that get their own chip and number key 1–9; secondary ones sit under "Weitere". */
 export function orderStampPresets(presets: ShiftPreset[]): ShiftPreset[] {
   return splitStampPresets(presets).primary;
-}
-
-function presetTime(preset: ShiftPreset, allDayLabel: string) {
-  return preset.isAllDay
-    ? allDayLabel
-    : `${preset.startTime.slice(0, 5)} – ${preset.endTime.slice(0, 5)}`;
 }
 
 type MoreVariant = "dock" | "compare" | "bar";
@@ -75,7 +69,7 @@ function MoreChip({ variant, count, active, open, className, ...props }: MoreChi
           <>
             <span
               className="shift-solid flex size-[22px] shrink-0 items-center justify-center rounded-[5px] text-[11px] font-bold"
-              style={{ "--shift": active.color } as React.CSSProperties}
+              style={shiftVars(active.color)}
             >
               {getShiftCode(active.title)}
             </span>
@@ -382,7 +376,7 @@ export function MobilePresetBar({
               >
                 <span
                   className="shift-solid flex size-[22px] shrink-0 items-center justify-center rounded-[5px] text-[11px] font-bold"
-                  style={{ "--shift": preset.color } as React.CSSProperties}
+                  style={shiftVars(preset.color)}
                 >
                   {getShiftCode(preset.title)}
                 </span>
@@ -401,9 +395,7 @@ export function MobilePresetBar({
                       on ? "text-brand-ink" : "text-fg-tertiary"
                     )}
                   >
-                    {preset.isAllDay
-                      ? t("shift.allDayShift")
-                      : `${preset.startTime} – ${preset.endTime}`}
+                    {presetTime(preset, t("shift.allDayShift"))}
                   </span>
                 </span>
               </button>

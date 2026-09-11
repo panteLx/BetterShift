@@ -1,9 +1,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
+import { CheckRow, ColorSwatches, Field, inputClass } from "@/components/form-kit";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { DEFAULT_COLOR } from "@/lib/constants";
 import { calculateShiftDuration } from "@/lib/date-utils";
@@ -22,35 +20,6 @@ interface ShiftFormFieldsProps {
 }
 
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
-
-function CheckRow({
-  id,
-  label,
-  checked,
-  onCheckedChange,
-  disabled,
-}: {
-  id: string;
-  label: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-[9px]">
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={(value) => onCheckedChange(value === true)}
-        disabled={disabled}
-        className="size-[17px] rounded-[5px] border-control"
-      />
-      <Label htmlFor={id} className="cursor-pointer text-[13.5px] font-normal text-fg-body">
-        {label}
-      </Label>
-    </div>
-  );
-}
 
 export function ShiftFormFields({
   formData,

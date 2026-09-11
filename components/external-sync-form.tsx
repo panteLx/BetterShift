@@ -5,8 +5,7 @@ import { useTranslations } from "next-intl";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { ChevronDown, FileUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ColorSwatches, Field, inputClass, SectionLabel } from "@/components/form-kit";
+import { CheckRow, ColorSwatches, Field, inputClass, SectionLabel } from "@/components/form-kit";
 import { SegmentedControl } from "@/components/segmented-control";
 import { formatSyncInterval } from "@/components/external-sync-list";
 import {
@@ -157,7 +156,7 @@ export function ExternalSyncForm({
       )}
 
       <div className="flex flex-col gap-[9px]">
-        <CheckboxRow
+        <CheckRow
           id={`${id}-hidden`}
           label={t("syncSheet.hideShifts")}
           checked={values.isHidden}
@@ -165,7 +164,7 @@ export function ExternalSyncForm({
           disabled={disabled}
         />
         {/* Hidden shifts never count, so the stats option is implied and locked. */}
-        <CheckboxRow
+        <CheckRow
           id={`${id}-stats`}
           label={t("syncSheet.excludeFromStats")}
           checked={values.isHidden || values.hideFromStats}
@@ -228,40 +227,6 @@ function IntervalSlider({
   );
 }
 
-function CheckboxRow({
-  id,
-  label,
-  checked,
-  onCheckedChange,
-  disabled,
-}: {
-  id: string;
-  label: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-[9px]">
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={(next) => onCheckedChange(next === true)}
-        disabled={disabled}
-        className="size-[17px] rounded-[5px] border-[1.5px] border-control shadow-none data-[state=checked]:border-brand data-[state=checked]:bg-brand dark:data-[state=checked]:bg-brand"
-      />
-      <label
-        htmlFor={id}
-        className={cn(
-          "text-[13.5px] text-fg-body",
-          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
-        )}
-      >
-        {label}
-      </label>
-    </div>
-  );
-}
 
 function UrlHints() {
   const t = useTranslations();

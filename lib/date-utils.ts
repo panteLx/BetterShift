@@ -9,6 +9,31 @@ export function formatDateToLocal(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const longDateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * The "Montag, 15. Januar" heading used by every day view, sheet and dialog.
+ * Formatters are cached because they are built during render.
+ */
+export function formatLongDate(
+  date: Date,
+  locale: string,
+  { year = false, month = "long" }: { year?: boolean; month?: "long" | "short" } = {}
+): string {
+  const key = `${locale}|${month}|${year}`;
+  let formatter = longDateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      day: "numeric",
+      month,
+      ...(year ? { year: "numeric" as const } : {}),
+    });
+    longDateFormatters.set(key, formatter);
+  }
+  return formatter.format(date);
+}
+
 /**
  * Parses a YYYY-MM-DD date string as a local date (NOT UTC!)
  * This fixes the timezone bug where "2025-01-15" was interpreted as UTC midnight

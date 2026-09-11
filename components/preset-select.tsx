@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import { Field } from "@/components/form-kit";
 import { ShiftPreset } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 interface PresetSelectProps {
   presets: ShiftPreset[];
@@ -42,7 +43,7 @@ export function PresetSelect({ presets, value, onPresetSelect, onClear }: Preset
             >
               <span
                 className="shift-rail size-[7px] shrink-0 rounded-full"
-                style={{ "--shift": preset.color } as React.CSSProperties}
+                style={shiftVars(preset.color)}
               />
               {preset.title}
             </button>

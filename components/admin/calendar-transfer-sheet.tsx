@@ -12,6 +12,7 @@ import { useAdminCalendarActions, type AdminCalendar } from "@/hooks/useAdminCal
 import { fetchAdminUsers } from "@/hooks/useAdminUsers";
 import { useCanTransferCalendar } from "@/hooks/useAdminAccess";
 import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 interface CalendarTransferSheetProps {
   open: boolean;
@@ -161,7 +162,7 @@ export function CalendarTransferSheet({
             <ListRow key={calendar.id} className="py-2.5">
               <span
                 className="shift-rail size-2.5 shrink-0 rounded-full"
-                style={{ "--shift": calendar.color } as React.CSSProperties}
+                style={shiftVars(calendar.color)}
               />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px] font-semibold text-fg-strong">{calendar.name}</div>

@@ -9,7 +9,7 @@ import { PresetSelect } from "@/components/preset-select";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useShiftForm } from "@/hooks/useShiftForm";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
-import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
+import { formatDateToLocal, formatLongDate, parseLocalDate } from "@/lib/date-utils";
 
 interface ShiftSheetProps {
   open: boolean;
@@ -160,12 +160,7 @@ export function ShiftSheet({
   };
 
   const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(formData.date)
-    ? new Intl.DateTimeFormat(locale, {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(parseLocalDate(formData.date))
+    ? formatLongDate(parseLocalDate(formData.date), locale, { year: true })
     : undefined;
 
   return (

@@ -1,10 +1,9 @@
 "use client";
 
-import { ReactNode, Ref, useId } from "react";
+import { Ref, useId } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
+import { CheckRow, ColorSwatches, Field, inputClass } from "@/components/form-kit";
 import { ShiftPreset } from "@/lib/db/schema";
 import { DEFAULT_COLOR } from "@/lib/constants";
 import type { PresetFormData } from "@/hooks/usePresets";
@@ -38,37 +37,6 @@ export function samePresetForm(a: PresetFormData, b: PresetFormData): boolean {
   return (Object.keys(a) as (keyof PresetFormData)[]).every((key) => a[key] === b[key]);
 }
 
-function CheckRow({
-  id,
-  checked,
-  onCheckedChange,
-  disabled,
-  children,
-  hint,
-}: {
-  id: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-  children: ReactNode;
-  hint?: ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={(value) => onCheckedChange(value === true)}
-        disabled={disabled}
-        className="mt-px size-[17px] rounded-[5px] border-[1.5px] border-control bg-surface-card shadow-none"
-      />
-      <label htmlFor={id} className="cursor-pointer text-[13.5px] leading-[18px] text-fg-body">
-        {children}
-        {hint && <span className="mt-px block text-[12px] text-fg-tertiary">{hint}</span>}
-      </label>
-    </div>
-  );
-}
 
 interface PresetFormCardProps {
   formId: string;

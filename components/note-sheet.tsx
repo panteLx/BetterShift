@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { formatLongDate } from "@/lib/date-utils";
 import { Info, Trash2, TriangleAlert } from "lucide-react";
 import { BaseSheet } from "@/components/ui/base-sheet";
 import { Button } from "@/components/ui/button";
@@ -154,12 +155,7 @@ export function NoteSheet({
   };
 
   const formattedDate = selectedDate
-    ? new Intl.DateTimeFormat(locale, {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(selectedDate)
+    ? formatLongDate(selectedDate, locale, { year: true })
     : "";
 
   const unitLabel = {

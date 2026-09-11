@@ -5,6 +5,7 @@ import { RefreshCw, Trash2 } from "lucide-react";
 import { ExternalSync } from "@/lib/db/schema";
 import { ListRow, Pill, RowIconButton } from "@/components/form-kit";
 import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 /** "5 min", "2 h", "24 h" — unit abbreviations are the same in every locale. */
 export function formatSyncInterval(minutes: number) {
@@ -61,7 +62,7 @@ export function ExternalSyncRow({
       >
         <span
           className="shift-rail h-[34px] w-1 shrink-0 self-center rounded-full"
-          style={{ "--shift": sync.color } as React.CSSProperties}
+          style={shiftVars(sync.color)}
         />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-semibold text-fg-strong">

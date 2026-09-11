@@ -8,7 +8,7 @@ import { ShiftStats } from "@/components/shift-stats";
 import { ShiftDetailRow } from "@/components/day-detail";
 import { ShiftWithCalendar } from "@/lib/types";
 import { getDateLocale } from "@/lib/locales";
-import { formatDateToLocal } from "@/lib/date-utils";
+import { formatDateToLocal, formatLongDate } from "@/lib/date-utils";
 import { formatHours, getShiftMinutes, sortShifts } from "@/lib/shift-display";
 
 interface MonthDialogProps {
@@ -105,11 +105,7 @@ export function MonthShiftsDialog({
             return (
               <section key={day.key} className="flex flex-col gap-1.5">
                 <h3 className="flex items-baseline gap-2 text-[13px] font-semibold text-fg-strong">
-                  {new Intl.DateTimeFormat(locale, {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  }).format(day.date)}
+                  {formatLongDate(day.date, locale)}
                   <span className="font-mono text-[11.5px] font-normal text-fg-tertiary">
                     {t("calendarView.shiftCount", { count: day.shifts.length })}
                     {minutes > 0 && ` · ${formatHours(minutes, locale)}`}

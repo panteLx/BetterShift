@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useAdminAccess";
 import { getDateLocale } from "@/lib/locales";
 import { queryKeys } from "@/lib/query-keys";
+import { shiftVars } from "@/lib/shift-display";
 
 interface CalendarDetailsSheetProps {
   open: boolean;
@@ -130,7 +131,7 @@ export function CalendarDetailsSheet({
               <div className="flex min-w-0 items-center gap-[9px]">
                 <span
                   className="shift-rail size-2.5 shrink-0 rounded-full"
-                  style={{ "--shift": calendar.color } as React.CSSProperties}
+                  style={shiftVars(calendar.color)}
                 />
                 <span className="truncate text-[15px] font-semibold text-fg-strong">{calendar.name}</span>
               </div>

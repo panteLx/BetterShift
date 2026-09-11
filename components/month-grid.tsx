@@ -8,12 +8,7 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
-import {
-  buildDayShiftLayout,
-  DayLayoutOptions,
-  DayShiftLayout,
-  getShiftsForDay,
-} from "@/lib/shift-display";
+import { DayLayoutOptions, DayShiftLayout, buildDayShiftLayout, getShiftsForDay, shiftVars } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_KEYS = [
@@ -252,7 +247,7 @@ export function MonthGrid({
                 <span
                   key={entry.key}
                   className={cn(chip, "pl-[5px]")}
-                  style={{ "--shift": shift.color } as React.CSSProperties}
+                  style={shiftVars(shift.color)}
                   title={`${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`}
                 >
                   <span className="shift-rail w-[3px] shrink-0 self-stretch rounded-full" />
@@ -276,7 +271,7 @@ export function MonthGrid({
                 <span
                   key={entry.key}
                   className={cn(chip, "items-center pl-[5px]")}
-                  style={{ "--shift": entry.shift.color } as React.CSSProperties}
+                  style={shiftVars(entry.shift.color)}
                   title={entry.shift.title}
                 >
                   <RefreshCw className="size-3 shrink-0" />
@@ -291,7 +286,7 @@ export function MonthGrid({
                 <span
                   key={entry.key}
                   className={cn(chip, "items-center self-start pl-[5px]")}
-                  style={{ "--shift": entry.sync.color } as React.CSSProperties}
+                  style={shiftVars(entry.sync.color)}
                   title={entry.sync.name}
                 >
                   <RefreshCw className="size-3 shrink-0" />
@@ -307,7 +302,7 @@ export function MonthGrid({
                 >
                   <CalendarClock
                     className="shift-icon size-3 shrink-0"
-                    style={{ "--shift": entry.note.color || undefined } as React.CSSProperties}
+                    style={shiftVars(entry.note.color || undefined)}
                   />
                   <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-cell-event-ink">
                     {entry.note.note}
@@ -369,7 +364,7 @@ export function MonthGrid({
           <span
             key={field.key}
             className="shift-field flex h-[19px] shrink-0 items-center gap-[2px] overflow-hidden whitespace-nowrap rounded-[4px] px-1 text-[11px] font-semibold leading-[19px]"
-            style={{ "--shift": field.color } as React.CSSProperties}
+            style={shiftVars(field.color)}
           >
             {field.shift ? (
               field.shift.title
@@ -407,7 +402,7 @@ export function MonthGrid({
           <CalendarClock
             key={event.id}
             className="shift-icon size-2.5 shrink-0"
-            style={{ "--shift": event.color || undefined } as React.CSSProperties}
+            style={shiftVars(event.color || undefined)}
           />
         ))}
         {noteShown && <StickyNote className="size-2.5 shrink-0 text-cell-note" />}
@@ -448,7 +443,7 @@ export function MonthGrid({
             {events[0] && (
               <span
                 className="shift-chip max-w-[88px] truncate rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-semibold"
-                style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
+                style={shiftVars(events[0].color || "var(--brand)")}
                 title={events.map((e) => e.note).join("\n")}
               >
                 {events[0].note}
@@ -468,7 +463,7 @@ export function MonthGrid({
             >
               <span
                 className="shift-rail h-[13px] w-[3px] shrink-0 rounded-full"
-                style={{ "--shift": shift.color } as React.CSSProperties}
+                style={shiftVars(shift.color)}
               />
               <span className="min-w-0 flex-1 truncate">{shift.title}</span>
             </span>
@@ -477,7 +472,7 @@ export function MonthGrid({
             <span
               key={sync.id}
               className="shift-chip flex items-center gap-1.5 rounded-sm px-[7px] py-[3px] text-[11.5px] font-medium"
-              style={{ "--shift": sync.color } as React.CSSProperties}
+              style={shiftVars(sync.color)}
               title={sync.name}
             >
               <RefreshCw className="size-3 shrink-0" />

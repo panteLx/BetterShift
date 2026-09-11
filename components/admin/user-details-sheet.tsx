@@ -16,6 +16,7 @@ import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getDateLocale } from "@/lib/locales";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 interface UserDetailsSheetProps {
   open: boolean;
@@ -215,7 +216,7 @@ export function UserDetailsSheet({
                 <ListRow key={calendar.id} className="py-2.5">
                   <span
                     className="shift-rail size-2.5 shrink-0 rounded-full"
-                    style={{ "--shift": calendar.color } as React.CSSProperties}
+                    style={shiftVars(calendar.color)}
                   />
                   <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-fg-strong">
                     {calendar.name}

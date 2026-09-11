@@ -36,6 +36,7 @@ import {
   useCanTransferCalendar,
 } from "@/hooks/useAdminAccess";
 import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 interface CalendarTableProps {
   /** One page of calendars, already sorted by the API */
@@ -92,7 +93,7 @@ function CalendarDot({ color, className }: { color: string; className?: string }
   return (
     <span
       className={cn("shift-rail size-2 shrink-0 rounded-full", className)}
-      style={{ "--shift": color } as React.CSSProperties}
+      style={shiftVars(color)}
     />
   );
 }

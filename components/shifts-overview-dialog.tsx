@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { formatLongDate } from "@/lib/date-utils";
 import { PanelDialog } from "@/components/panel-dialog";
 import { ShiftDetailRow } from "@/components/day-detail";
 import { ShiftWithCalendar } from "@/lib/types";
@@ -31,12 +32,7 @@ export function ShiftsOverviewDialog({
 
   if (!date) return null;
 
-  const formattedDate = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
+  const formattedDate = formatLongDate(date, locale, { year: true });
   const minutes = shifts.reduce((sum, s) => sum + getShiftMinutes(s), 0);
 
   return (

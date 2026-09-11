@@ -10,6 +10,7 @@ import { PanelDialog } from "@/components/panel-dialog";
 import { SectionLabel } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import type { AdminCalendar } from "@/hooks/useAdminCalendars";
+import { shiftVars } from "@/lib/shift-display";
 
 interface CalendarBulkDeleteDialogProps {
   open: boolean;
@@ -88,7 +89,7 @@ export function CalendarBulkDeleteDialog({
             <li key={calendar.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
               <span
                 className="shift-rail size-2.5 shrink-0 rounded-full"
-                style={{ "--shift": calendar.color } as React.CSSProperties}
+                style={shiftVars(calendar.color)}
               />
               <span className="truncate text-[13.5px] font-semibold text-fg-strong">{calendar.name}</span>
             </li>

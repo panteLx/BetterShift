@@ -14,6 +14,7 @@ import {
   type DismissedCalendar,
 } from "@/hooks/useCalendarSubscriptions";
 import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 type CalendarDiscoverySheetProps = {
   open: boolean;
@@ -88,7 +89,7 @@ export function CalendarDiscoverySheet({
     <ListRow key={calendar.id}>
       <span
         className={cn("shift-rail size-2.5 shrink-0 rounded-full", muted && "opacity-50")}
-        style={{ "--shift": calendar.color } as React.CSSProperties}
+        style={shiftVars(calendar.color)}
       />
       <div className="min-w-0 flex-1">
         <div

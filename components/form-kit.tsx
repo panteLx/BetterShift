@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { HexColorPicker } from "react-colorful";
 import { Pipette, type LucideIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -119,6 +120,47 @@ export function ColorSwatches({
           </PopoverContent>
         </Popover>
       )}
+    </div>
+  );
+}
+
+/** Checkbox with a clickable label, optionally with a hint line below it. */
+export function CheckRow({
+  id,
+  checked,
+  onCheckedChange,
+  disabled,
+  label,
+  hint,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  label?: ReactNode;
+  hint?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+        disabled={disabled}
+        className="mt-px size-[17px] rounded-[5px] border-[1.5px] border-control bg-surface-card shadow-none"
+      />
+      <label
+        htmlFor={id}
+        className={cn(
+          "text-[13.5px] leading-[18px] text-fg-body",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+        )}
+      >
+        {children ?? label}
+        {hint && <span className="mt-px block text-[12px] text-fg-tertiary">{hint}</span>}
+      </label>
     </div>
   );
 }
