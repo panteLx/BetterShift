@@ -128,7 +128,8 @@ export function MonthGrid({
           const today = isToday(day);
           const selected = isSameLocalDay(day, selectedDay);
           const weekend = day.getDay() === 0 || day.getDay() === 6;
-          const highlighted = highlightedWeekdays.includes(day.getDay());
+          const highlighted =
+            !!highlightColor && !today && highlightedWeekdays.includes(day.getDay());
           const toggling = togglingDates.has(key);
 
           const dayNotes = inMonth ? findNotesForDate(notes, day) : [];
@@ -173,11 +174,7 @@ export function MonthGrid({
               onTouchEnd={cancelPress}
               onTouchMove={cancelPress}
               style={
-                highlighted && highlightColor && !today
-                  ? {
-                      backgroundColor: `color-mix(in oklch, ${highlightColor} 9%, var(--surface-cell))`,
-                    }
-                  : undefined
+                highlighted ? ({ "--highlight": highlightColor } as React.CSSProperties) : undefined
               }
               className={cn(
                 "relative flex min-h-0 min-w-0 select-none flex-col overflow-hidden text-left outline-none transition-colors [-webkit-touch-callout:none]",
@@ -190,6 +187,7 @@ export function MonthGrid({
                     ? "bg-surface-weekend"
                     : "bg-surface-cell",
                 !today && "hover:bg-surface-panel",
+                highlighted && "day-highlight",
                 !inMonth && "opacity-45",
                 selected && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]",
                 toggling && "cursor-wait opacity-60",

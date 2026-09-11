@@ -178,6 +178,9 @@
   /* Shift chips: arbitrary DB colors, tinted per theme */
   --shift-tint: 8%;
   --shift-ink-mix: #101828 22%;
+
+  /* Highlighted weekdays: share of the user's colour over the cell surface */
+  --highlight-tint: 10%;
 }
 
 .dark {
@@ -258,6 +261,7 @@
   --sidebar-ring: #3b82f6;
 
   --shift-tint: 16%;
+  --highlight-tint: 22%;
 }
 
 @layer base {
@@ -341,5 +345,14 @@
   }
   .dark .shift-text {
     color: color-mix(in oklch, var(--shift-base) 55%, white);
+  }
+
+  /*
+   * Weekday highlight. Set --highlight to the chosen hex. A flat layer over the cell's own
+   * background keeps weekend and hover; srgb, because oklch drags the hue toward the navy dark cell.
+   */
+  .day-highlight {
+    --highlight-layer: color-mix(in srgb, var(--highlight) var(--highlight-tint), transparent);
+    background-image: linear-gradient(var(--highlight-layer), var(--highlight-layer));
   }
 }
