@@ -1,3 +1,4 @@
+import { differenceInCalendarDays } from "date-fns";
 import { CalendarNote } from "./db/schema";
 import { parseLocalDate } from "./date-utils";
 
@@ -27,16 +28,8 @@ export function matchesRecurringEvent(
       if (eventDayOfWeek !== targetDayOfWeek) return false;
       if (targetDate < eventDate) return false;
 
-      // Normalize dates to midnight to avoid time component issues
-      const eventMidnight = new Date(eventDate);
-      eventMidnight.setHours(0, 0, 0, 0);
-      const targetMidnight = new Date(targetDate);
-      targetMidnight.setHours(0, 0, 0, 0);
-
-      const daysDiff = Math.floor(
-        (targetMidnight.getTime() - eventMidnight.getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
+      // Calendar days, not elapsed ms: a DST switch makes one day 23 or 25 hours long
+      const daysDiff = differenceInCalendarDays(targetDate, eventDate);
       return daysDiff % (7 * recurringInterval) === 0;
     }
 
