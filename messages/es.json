@@ -213,10 +213,9 @@
     "settingsTitle": "Mi vista",
     "settingsDescription": "Tu vista personal. Se aplica a todos los calendarios sin vista propia y solo tú la ves.",
     "shiftsPerDay": "Turnos regulares por día",
-    "shiftsPerDayHint": "Número máximo de turnos regulares a mostrar por día",
+    "shiftsPerDayHint": "Los demás aparecen como «+N». Auto muestra tantos como quepan en la celda del día.",
     "externalShiftsPerDay": "Turnos externos por día",
-    "externalShiftsPerDayHint": "Número máximo de turnos de calendarios externos a mostrar por día",
-    "showAll": "Todo",
+    "externalShiftsPerDayHint": "Se aplica a calendarios externos mostrados «Como los propios». Los demás aparecen como «+N».",
     "sortOptions": "Opciones de orden",
     "sortBy": "Ordenar por",
     "sortByStartTime": "Hora de inicio",
@@ -228,7 +227,7 @@
     "combinedSort": "Ordenar todos los turnos juntos",
     "combinedSortHint": "Ordena los turnos regulares y externos juntos en lugar de por separado",
     "showNotes": "Mostrar notas del turno",
-    "showNotesHint": "Muestra las notas del turno en la vista mensual del escritorio",
+    "showNotesHint": "La nota de un turno como segunda línea en la vista mensual",
     "dayHighlighting": "Resaltado de días",
     "highlightWeekends": "Resaltar fines de semana",
     "highlightWeekendsHint": "Resalta sábados y domingos con color",
@@ -250,7 +249,8 @@
     "calendarOwn": "Vista propia para este calendario",
     "calendarOwnHint": "Se aplica a todas las personas con acceso a este calendario.",
     "calendarOffNote": "Aquí cada persona ve su vista personal. La tuya se ajusta en «Mi vista».",
-    "calendarLocked": "Definida para este calendario. Solo quienes gestionan el calendario pueden cambiarla."
+    "calendarLocked": "Definida para este calendario. Solo quienes gestionan el calendario pueden cambiarla.",
+    "limitAuto": "Auto"
   },
   "stats": {
     "title": "Estadísticas de turnos",

@@ -213,10 +213,9 @@
     "settingsTitle": "Mon affichage",
     "settingsDescription": "Votre affichage personnel. Il s’applique à tous les calendriers sans affichage propre et n’est visible que par vous.",
     "shiftsPerDay": "Créneaux réguliers par jour",
-    "shiftsPerDayHint": "Nombre maximum de créneaux réguliers affichés par jour",
+    "shiftsPerDayHint": "Les autres apparaissent sous la forme « +N ». Auto en affiche autant que la case du jour peut contenir.",
     "externalShiftsPerDay": "Créneaux externes par jour",
-    "externalShiftsPerDayHint": "Nombre maximum de créneaux de calendriers externes affichés par jour",
-    "showAll": "Tous",
+    "externalShiftsPerDayHint": "S'applique aux calendriers externes affichés « Comme les vôtres ». Les autres apparaissent sous la forme « +N ».",
     "sortOptions": "Options de tri",
     "sortBy": "Trier par",
     "sortByStartTime": "Heure de début",
@@ -228,7 +227,7 @@
     "combinedSort": "Trier tous les créneaux ensemble",
     "combinedSortHint": "Trier les créneaux réguliers et externes ensemble plutôt que séparément",
     "showNotes": "Afficher les notes des créneaux",
-    "showNotesHint": "Afficher les notes des créneaux dans la vue mensuelle sur ordinateur",
+    "showNotesHint": "La note d'un créneau sur une deuxième ligne dans la vue mensuelle",
     "dayHighlighting": "Mise en évidence des jours",
     "highlightWeekends": "Mettre en évidence les week-ends",
     "highlightWeekendsHint": "Mettre en évidence les samedis et dimanches avec une couleur",
@@ -250,7 +249,8 @@
     "calendarOwn": "Affichage propre à ce calendrier",
     "calendarOwnHint": "S’applique à toutes les personnes ayant accès à ce calendrier.",
     "calendarOffNote": "Chacun voit ici son affichage personnel. Le vôtre se règle dans « Mon affichage ».",
-    "calendarLocked": "Défini pour ce calendrier. Seules les personnes qui gèrent le calendrier peuvent le modifier."
+    "calendarLocked": "Défini pour ce calendrier. Seules les personnes qui gèrent le calendrier peuvent le modifier.",
+    "limitAuto": "Auto"
   },
   "stats": {
     "title": "Statistiques des créneaux",

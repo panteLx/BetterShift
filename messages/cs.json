@@ -213,10 +213,9 @@
     "settingsTitle": "Moje zobrazení",
     "settingsDescription": "Vaše osobní zobrazení. Platí pro všechny kalendáře bez vlastního zobrazení a vidíte ho jen vy.",
     "shiftsPerDay": "Běžné směny za den",
-    "shiftsPerDayHint": "Maximální počet běžných směn zobrazených za den",
+    "shiftsPerDayHint": "Další se zobrazí jako „+N“. Auto zobrazí tolik, kolik se vejde do buňky dne.",
     "externalShiftsPerDay": "Externí směny za den",
-    "externalShiftsPerDayHint": "Maximální počet směn z externích kalendářů zobrazených za den",
-    "showAll": "Vše",
+    "externalShiftsPerDayHint": "Platí pro externí kalendáře zobrazené „Jako vlastní“. Další se zobrazí jako „+N“.",
     "sortOptions": "Možnosti řazení",
     "sortBy": "Řadit podle",
     "sortByStartTime": "Času začátku",
@@ -228,7 +227,7 @@
     "combinedSort": "Řadit všechny směny dohromady",
     "combinedSortHint": "Řadit běžné a externí směny dohromady místo odděleně",
     "showNotes": "Zobrazit poznámky směn",
-    "showNotesHint": "Zobrazit poznámky směn v měsíčním zobrazení na počítači",
+    "showNotesHint": "Poznámka směny jako druhý řádek v měsíčním zobrazení",
     "dayHighlighting": "Zvýraznění dnů",
     "highlightWeekends": "Zvýraznit víkendy",
     "highlightWeekendsHint": "Zvýraznit soboty a neděle barvou",
@@ -250,7 +249,8 @@
     "calendarOwn": "Vlastní zobrazení pro tento kalendář",
     "calendarOwnHint": "Platí pro všechny, kdo mají k tomuto kalendáři přístup.",
     "calendarOffNote": "Každý tu vidí své osobní zobrazení. To vaše nastavíte v „Moje zobrazení“.",
-    "calendarLocked": "Nastaveno pro tento kalendář. Změnit ho mohou jen ti, kdo kalendář spravují."
+    "calendarLocked": "Nastaveno pro tento kalendář. Změnit ho mohou jen ti, kdo kalendář spravují.",
+    "limitAuto": "Auto"
   },
   "stats": {
     "title": "Statistiky směn",

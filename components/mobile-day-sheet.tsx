@@ -22,11 +22,13 @@ import { PeriodSummary, StatsPeriod } from "@/hooks/useDaySummary";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
-type SheetTab = "day" | "stats";
+export type SheetTab = "day" | "stats";
 
 interface MobileDaySheetProps {
   model: DayViewModel;
   actions: DayActions;
+  tab: SheetTab;
+  onTabChange: (tab: SheetTab) => void;
   period: StatsPeriod;
   onPeriodChange: (period: StatsPeriod) => void;
   periodSummary: PeriodSummary;
@@ -34,43 +36,48 @@ interface MobileDaySheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Bottom bar under the phone grid: the selected day in brief and a button to add a shift. */
+/** Bottom bar under the phone grid: the visible month in figures and a button to add a shift. */
 export function MobileDayFooter({
-  model,
-  onOpen,
+  summary,
+  onOpenStats,
   onAddShift,
 }: {
-  model: DayViewModel;
-  onOpen: () => void;
+  summary: PeriodSummary;
+  onOpenStats: () => void;
   /** Hidden when the calendar can't be edited */
   onAddShift?: () => void;
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const { selectedDay, dayShifts, dayNotes } = model;
-  const day = new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric" }).format(
-    selectedDay
-  );
-  const shifts =
-    dayShifts.length > 0 ? dayShifts.map((s) => s.title).join(", ") : t("calendarView.dayFree");
-  const events = dayNotes.filter((n) => n.type === "event").length;
-  const notes = dayNotes.length - events;
-  const extras = [
-    events > 0 && t("calendarView.eventCount", { count: events }),
-    notes > 0 && t("calendarView.notesCount", { count: notes }),
-  ].filter(Boolean);
+  const { stats, freeDays } = summary;
+  const figures = [
+    { label: t("calendarView.kpiShifts"), value: stats?.totalShifts ?? "–" },
+    {
+      label: t("calendarView.kpiHours"),
+      value: stats
+        ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(stats.totalMinutes / 60)
+        : "–",
+    },
+    { label: t("calendarView.kpiFreeDays"), value: freeDays ?? "–" },
+  ];
 
   return (
     <div className="flex items-center gap-2.5 border-t border-line bg-surface-panel px-3.5 pb-[max(9px,env(safe-area-inset-bottom))] pt-[9px]">
-      <button type="button" onClick={onOpen} className="min-w-0 flex-1 py-1 text-left">
-        <span className="block truncate text-[12.5px] font-semibold text-fg-strong">
-          {day}: {shifts}
-        </span>
-        {extras.length > 0 && (
-          <span className="mt-px block truncate text-[11px] text-fg-tertiary">
-            {extras.join(" · ")}
+      <button
+        type="button"
+        onClick={onOpenStats}
+        className="grid min-w-0 flex-1 grid-cols-3 gap-2 py-0.5 text-left"
+      >
+        {figures.map((figure) => (
+          <span key={figure.label} className="min-w-0">
+            <span className="block truncate font-mono text-[15px] font-medium leading-5 text-fg-strong">
+              {figure.value}
+            </span>
+            <span className="block truncate text-[10.5px] leading-[14px] text-fg-tertiary">
+              {figure.label}
+            </span>
           </span>
-        )}
+        ))}
       </button>
       {onAddShift && (
         <button
@@ -89,6 +96,8 @@ export function MobileDayFooter({
 export function MobileDaySheet({
   model,
   actions,
+  tab,
+  onTabChange,
   period,
   onPeriodChange,
   periodSummary,
@@ -97,7 +106,6 @@ export function MobileDaySheet({
 }: MobileDaySheetProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const [tab, setTab] = useState<SheetTab>("day");
   const [tall, setTall] = useState(false);
   const { selectedDay, currentDate, dayShifts, dayNotes, canEdit } = model;
   const labels = useDayLabels(selectedDay);
@@ -182,7 +190,7 @@ export function MobileDaySheet({
             size="lg"
             label={t("calendarView.sheetTabs")}
             value={tab}
-            onChange={setTab}
+            onChange={onTabChange}
             options={[
               { value: "day", label: t("calendarView.tabDay") },
               { value: "stats", label: t("calendarView.tabStats") },

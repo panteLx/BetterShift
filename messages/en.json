@@ -213,10 +213,9 @@
     "settingsTitle": "My view",
     "settingsDescription": "Your personal view. Applies to all calendars without their own view and is only visible to you.",
     "shiftsPerDay": "Regular shifts per day",
-    "shiftsPerDayHint": "Maximum number of regular shifts to display per day",
+    "shiftsPerDayHint": "More appear as “+N”. Auto shows as many as fit into the day cell.",
     "externalShiftsPerDay": "External shifts per day",
-    "externalShiftsPerDayHint": "Maximum number of external calendar shifts to display per day",
-    "showAll": "All",
+    "externalShiftsPerDayHint": "Applies to external calendars shown “Like your own”. More appear as “+N”.",
     "sortOptions": "Sort Options",
     "sortBy": "Sort by",
     "sortByStartTime": "Start time",
@@ -228,7 +227,7 @@
     "combinedSort": "Sort all shifts together",
     "combinedSortHint": "Sort regular and external shifts together instead of separately",
     "showNotes": "Show shift notes",
-    "showNotesHint": "Show shift notes in the month view on desktop",
+    "showNotesHint": "A shift's note as a second line in the month view",
     "dayHighlighting": "Day Highlighting",
     "highlightWeekends": "Highlight Weekends",
     "highlightWeekendsHint": "Highlight Saturdays and Sundays with color",
@@ -250,7 +249,8 @@
     "calendarOwn": "Own view for this calendar",
     "calendarOwnHint": "Applies to everyone with access to this calendar.",
     "calendarOffNote": "Everyone sees their personal view here. You set yours under “My view”.",
-    "calendarLocked": "Set for this calendar. Only people who manage the calendar can change it."
+    "calendarLocked": "Set for this calendar. Only people who manage the calendar can change it.",
+    "limitAuto": "Auto"
   },
   "stats": {
     "title": "Shift Statistics",

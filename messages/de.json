@@ -213,10 +213,9 @@
     "settingsTitle": "Meine Ansicht",
     "settingsDescription": "Deine persönliche Ansicht. Gilt für alle Kalender ohne eigene Ansicht und ist nur für dich sichtbar.",
     "shiftsPerDay": "Normale Schichten pro Tag",
-    "shiftsPerDayHint": "Maximale Anzahl der normalen Schichten pro Tag",
+    "shiftsPerDayHint": "Weitere erscheinen als „+N“. Auto zeigt so viele, wie in die Tageszelle passen.",
     "externalShiftsPerDay": "Externe Schichten pro Tag",
-    "externalShiftsPerDayHint": "Maximale Anzahl der Schichten aus externen Kalendern pro Tag",
-    "showAll": "Alle",
+    "externalShiftsPerDayHint": "Gilt für externe Kalender mit der Anzeige „Wie eigene“. Weitere erscheinen als „+N“.",
     "sortOptions": "Sortieroptionen",
     "sortBy": "Sortieren nach",
     "sortByStartTime": "Startzeit",
@@ -228,7 +227,7 @@
     "combinedSort": "Alle Schichten zusammen sortieren",
     "combinedSortHint": "Normale und externe Schichten gemeinsam sortieren statt separat",
     "showNotes": "Schichtnotizen anzeigen",
-    "showNotesHint": "Notizen der Schichten in der Monatsansicht am Desktop anzeigen",
+    "showNotesHint": "Die Notiz einer Schicht als zweite Zeile in der Monatsansicht",
     "dayHighlighting": "Tage hervorheben",
     "highlightWeekends": "Wochenenden hervorheben",
     "highlightWeekendsHint": "Samstage und Sonntage farbig hervorheben",
@@ -250,7 +249,8 @@
     "calendarOwn": "Eigene Ansicht für diesen Kalender",
     "calendarOwnHint": "Gilt für alle mit Zugriff auf diesen Kalender.",
     "calendarOffNote": "Alle sehen hier ihre persönliche Ansicht. Deine stellst du unter „Meine Ansicht“ ein.",
-    "calendarLocked": "Für diesen Kalender festgelegt. Ändern können das nur Personen, die den Kalender verwalten."
+    "calendarLocked": "Für diesen Kalender festgelegt. Ändern können das nur Personen, die den Kalender verwalten.",
+    "limitAuto": "Auto"
   },
   "stats": {
     "title": "Schichtenstatistik",

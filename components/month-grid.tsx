@@ -80,6 +80,18 @@ function fitCount(
   return shown;
 }
 
+/** Runs of adjacent highlighted columns (Monday first), so neighbouring days share one band. */
+function highlightBands(weekdays: number[]): { start: number; span: number }[] {
+  const bands: { start: number; span: number }[] = [];
+  for (let col = 0; col < 7; col++) {
+    if (!weekdays.includes((col + 1) % 7)) continue;
+    const last = bands[bands.length - 1];
+    if (last && last.start + last.span === col) last.span++;
+    else bands.push({ start: col, span: 1 });
+  }
+  return bands;
+}
+
 /** Grid box size; both month layouts fit their cells to it. */
 function useGridSize(enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null);
@@ -482,7 +494,23 @@ export function MonthGrid({
 
   return (
     // On phones the grid may not shrink below its minimum rows, so the page scrolls instead
-    <div className={cn("flex flex-1 flex-col", !phone && "min-h-0")}>
+    <div className={cn("flex flex-1 flex-col", phone ? "relative isolate" : "min-h-0")}>
+      {phone && highlightColor && highlightedWeekdays.length > 0 && (
+        // Phone cells have no surface, so a highlighted weekday is one band behind the column
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -top-1 bottom-0 -z-10 grid grid-cols-7 px-1"
+          style={{ "--highlight": highlightColor } as React.CSSProperties}
+        >
+          {highlightBands(highlightedWeekdays).map(({ start, span }) => (
+            <span
+              key={start}
+              className="day-highlight rounded-[8px] [--highlight-tint:8%] dark:[--highlight-tint:10%]"
+              style={{ gridColumn: `${start + 1} / span ${span}` }}
+            />
+          ))}
+        </div>
+      )}
       <div
         className={cn(
           "grid grid-cols-7",
@@ -532,7 +560,7 @@ export function MonthGrid({
           const selected = isSameLocalDay(day, selectedDay);
           const weekend = day.getDay() === 0 || day.getDay() === 6;
           const highlighted =
-            !!highlightColor && !today && highlightedWeekdays.includes(day.getDay());
+            !phone && !!highlightColor && !today && highlightedWeekdays.includes(day.getDay());
           const toggling = togglingDates.has(key);
 
           const dayNotes = inMonth ? findNotesForDate(notes, day) : [];

@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MonthGrid } from "@/components/month-grid";
 import { DayInspector, DayActions, DayViewModel } from "@/components/day-inspector";
-import { MobileDayFooter, MobileDaySheet } from "@/components/mobile-day-sheet";
+import { MobileDayFooter, MobileDaySheet, SheetTab } from "@/components/mobile-day-sheet";
 import { MobilePresetBar, StampDock, orderStampPresets } from "@/components/stamp-dock";
 import { GuestBanner } from "@/components/guest-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
@@ -85,6 +85,7 @@ export function CalendarWorkspace({
   const { isGuest } = useAuth();
   const { isOnline } = useConnectionStatus({ toasts: false });
   const [period, setPeriod] = useState<StatsPeriod>("month");
+  const [sheetTab, setSheetTab] = useState<SheetTab>("day");
 
   const dayData = useDayData({ selectedDay, shifts, notes });
   const monthSummary = usePeriodSummary({
@@ -237,19 +238,29 @@ export function CalendarWorkspace({
           />
         )}
         <MobileDayFooter
-          model={model}
-          onOpen={() => onSheetOpenChange(true)}
+          summary={monthSummary}
+          onOpenStats={() => {
+            setSheetTab("stats");
+            setPeriod("month");
+            onSheetOpenChange(true);
+          }}
           onAddShift={model.canEdit ? actions.onAddShift : undefined}
         />
       </div>
       <MobileDaySheet
         model={model}
         actions={actions}
+        tab={sheetTab}
+        onTabChange={setSheetTab}
         period={period}
         onPeriodChange={setPeriod}
         periodSummary={sheetSummary}
         open={sheetOpen}
-        onOpenChange={onSheetOpenChange}
+        onOpenChange={(open) => {
+          onSheetOpenChange(open);
+          // A tapped day always opens on its own tab
+          if (!open) setSheetTab("day");
+        }}
       />
     </div>
   );

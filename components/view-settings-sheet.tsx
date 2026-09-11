@@ -16,6 +16,7 @@ import {
 import { useViewSettings } from "@/hooks/useViewSettings";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   CalendarViewSettings,
   PersonalViewSettings,
@@ -27,16 +28,16 @@ import { cn } from "@/lib/utils";
 
 export type ViewSettingsState = ReturnType<typeof useViewSettings>;
 
-type LimitValue = "1" | "2" | "3" | "4" | "all";
-const LIMITS: LimitValue[] = ["1", "2", "3", "4", "all"];
+type LimitValue = "1" | "2" | "3" | "auto";
+const LIMITS: LimitValue[] = ["1", "2", "3", "auto"];
 
 // Handoff rule: locked controls keep their contrast and only lose the fill
 const LOCKED_FIELDS =
   "[&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-100 [&_[role=radio][aria-checked=true]:disabled]:bg-transparent [&_[role=switch]:disabled]:border-control [&_[role=switch]:disabled]:bg-surface-sunken";
 
 function toLimit(value: number | null): LimitValue {
-  if (value === null) return "all";
-  return (LIMITS.includes(String(value) as LimitValue) ? String(value) : "3") as LimitValue;
+  if (value === null) return "auto";
+  return (LIMITS.includes(String(value) as LimitValue) ? String(value) : "auto") as LimitValue;
 }
 
 function LimitControl({
@@ -69,7 +70,7 @@ function LimitControl({
             role="radio"
             aria-checked={active}
             disabled={disabled}
-            onClick={() => onChange(limit === "all" ? null : Number(limit))}
+            onClick={() => onChange(limit === "auto" ? null : Number(limit))}
             className={cn(
               "h-7 min-w-8 rounded-md px-2 font-mono text-[12.5px] font-medium",
               active
@@ -79,7 +80,7 @@ function LimitControl({
                 : "text-fg-secondary"
             )}
           >
-            {limit === "all" ? t("view.showAll") : limit}
+            {limit === "auto" ? t("view.limitAuto") : limit}
           </button>
         );
       })}
@@ -102,6 +103,7 @@ function ViewFields({
 }) {
   const t = useTranslations();
   const id = useId();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const weekdays = [
     { day: 1, label: t("view.monday") },
     { day: 2, label: t("view.tuesday") },
@@ -145,14 +147,17 @@ function ViewFields({
             disabled={disabled}
           />
         </div>
-        <ToggleRow
-          id={`${id}-notes`}
-          title={t("view.showNotes")}
-          description={t("view.showNotesHint")}
-          checked={value.showShiftNotes}
-          onCheckedChange={(showShiftNotes) => onChange({ showShiftNotes })}
-          disabled={disabled}
-        />
+        {/* Phone cells have no room for a second line, so the toggle would do nothing there */}
+        {desktop && (
+          <ToggleRow
+            id={`${id}-notes`}
+            title={t("view.showNotes")}
+            description={t("view.showNotesHint")}
+            checked={value.showShiftNotes}
+            onCheckedChange={(showShiftNotes) => onChange({ showShiftNotes })}
+            disabled={disabled}
+          />
+        )}
         {stampBar && (
           <ToggleRow
             id={`${id}-dock`}

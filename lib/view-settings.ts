@@ -3,7 +3,7 @@ import type { ShiftSortOrder, ShiftSortType } from "@/lib/shift-display";
 
 /** Display options a calendar can pin for everyone with access to it. */
 export interface CalendarViewSettings {
-  /** null shows all shifts */
+  /** null shows as many as fit into the cell */
   shiftsPerDay: number | null;
   externalShiftsPerDay: number | null;
   showShiftNotes: boolean;
@@ -20,7 +20,7 @@ export interface PersonalViewSettings extends CalendarViewSettings {
   showStampBar: boolean;
 }
 
-export const SHIFTS_PER_DAY_MAX = 10;
+export const SHIFTS_PER_DAY_MAX = 3;
 
 const SORT_TYPES: readonly ShiftSortType[] = ["startTime", "createdAt", "title"];
 const SORT_ORDERS: readonly ShiftSortOrder[] = ["asc", "desc"];
@@ -53,7 +53,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function sanitizeLimit(value: unknown, fallback: number | null): number | null {
   if (value === null) return null;
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
-  return Math.min(SHIFTS_PER_DAY_MAX, Math.max(1, Math.round(value)));
+  const limit = Math.max(1, Math.round(value));
+  // Month cells show at most four rows, so any higher limit behaves like filling the cell
+  return limit > SHIFTS_PER_DAY_MAX ? null : limit;
 }
 
 function sanitizeBoolean(value: unknown, fallback: boolean): boolean {
