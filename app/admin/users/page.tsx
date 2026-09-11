@@ -15,7 +15,7 @@ import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ChoiceChips } from "@/components/form-kit";
 import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
-import { FilterMenuButton } from "@/components/admin/admin-table-controls";
+import { FilterMenuButton, type SortState } from "@/components/admin/admin-table-controls";
 import { UserTable } from "@/components/admin/user-table";
 import { UserEditSheet } from "@/components/admin/user-edit-sheet";
 import { UserDetailsSheet } from "@/components/admin/user-details-sheet";
@@ -23,51 +23,45 @@ import { UserBanDialog } from "@/components/admin/user-ban-dialog";
 import { UserUnbanDialog } from "@/components/admin/user-unban-dialog";
 import { UserDeleteDialog } from "@/components/admin/user-delete-dialog";
 import { UserPasswordResetDialog } from "@/components/admin/user-password-reset-dialog";
-import { useAdminUsers, type AdminUser, type UserFilters, type UserSort } from "@/hooks/useAdminUsers";
+import { useAdminUserActions, useAdminUsers, type AdminUser } from "@/hooks/useAdminUsers";
+import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
+import {
+  ADMIN_PAGE_SIZE,
+  type UserListParams,
+  type UserRoleFilter,
+  type UserSortField,
+  type UserStatusFilter,
+} from "@/lib/admin-list";
 
-type RoleFilter = "all" | "superadmin" | "admin" | "user";
-type StatusFilter = "all" | "active" | "banned";
 type Preset = "all" | "superadmin" | "banned";
-
-// Stable references so the query key does not change between renders
-const FILTERS: UserFilters = {};
-const SORT: UserSort = { field: "createdAt", direction: "desc" };
-const PAGINATION = { page: 1, limit: 1000 };
 
 export default function AdminUsersPage() {
   const t = useTranslations();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const search = useDebouncedSearch();
+  const [roleFilter, setRoleFilter] = useState<UserRoleFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>("all");
+  const [sort, setSort] = useState<SortState<UserSortField>>({ column: "createdAt", direction: "desc" });
 
-  // Filtering happens client-side so the header can show totals of all accounts.
-  const { users, isLoading, banUser, unbanUser, deleteUser, resetPassword } = useAdminUsers(
-    FILTERS,
-    SORT,
-    PAGINATION
-  );
+  // Any change to search, filters or sort starts over on the first page
+  const listKey = [search.query, roleFilter, statusFilter, sort.column, sort.direction].join("|");
+  const [requestedPage, setPage] = useResettableState(listKey, 1);
 
-  const counts = useMemo(
+  const params = useMemo<UserListParams>(
     () => ({
-      total: users.length,
-      banned: users.filter((u) => u.banned).length,
-      superadmin: users.filter((u) => u.role === "superadmin").length,
+      search: search.query,
+      role: roleFilter,
+      status: statusFilter,
+      sort: sort.column,
+      order: sort.direction,
+      page: requestedPage,
+      limit: ADMIN_PAGE_SIZE,
     }),
-    [users]
+    [search.query, roleFilter, statusFilter, sort, requestedPage]
   );
 
-  const filteredUsers = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return users.filter(
-      (u) =>
-        (roleFilter === "all" || (u.role || "user") === roleFilter) &&
-        (statusFilter === "all" || u.banned === (statusFilter === "banned")) &&
-        (!query ||
-          u.email.toLowerCase().includes(query) ||
-          (u.name || "").toLowerCase().includes(query))
-    );
-  }, [users, searchQuery, roleFilter, statusFilter]);
+  const { users, total, counts, page, isLoading, isPlaceholderData } = useAdminUsers(params);
+  const { banUser, unbanUser, deleteUser, resetPassword } = useAdminUserActions();
 
   // The segments cover the common cases; anything else lives in the filter menu.
   const preset: Preset | "custom" =
@@ -123,7 +117,7 @@ export default function AdminUsersPage() {
     if (await resetPassword(selectedUser.id, newPassword)) setShowPasswordDialog(false);
   };
 
-  if (isLoading && users.length === 0) {
+  if (isLoading && !counts) {
     return <FullscreenLoader />;
   }
 
@@ -136,7 +130,7 @@ export default function AdminUsersPage() {
         <DropdownMenuLabel>{t("admin.role")}</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={roleFilter}
-          onValueChange={(value) => setRoleFilter(value as RoleFilter)}
+          onValueChange={(value) => setRoleFilter(value as UserRoleFilter)}
         >
           <DropdownMenuRadioItem value="all">{t("admin.allRoles")}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="superadmin">{t("common.roles.superadmin")}</DropdownMenuRadioItem>
@@ -147,7 +141,7 @@ export default function AdminUsersPage() {
         <DropdownMenuLabel>{t("common.labels.status")}</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+          onValueChange={(value) => setStatusFilter(value as UserStatusFilter)}
         >
           <DropdownMenuRadioItem value="all">{t("admin.allStatuses")}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="active">{t("common.status.active")}</DropdownMenuRadioItem>
@@ -162,13 +156,15 @@ export default function AdminUsersPage() {
       <div className="flex flex-col gap-4">
         <AdminPageHeader
           title={t("admin.usersMenu")}
-          subtitle={t("adminUsers.subtitle", { count: counts.total, banned: counts.banned })}
+          subtitle={
+            counts ? t("adminUsers.subtitle", { count: counts.total, banned: counts.banned }) : undefined
+          }
         />
 
         <div className="flex flex-col gap-[11px] lg:flex-row lg:items-center lg:gap-[9px]">
           <AdminSearch
-            value={searchQuery}
-            onChange={setSearchQuery}
+            value={search.input}
+            onChange={search.setInput}
             placeholder={t("admin.searchUsers")}
             className="lg:w-[340px]"
           />
@@ -190,9 +186,9 @@ export default function AdminUsersPage() {
                 onChange={applyPreset}
                 label={t("adminUsers.filterLabel")}
                 options={[
-                  { value: "all", label: `${t("adminUsers.all")} ${counts.total}` },
-                  { value: "superadmin", label: `${t("common.roles.superadmin")} ${counts.superadmin}` },
-                  { value: "banned", label: `${t("admin.banned")} ${counts.banned}` },
+                  { value: "all", label: `${t("adminUsers.all")} ${counts?.total ?? ""}` },
+                  { value: "superadmin", label: `${t("common.roles.superadmin")} ${counts?.superadmin ?? ""}` },
+                  { value: "banned", label: `${t("admin.banned")} ${counts?.banned ?? ""}` },
                 ]}
               />
             </div>
@@ -202,8 +198,14 @@ export default function AdminUsersPage() {
         </div>
 
         <UserTable
-          users={filteredUsers}
-          total={counts.total}
+          users={users}
+          total={total}
+          page={page}
+          pageSize={ADMIN_PAGE_SIZE}
+          onPageChange={setPage}
+          sort={sort}
+          onSortChange={setSort}
+          isStale={isPlaceholderData}
           onUserClick={openFor(setShowDetailsSheet)}
           onEditUser={openFor(setShowEditSheet)}
           onResetPassword={openFor(setShowPasswordDialog)}

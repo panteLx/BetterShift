@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useMemo, useSyncExternalStore } from "react";
+import { ReactNode, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -9,20 +9,13 @@ import { ArrowUpCircle, ChevronRight, FolderClosed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
-import { UserMenu } from "@/components/user-menu";
 import { AdminPageHeader, SeverityPill } from "@/components/admin/admin-kit";
-import { COUNT_PAGINATION, useAdminSections } from "@/components/admin/admin-sidebar";
+import { useAdminSections } from "@/components/admin/admin-sidebar";
 import { useAuditDescription } from "@/components/admin/audit-describe";
 import { useAdminStats } from "@/hooks/useAdminStats";
-import { useAdminAuditLogs, type AuditLogSort } from "@/hooks/useAdminAuditLogs";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
-
-const ACTIVITY_SORT: AuditLogSort = { field: "timestamp", direction: "desc" };
-const ACTIVITY_PAGE = { limit: 5, offset: 0 };
-const ADMIN_FILTER = { action: "admin." };
-const SECURITY_FILTER = { action: "security." };
 
 const noSubscribe = () => () => {};
 
@@ -56,23 +49,13 @@ export default function AdminDashboardPage() {
   const describe = useAuditDescription();
   const host = useSyncExternalStore(noSubscribe, () => window.location.host, () => "");
 
-  const { stats } = useAdminStats();
+  const { stats, isLoading: statsLoading } = useAdminStats();
   const { versionInfo } = useVersionUpdateCheck();
-  const adminLogs = useAdminAuditLogs(ADMIN_FILTER, ACTIVITY_SORT, ACTIVITY_PAGE);
-  const securityLogs = useAdminAuditLogs(SECURITY_FILTER, ACTIVITY_SORT, ACTIVITY_PAGE);
-  const logsCount = useAdminAuditLogs(undefined, undefined, COUNT_PAGINATION);
   const [, usersArea, calendarsArea, logsArea] = useAdminSections();
 
-  // Same scope as the previous preview: admin actions plus security events
-  const activity = useMemo(
-    () =>
-      [...adminLogs.logs, ...securityLogs.logs]
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-        .slice(0, ACTIVITY_PAGE.limit),
-    [adminLogs.logs, securityLogs.logs]
-  );
-  const activityTotal = adminLogs.total + securityLogs.total;
-  const activityLoading = adminLogs.isLoading || securityLogs.isLoading;
+  // Admin actions plus security events, delivered with the stats
+  const activity = stats?.activity.logs ?? [];
+  const activityTotal = stats?.activity.total ?? 0;
 
   const orphaned = stats?.calendars.orphaned ?? 0;
   const hasUpdate = !!versionInfo?.hasUpdate && !versionInfo.isDev;
@@ -138,7 +121,7 @@ export default function AdminDashboardPage() {
       ...calendarsArea,
       sub: stats ? t("adminDashboard.calendarsSub", { count: stats.calendars.total + orphaned, orphaned }) : "",
     },
-    { ...logsArea, sub: logsCount.isLoading ? "" : t("adminDashboard.logsSub", { count: logsCount.total }) },
+    { ...logsArea, sub: stats ? t("adminDashboard.logsSub", { count: stats.auditLogs.total }) : "" },
   ];
 
   return (
@@ -179,7 +162,6 @@ export default function AdminDashboardPage() {
             </div>
           )
         }
-        mobileActions={<UserMenu />}
       />
 
       {orphaned > 0 && (
@@ -243,7 +225,7 @@ export default function AdminDashboardPage() {
 
           {activity.length === 0 ? (
             <div className="rounded-[11px] border border-line px-4 py-8 text-center text-[13px] text-fg-tertiary lg:rounded-none lg:border-0">
-              {activityLoading ? t("common.loading") : t("admin.noLogsFound")}
+              {statsLoading ? t("common.loading") : t("admin.noLogsFound")}
             </div>
           ) : (
             <ul className="flex flex-col gap-2 lg:gap-0 lg:px-4 lg:pt-1">

@@ -1033,7 +1033,6 @@
     "moreFilters": "Další filtry",
     "numbers": "Čísla",
     "showPassword": "Zobrazit heslo",
-    "shownOf": "{shown} z {total}",
     "subtitle": "{count, plural, one {# účet} few {# účty} other {# účtů}}{banned, plural, =0 {} one {, z toho # zablokovaný} few {, z toho # zablokované} other {, z toho # zablokovaných}}"
   },
   "adminCalendars": {
@@ -1053,5 +1052,9 @@
     "sharesAndLinks": "Sdílení, {links, plural, one {# přístupový odkaz} few {# přístupové odkazy} other {# přístupových odkazů}}",
     "showOrphaned": "Zobrazit",
     "subtitle": "{count, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}, celkem {shifts, plural, one {# směna} few {# směny} other {# směn}}"
+  },
+  "adminPagination": {
+    "range": "{from}–{to} z {total}",
+    "label": "Stránky"
   }
 }

@@ -8,8 +8,8 @@ import { Field, ListRow, Pill, SectionLabel, inputClass } from "@/components/for
 import { AdminFormPanel } from "@/components/admin/admin-form-panel";
 import { RolePill, UserAvatar } from "@/components/admin/admin-kit";
 import { isOrphaned } from "@/components/admin/calendar-table";
-import { useAdminCalendars, type AdminCalendar } from "@/hooks/useAdminCalendars";
-import { useAdminUsers, type AdminUser } from "@/hooks/useAdminUsers";
+import { useAdminCalendarActions, type AdminCalendar } from "@/hooks/useAdminCalendars";
+import { fetchAdminUsers } from "@/hooks/useAdminUsers";
 import { useCanTransferCalendar } from "@/hooks/useAdminAccess";
 import { cn } from "@/lib/utils";
 
@@ -49,8 +49,7 @@ export function CalendarTransferSheet({
   onSuccess,
 }: CalendarTransferSheetProps) {
   const t = useTranslations();
-  const { transferCalendar, bulkTransferCalendars, isLoading } = useAdminCalendars();
-  const { fetchUsers } = useAdminUsers();
+  const { transferCalendar, bulkTransferCalendars, isTransferring } = useAdminCalendarActions();
   const canTransfer = useCanTransferCalendar();
 
   const [query, setQuery] = useState("");
@@ -76,15 +75,16 @@ export function CalendarTransferSheet({
 
     setSearchLoading(true);
     searchTimeout.current = setTimeout(async () => {
-      const result = await fetchUsers(
-        { search: value, status: "active" },
-        { field: "name", direction: "asc" },
-        { page: 1, limit: 50 }
-      );
-
-      if (result) {
+      try {
+        const result = await fetchAdminUsers({
+          search: value,
+          status: "active",
+          sort: "name",
+          order: "asc",
+          limit: 50,
+        });
         setSearchResults(
-          result.users.map((user: AdminUser) => ({
+          result.items.map((user) => ({
             id: user.id,
             name: user.name,
             email: user.email,
@@ -92,6 +92,8 @@ export function CalendarTransferSheet({
             role: user.role || "user",
           }))
         );
+      } catch {
+        setSearchResults([]);
       }
       setSearchLoading(false);
     }, 300);
@@ -144,7 +146,7 @@ export function CalendarTransferSheet({
           : calendars[0]?.name
       }
       onSave={handleTransfer}
-      isSaving={isLoading}
+      isSaving={isTransferring}
       saveDisabled={!selectedUser}
       saveLabel={t("admin.calendars.transferButton")}
     >

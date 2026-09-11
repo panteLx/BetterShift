@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
 import { AdminFormPanel } from "@/components/admin/admin-form-panel";
-import { useAdminCalendars, type AdminCalendar } from "@/hooks/useAdminCalendars";
+import { useAdminCalendarActions, type AdminCalendar } from "@/hooks/useAdminCalendars";
 import { useCanEditCalendar } from "@/hooks/useAdminAccess";
 
 interface CalendarEditSheetProps {
@@ -18,7 +18,7 @@ interface CalendarEditSheetProps {
 
 export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: CalendarEditSheetProps) {
   const t = useTranslations();
-  const { updateCalendar, isLoading } = useAdminCalendars();
+  const { updateCalendar, isUpdating } = useAdminCalendarActions();
   const canEdit = useCanEditCalendar();
 
   // Resets when the parent remounts this component via its key
@@ -36,7 +36,7 @@ export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: C
   }
 
   const handleSave = async () => {
-    const updates: { name?: string; color?: string; guestPermission?: string } = {};
+    const updates: Parameters<typeof updateCalendar>[1] = {};
 
     if (name !== calendar.name) updates.name = name;
     if (color !== calendar.color) updates.color = color;
@@ -56,7 +56,7 @@ export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: C
       title={t("admin.calendars.editCalendar")}
       subtitle={calendar.name}
       onSave={handleSave}
-      isSaving={isLoading}
+      isSaving={isUpdating}
       saveDisabled={!hasChanges || !name.trim()}
       hasUnsavedChanges={hasChanges}
     >

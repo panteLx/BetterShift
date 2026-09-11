@@ -1033,7 +1033,6 @@
     "moreFilters": "More filters",
     "numbers": "Numbers",
     "showPassword": "Show password",
-    "shownOf": "{shown} of {total}",
     "subtitle": "{count, plural, one {# account} other {# accounts}}{banned, plural, =0 {} other {, # banned}}"
   },
   "adminCalendars": {
@@ -1053,5 +1052,9 @@
     "sharesAndLinks": "Shares, {links, plural, one {# access link} other {# access links}}",
     "showOrphaned": "Show",
     "subtitle": "{count, plural, one {# calendar} other {# calendars}}, {shifts, plural, one {# shift} other {# shifts}} in total"
+  },
+  "adminPagination": {
+    "range": "{from}–{to} of {total}",
+    "label": "Pages"
   }
 }

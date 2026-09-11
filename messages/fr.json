@@ -1033,7 +1033,6 @@
     "moreFilters": "Plus de filtres",
     "numbers": "Chiffres",
     "showPassword": "Afficher le mot de passe",
-    "shownOf": "{shown} sur {total}",
     "subtitle": "{count, plural, one {# compte} other {# comptes}}{banned, plural, =0 {} one {, dont # bloqué} other {, dont # bloqués}}"
   },
   "adminCalendars": {
@@ -1053,5 +1052,9 @@
     "sharesAndLinks": "Partages, {links, plural, one {# lien d'accès} other {# liens d'accès}}",
     "showOrphaned": "Afficher",
     "subtitle": "{count, plural, one {# calendrier} other {# calendriers}}, {shifts, plural, one {# créneau} other {# créneaux}} au total"
+  },
+  "adminPagination": {
+    "range": "{from}–{to} sur {total}",
+    "label": "Pages"
   }
 }
