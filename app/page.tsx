@@ -444,7 +444,6 @@ function HomeContent() {
       showMonthShiftsDialog={dialogStates.showMonthShiftsDialog}
       onMonthShiftsDialogChange={dialogStates.setShowMonthShiftsDialog}
       onDeleteShift={(shift) => shiftActions.handleDeleteShift(shift.id)}
-      presets={presets}
       showPresetManageDialog={dialogStates.showPresetManageDialog}
       onPresetManageDialogChange={dialogStates.setShowPresetManageDialog}
     />

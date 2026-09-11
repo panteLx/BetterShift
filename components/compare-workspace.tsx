@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { addMonths, format, isSameMonth, isToday, subMonths } from "date-fns";
+import { addMonths, format, isSameDay, isSameMonth, isToday, subMonths } from "date-fns";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -30,7 +30,6 @@ import {
   getShiftCode,
   getShiftMinutes,
   getShiftsForDay,
-  isSameLocalDay,
   sortShifts,
 } from "@/lib/shift-display";
 import { getDateLocale } from "@/lib/locales";
@@ -127,7 +126,6 @@ export function CompareWorkspace(props: CompareWorkspaceProps) {
           open={!!manageCalendarId}
           onOpenChange={(open) => !open && setManageCalendarId(null)}
           calendarId={managed.id}
-          presets={props.presetsMap.get(managed.id) ?? []}
           onPresetsChange={() => props.onPresetsChange(managed.id)}
         />
       )}
@@ -552,7 +550,7 @@ function CompareMobile({
             const inMonth = isSameMonth(day, currentDate);
             const weekend = day.getDay() === 0 || day.getDay() === 6;
             const today = isToday(day);
-            const selected = isSameLocalDay(day, selectedDay);
+            const selected = isSameDay(day, selectedDay);
             return (
               <button
                 key={day.toISOString()}

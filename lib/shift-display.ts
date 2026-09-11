@@ -1,3 +1,5 @@
+import { CSSProperties } from "react";
+import { isSameDay } from "date-fns";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ExternalSync } from "@/lib/db/schema";
 import { calculateShiftDuration } from "@/lib/date-utils";
@@ -20,27 +22,23 @@ export interface DayShiftLayout {
   hiddenCount: number;
   /** The part of hiddenCount that came from external syncs */
   hiddenExternalCount: number;
-  /** Everything that would render as a chip without limits */
-  displayable: ShiftWithCalendar[];
   /** External syncs in "minimal" mode collapse into one counter each */
   minimalGroups: { sync: ExternalSync; shifts: ShiftWithCalendar[] }[];
-}
-
-export function isSameLocalDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
 }
 
 export function getShiftsForDay(
   shifts: ShiftWithCalendar[],
   day: Date
 ): ShiftWithCalendar[] {
-  return shifts.filter(
-    (shift) => shift.date && isSameLocalDay(shift.date as Date, day)
-  );
+  return shifts.filter((shift) => shift.date && isSameDay(shift.date as Date, day));
+}
+
+/** The day's shifts in start-time order — the shape every day view needs. */
+export function getDayShifts(
+  shifts: ShiftWithCalendar[],
+  day: Date
+): ShiftWithCalendar[] {
+  return sortShifts(getShiftsForDay(shifts, day), "startTime");
 }
 
 export function sortShifts(
@@ -127,7 +125,6 @@ export function buildDayShiftLayout(
     hiddenCount:
       regular.length - shownRegular.length + external.length - shownExternal.length,
     hiddenExternalCount: external.length - shownExternal.length,
-    displayable: [...regular, ...external],
     minimalGroups: [...minimal.entries()].flatMap(([id, shifts]) => {
       const sync = syncById.get(id);
       return sync ? [{ sync, shifts }] : [];
@@ -141,17 +138,44 @@ export function getShiftMinutes(shift: ShiftWithCalendar): number {
     : calculateShiftDuration(shift.startTime, shift.endTime);
 }
 
+export function sumShiftMinutes(shifts: ShiftWithCalendar[]): number {
+  return shifts.reduce((total, shift) => total + getShiftMinutes(shift), 0);
+}
+
+/** Shift colour for the `shift-chip` / `shift-solid` / `shift-rail` utilities. */
+export function shiftVars(color?: string | null): CSSProperties {
+  return { "--shift": color || undefined } as CSSProperties;
+}
+
 /** One-letter stamp code used where only a block fits (stamp dock, preset list, compare). */
 export function getShiftCode(title: string): string {
   const first = Array.from(title.trim())[0];
   return first ? first.toLocaleUpperCase() : "·";
 }
 
-export function formatHours(minutes: number, locale: string): string {
-  const hours = minutes / 60;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(hours)}h`;
+const hourFormatters = new Map<string, Intl.NumberFormat>();
+
+function hourFormatter(locale: string): Intl.NumberFormat {
+  let formatter = hourFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    hourFormatters.set(locale, formatter);
+  }
+  return formatter;
 }
 
-export function formatTimeRange(shift: ShiftWithCalendar): string {
-  return `${shift.startTime.slice(0, 5)} – ${shift.endTime.slice(0, 5)}`;
+export function formatHours(
+  minutes: number,
+  locale: string,
+  { unit = true }: { unit?: boolean } = {}
+): string {
+  const hours = hourFormatter(locale).format(minutes / 60);
+  return unit ? `${hours}h` : hours;
+}
+
+export function formatTimeRange(times: {
+  startTime: string;
+  endTime: string;
+}): string {
+  return `${times.startTime.slice(0, 5)} – ${times.endTime.slice(0, 5)}`;
 }

@@ -21,16 +21,8 @@ interface BaseSheetProps {
   saveDisabled?: boolean;
   saveLabel?: string;
   hasUnsavedChanges?: boolean;
-  maxWidth?: "sm" | "md" | "lg" | "xl";
-  headerLeading?: ReactNode;
+  width?: PanelWidth;
 }
-
-const WIDTH_MAP: Record<NonNullable<BaseSheetProps["maxWidth"]>, PanelWidth> = {
-  sm: "md",
-  md: "md",
-  lg: "lg",
-  xl: "xl",
-};
 
 /** Form panel with cancel/save footer and an unsaved-changes guard. */
 export function BaseSheet({
@@ -47,8 +39,7 @@ export function BaseSheet({
   saveDisabled = false,
   saveLabel,
   hasUnsavedChanges = false,
-  maxWidth = "md",
-  headerLeading,
+  width = "md",
 }: BaseSheetProps) {
   const t = useTranslations();
 
@@ -92,8 +83,7 @@ export function BaseSheet({
         onOpenChange={(next) => (next ? onOpenChange(true) : handleClose())}
         title={title}
         description={description}
-        headerLeading={headerLeading}
-        width={WIDTH_MAP[maxWidth]}
+        width={width}
         footer={footer ?? defaultFooter}
       >
         {children}

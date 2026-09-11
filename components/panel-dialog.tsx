@@ -89,8 +89,6 @@ export interface PanelDialogProps {
   bodyClassName?: string;
   /** Children render their own PanelBody/PanelFooter */
   bare?: boolean;
-  /** Hide the header, e.g. when the content brings its own */
-  hideHeader?: boolean;
   /** Desktop-only fixed height, for layouts with an inner sidebar */
   fixedHeight?: string;
 }
@@ -107,7 +105,6 @@ export function PanelDialog({
   width = "md",
   bodyClassName,
   bare = false,
-  hideHeader = false,
   fixedHeight,
 }: PanelDialogProps) {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
@@ -128,8 +125,7 @@ export function PanelDialog({
     <div
       className={cn(
         "flex shrink-0 items-start gap-3 border-b border-line px-[22px]",
-        desktop ? "pb-4 pt-5" : "pb-3.5 pt-1.5",
-        hideHeader && "sr-only"
+        desktop ? "pb-4 pt-5" : "pb-3.5 pt-1.5"
       )}
     >
       {headerLeading}

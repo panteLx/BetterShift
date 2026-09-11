@@ -8,10 +8,9 @@ import { toast } from "sonner";
 import { ExternalSync, SyncLog } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
+import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { ExternalSyncRow } from "@/components/external-sync-list";
 import { ExternalSyncForm } from "@/components/external-sync-form";
-import { useDirtyState } from "@/hooks/useDirtyState";
 import { syncToFormValues, useExternalSyncForm } from "@/hooks/useExternalSyncForm";
 import { REFETCH_INTERVAL } from "@/lib/query-client";
 import { queryKeys } from "@/lib/query-keys";
@@ -416,53 +415,6 @@ export function ExternalSyncPanel({
         cancelText={t("common.cancel")}
         confirmText={t("common.delete")}
         confirmVariant="destructive"
-      />
-    </>
-  );
-}
-
-interface ExternalSyncManageSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  calendarId: string | null;
-  onSyncComplete?: () => void;
-  syncErrorRefreshTrigger?: number;
-}
-
-export function ExternalSyncManageSheet({
-  open,
-  onOpenChange,
-  calendarId,
-  onSyncComplete,
-}: ExternalSyncManageSheetProps) {
-  const t = useTranslations();
-  const [dirty, setDirty] = useState(false);
-  const { handleClose, showConfirmDialog, setShowConfirmDialog, handleConfirmClose } =
-    useDirtyState({ onClose: onOpenChange, hasChanges: () => dirty });
-
-  return (
-    <>
-      <PanelDialog
-        bare
-        open={open}
-        onOpenChange={(next) => (next ? onOpenChange(true) : handleClose())}
-        title={t("syncSheet.title")}
-        description={t("syncSheet.description")}
-      >
-        {calendarId && (
-          <ExternalSyncPanel
-            calendarId={calendarId}
-            onClose={handleClose}
-            onSyncComplete={onSyncComplete}
-            onDirtyChange={setDirty}
-          />
-        )}
-      </PanelDialog>
-
-      <ConfirmationDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={handleConfirmClose}
       />
     </>
   );

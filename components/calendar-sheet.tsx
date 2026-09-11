@@ -59,7 +59,6 @@ export function CalendarSheet({
       isSaving={isSaving}
       saveDisabled={!name.trim()}
       hasUnsavedChanges={hasChanges()}
-      maxWidth="md"
     >
       <div className="flex flex-col gap-4">
         <Field label={t("calendar.name")} htmlFor="name">

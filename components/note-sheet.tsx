@@ -217,7 +217,6 @@ export function NoteSheet({
       description={formattedDate}
       footer={footer}
       hasUnsavedChanges={hasChanges()}
-      maxWidth="md"
     >
       <div className="flex flex-col gap-4">
         {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}

@@ -6,7 +6,6 @@ import { StatusBanner } from "@/components/status-banner";
 interface ReadOnlyBannerProps {
   title?: string;
   message?: string;
-  variant?: "default" | "compact";
 }
 
 export function ReadOnlyBanner({ title, message }: ReadOnlyBannerProps) {

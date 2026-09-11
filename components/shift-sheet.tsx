@@ -181,7 +181,6 @@ export function ShiftSheet({
       saveDisabled={!formData.title.trim() || (shift && !hasChanges())}
       saveLabel={shift ? undefined : t("shiftSheet.createAction")}
       hasUnsavedChanges={!isReadOnly && hasChanges()}
-      maxWidth="md"
     >
       <div className="flex flex-col gap-4">
         {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}

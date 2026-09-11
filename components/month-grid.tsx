@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { isToday } from "date-fns";
+import { isSameDay, isToday } from "date-fns";
 import { CalendarClock, RefreshCw, StickyNote } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
@@ -13,7 +13,6 @@ import {
   DayLayoutOptions,
   DayShiftLayout,
   getShiftsForDay,
-  isSameLocalDay,
 } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
@@ -557,7 +556,7 @@ export function MonthGrid({
           const key = formatDateToLocal(day);
           const inMonth = day.getMonth() === currentDate.getMonth();
           const today = isToday(day);
-          const selected = isSameLocalDay(day, selectedDay);
+          const selected = isSameDay(day, selectedDay);
           const weekend = day.getDay() === 0 || day.getDay() === 6;
           const highlighted =
             !phone && !!highlightColor && !today && highlightedWeekdays.includes(day.getDay());

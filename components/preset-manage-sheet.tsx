@@ -249,8 +249,6 @@ interface PresetManageSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   calendarId: string;
-  /** Unused: the panel reads presets from the query cache. Kept for existing callers. */
-  presets?: ShiftPreset[];
   onPresetsChange?: () => void;
   readOnly?: boolean;
 }

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
+import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { ChoiceChips, Field, OptionCards, ToggleRow } from "@/components/form-kit";
 import { isRateLimitError, handleRateLimitError } from "@/lib/rate-limit-client";
 import { CalendarWithCount } from "@/lib/types";
@@ -238,26 +238,5 @@ export function ExportPanel({
         </Button>
       </PanelFooter>
     </>
-  );
-}
-
-interface ExportDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  calendarId: string;
-}
-
-export function ExportDialog({ open, onOpenChange, calendarId }: ExportDialogProps) {
-  const t = useTranslations();
-  return (
-    <PanelDialog
-      bare
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("export.title")}
-      description={t("export.description")}
-    >
-      <ExportPanel calendarId={calendarId} onClose={() => onOpenChange(false)} />
-    </PanelDialog>
   );
 }

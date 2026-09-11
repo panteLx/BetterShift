@@ -11,7 +11,7 @@ import { PresetManageSheet } from "@/components/preset-manage-sheet";
 import { MonthShiftsDialog, MonthStatsDialog } from "@/components/month-dialogs";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { ShiftWithCalendar } from "@/lib/types";
-import { CalendarNote, ShiftPreset } from "@/lib/db/schema";
+import { CalendarNote } from "@/lib/db/schema";
 
 interface DialogManagerProps {
   // Calendar Dialog
@@ -25,7 +25,6 @@ interface DialogManagerProps {
   onShiftSubmit: (data: ShiftFormData) => void;
   selectedDate?: Date;
   selectedCalendar: string | null;
-  onPresetsChange?: () => void;
   editingShift?: ShiftWithCalendar;
 
   // Calendar settings on desktop; on phones the same flag opens the phone menu
@@ -86,7 +85,6 @@ interface DialogManagerProps {
   onDeleteShift: (shift: ShiftWithCalendar) => void;
 
   // Preset management opened from the stamp dock
-  presets: ShiftPreset[];
   showPresetManageDialog: boolean;
   onPresetManageDialogChange: (open: boolean) => void;
 }
@@ -107,7 +105,6 @@ export function DialogManager(props: DialogManagerProps) {
         onSubmit={props.onShiftSubmit}
         selectedDate={props.selectedDate}
         shift={props.editingShift}
-        onPresetsChange={props.onPresetsChange}
         calendarId={props.selectedCalendar || undefined}
       />
 
@@ -191,8 +188,6 @@ export function DialogManager(props: DialogManagerProps) {
           open={props.showPresetManageDialog}
           onOpenChange={props.onPresetManageDialogChange}
           calendarId={props.selectedCalendar}
-          presets={props.presets}
-          onPresetsChange={props.onPresetsChange}
         />
       )}
       <NoteSheet
