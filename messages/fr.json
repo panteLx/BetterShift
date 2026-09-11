@@ -951,7 +951,6 @@
   },
   "adminDashboard": {
     "title": "Aperçu",
-    "reload": "Recharger",
     "attention": "{count, plural, one {Un point à traiter} other {# points à traiter}}",
     "allClear": "Rien à traiter pour le moment",
     "openCalendars": "Ouvrir les calendriers",

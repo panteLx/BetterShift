@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowUpCircle, ChevronRight, FolderClosed, RefreshCw } from "lucide-react";
+import { ArrowUpCircle, ChevronRight, FolderClosed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
@@ -56,8 +56,8 @@ export default function AdminDashboardPage() {
   const describe = useAuditDescription();
   const host = useSyncExternalStore(noSubscribe, () => window.location.host, () => "");
 
-  const { stats, refetch: refetchStats } = useAdminStats();
-  const { versionInfo, refetch: refetchVersion } = useVersionUpdateCheck();
+  const { stats } = useAdminStats();
+  const { versionInfo } = useVersionUpdateCheck();
   const adminLogs = useAdminAuditLogs(ADMIN_FILTER, ACTIVITY_SORT, ACTIVITY_PAGE);
   const securityLogs = useAdminAuditLogs(SECURITY_FILTER, ACTIVITY_SORT, ACTIVITY_PAGE);
   const logsCount = useAdminAuditLogs(undefined, undefined, COUNT_PAGINATION);
@@ -83,13 +83,6 @@ export default function AdminDashboardPage() {
       ? format(new Date(versionInfo.buildDate), "PPp", { locale: dateLocale })
       : t("admin.systemInfo.unknown");
 
-  const reload = () => {
-    refetchStats();
-    refetchVersion();
-    adminLogs.refetch();
-    securityLogs.refetch();
-  };
-
   const versionPill = versionInfo?.isDev ? (
     <Pill tone="warning" className="text-[11px]">{t("admin.systemInfo.development")}</Pill>
   ) : hasUpdate ? (
@@ -107,13 +100,6 @@ export default function AdminDashboardPage() {
     >
       {t("admin.systemInfo.viewOnGitHub")}
     </a>
-  );
-
-  const reloadButton = (
-    <Button variant="outline" onClick={reload} className="h-9 gap-2 rounded-[9px] px-[13px] text-[13.5px] font-semibold">
-      <RefreshCw className="size-[15px] text-fg-secondary" />
-      {t("adminDashboard.reload")}
-    </Button>
   );
 
   const scaleRows = [
@@ -177,24 +163,21 @@ export default function AdminDashboardPage() {
           </>
         }
         actions={
-          <div className="flex flex-wrap items-center justify-end gap-4">
-            {versionInfo && (
-              <>
-                <SystemItem label={t("admin.systemInfo.version")}>
-                  <span className="font-mono text-[14px] font-semibold text-fg-strong">{versionInfo.version}</span>
-                  {versionPill}
-                </SystemItem>
-                <SystemItem label={t("admin.systemInfo.buildDate")}>
-                  <span className="text-[14px] font-semibold text-fg-strong">{buildDate}</span>
-                </SystemItem>
-                <SystemItem label={t("admin.systemInfo.commitHash")}>
-                  <span className="font-mono text-[14px] font-semibold text-fg-strong">{versionInfo.commitHash}</span>
-                  {githubLink}
-                </SystemItem>
-              </>
-            )}
-            {reloadButton}
-          </div>
+          versionInfo && (
+            <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
+              <SystemItem label={t("admin.systemInfo.version")}>
+                <span className="font-mono text-[14px] font-semibold text-fg-strong">{versionInfo.version}</span>
+                {versionPill}
+              </SystemItem>
+              <SystemItem label={t("admin.systemInfo.buildDate")}>
+                <span className="text-[14px] font-semibold text-fg-strong">{buildDate}</span>
+              </SystemItem>
+              <SystemItem label={t("admin.systemInfo.commitHash")}>
+                <span className="font-mono text-[14px] font-semibold text-fg-strong">{versionInfo.commitHash}</span>
+                {githubLink}
+              </SystemItem>
+            </div>
+          )
         }
         mobileActions={<UserMenu />}
       />
@@ -351,7 +334,6 @@ export default function AdminDashboardPage() {
                 </span>
                 {githubLink}
               </SystemItem>
-              <div className="pt-1">{reloadButton}</div>
             </div>
           </section>
         </div>
