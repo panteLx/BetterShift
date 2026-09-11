@@ -8,6 +8,7 @@ import {
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
 import { logAdminAction } from "@/lib/audit-log";
+import { parseLocalDate } from "@/lib/date-utils";
 
 /**
  * Admin Audit Logs API
@@ -22,8 +23,8 @@ import { logAdminAction } from "@/lib/audit-log";
  * - resourceId: Filter by specific resource ID
  * - severity: Filter by severity (info, warning, error, critical)
  * - search: Search in action, resourceType, or metadata (case-insensitive)
- * - startDate: Filter logs after this date (ISO string)
- * - endDate: Filter logs before this date (ISO string)
+ * - startDate: Filter logs from this local day on (YYYY-MM-DD, inclusive)
+ * - endDate: Filter logs up to this local day (YYYY-MM-DD, inclusive)
  * - sortBy: Sort field (timestamp, action, severity)
  * - sortOrder: Sort direction (asc, desc)
  * - limit: Number of logs to return (default: 50, max: 500)
@@ -105,27 +106,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Date range filters
+    // Date range filters (local YYYY-MM-DD days, inclusive)
     if (startDate) {
-      const startTimestamp = new Date(startDate);
-      if (!isNaN(startTimestamp.getTime())) {
-        // Set to start of day (00:00:00)
-        startTimestamp.setHours(0, 0, 0, 0);
-        // Convert to Unix timestamp (seconds)
-        const unixTimestamp = Math.floor(startTimestamp.getTime() / 1000);
-        conditions.push(sql`${auditLogs.timestamp} >= ${unixTimestamp}`);
+      let startTimestamp: Date;
+      try {
+        startTimestamp = parseLocalDate(startDate);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid startDate" },
+          { status: 400 }
+        );
       }
+      startTimestamp.setHours(0, 0, 0, 0);
+      const unixTimestamp = Math.floor(startTimestamp.getTime() / 1000);
+      conditions.push(sql`${auditLogs.timestamp} >= ${unixTimestamp}`);
     }
 
     if (endDate) {
-      const endTimestamp = new Date(endDate);
-      if (!isNaN(endTimestamp.getTime())) {
-        // Set to end of day (23:59:59)
-        endTimestamp.setHours(23, 59, 59, 999);
-        // Convert to Unix timestamp (seconds)
-        const unixTimestamp = Math.floor(endTimestamp.getTime() / 1000);
-        conditions.push(sql`${auditLogs.timestamp} <= ${unixTimestamp}`);
+      let endTimestamp: Date;
+      try {
+        endTimestamp = parseLocalDate(endDate);
+      } catch {
+        return NextResponse.json({ error: "Invalid endDate" }, { status: 400 });
       }
+      endTimestamp.setHours(23, 59, 59, 999);
+      const unixTimestamp = Math.floor(endTimestamp.getTime() / 1000);
+      conditions.push(sql`${auditLogs.timestamp} <= ${unixTimestamp}`);
     }
 
     // Apply sorting
@@ -228,7 +234,7 @@ export async function GET(request: NextRequest) {
  * Delete old audit logs (bulk operation).
  *
  * Delete Methods:
- * 1. Query Parameter: ?before=2024-01-01 (delete logs older than date)
+ * 1. Query Parameter: ?before=2024-01-01 (delete logs before that local day)
  * 2. Request Body: { logIds: [...] } (delete specific logs by ID)
  *
  * Permission: Superadmin only
@@ -253,9 +259,10 @@ export async function DELETE(request: NextRequest) {
 
     // Method 1: Delete by date (query parameter)
     if (beforeDate) {
-      const beforeTimestamp = new Date(beforeDate);
-
-      if (isNaN(beforeTimestamp.getTime())) {
+      let beforeTimestamp: Date;
+      try {
+        beforeTimestamp = parseLocalDate(beforeDate);
+      } catch {
         return NextResponse.json(
           { error: "Invalid date format" },
           { status: 400 }
