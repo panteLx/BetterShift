@@ -25,7 +25,8 @@ const SAMPLE_SHIFTS = ["#2563eb", "#6d28d9", "#4338ca"];
 const SAMPLE_VACATION = "#047857";
 
 // 16px on phones keeps iOS from zooming into the field on focus.
-export const authInputClass = "h-[42px] rounded-[9px] px-[13px] text-base sm:text-[14px]";
+export const authInputClass =
+  "h-[42px] rounded-[9px] px-[13px] text-base sm:text-[14px]";
 
 export function AuthShell({
   title,
@@ -38,14 +39,19 @@ export function AuthShell({
 }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background lg:flex-row">
-      <header className={cn("flex h-14 shrink-0 items-center px-4 lg:hidden", BRAND_SURFACE)}>
+      <header
+        className={cn(
+          "flex h-14 shrink-0 items-center px-4 lg:hidden",
+          BRAND_SURFACE,
+        )}
+      >
         <BrandMark />
       </header>
 
       <aside
         className={cn(
           "sticky top-0 hidden h-dvh w-[420px] shrink-0 flex-col overflow-y-auto px-[34px] py-9 lg:flex dark:border-r",
-          BRAND_SURFACE
+          BRAND_SURFACE,
         )}
       >
         <BrandMark />
@@ -60,7 +66,9 @@ export function AuthShell({
               {title}
             </h1>
             {description && (
-              <p className="mt-1 text-[14px] text-fg-secondary">{description}</p>
+              <p className="mt-1 text-[14px] text-fg-secondary">
+                {description}
+              </p>
             )}
           </div>
           {children}
@@ -106,7 +114,7 @@ function SampleMonth() {
         start: startOfWeek(startOfMonth(today), { weekStartsOn: 1 }),
         end: endOfWeek(endOfMonth(today), { weekStartsOn: 1 }),
       }),
-    [today]
+    [today],
   );
 
   return (
@@ -137,13 +145,13 @@ function SampleMonth() {
               className={cn(
                 "flex aspect-square flex-col items-center gap-0.5 rounded-[4px] px-0.5 py-[3px]",
                 isToday ? "bg-brand" : "bg-white/5",
-                !inMonth && "opacity-30"
+                !inMonth && "opacity-30",
               )}
             >
               <span
                 className={cn(
                   "font-mono text-[8.5px] leading-[1.2]",
-                  isToday ? "text-white" : "text-[#98a2b3]"
+                  isToday ? "text-white" : "text-[#98a2b3]",
                 )}
               >
                 {day.getDate()}
@@ -193,7 +201,6 @@ function InstanceFacts() {
   const facts: { label: string; value: string; dot?: string }[] = [
     { label: t("authPage.instance"), value: host },
     { label: t("admin.systemInfo.version"), value: health?.version ?? "–" },
-    { label: t("authPage.data"), value: t("authPage.dataValue") },
     { label: t("common.labels.status"), value: status.label, dot: status.dot },
   ];
 
@@ -203,7 +210,11 @@ function InstanceFacts() {
         <div key={fact.label} className="flex items-center gap-2.5">
           <dt className="w-[78px] shrink-0 text-[#8a94a6]">{fact.label}</dt>
           <dd className="flex min-w-0 items-center gap-2.5 text-[#d0d5dd]">
-            {fact.dot && <span className={cn("size-1.5 shrink-0 rounded-full", fact.dot)} />}
+            {fact.dot && (
+              <span
+                className={cn("size-1.5 shrink-0 rounded-full", fact.dot)}
+              />
+            )}
             <span className="truncate">{fact.value}</span>
           </dd>
         </div>
@@ -219,7 +230,9 @@ export function PasswordInput({
   const t = useTranslations();
   const [visible, setVisible] = useState(false);
   const Icon = visible ? EyeOff : Eye;
-  const label = visible ? t("authPage.hidePassword") : t("authPage.showPassword");
+  const label = visible
+    ? t("authPage.hidePassword")
+    : t("authPage.showPassword");
 
   return (
     <div className="relative">

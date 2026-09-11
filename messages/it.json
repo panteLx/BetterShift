@@ -898,8 +898,6 @@
     "hidePassword": "Nascondi password",
     "sampleMonth": "Mese di esempio",
     "instance": "Istanza",
-    "data": "Dati",
-    "dataValue": "locale, SQLite",
     "statusOk": "raggiungibile",
     "statusDown": "non raggiungibile",
     "statusChecking": "verifica in corso …"

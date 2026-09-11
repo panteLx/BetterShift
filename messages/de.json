@@ -898,8 +898,6 @@
     "hidePassword": "Passwort verbergen",
     "sampleMonth": "Beispielmonat",
     "instance": "Instanz",
-    "data": "Daten",
-    "dataValue": "lokal, SQLite",
     "statusOk": "erreichbar",
     "statusDown": "nicht erreichbar",
     "statusChecking": "wird geprüft …"

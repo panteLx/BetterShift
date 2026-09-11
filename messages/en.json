@@ -898,8 +898,6 @@
     "hidePassword": "Hide password",
     "sampleMonth": "Sample month",
     "instance": "Instance",
-    "data": "Data",
-    "dataValue": "local, SQLite",
     "statusOk": "reachable",
     "statusDown": "unreachable",
     "statusChecking": "checking …"

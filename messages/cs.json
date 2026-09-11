@@ -898,8 +898,6 @@
     "hidePassword": "Skrýt heslo",
     "sampleMonth": "Ukázkový měsíc",
     "instance": "Instance",
-    "data": "Data",
-    "dataValue": "lokálně, SQLite",
     "statusOk": "dostupná",
     "statusDown": "nedostupná",
     "statusChecking": "ověřuje se …"
