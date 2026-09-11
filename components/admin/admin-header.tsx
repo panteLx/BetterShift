@@ -1,150 +1,115 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
-import { useConnectionStatus } from "@/hooks/useConnectionStatus";
+import { useLocale, useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
+import { ChevronRight, Languages, SunMoon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { LanguageSwitcher } from "@/components/language-switcher";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { UserMenu } from "@/components/user-menu";
+import { useThemeOptions } from "@/components/appearance-picker";
+import { setLocaleCookie } from "@/components/app-preferences-menu-items";
+import { isActiveSection, useAdminSections } from "@/components/admin/admin-sidebar";
+import { locales } from "@/lib/locales";
 
-interface BreadcrumbSegment {
-  label: string;
-  href?: string;
-}
-
-interface AdminHeaderProps {
-  onMenuClick?: () => void;
-}
-
-/**
- * Admin Panel Header
- *
- * Features:
- * - Automatic breadcrumb navigation from URL
- * - Theme + Language switchers
- * - Mobile menu toggle
- */
-export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
+function LanguageSelect() {
   const t = useTranslations();
-  const pathname = usePathname();
-  const { isOnline } = useConnectionStatus();
-
-  // Generate breadcrumbs from pathname
-  const generateBreadcrumbs = (): BreadcrumbSegment[] => {
-    const segments: BreadcrumbSegment[] = [
-      { label: t("admin.title"), href: "/admin" },
-    ];
-
-    // Parse pathname segments
-    const pathParts = pathname.split("/").filter(Boolean);
-
-    // Remove "admin" prefix (already in first segment)
-    const adminIndex = pathParts.indexOf("admin");
-    if (adminIndex !== -1) {
-      pathParts.splice(adminIndex, 1);
-    }
-
-    // Map path segments to breadcrumb items
-    let currentPath = "/admin";
-    for (let i = 0; i < pathParts.length; i++) {
-      const part = pathParts[i];
-      currentPath += `/${part}`;
-
-      // Check if it's the last segment (current page - no link)
-      const isLast = i === pathParts.length - 1;
-
-      // Map known segments to translations
-      let label = part;
-      if (part === "users") {
-        label = t("admin.usersMenu");
-      } else if (part === "calendars") {
-        label = t("admin.calendarsMenu");
-      } else if (part === "orphaned") {
-        label = t("admin.orphanedCalendars");
-      } else if (part === "logs") {
-        label = t("admin.auditLogs");
-      }
-
-      segments.push({
-        label,
-        href: isLast ? undefined : currentPath,
-      });
-    }
-
-    return segments;
+  const locale = useLocale();
+  const names: Record<string, string> = {
+    de: t("language.de"),
+    en: t("language.en"),
+    es: t("language.es"),
+    fr: t("language.fr"),
+    it: t("language.it"),
+    cs: t("language.cs"),
   };
 
-  const breadcrumbs = generateBreadcrumbs();
+  return (
+    <Select value={locale} onValueChange={setLocaleCookie}>
+      <SelectTrigger
+        size="sm"
+        aria-label={t("appMenu.language")}
+        className="h-8 gap-[7px] rounded-lg border-line px-[11px] text-[13px] text-fg-body shadow-none"
+      >
+        <Languages className="size-[15px] text-fg-secondary" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent align="end">
+        {locales.map((value) => (
+          <SelectItem key={value} value={value}>
+            {names[value] ?? value}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function AppearanceMenu() {
+  const t = useTranslations();
+  const { theme, setTheme } = useTheme();
+  const options = useThemeOptions();
 
   return (
-    <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
-      <div className="p-4 space-y-3">
-        {/* Top row: Breadcrumbs + Controls */}
-        <div className="flex items-center justify-between gap-4">
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMenuClick}
-            className="lg:hidden flex-shrink-0"
-            aria-label="Toggle menu"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("appearance.title")}
+          className="flex size-8 items-center justify-center rounded-lg border border-line text-fg-secondary transition-colors hover:bg-surface-panel"
+        >
+          <SunMoon className="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuLabel className="text-[12px] font-semibold text-fg-tertiary">
+          {t("appearance.title")}
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+          {options.map(({ value, title }) => (
+            <DropdownMenuRadioItem key={value} value={value}>
+              {title}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
-          {/* Breadcrumbs */}
-          <Breadcrumb className="flex-1 min-w-0">
-            <BreadcrumbList>
-              {breadcrumbs.map((segment, index) => {
-                const isLast = index === breadcrumbs.length - 1;
+/** Desktop top bar: breadcrumb, language, appearance and account menu. */
+export function AdminHeader() {
+  const t = useTranslations();
+  const pathname = usePathname();
+  const sections = useAdminSections();
+  const current = sections.find((section) => isActiveSection(pathname, section.href));
 
-                return (
-                  <div key={segment.href || segment.label} className="contents">
-                    <BreadcrumbItem>
-                      {segment.href ? (
-                        <BreadcrumbLink asChild>
-                          <Link href={segment.href}>{segment.label}</Link>
-                        </BreadcrumbLink>
-                      ) : (
-                        <BreadcrumbPage>{segment.label}</BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-                    {!isLast && <BreadcrumbSeparator />}
-                  </div>
-                );
-              })}
-            </BreadcrumbList>
-          </Breadcrumb>
-
-          {/* Controls: Connection Status + Theme + Language */}
-          <div className="flex items-center gap-2">
-            {/* Connection Status Indicator */}
-            <div
-              title={isOnline ? t("sync.connected") : t("sync.disconnected")}
-            >
-              <div
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  isOnline
-                    ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"
-                    : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-                }`}
-              ></div>
-            </div>
-            <LanguageSwitcher />
-            <ThemeSwitcher />
-          </div>
-        </div>
-      </div>
+  return (
+    <header className="hidden h-14 shrink-0 items-center gap-2.5 border-b border-line bg-background px-[18px] lg:flex">
+      <nav aria-label={t("adminShell.breadcrumb")} className="flex min-w-0 flex-1 items-center gap-2.5">
+        <Link href="/admin" className="text-[13.5px] text-fg-tertiary transition-colors hover:text-fg-body">
+          {t("admin.title")}
+        </Link>
+        {current && (
+          <>
+            <ChevronRight className="size-[15px] shrink-0 text-fg-faint" />
+            <span aria-current="page" className="truncate text-[13.5px] font-semibold text-fg-strong">
+              {current.label}
+            </span>
+          </>
+        )}
+      </nav>
+      <LanguageSelect />
+      <AppearanceMenu />
+      <UserMenu />
     </header>
   );
 }

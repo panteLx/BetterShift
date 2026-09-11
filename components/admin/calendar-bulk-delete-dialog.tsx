@@ -2,18 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { PanelDialog } from "@/components/panel-dialog";
+import { SectionLabel } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
 import type { AdminCalendar } from "@/hooks/useAdminCalendars";
 
 interface CalendarBulkDeleteDialogProps {
@@ -22,6 +17,8 @@ interface CalendarBulkDeleteDialogProps {
   calendars: AdminCalendar[];
   onConfirm: () => Promise<void>;
 }
+
+const PREVIEW_LIMIT = 5;
 
 export function CalendarBulkDeleteDialog({
   open,
@@ -39,7 +36,6 @@ export function CalendarBulkDeleteDialog({
     setIsSubmitting(true);
     try {
       await onConfirm();
-      // Reset form
       setUnderstood(false);
       onOpenChange(false);
     } finally {
@@ -48,79 +44,25 @@ export function CalendarBulkDeleteDialog({
   };
 
   const handleCancel = () => {
-    // Reset form
     setUnderstood(false);
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{t("common.deleteSelected")}</DialogTitle>
-          <DialogDescription>
-            {t("admin.calendars.bulkDeleteConfirm", {
-              count: calendars.length,
-            })}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Warning */}
-          <div className="flex gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800 dark:text-red-200">
-              {t("admin.calendars.bulkDeleteWarning")}
-            </p>
-          </div>
-
-          {/* Calendar List (max 5 shown) */}
-          <div className="space-y-2">
-            <Label>{t("admin.calendars.calendarsToDelete")}:</Label>
-            <div className="p-3 rounded-lg border bg-muted/20 max-h-[150px] overflow-y-auto">
-              <ul className="space-y-1 text-sm">
-                {calendars.slice(0, 5).map((calendar) => (
-                  <li key={calendar.id} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: calendar.color }}
-                    />
-                    <span className="truncate">{calendar.name}</span>
-                  </li>
-                ))}
-                {calendars.length > 5 && (
-                  <li className="text-muted-foreground italic">
-                    {t("admin.calendars.andMore", {
-                      count: calendars.length - 5,
-                    })}
-                  </li>
-                )}
-              </ul>
-            </div>
-          </div>
-
-          {/* Checkbox Confirmation */}
-          <div className="flex items-start space-x-3">
-            <Checkbox
-              id="understood"
-              checked={understood}
-              onCheckedChange={(checked) => setUnderstood(checked === true)}
-              className="mt-1"
-            />
-            <Label
-              htmlFor="understood"
-              className="text-sm font-medium leading-normal cursor-pointer"
-            >
-              {t("admin.calendars.deleteUnderstood")}
-            </Label>
-          </div>
-        </div>
-
-        <DialogFooter>
+    <PanelDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("common.deleteSelected")}
+      description={t("admin.calendars.bulkDeleteConfirm", { count: calendars.length })}
+      width="sm"
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
           <Button
             variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
             {t("common.cancel")}
           </Button>
@@ -128,13 +70,51 @@ export function CalendarBulkDeleteDialog({
             variant="destructive"
             onClick={handleConfirm}
             disabled={!understood || isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
-            {isSubmitting
-              ? t("common.saving")
-              : t("admin.calendars.confirmDelete")}
+            {isSubmitting ? t("common.saving") : t("admin.calendars.confirmDelete")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <StatusBanner tone="danger" icon={TriangleAlert}>
+        {t("admin.calendars.bulkDeleteWarning")}
+      </StatusBanner>
+
+      <section>
+        <SectionLabel>{t("admin.calendars.calendarsToDelete")}</SectionLabel>
+        <ul className="flex flex-col divide-y divide-line-subtle rounded-[11px] border border-line bg-surface-card">
+          {calendars.slice(0, PREVIEW_LIMIT).map((calendar) => (
+            <li key={calendar.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
+              <span
+                className="shift-rail size-2.5 shrink-0 rounded-full"
+                style={{ "--shift": calendar.color } as React.CSSProperties}
+              />
+              <span className="truncate text-[13.5px] font-semibold text-fg-strong">{calendar.name}</span>
+            </li>
+          ))}
+          {calendars.length > PREVIEW_LIMIT && (
+            <li className="px-3.5 py-2.5 text-[12.5px] text-fg-tertiary">
+              {t("admin.calendars.andMore", { count: calendars.length - PREVIEW_LIMIT })}
+            </li>
+          )}
+        </ul>
+      </section>
+
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id="bulk-delete-understood"
+          checked={understood}
+          onCheckedChange={(checked) => setUnderstood(checked === true)}
+          className="mt-0.5"
+        />
+        <Label
+          htmlFor="bulk-delete-understood"
+          className="cursor-pointer text-[13.5px] font-medium leading-snug text-fg-body"
+        >
+          {t("admin.calendars.deleteUnderstood")}
+        </Label>
+      </div>
+    </PanelDialog>
   );
 }

@@ -2,19 +2,15 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PanelDialog } from "@/components/panel-dialog";
+import { Field, inputClass } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
+import { cn } from "@/lib/utils";
 import type { AdminUser } from "@/hooks/useAdminUsers";
 
 interface UserDeleteDialogProps {
@@ -24,12 +20,7 @@ interface UserDeleteDialogProps {
   onConfirm: () => Promise<void>;
 }
 
-export function UserDeleteDialog({
-  open,
-  onOpenChange,
-  user,
-  onConfirm,
-}: UserDeleteDialogProps) {
+export function UserDeleteDialog({ open, onOpenChange, user, onConfirm }: UserDeleteDialogProps) {
   const t = useTranslations();
   const [confirmation, setConfirmation] = useState("");
   const [understood, setUnderstood] = useState(false);
@@ -37,15 +28,18 @@ export function UserDeleteDialog({
 
   const isConfirmed = confirmation === user.name && understood;
 
+  const reset = () => {
+    setConfirmation("");
+    setUnderstood(false);
+  };
+
   const handleConfirm = async () => {
     if (!isConfirmed) return;
 
     setIsSubmitting(true);
     try {
       await onConfirm();
-      // Reset form
-      setConfirmation("");
-      setUnderstood(false);
+      reset();
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -53,72 +47,25 @@ export function UserDeleteDialog({
   };
 
   const handleCancel = () => {
-    // Reset form
-    setConfirmation("");
-    setUnderstood(false);
+    reset();
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{t("admin.deleteUser")}</DialogTitle>
-          <DialogDescription>
-            {t("admin.deleteUserConfirm", {
-              name: user.name || user.email,
-            })}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Warning */}
-          <div className="flex gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800 dark:text-red-200">
-              {t("admin.deleteWarning")}
-            </p>
-          </div>
-
-          {/* Checkbox Confirmation */}
-          <div className="flex items-start space-x-3">
-            <Checkbox
-              id="understood"
-              checked={understood}
-              onCheckedChange={(checked) => setUnderstood(checked === true)}
-              className="mt-1"
-            />
-            <Label
-              htmlFor="understood"
-              className="text-sm font-medium leading-normal cursor-pointer"
-            >
-              {t("admin.deleteUnderstood")}
-            </Label>
-          </div>
-
-          {/* Name Confirmation */}
-          <div className="space-y-2">
-            <Label htmlFor="confirmation">
-              {t("admin.deleteConfirmation", { name: user.name })}
-            </Label>
-            <Input
-              id="confirmation"
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              placeholder={user.name}
-              className="font-mono"
-            />
-            <p className="text-xs text-muted-foreground">
-              {t("admin.deleteConfirmationHint")}
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter>
+    <PanelDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("admin.deleteUser")}
+      description={t("admin.deleteUserConfirm", { name: user.name || user.email })}
+      width="sm"
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
           <Button
             variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
             {t("common.cancel")}
           </Button>
@@ -126,11 +73,46 @@ export function UserDeleteDialog({
             variant="destructive"
             onClick={handleConfirm}
             disabled={!isConfirmed || isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
             {isSubmitting ? t("common.saving") : t("admin.confirmDelete")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <StatusBanner tone="danger" icon={TriangleAlert}>
+        {t("admin.deleteWarning")}
+      </StatusBanner>
+
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id="delete-user-understood"
+          checked={understood}
+          onCheckedChange={(checked) => setUnderstood(checked === true)}
+          className="mt-0.5"
+        />
+        <Label
+          htmlFor="delete-user-understood"
+          className="cursor-pointer text-[13.5px] font-medium leading-snug text-fg-body"
+        >
+          {t("admin.deleteUnderstood")}
+        </Label>
+      </div>
+
+      <Field
+        label={t("admin.deleteConfirmation", { name: user.name })}
+        htmlFor="delete-user-confirmation"
+        hint={t("admin.deleteConfirmationHint")}
+      >
+        <Input
+          id="delete-user-confirmation"
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+          placeholder={user.name}
+          autoComplete="off"
+          className={cn(inputClass, "font-mono")}
+        />
+      </Field>
+    </PanelDialog>
   );
 }

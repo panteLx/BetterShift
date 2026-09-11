@@ -1,713 +1,389 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useTranslations, useLocale } from "next-intl";
-import { useAdminAuditLogs, type AuditLog } from "@/hooks/useAdminAuditLogs";
-import { FullscreenLoader } from "@/components/fullscreen-loader";
+import { Fragment, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { format } from "date-fns";
+import { ChevronRight, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  AdminMobileCard,
+  AdminPageHeader,
+  AdminSearch,
+  AdminTableCard,
+  AdminTableHead,
+  AdminTableRow,
+  SeverityPill,
+} from "@/components/admin/admin-kit";
+import { SortHeader, nextSort, type SortState } from "@/components/admin/admin-table-controls";
 import { AuditLogDetailsDialog } from "@/components/admin/audit-log-details-dialog";
 import { AuditLogDeleteDialog } from "@/components/admin/audit-log-delete-dialog";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Trash2,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  X,
-} from "lucide-react";
-import { format } from "date-fns";
-import { getDateLocale } from "@/lib/locales";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+  AuditFilterBar,
+  AuditFilterChips,
+  AuditFilterSheet,
+  EMPTY_AUDIT_FILTERS,
+  hasAuditFilters,
+  type AuditFilterValues,
+} from "@/components/admin/audit-log-filters";
+import { useAuditDescription } from "@/components/admin/audit-describe";
+import { useAdminAuditLogs, type AuditLog, type AuditLogFilters } from "@/hooks/useAdminAuditLogs";
 import { useIsSuperAdmin } from "@/hooks/useAdminAccess";
+import { getDateLocale } from "@/lib/locales";
+import { cn } from "@/lib/utils";
 
-/**
- * Admin Audit Logs Page
- *
- * Features:
- * - View all audit logs (admin + superadmin)
- * - Advanced filters (action, severity, user, date range)
- * - Sortable columns
- * - Expandable rows for metadata
- * - Pagination (50 per page)
- * - Delete old logs (superadmin only)
- * - Responsive design
- */
+type SortColumn = "timestamp" | "action" | "severity" | "user" | "ipAddress";
+
+const PAGE_SIZE = 25;
+const COLUMNS = "18px 160px 180px minmax(0,140px) 96px minmax(0,1fr) 118px 64px";
+
+const stop = (e: MouseEvent | KeyboardEvent) => e.stopPropagation();
+
 export default function AdminAuditLogsPage() {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
   const isSuperAdmin = useIsSuperAdmin();
+  const describe = useAuditDescription();
 
-  // Filter State
   const [page, setPage] = useState(0);
-  const limit = 25;
-  const [actionFilter, setActionFilter] = useState<string>("all");
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [filterValues, setFilterValues] = useState<AuditFilterValues>(EMPTY_AUDIT_FILTERS);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [sort, setSort] = useState<SortState<SortColumn>>({ column: "timestamp", direction: "desc" });
 
-  // Sort State
-  const [sortColumn, setSortColumn] = useState<
-    "timestamp" | "action" | "severity" | "user" | "ipAddress"
-  >("timestamp");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-
-  // Build filters and sort for hook
-  const filters = useMemo(
-    () => ({
-      action: actionFilter !== "all" ? actionFilter : undefined,
-      severity:
-        severityFilter !== "all"
-          ? (severityFilter as "info" | "warning" | "error" | "critical")
-          : undefined,
-      search: debouncedSearch || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-    }),
-    [actionFilter, severityFilter, debouncedSearch, startDate, endDate]
-  );
-
-  const sort = useMemo(
-    () => ({
-      field: sortColumn,
-      direction: sortDirection,
-    }),
-    [sortColumn, sortDirection]
-  );
-
-  const pagination = useMemo(
-    () => ({
-      limit,
-      offset: page * limit,
-    }),
-    [page, limit]
-  );
-
-  // Use hook with live updates
-  const { logs, total, isLoading } = useAdminAuditLogs(
-    filters,
-    sort,
-    pagination
-  );
-
-  // UI State
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
 
-  // Memoized helper functions for badge colors
-  const getSeverityColor = useMemo(
-    () => (severity: string) => {
-      switch (severity) {
-        case "info":
-          return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-        case "warning":
-          return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-        case "error":
-          return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-        case "critical":
-          return "bg-red-500/10 text-red-500 border-red-500/20";
-        default:
-          return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-      }
-    },
-    []
+  const filters = useMemo<AuditLogFilters>(
+    () => ({
+      action: filterValues.action !== "all" ? filterValues.action : undefined,
+      severity:
+        filterValues.severity !== "all" ? (filterValues.severity as AuditLogFilters["severity"]) : undefined,
+      search: debouncedSearch || undefined,
+      startDate: filterValues.startDate || undefined,
+      endDate: filterValues.endDate || undefined,
+    }),
+    [filterValues, debouncedSearch]
   );
+  const sortParams = useMemo(() => ({ field: sort.column, direction: sort.direction }), [sort]);
+  const pagination = useMemo(() => ({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }), [page]);
 
-  const getActionColor = useMemo(
-    () => (action: string) => {
-      if (action.startsWith("admin.")) {
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      }
-      if (action.startsWith("calendar.")) {
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      }
-      if (action.startsWith("auth.")) {
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      }
-      if (action.startsWith("security.")) {
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-      }
-      return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-    },
-    []
-  );
+  const { logs, total, isLoading } = useAdminAuditLogs(filters, sortParams, pagination);
 
-  const getUserInitials = useMemo(
-    () => (name: string | null) => {
-      if (!name) return "?";
-      return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    },
-    []
-  );
-
-  // Handler functions that combine filter changes with page reset
-  const handleActionFilterChange = (value: string) => {
-    setActionFilter(value);
+  const resetView = () => {
     setPage(0);
     setSelectedLogIds([]);
     setExpandedRows(new Set());
   };
 
-  const handleSeverityFilterChange = (value: string) => {
-    setSeverityFilter(value);
-    setPage(0);
-    setSelectedLogIds([]);
-    setExpandedRows(new Set());
+  const updateFilters = (patch: Partial<AuditFilterValues>) => {
+    setFilterValues((prev) => ({ ...prev, ...patch }));
+    resetView();
   };
 
-  const handleStartDateChange = (value: string) => {
-    setStartDate(value);
-    setPage(0);
-    setSelectedLogIds([]);
-    setExpandedRows(new Set());
+  const clearFilters = () => {
+    setFilterValues(EMPTY_AUDIT_FILTERS);
+    setSearchQuery("");
+    setDebouncedSearch("");
+    resetView();
   };
 
-  const handleEndDateChange = (value: string) => {
-    setEndDate(value);
-    setPage(0);
-    setSelectedLogIds([]);
-    setExpandedRows(new Set());
-  };
-
-  const handleDebouncedSearchChange = (value: string) => {
-    setDebouncedSearch(value);
-    setPage(0);
-    setSelectedLogIds([]);
-    setExpandedRows(new Set());
-  };
-
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      handleDebouncedSearchChange(searchQuery);
+      setDebouncedSearch(searchQuery);
+      setPage(0);
+      setSelectedLogIds([]);
+      setExpandedRows(new Set());
     }, 500);
-
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Toggle row expansion
   const toggleRow = (logId: string) => {
     setExpandedRows((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(logId)) {
-        newSet.delete(logId);
-      } else {
-        newSet.add(logId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      if (next.has(logId)) next.delete(logId);
+      else next.add(logId);
+      return next;
     });
   };
 
-  // Handle sort column click - now triggers backend sort
-  const handleSort = (
-    column: "timestamp" | "action" | "severity" | "user" | "ipAddress"
-  ) => {
-    if (sortColumn === column) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(column);
-      setSortDirection("desc");
-    }
-  };
-
-  // Handle pagination
-  const goToNextPage = () => {
-    if (page * limit + logs.length < total) {
-      setPage((prev) => prev + 1);
-    }
-  };
-
-  const goToPreviousPage = () => {
-    if (page > 0) {
-      setPage((prev) => prev - 1);
-    }
-  };
-
-  // Clear filters
-  const clearFilters = () => {
-    setActionFilter("all");
-    setSeverityFilter("all");
-    setSearchQuery("");
-    setStartDate("");
-    setEndDate("");
-    setPage(0);
-    // Immediately clear debouncedSearch to prevent stale value
-    handleDebouncedSearchChange("");
-  };
-
-  // Checkbox selection handlers
   const toggleLogSelection = (logId: string) => {
-    setSelectedLogIds((prev) =>
-      prev.includes(logId)
-        ? prev.filter((id) => id !== logId)
-        : [...prev, logId]
-    );
+    setSelectedLogIds((prev) => (prev.includes(logId) ? prev.filter((id) => id !== logId) : [...prev, logId]));
   };
 
-  const toggleSelectAll = () => {
-    if (selectedLogIds.length === logs.length) {
-      setSelectedLogIds([]);
-    } else {
-      setSelectedLogIds(logs.map((log) => log.id));
-    }
+  const isAllSelected = logs.length > 0 && selectedLogIds.length === logs.length;
+  const toggleSelectAll = () => setSelectedLogIds(isAllSelected ? [] : logs.map((log) => log.id));
+
+  const openDetails = (log: AuditLog) => {
+    setSelectedLog(log);
+    setShowDetailsDialog(true);
   };
 
-  const clearSelection = () => {
-    setSelectedLogIds([]);
-  };
+  const hasNext = page * PAGE_SIZE + logs.length < total;
+  const template = isSuperAdmin ? `20px ${COLUMNS}` : COLUMNS;
+  const formatTimestamp = (date: Date) => format(date, "PP p", { locale: dateLocale });
+  const userLabel = (log: AuditLog) =>
+    log.userId ? log.userName || log.userEmail || t("admin.unknownUser") : t("admin.systemAction");
 
-  const isAllSelected =
-    logs.length > 0 && selectedLogIds.length === logs.length;
+  const sortHeader = (column: SortColumn, label: string) => (
+    <SortHeader column={column} label={label} sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
+  );
 
-  // Show loader only on initial load
-  if (isLoading && logs.length === 0) {
-    return <FullscreenLoader />;
-  }
+  const pager = (
+    <div className="flex shrink-0 gap-[7px]">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setPage((p) => Math.max(0, p - 1))}
+        disabled={page === 0}
+        className="h-[30px] rounded-lg px-[11px] text-[12.5px]"
+      >
+        {t("common.previous")}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => hasNext && setPage((p) => p + 1)}
+        disabled={!hasNext}
+        className="h-[30px] rounded-lg px-[11px] text-[12.5px] font-semibold"
+      >
+        {t("common.next")}
+      </Button>
+    </div>
+  );
+
+  const showing =
+    total > 0
+      ? t("admin.showingLogs", {
+          from: page * PAGE_SIZE + 1,
+          to: Math.min(page * PAGE_SIZE + logs.length, total),
+          total,
+        })
+      : "";
+
+  const emptyText = isLoading ? t("common.loading") : t("admin.noLogsFound");
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {t("admin.auditLogs")}
-          </h2>
-          <p className="text-muted-foreground mt-2">
-            {t("admin.auditLogsDescription")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isSuperAdmin && (
+    <div className="flex flex-col gap-3 lg:gap-4">
+      <AdminPageHeader
+        title={t("admin.auditLogs")}
+        subtitle={t("adminAudit.subtitle", { count: total })}
+        actions={
+          isSuperAdmin && (
             <Button
               variant="outline"
-              size="sm"
               onClick={() => setShowDeleteDialog(true)}
+              className="h-[38px] gap-2 rounded-[9px] border-warning-line bg-warning-surface px-3.5 font-semibold text-warning-title hover:bg-warning-soft hover:text-warning-title dark:border-warning-line dark:bg-warning-surface dark:hover:bg-warning-soft"
             >
-              <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline ml-2">
-                {t("admin.deleteOldLogs")}
-              </span>
+              <Trash2 className="size-4" />
+              {t("admin.deleteOldLogs")}
             </Button>
-          )}
+          )
+        }
+        mobileActions={
+          <>
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteDialog(true)}
+                aria-label={t("admin.deleteOldLogs")}
+                className="flex size-[34px] items-center justify-center rounded-[9px] border border-warning-line bg-warning-surface text-warning-title"
+              >
+                <Trash2 className="size-[17px]" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowFilterSheet(true)}
+              aria-label={t("adminAudit.filterTitle")}
+              className={cn(
+                "relative flex size-[34px] items-center justify-center rounded-[9px] border",
+                hasAuditFilters(filterValues) ? "border-brand text-brand-ink" : "border-line text-fg-secondary"
+              )}
+            >
+              <SlidersHorizontal className="size-[17px]" />
+              {hasAuditFilters(filterValues) && (
+                <span className="absolute right-1 top-1 size-1.5 rounded-full bg-brand" />
+              )}
+            </button>
+          </>
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-[9px]">
+        <AdminSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t("admin.searchLogs")}
+          className="lg:w-[340px]"
+        />
+        <div className="hidden flex-wrap items-center gap-[9px] lg:flex">
+          <AuditFilterBar filters={filterValues} onChange={updateFilters} onClear={clearFilters} />
         </div>
       </div>
+      <AuditFilterChips filters={filterValues} onOpen={() => setShowFilterSheet(true)} />
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t("admin.searchLogs")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Action Type Filter */}
-          <Select value={actionFilter} onValueChange={handleActionFilterChange}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("admin.allActions")}</SelectItem>
-              <SelectItem value="admin.">{t("admin.adminActions")}</SelectItem>
-              <SelectItem value="calendar.">
-                {t("admin.calendarActions")}
-              </SelectItem>
-              <SelectItem value="auth.">{t("admin.authActions")}</SelectItem>
-              <SelectItem value="security.">
-                {t("admin.securityActions")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Severity Filter */}
-          <Select
-            value={severityFilter}
-            onValueChange={handleSeverityFilterChange}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {t("common.filters.allSeverities")}
-              </SelectItem>
-              <SelectItem value="info">{t("common.severity.info")}</SelectItem>
-              <SelectItem value="warning">
-                {t("common.severity.warning")}
-              </SelectItem>
-              <SelectItem value="error">
-                {t("common.severity.error")}
-              </SelectItem>
-              <SelectItem value="critical">
-                {t("common.severity.critical")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Date Range Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="text-sm font-medium mb-2 block">
-              {t("common.labels.startDate")}
-            </label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => handleStartDateChange(e.target.value)}
-            />
-          </div>
-
-          <div className="flex-1">
-            <label className="text-sm font-medium mb-2 block">
-              {t("common.labels.endDate")}
-            </label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => handleEndDateChange(e.target.value)}
-            />
-          </div>
-
-          {/* Clear Filters Button */}
-          {(actionFilter !== "all" ||
-            severityFilter !== "all" ||
-            searchQuery ||
-            startDate ||
-            endDate) && (
-            <div className="flex items-end">
-              <Button variant="outline" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-2" />
-                {t("common.filters.clearFilters")}
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <p>
-          {t("admin.showingLogs", {
-            from: page * limit + 1,
-            to: Math.min(page * limit + logs.length, total),
-            total,
-          })}
-        </p>
-      </div>
-
-      {/* Bulk Actions Bar */}
       {selectedLogIds.length > 0 && isSuperAdmin && (
-        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">
+        <div className="hidden items-center justify-between gap-3 rounded-[11px] border border-line bg-surface-panel px-3.5 py-2.5 lg:flex">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-fg-strong">
               {t("admin.selectedLogs", { count: selectedLogIds.length })}
             </span>
-            <Button variant="ghost" size="sm" onClick={clearSelection}>
-              <X className="h-4 w-4 mr-2" />
+            <Button variant="ghost" size="sm" onClick={() => setSelectedLogIds([])} className="h-8 text-fg-secondary">
+              <X className="size-4" />
               {t("admin.clearSelection")}
             </Button>
           </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setShowDeleteDialog(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
+          <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} className="h-8 font-semibold">
+            <Trash2 className="size-4" />
             {t("common.deleteSelected")}
           </Button>
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {isSuperAdmin && (
-                <TableHead className="w-[50px]">
+      {/* Desktop table */}
+      <AdminTableCard
+        className="hidden lg:block"
+        footer={
+          total > 0 && (
+            <>
+              <span>{showing}</span>
+              {pager}
+            </>
+          )
+        }
+      >
+        <AdminTableHead
+          template={template}
+          columns={[
+            ...(isSuperAdmin
+              ? [
                   <Checkbox
+                    key="all"
                     checked={isAllSelected}
                     onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-              )}
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => handleSort("timestamp")}
-              >
-                <div className="flex items-center gap-2">
-                  {t("admin.timestamp")}
-                  {sortColumn === "timestamp" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    ))}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => handleSort("action")}
-              >
-                <div className="flex items-center gap-2">
-                  {t("common.labels.action")}
-                  {sortColumn === "action" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    ))}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => handleSort("user")}
-              >
-                <div className="flex items-center gap-2">
-                  {t("common.labels.user")}
-                  {sortColumn === "user" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    ))}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => handleSort("severity")}
-              >
-                <div className="flex items-center gap-2">
-                  {t("common.labels.severity")}
-                  {sortColumn === "severity" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    ))}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => handleSort("ipAddress")}
-              >
-                <div className="flex items-center gap-2">
-                  {t("common.labels.ipAddress")}
-                  {sortColumn === "ipAddress" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    ))}
-                </div>
-              </TableHead>
-              <TableHead className="w-[100px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {logs.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={isSuperAdmin ? 8 : 7}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  {isLoading ? t("common.loading") : t("admin.noLogsFound")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              logs.map((log) => (
-                <React.Fragment key={log.id}>
-                  <TableRow
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleRow(log.id)}
-                  >
-                    {isSuperAdmin && (
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedLogIds.includes(log.id)}
-                          onCheckedChange={() => toggleLogSelection(log.id)}
-                        />
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      {expandedRows.has(log.id) ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {format(new Date(log.timestamp), "PPp", {
-                        locale: dateLocale,
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getActionColor(log.action)}
-                      >
-                        {log.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {log.userId ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            {log.userImage && (
-                              <AvatarImage
-                                src={log.userImage}
-                                alt={log.userName || ""}
-                              />
-                            )}
-                            <AvatarFallback className="text-xs">
-                              {getUserInitials(log.userName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">
-                            {log.userName ||
-                              log.userEmail ||
-                              t("admin.unknownUser")}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {t("admin.systemAction")}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getSeverityColor(log.severity)}
-                      >
-                        {log.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {log.ipAddress || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedLog(log);
-                          setShowDetailsDialog(true);
-                        }}
-                      >
-                        {t("common.viewDetails")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {expandedRows.has(log.id) && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={isSuperAdmin ? 8 : 7}
-                        className="bg-muted/50"
-                      >
-                        <div className="p-4 space-y-2">
-                          <div className="text-sm font-medium">
-                            {t("admin.metadata")}:
-                          </div>
-                          <pre className="text-xs bg-background p-3 rounded border overflow-x-auto">
-                            {JSON.stringify(log.metadata, null, 2)}
-                          </pre>
-                          {log.userAgent && (
-                            <div className="text-xs text-muted-foreground">
-                              <span className="font-medium">
-                                {t("admin.userAgent")}:
-                              </span>{" "}
-                              {log.userAgent}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    aria-label={t("adminAudit.selectAll")}
+                  />,
+                ]
+              : []),
+            "",
+            sortHeader("timestamp", t("admin.timestamp")),
+            sortHeader("action", t("common.labels.action")),
+            sortHeader("user", t("common.labels.user")),
+            sortHeader("severity", t("adminAudit.severityShort")),
+            t("adminAudit.whatHappened"),
+            sortHeader("ipAddress", t("common.labels.ipAddress")),
+            "",
+          ]}
+        />
+        {logs.length === 0 ? (
+          <div className="px-4 py-10 text-center text-[13px] text-fg-tertiary">{emptyText}</div>
+        ) : (
+          logs.map((log) => {
+            const expanded = expandedRows.has(log.id);
+            return (
+              <Fragment key={log.id}>
+                <AdminTableRow template={template} onClick={() => toggleRow(log.id)}>
+                  {isSuperAdmin && (
+                    <div onClick={stop} onKeyDown={stop} className="flex">
+                      <Checkbox
+                        checked={selectedLogIds.includes(log.id)}
+                        onCheckedChange={() => toggleLogSelection(log.id)}
+                        aria-label={t("adminAudit.selectEntry")}
+                      />
+                    </div>
                   )}
-                </React.Fragment>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  <ChevronRight
+                    className={cn(
+                      "size-[15px] transition-transform",
+                      expanded ? "rotate-90 text-fg-secondary" : "text-fg-faint"
+                    )}
+                  />
+                  <span className="font-mono text-[12.5px] text-fg-body">{formatTimestamp(log.timestamp)}</span>
+                  <span className="max-w-full justify-self-start truncate rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
+                    {log.action}
+                  </span>
+                  <span className={cn("truncate text-[13px]", log.userId ? "text-fg-body" : "text-fg-tertiary")}>
+                    {userLabel(log)}
+                  </span>
+                  <span className="justify-self-start">
+                    <SeverityPill severity={log.severity} />
+                  </span>
+                  <span className="truncate text-[12.5px] text-fg-tertiary">{describe(log)}</span>
+                  <span className="truncate font-mono text-[12px] text-fg-tertiary">{log.ipAddress || "—"}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDetails(log);
+                    }}
+                    onKeyDown={stop}
+                    className="justify-self-end text-[12.5px] font-semibold text-brand-ink hover:underline"
+                  >
+                    {t("adminAudit.details")}
+                  </button>
+                </AdminTableRow>
+                {expanded && (
+                  <div className="flex flex-col gap-2 border-b border-line-subtle bg-surface-panel px-4 py-3">
+                    <div className="eyebrow">{t("admin.metadata")}</div>
+                    <pre className="max-h-72 overflow-auto rounded-lg border border-line bg-background p-3 font-mono text-[12px] text-fg-body">
+                      {JSON.stringify(log.metadata, null, 2)}
+                    </pre>
+                    {log.userAgent && (
+                      <div className="text-[12px] text-fg-tertiary">
+                        <span className="font-semibold text-fg-secondary">{t("admin.userAgent")}:</span>{" "}
+                        {log.userAgent}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Fragment>
+            );
+          })
+        )}
+      </AdminTableCard>
+
+      {/* Phone cards */}
+      <div className="flex flex-col gap-[9px] lg:hidden">
+        {logs.length === 0 ? (
+          <div className="rounded-[11px] border border-line px-4 py-8 text-center text-[13px] text-fg-tertiary">
+            {emptyText}
+          </div>
+        ) : (
+          logs.map((log) => (
+            <AdminMobileCard key={log.id} onClick={() => openDetails(log)}>
+              <div className="flex w-full items-center gap-2">
+                <span className="min-w-0 truncate rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
+                  {log.action}
+                </span>
+                <span className="flex-1" />
+                <SeverityPill severity={log.severity} />
+                <ChevronRight className="size-4 shrink-0 text-fg-faint" />
+              </div>
+              <div className="text-[13.5px] leading-snug text-fg-body">{describe(log)}</div>
+              <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-fg-tertiary">
+                <span className="truncate">{userLabel(log)}</span>
+                <span className="text-fg-faint">·</span>
+                <span className="shrink-0 font-mono">{formatTimestamp(log.timestamp)}</span>
+              </div>
+            </AdminMobileCard>
+          ))
+        )}
+        {total > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-3 pt-1 text-[12px] text-fg-tertiary">
+            <span className="min-w-0">{showing}</span>
+            {pager}
+          </div>
+        )}
       </div>
 
-      {/* Pagination */}
-      {total > limit && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {t("admin.page")} {page + 1} {t("common.of")}{" "}
-            {Math.ceil(total / limit)}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToPreviousPage}
-              disabled={page === 0}
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              {t("common.previous")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToNextPage}
-              disabled={page * limit + logs.length >= total}
-            >
-              {t("common.next")}
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Dialogs */}
       {selectedLog && (
-        <AuditLogDetailsDialog
-          open={showDetailsDialog}
-          onOpenChange={setShowDetailsDialog}
-          log={selectedLog}
-        />
+        <AuditLogDetailsDialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog} log={selectedLog} />
       )}
 
       <AuditLogDeleteDialog
@@ -716,9 +392,16 @@ export default function AdminAuditLogsPage() {
         selectedLogIds={selectedLogIds}
         onSuccess={() => {
           setPage(0);
-          clearSelection();
-          // No manual refetch needed - React Query will auto-update
+          setSelectedLogIds([]);
         }}
+      />
+
+      <AuditFilterSheet
+        open={showFilterSheet}
+        onOpenChange={setShowFilterSheet}
+        filters={filterValues}
+        onChange={updateFilters}
+        onClear={clearFilters}
       />
     </div>
   );

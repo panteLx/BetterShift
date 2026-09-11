@@ -1,30 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  MoreVertical,
-  Edit,
-  Key,
-  Ban,
-  ShieldOff,
+  ChevronRight,
+  Ellipsis,
+  Eye,
+  KeyRound,
+  Lock,
+  LockOpen,
+  Pencil,
   Trash2,
-  ChevronUp,
-  ChevronDown,
 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,24 +20,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  AdminMobileCard,
+  AdminTableCard,
+  AdminTableHead,
+  AdminTableRow,
+  Count,
+  RolePill,
+  StatusPill,
+  UserAvatar,
+} from "@/components/admin/admin-kit";
+import {
+  RowActionButton,
+  SortHeader,
+  nextSort,
+  type SortState,
+} from "@/components/admin/admin-table-controls";
 import { getDateLocale } from "@/lib/locales";
 import type { AdminUser } from "@/hooks/useAdminUsers";
-import {
-  useCanEditUser,
-  useCanBanUser,
-  useCanDeleteUser,
-  useCanResetPassword,
-} from "@/hooks/useAdminAccess";
+import { useUserPermissions } from "@/hooks/useAdminAccess";
 
 interface UserTableProps {
   users: AdminUser[];
-  isLoading?: boolean;
+  /** All accounts before filtering, for the "n of m" footer */
+  total: number;
   onUserClick: (user: AdminUser) => void;
   onEditUser: (user: AdminUser) => void;
   onResetPassword: (user: AdminUser) => void;
@@ -58,420 +53,239 @@ interface UserTableProps {
   onDeleteUser: (user: AdminUser) => void;
 }
 
-type SortColumn =
-  | "name"
-  | "email"
-  | "role"
-  | "status"
-  | "createdAt"
-  | "lastActivity"
-  | "calendarCount"
-  | "sharesCount";
-type SortDirection = "asc" | "desc";
+type RowHandlers = Omit<UserTableProps, "users" | "total">;
 
-function UserTableRow({
-  user,
-  onUserClick,
-  onEditUser,
-  onResetPassword,
-  onBanUser,
-  onUnbanUser,
-  onDeleteUser,
-}: {
-  user: AdminUser;
-  onUserClick: (user: AdminUser) => void;
-  onEditUser: (user: AdminUser) => void;
-  onResetPassword: (user: AdminUser) => void;
-  onBanUser: (user: AdminUser) => void;
-  onUnbanUser: (user: AdminUser) => void;
-  onDeleteUser: (user: AdminUser) => void;
-}) {
+type SortColumn = "name" | "role" | "status" | "createdAt" | "lastActivity" | "calendarCount";
+
+const TEMPLATE = "minmax(0,2.4fr) 120px 110px 130px 150px 90px 102px";
+const ROLE_ORDER: Record<string, number> = { user: 0, admin: 1, superadmin: 2 };
+
+function useDateFormatters() {
   const t = useTranslations();
-  const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
-
-  const canEdit = useCanEditUser(user);
-  const canBan = useCanBanUser(user);
-  const canDelete = useCanDeleteUser(user);
-  const canResetPassword = useCanResetPassword(user);
-
-  const getUserInitials = () => {
-    if (user.name) {
-      return user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return user.email.slice(0, 2).toUpperCase();
+  const dateLocale = getDateLocale(useLocale());
+  return {
+    created: (date: Date) => format(date, "PP", { locale: dateLocale }),
+    lastActive: (date: Date | null) =>
+      date
+        ? formatDistanceToNow(date, { addSuffix: true, locale: dateLocale })
+        : t("admin.neverActive"),
+    until: (date: Date) => format(date, "PPP", { locale: dateLocale }),
   };
+}
 
-  const getRoleBadgeClass = () => {
-    switch (user.role) {
-      case "superadmin":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      case "admin":
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-      default:
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    }
-  };
-
-  const hasActions = canEdit || canResetPassword || canBan || canDelete;
-
+function BannedPill({ user }: { user: AdminUser }) {
+  const t = useTranslations();
+  const dates = useDateFormatters();
   return (
-    <TableRow className="cursor-pointer" onClick={() => onUserClick(user)}>
-      {/* Avatar + Name + Email */}
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            {user.image && <AvatarImage src={user.image} />}
-            <AvatarFallback className="text-xs">
-              {getUserInitials()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{user.name}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user.email}
-            </p>
-          </div>
-        </div>
-      </TableCell>
-
-      {/* Role */}
-      <TableCell>
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getRoleBadgeClass()}`}
-        >
-          {t(`common.roles.${user.role}`)}
-        </span>
-      </TableCell>
-
-      {/* Status */}
-      <TableCell>
-        {user.banned ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge variant="destructive" className="cursor-help">
-                  {t("admin.banned")}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <div className="space-y-1">
-                  {user.banReason && (
-                    <p className="text-xs font-medium">{user.banReason}</p>
-                  )}
-                  {user.banExpires ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t("admin.bannedUntil", {
-                        date: format(user.banExpires, "PPP", {
-                          locale: dateLocale,
-                        }),
-                      })}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {t("admin.bannedPermanently")}
-                    </p>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <Badge variant="secondary">{t("common.status.active")}</Badge>
-        )}
-      </TableCell>
-
-      {/* Created */}
-      <TableCell>
-        <span className="text-sm text-muted-foreground">
-          {format(user.createdAt, "PP", { locale: dateLocale })}
-        </span>
-      </TableCell>
-
-      {/* Last Activity */}
-      <TableCell>
-        {user.lastActivity ? (
-          <span className="text-sm text-muted-foreground">
-            {formatDistanceToNow(user.lastActivity, {
-              addSuffix: true,
-              locale: dateLocale,
-            })}
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help">
+            <StatusPill banned />
           </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">
-            {t("admin.neverActive")}
-          </span>
-        )}
-      </TableCell>
-
-      {/* Calendar Count */}
-      <TableCell>
-        <span className="text-sm">{user.calendarCount}</span>
-      </TableCell>
-
-      {/* Shares Count */}
-      <TableCell>
-        <span className="text-sm">{user.sharesCount}</span>
-      </TableCell>
-
-      {/* Actions */}
-      <TableCell onClick={(e) => e.stopPropagation()}>
-        {hasActions && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canEdit && (
-                <DropdownMenuItem onClick={() => onEditUser(user)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  {t("admin.editUser")}
-                </DropdownMenuItem>
-              )}
-              {canResetPassword && (
-                <DropdownMenuItem onClick={() => onResetPassword(user)}>
-                  <Key className="h-4 w-4 mr-2" />
-                  {t("admin.resetPassword")}
-                </DropdownMenuItem>
-              )}
-              {canBan && (
-                <>
-                  {(canEdit || canResetPassword) && <DropdownMenuSeparator />}
-                  {!user.banned ? (
-                    <DropdownMenuItem onClick={() => onBanUser(user)}>
-                      <Ban className="h-4 w-4 mr-2" />
-                      {t("admin.banUser")}
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem onClick={() => onUnbanUser(user)}>
-                      <ShieldOff className="h-4 w-4 mr-2" />
-                      {t("admin.unbanUser")}
-                    </DropdownMenuItem>
-                  )}
-                </>
-              )}
-              {canDelete && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onDeleteUser(user)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {t("admin.deleteUser")}
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </TableCell>
-    </TableRow>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          {user.banReason && <p className="text-xs font-medium">{user.banReason}</p>}
+          <p className="text-xs opacity-80">
+            {user.banExpires
+              ? t("admin.bannedUntil", { date: dates.until(user.banExpires) })
+              : t("admin.bannedPermanently")}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
-export function UserTable({
-  users,
-  onUserClick,
-  onEditUser,
-  onResetPassword,
-  onBanUser,
-  onUnbanUser,
-  onDeleteUser,
-}: UserTableProps) {
+function UserRow({ user, ...handlers }: { user: AdminUser } & RowHandlers) {
   const t = useTranslations();
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>("createdAt");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const dates = useDateFormatters();
+  const { canEdit, canBan, canDelete, canResetPassword } = useUserPermissions(user);
 
-  // Sort users
+  return (
+    <AdminTableRow
+      template={TEMPLATE}
+      muted={user.banned ? "danger" : undefined}
+      onClick={() => handlers.onUserClick(user)}
+    >
+      <div className="flex min-w-0 items-center gap-[11px]">
+        <UserAvatar name={user.name || user.email} image={user.image} size={32} />
+        <div className="min-w-0">
+          <div className="truncate text-[13.5px] font-semibold text-fg-strong">{user.name}</div>
+          <div className="truncate text-[12px] text-fg-tertiary">{user.email}</div>
+        </div>
+      </div>
+      <div>
+        <RolePill role={user.role} />
+      </div>
+      <div>{user.banned ? <BannedPill user={user} /> : <StatusPill banned={false} />}</div>
+      <span className="truncate text-[12.5px] text-fg-secondary">{dates.created(user.createdAt)}</span>
+      <span className="truncate text-[12.5px] text-fg-secondary">
+        {dates.lastActive(user.lastActivity)}
+      </span>
+      <Count value={user.calendarCount} />
+      {/* Stop clicks and Enter/Space from also opening the details panel */}
+      <div
+        className="flex items-center justify-end gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <RowActionButton
+          icon={Pencil}
+          label={t("admin.editUser")}
+          disabled={!canEdit}
+          onClick={() => handlers.onEditUser(user)}
+        />
+        {user.banned ? (
+          <RowActionButton
+            icon={LockOpen}
+            label={t("admin.unbanUser")}
+            disabled={!canBan}
+            onClick={() => handlers.onUnbanUser(user)}
+          />
+        ) : (
+          <RowActionButton
+            icon={Lock}
+            label={t("admin.banUser")}
+            disabled={!canBan}
+            onClick={() => handlers.onBanUser(user)}
+          />
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <RowActionButton icon={Ellipsis} label={t("adminUsers.moreActions")} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-52">
+            <DropdownMenuItem onClick={() => handlers.onUserClick(user)}>
+              <Eye />
+              {t("common.viewDetails")}
+            </DropdownMenuItem>
+            {canResetPassword && (
+              <DropdownMenuItem onClick={() => handlers.onResetPassword(user)}>
+                <KeyRound />
+                {t("admin.resetPassword")}
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handlers.onDeleteUser(user)}
+                  className="text-danger focus:text-danger"
+                >
+                  <Trash2 />
+                  {t("admin.deleteUser")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </AdminTableRow>
+  );
+}
+
+function UserCard({ user, onClick }: { user: AdminUser; onClick: () => void }) {
+  const t = useTranslations();
+  const dates = useDateFormatters();
+  return (
+    <AdminMobileCard onClick={onClick}>
+      <div className="flex items-start gap-[11px]">
+        <UserAvatar name={user.name || user.email} image={user.image} size={36} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14px] font-semibold text-fg-strong">{user.name}</div>
+          <div className="mt-px truncate text-[12.5px] text-fg-tertiary">{user.email}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <RolePill role={user.role} />
+            <StatusPill banned={user.banned} />
+            <span className="font-mono text-[11.5px] text-fg-faint">
+              {t("adminUsers.calendarCount", { count: user.calendarCount })} ·{" "}
+              {dates.lastActive(user.lastActivity)}
+            </span>
+          </div>
+        </div>
+        <ChevronRight className="mt-[3px] size-[17px] shrink-0 text-fg-faint" />
+      </div>
+    </AdminMobileCard>
+  );
+}
+
+export function UserTable({ users, total, ...handlers }: UserTableProps) {
+  const t = useTranslations();
+  const [sort, setSort] = useState<SortState<SortColumn>>({
+    column: "createdAt",
+    direction: "desc",
+  });
+
   const sortedUsers = [...users].sort((a, b) => {
-    if (!sortColumn) return 0;
-
     let comparison = 0;
-
-    switch (sortColumn) {
+    switch (sort.column) {
       case "name":
         comparison = (a.name || "").localeCompare(b.name || "");
         break;
-      case "email":
-        comparison = a.email.localeCompare(b.email);
-        break;
       case "role":
-        const roleOrder = { user: 0, admin: 1, superadmin: 2 };
-        comparison =
-          (roleOrder[a.role as keyof typeof roleOrder] ?? 0) -
-          (roleOrder[b.role as keyof typeof roleOrder] ?? 0);
+        comparison = (ROLE_ORDER[a.role ?? "user"] ?? 0) - (ROLE_ORDER[b.role ?? "user"] ?? 0);
         break;
       case "status":
-        comparison = (a.banned ? 1 : 0) - (b.banned ? 1 : 0);
+        comparison = Number(a.banned) - Number(b.banned);
         break;
       case "createdAt":
         comparison = a.createdAt.getTime() - b.createdAt.getTime();
         break;
       case "lastActivity":
-        const aTime = a.lastActivity?.getTime() ?? 0;
-        const bTime = b.lastActivity?.getTime() ?? 0;
-        comparison = aTime - bTime;
+        comparison = (a.lastActivity?.getTime() ?? 0) - (b.lastActivity?.getTime() ?? 0);
         break;
       case "calendarCount":
         comparison = a.calendarCount - b.calendarCount;
         break;
-      case "sharesCount":
-        comparison = a.sharesCount - b.sharesCount;
-        break;
     }
-
-    return sortDirection === "asc" ? comparison : -comparison;
+    return sort.direction === "asc" ? comparison : -comparison;
   });
 
-  // Handle sort column click
-  const handleSort = (column: SortColumn) => {
-    if (sortColumn === column) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(column);
-      setSortDirection("desc");
-    }
-  };
+  const onSort = (column: SortColumn) => setSort((prev) => nextSort(prev, column));
+  const header = (column: SortColumn, label: string) => (
+    <SortHeader column={column} label={label} sort={sort} onSort={onSort} />
+  );
+  const empty = (
+    <p className="px-4 py-10 text-center text-[13px] text-fg-tertiary">
+      {t("common.empty.noUsersFound")}
+    </p>
+  );
 
   return (
-    <div className="border border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 backdrop-blur-sm rounded-lg overflow-hidden shadow-sm">
-      <Table>
-        <TableHeader className="bg-muted/50">
-          <TableRow>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("name")}
-            >
-              <div className="flex items-center gap-2">
-                {t("common.labels.user")}
-                {sortColumn === "name" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("role")}
-            >
-              <div className="flex items-center gap-2">
-                {t("admin.role")}
-                {sortColumn === "role" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("status")}
-            >
-              <div className="flex items-center gap-2">
-                {t("common.labels.status")}
-                {sortColumn === "status" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("createdAt")}
-            >
-              <div className="flex items-center gap-2">
-                {t("common.stats.created")}
-                {sortColumn === "createdAt" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("lastActivity")}
-            >
-              <div className="flex items-center gap-2">
-                {t("common.time.lastActive")}
-                {sortColumn === "lastActivity" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("calendarCount")}
-            >
-              <div className="flex items-center gap-2">
-                {t("admin.calendarsCount")}
-                {sortColumn === "calendarCount" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => handleSort("sharesCount")}
-            >
-              <div className="flex items-center gap-2">
-                {t("common.labels.shares")}
-                {sortColumn === "sharesCount" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  ))}
-              </div>
-            </TableHead>
-            <TableHead className="w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center py-8">
-                <p className="text-sm text-muted-foreground">
-                  {t("common.empty.noUsersFound")}
-                </p>
-              </TableCell>
-            </TableRow>
-          ) : (
-            sortedUsers.map((user) => (
-              <UserTableRow
-                key={user.id}
-                user={user}
-                onUserClick={onUserClick}
-                onEditUser={onEditUser}
-                onResetPassword={onResetPassword}
-                onBanUser={onBanUser}
-                onUnbanUser={onUnbanUser}
-                onDeleteUser={onDeleteUser}
-              />
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      <AdminTableCard
+        className="hidden lg:block"
+        footer={<span>{t("adminUsers.shownOf", { shown: users.length, total })}</span>}
+      >
+        <AdminTableHead
+          template={TEMPLATE}
+          columns={[
+            header("name", t("common.labels.user")),
+            header("role", t("admin.role")),
+            header("status", t("common.labels.status")),
+            header("createdAt", t("common.stats.created")),
+            header("lastActivity", t("common.time.lastActive")),
+            header("calendarCount", t("admin.calendarsCount")),
+            <span key="actions" className="block text-right">
+              {t("adminUsers.actions")}
+            </span>,
+          ]}
+        />
+        {sortedUsers.length === 0
+          ? empty
+          : sortedUsers.map((user) => <UserRow key={user.id} user={user} {...handlers} />)}
+      </AdminTableCard>
+
+      <div className="flex flex-col gap-[9px] lg:hidden">
+        {sortedUsers.length === 0 ? (
+          <div className="rounded-[11px] border border-line">{empty}</div>
+        ) : (
+          sortedUsers.map((user) => (
+            <UserCard key={user.id} user={user} onClick={() => handlers.onUserClick(user)} />
+          ))
+        )}
+      </div>
+    </>
   );
 }
