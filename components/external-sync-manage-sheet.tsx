@@ -1,21 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { ExternalSync, SyncLog } from "@/lib/db/schema";
+import { ExternalSync } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { ExternalSyncRow } from "@/components/external-sync-list";
 import { ExternalSyncForm } from "@/components/external-sync-form";
 import { syncToFormValues, useExternalSyncForm } from "@/hooks/useExternalSyncForm";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
-import { queryKeys } from "@/lib/query-keys";
+import { useExternalSync } from "@/hooks/useExternalSync";
 import { isRateLimitError, handleRateLimitError } from "@/lib/rate-limit-client";
 import { isValidCalendarUrl, detectCalendarSyncType } from "@/lib/external-calendar-utils";
+import { useGuardedAction, useReportDirty } from "@/hooks/useDirtyState";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -36,39 +35,15 @@ export function ExternalSyncPanel({
   onDirtyChange,
 }: ExternalSyncPanelProps) {
   const t = useTranslations();
-  const queryClient = useQueryClient();
   const [mode, setMode] = useState<PanelMode>({ kind: "list" });
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const { values, setField, reset, isDirty } = useExternalSyncForm();
   const itemLabel = t("externalSync.syncTypeCustom");
 
-  const { data: syncs = [] } = useQuery({
-    queryKey: queryKeys.externalSyncs.byCalendar(calendarId),
-    queryFn: async () => {
-      const params = new URLSearchParams({ calendarId });
-      const response = await fetch(`/api/external-syncs?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch syncs");
-      return (await response.json()) as ExternalSync[];
-    },
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
-  });
-
-  const { data: syncLogs = [] } = useQuery({
-    queryKey: queryKeys.externalSyncs.logs(calendarId),
-    queryFn: async () => {
-      const params = new URLSearchParams({ calendarId, limit: "50" });
-      const response = await fetch(`/api/sync-logs?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch sync logs");
-      return (await response.json()) as SyncLog[];
-    },
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
-  });
+  const { externalSyncs: syncs, syncLogs, refetch: invalidateSyncs } = useExternalSync(calendarId);
 
   // Latest unread error per sync; marking logs as read clears it.
   const syncErrors = useMemo(() => {
@@ -90,15 +65,7 @@ export function ExternalSyncPanel({
 
   const hasUnsavedChanges = formOpen && isDirty;
 
-  useEffect(() => {
-    onDirtyChange?.(hasUnsavedChanges);
-    return () => onDirtyChange?.(false);
-  }, [hasUnsavedChanges, onDirtyChange]);
-
-  const invalidateSyncs = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.externalSyncs.byCalendar(calendarId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.externalSyncs.logs(calendarId) });
-  }, [calendarId, queryClient]);
+  useReportDirty(hasUnsavedChanges, onDirtyChange);
 
   const showList = () => {
     setMode({ kind: "list" });
@@ -116,13 +83,7 @@ export function ExternalSyncPanel({
   };
 
   /** Runs `action` right away, or after confirming that unsaved input may be dropped. */
-  const guardUnsaved = (action: () => void) => {
-    if (hasUnsavedChanges) {
-      setPendingAction(() => action);
-    } else {
-      action();
-    }
-  };
+  const { guarded: guardUnsaved, confirmProps } = useGuardedAction(hasUnsavedChanges);
 
   const handleSync = async (syncId: string) => {
     setIsSyncing(syncId);
@@ -397,14 +358,7 @@ export function ExternalSyncPanel({
         )}
       </PanelFooter>
 
-      <ConfirmationDialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => !open && setPendingAction(null)}
-        onConfirm={() => {
-          pendingAction?.();
-          setPendingAction(null);
-        }}
-      />
+      <ConfirmationDialog {...confirmProps} />
 
       <ConfirmationDialog
         open={deleteTargetId !== null}

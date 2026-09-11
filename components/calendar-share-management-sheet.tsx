@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Globe, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useAccessLinkForm } from "@/hooks/useAccessLinkForm";
+import { useReportDirty } from "@/hooks/useDirtyState";
 
 type GuestPermission = "none" | "read" | "write";
 type SharingTab = "people" | "public" | "links";
@@ -37,10 +38,7 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
   const [tab, setTab] = useState<SharingTab>("people");
   const linkForm = useAccessLinkForm(calendarId);
 
-  useEffect(() => {
-    onDirtyChange?.(linkForm.dirty);
-    return () => onDirtyChange?.(false);
-  }, [linkForm.dirty, onDirtyChange]);
+  useReportDirty(linkForm.dirty, onDirtyChange);
 
   const [optimisticGuest, setOptimisticGuest] = useState<GuestPermission | null>(null);
   const [saving, setSaving] = useState(false);

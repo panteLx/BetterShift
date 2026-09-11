@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Info, Lock, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   sanitizeCalendarViewSettings,
 } from "@/lib/view-settings";
 import { cn } from "@/lib/utils";
+import { useReportDirty } from "@/hooks/useDirtyState";
 
 export type ViewSettingsState = ReturnType<typeof useViewSettings>;
 
@@ -297,9 +298,7 @@ export function CalendarViewPanel({
     canManage &&
     (enabled !== !!saved || (!!saved && enabled && !calendarViewSettingsEqual(draft, saved)));
 
-  useEffect(() => {
-    onDirtyChange(dirty);
-  }, [dirty, onDirtyChange]);
+  useReportDirty(dirty, onDirtyChange);
 
   const toggle = (on: boolean) => {
     // Turning it on starts from the saved view, or from the personal one the first time

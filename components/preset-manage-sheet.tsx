@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { ShiftPreset } from "@/lib/db/schema";
 import { usePresets, type PresetFormData } from "@/hooks/usePresets";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useReportDirty } from "@/hooks/useDirtyState";
 
 interface PresetsPanelProps {
   calendarId: string;
@@ -58,10 +59,7 @@ export function PresetsPanel({
   const isDirty = !isReadOnly && !samePresetForm(formData, baseline);
   const canSave = !isSaving && formData.title.trim() !== "" && (!editingPreset || isDirty);
 
-  useEffect(() => {
-    onDirtyChange?.(isDirty);
-  }, [isDirty, onDirtyChange]);
-  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+  useReportDirty(isDirty, onDirtyChange);
 
   const ordered = useMemo(() => {
     if (!pendingOrder) return presets;

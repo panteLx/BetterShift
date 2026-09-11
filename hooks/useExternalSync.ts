@@ -96,6 +96,7 @@ export function useExternalSync(selectedCalendar: string | null) {
 
   return {
     externalSyncs,
+    syncLogs,
     hasSyncErrors,
     loading: syncsLoading || logsLoading,
     refetch,

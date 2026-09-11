@@ -43,6 +43,7 @@ import { signOut } from "@/lib/auth/client";
 import { locales } from "@/lib/locales";
 import { CalendarWithCount } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useGuardedAction } from "@/hooks/useDirtyState";
 
 type MenuSection = SettingsSection | "myView" | "appearance" | "language";
 
@@ -227,7 +228,7 @@ function PhoneMenuSheet({
   const isAdmin = useIsAdmin();
   const [section, setSection] = useState<MenuSection | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
 
@@ -248,10 +249,7 @@ function PhoneMenuSheet({
     onOpenChange(false);
   };
   // Sections with unsaved input report it; leaving them asks first
-  const guarded = (action: () => void) => {
-    if (dirty) setPendingAction(() => action);
-    else action();
-  };
+  const { guarded, confirmProps } = useGuardedAction(dirty, () => setDirty(false));
   const openSection = (id: MenuSection | null) =>
     guarded(() => {
       setDirty(false);
@@ -445,16 +443,7 @@ function PhoneMenuSheet({
       </PanelDialog>
       <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
       {signedIn && <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />}
-      <ConfirmationDialog
-        open={!!pendingAction}
-        onOpenChange={(next) => !next && setPendingAction(null)}
-        onConfirm={() => {
-          const action = pendingAction;
-          setPendingAction(null);
-          setDirty(false);
-          action?.();
-        }}
-      />
+      <ConfirmationDialog {...confirmProps} />
     </>
   );
 }

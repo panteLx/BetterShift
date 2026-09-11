@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Bell,
@@ -33,6 +33,7 @@ import { useExternalSync } from "@/hooks/useExternalSync";
 import { useCalendarTokens } from "@/hooks/useCalendarTokens";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { cn } from "@/lib/utils";
+import { useGuardedAction, useReportDirty } from "@/hooks/useDirtyState";
 
 export type SettingsSection =
   | "general"
@@ -86,9 +87,7 @@ function GeneralPanel({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dirty = !!calendar && (name !== calendar.name || color !== calendar.color);
 
-  useEffect(() => {
-    onDirtyChange(dirty);
-  }, [dirty, onDirtyChange]);
+  useReportDirty(dirty, onDirtyChange);
 
   const save = async () => {
     if (!calendar) return;
@@ -323,17 +322,13 @@ export function SettingsDialog({
   const { calendar, items } = useCalendarSettings(calendarId);
   const [section, setSection] = useState<SettingsSection | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const close = () => {
     setDirty(false);
     onOpenChange(false);
   };
   // Panels with unsaved input report it; leaving them asks first
-  const guarded = (action: () => void) => {
-    if (dirty) setPendingAction(() => action);
-    else action();
-  };
+  const { guarded, confirmProps } = useGuardedAction(dirty, () => setDirty(false));
   const openSection = (id: SettingsSection) =>
     guarded(() => {
       setDirty(false);
@@ -424,16 +419,7 @@ export function SettingsDialog({
           </div>
         </div>
       </PanelDialog>
-      <ConfirmationDialog
-        open={!!pendingAction}
-        onOpenChange={(next) => !next && setPendingAction(null)}
-        onConfirm={() => {
-          const action = pendingAction;
-          setPendingAction(null);
-          setDirty(false);
-          action?.();
-        }}
-      />
+      <ConfirmationDialog {...confirmProps} />
     </>
   );
 }
