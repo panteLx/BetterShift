@@ -1,6 +1,7 @@
 import { CalendarSheet } from "@/components/calendar-sheet";
 import { ShiftSheet, ShiftFormData } from "@/components/shift-sheet";
-import { SettingsDialog, SettingsSection } from "@/components/settings-dialog";
+import { SettingsDialog } from "@/components/settings-dialog";
+import { PhoneMenu } from "@/components/phone-menu";
 import { SyncNotificationDialog } from "@/components/sync-notification-dialog";
 import { ShiftsOverviewDialog } from "@/components/shifts-overview-dialog";
 import { ViewSettingsSheet, ViewSettingsState } from "@/components/view-settings-sheet";
@@ -8,6 +9,7 @@ import { NoteSheet } from "@/components/note-sheet";
 import { NotesListDialog } from "@/components/notes-list-dialog";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
 import { MonthShiftsDialog, MonthStatsDialog } from "@/components/month-dialogs";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ShiftPreset } from "@/lib/db/schema";
 
@@ -26,10 +28,9 @@ interface DialogManagerProps {
   onPresetsChange?: () => void;
   editingShift?: ShiftWithCalendar;
 
-  // Unified settings (calendar sections incl. the calendar's own view)
+  // Calendar settings on desktop; on phones the same flag opens the phone menu
   showSettingsDialog: boolean;
   onSettingsDialogChange: (open: boolean) => void;
-  settingsSection?: SettingsSection;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
   viewSettings: ViewSettingsState;
@@ -91,6 +92,7 @@ interface DialogManagerProps {
 }
 
 export function DialogManager(props: DialogManagerProps) {
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   return (
     <>
       <CalendarSheet
@@ -109,16 +111,28 @@ export function DialogManager(props: DialogManagerProps) {
         calendarId={props.selectedCalendar || undefined}
       />
 
-      <SettingsDialog
-        key={`${props.selectedCalendar}-${props.settingsSection ?? ""}`}
-        open={props.showSettingsDialog}
-        onOpenChange={props.onSettingsDialogChange}
-        calendarId={props.selectedCalendar}
-        initialSection={props.settingsSection}
-        viewSettings={props.viewSettings}
-        onDeleteCalendar={props.onDeleteCalendar}
-        onSyncComplete={props.onSyncComplete}
-      />
+      {desktop ? (
+        <SettingsDialog
+          key={props.selectedCalendar}
+          open={props.showSettingsDialog}
+          onOpenChange={props.onSettingsDialogChange}
+          calendarId={props.selectedCalendar}
+          viewSettings={props.viewSettings}
+          onDeleteCalendar={props.onDeleteCalendar}
+          onSyncComplete={props.onSyncComplete}
+        />
+      ) : (
+        <PhoneMenu
+          open={props.showSettingsDialog}
+          onOpenChange={props.onSettingsDialogChange}
+          context={{
+            calendarId: props.selectedCalendar,
+            viewSettings: props.viewSettings,
+            onDeleteCalendar: props.onDeleteCalendar,
+            onSyncComplete: props.onSyncComplete,
+          }}
+        />
+      )}
 
       <ViewSettingsSheet
         open={props.showViewSettingsDialog}

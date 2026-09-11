@@ -146,14 +146,20 @@ export function AppHeader({
         <HeaderIconButton
           label={t("settings.title")}
           onClick={onSettings}
+          className="hidden lg:flex"
         >
           <Settings className="size-4" />
         </HeaderIconButton>
       )}
+      {/* Phones have no gear: the avatar opens the settings sheet with the calendar group */}
       {signedIn ? (
-        <UserMenu onOpenViewSettings={onViewSettings} />
+        <UserMenu onOpenViewSettings={onViewSettings} onOpenPhoneMenu={onSettings} />
       ) : (
-        <GuestMenu showLogin={isAuthEnabled} onOpenViewSettings={onViewSettings} />
+        <GuestMenu
+          showLogin={isAuthEnabled}
+          onOpenViewSettings={onViewSettings}
+          onOpenPhoneMenu={onSettings}
+        />
       )}
     </>
   );

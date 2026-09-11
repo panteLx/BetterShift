@@ -379,6 +379,41 @@ export function CalendarViewPanel({
   );
 }
 
+/** Body of "Meine Ansicht"; changes apply immediately. */
+export function PersonalViewPanel({
+  settings,
+  calendarId,
+}: {
+  settings: ViewSettingsState;
+  /** Selected calendar, to point out when its own view takes precedence */
+  calendarId?: string | null;
+}) {
+  const t = useTranslations();
+  const { calendars } = useCalendars();
+  const calendar = calendarId ? calendars.find((c) => c.id === calendarId) : undefined;
+  const { personal, updatePersonal } = settings;
+
+  return (
+    <PanelBody>
+      <div className="flex flex-col gap-5">
+        {calendar?.viewSettings && (
+          <InfoNote icon={Info}>
+            {t("view.overriddenByCalendar", { calendar: calendar.name })}
+          </InfoNote>
+        )}
+        <ViewFields
+          value={personal}
+          onChange={updatePersonal}
+          stampBar={{
+            checked: personal.showStampBar,
+            onChange: (showStampBar) => updatePersonal({ showStampBar }),
+          }}
+        />
+      </div>
+    </PanelBody>
+  );
+}
+
 /** "Meine Ansicht": the personal view, applied to every calendar without its own view. */
 export function ViewSettingsSheet({
   open,
@@ -389,14 +424,9 @@ export function ViewSettingsSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   settings: ViewSettingsState;
-  /** Selected calendar, to point out when its own view takes precedence */
   calendarId?: string | null;
 }) {
   const t = useTranslations();
-  const { calendars } = useCalendars();
-  const calendar = calendarId ? calendars.find((c) => c.id === calendarId) : undefined;
-  const { personal, updatePersonal } = settings;
-
   return (
     <PanelDialog
       bare
@@ -409,23 +439,7 @@ export function ViewSettingsSheet({
           : t("view.settingsDescriptionLocal")
       }
     >
-      <PanelBody>
-        <div className="flex flex-col gap-5">
-          {calendar?.viewSettings && (
-            <InfoNote icon={Info}>
-              {t("view.overriddenByCalendar", { calendar: calendar.name })}
-            </InfoNote>
-          )}
-          <ViewFields
-            value={personal}
-            onChange={updatePersonal}
-            stampBar={{
-              checked: personal.showStampBar,
-              onChange: (showStampBar) => updatePersonal({ showStampBar }),
-            }}
-          />
-        </div>
-      </PanelBody>
+      <PersonalViewPanel settings={settings} calendarId={calendarId} />
     </PanelDialog>
   );
 }

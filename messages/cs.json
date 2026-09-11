@@ -248,7 +248,7 @@
     "overriddenByCalendar": "„{calendar}“ má vlastní zobrazení. Vaše osobní zobrazení tam neplatí.",
     "calendarOwn": "Vlastní zobrazení pro tento kalendář",
     "calendarOwnHint": "Platí pro všechny, kdo mají k tomuto kalendáři přístup.",
-    "calendarOffNote": "Každý tu vidí své osobní zobrazení. To vaše najdete v uživatelské nabídce → „Moje zobrazení“.",
+    "calendarOffNote": "Každý tu vidí své osobní zobrazení. To vaše nastavíte v „Moje zobrazení“.",
     "calendarLocked": "Nastaveno pro tento kalendář. Změnit ho mohou jen ti, kdo kalendář spravují."
   },
   "stats": {
@@ -734,7 +734,7 @@
   },
   "settings": {
     "title": "Nastavení",
-    "description": "Kalendář, šablony, synchronizace a sdílení",
+    "description": "Platí pro všechny, kdo mají k tomuto kalendáři přístup",
     "general": "Název a barva",
     "generalHint": "Zobrazovaný název, barva kalendáře, smazání",
     "presets": "Šablony",
@@ -745,17 +745,19 @@
     "sharingHint": "{count, plural, =0 {Lidé, veřejný přístup, odkazy} one {Lidé, veřejný přístup, # aktivní odkaz} few {Lidé, veřejný přístup, # aktivní odkazy} other {Lidé, veřejný přístup, # aktivních odkazů}}",
     "export": "Export",
     "exportHint": "Soubor ICS nebo PDF",
-    "view": "Zobrazení",
+    "view": "Zobrazení kalendáře",
     "viewHint": "Vlastní zobrazení, hustota, řazení",
     "notifications": "Oznámení",
     "notificationsHint": "Synchronizace",
     "notificationsError": "Chyba synchronizace",
     "deleteImpact": "{count, plural, =0 {Kalendář bude trvale smazán} one {Smaže se i # směna} few {Smažou se i # směny} other {Smaže se i # směn}}",
     "appliesToAll": "Změny platí okamžitě pro všechny, se kterými je kalendář sdílen.",
-    "groupCalendar": "Kalendář",
-    "groupNotifications": "Oznámení",
     "groupAccount": "Účet",
-    "groupApp": "Aplikace"
+    "groupApp": "Aplikace",
+    "viewOn": "zapnuto",
+    "viewOff": "vypnuto",
+    "groupPersonal": "Jen pro vás",
+    "personalCaption": "Platí ve všech kalendářích, ostatní to nevidí"
   },
   "presetSheet": {
     "title": "Předvolby",

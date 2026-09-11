@@ -6,7 +6,8 @@ import Link from "next/link";
 import { ArrowLeft, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Pill } from "@/components/form-kit";
-import { getInitials } from "@/components/user-menu";
+import { getInitials, UserMenu } from "@/components/user-menu";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 /*
@@ -16,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Page title row. On phones it doubles as the sticky top bar (back to the app,
- * title, subtitle, `mobileActions`), so it must be the first child of the page.
+ * title, subtitle, `mobileActions`, avatar), so it must be the first child of the page.
  */
 export function AdminPageHeader({
   title,
@@ -26,11 +27,13 @@ export function AdminPageHeader({
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
+  /** Desktop only */
   actions?: ReactNode;
-  /** Replaces `actions` on phones, typically one 34px icon button */
+  /** Phones, shown before the avatar; typically 34px icon buttons */
   mobileActions?: ReactNode;
 }) {
   const t = useTranslations();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
   return (
     <div className="sticky top-0 z-20 -mx-4 flex items-center gap-2.5 border-b border-line bg-background px-4 pb-3 pt-[max(12px,env(safe-area-inset-top))] lg:static lg:mx-0 lg:flex-wrap lg:items-end lg:justify-between lg:gap-4 lg:border-0 lg:bg-transparent lg:p-0">
       <Link
@@ -49,8 +52,11 @@ export function AdminPageHeader({
         )}
       </div>
       {actions && <div className="hidden flex-wrap items-center gap-2 lg:flex">{actions}</div>}
-      {(mobileActions ?? actions) && (
-        <div className="flex shrink-0 items-center gap-2 lg:hidden">{mobileActions ?? actions}</div>
+      {!desktop && (
+        <div className="flex shrink-0 items-center gap-2 lg:hidden">
+          {mobileActions}
+          <UserMenu />
+        </div>
       )}
     </div>
   );

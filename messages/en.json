@@ -248,7 +248,7 @@
     "overriddenByCalendar": "“{calendar}” has its own view. Your personal view does not apply there.",
     "calendarOwn": "Own view for this calendar",
     "calendarOwnHint": "Applies to everyone with access to this calendar.",
-    "calendarOffNote": "Everyone sees their personal view here. You can find yours under user menu → “My view”.",
+    "calendarOffNote": "Everyone sees their personal view here. You set yours under “My view”.",
     "calendarLocked": "Set for this calendar. Only people who manage the calendar can change it."
   },
   "stats": {
@@ -734,7 +734,7 @@
   },
   "settings": {
     "title": "Settings",
-    "description": "Calendar, presets, sync and sharing",
+    "description": "Applies to everyone with access to this calendar",
     "general": "Name and color",
     "generalHint": "Display name, calendar color, delete",
     "presets": "Presets",
@@ -745,17 +745,19 @@
     "sharingHint": "{count, plural, =0 {People, public access, links} one {People, public access, # active link} other {People, public access, # active links}}",
     "export": "Export",
     "exportHint": "ICS file or PDF",
-    "view": "View",
+    "view": "Calendar view",
     "viewHint": "Own view, density, sorting",
     "notifications": "Notifications",
     "notificationsHint": "Synchronization",
     "notificationsError": "Sync error",
     "deleteImpact": "{count, plural, =0 {The calendar is deleted permanently} one {# shift will be deleted too} other {# shifts will be deleted too}}",
     "appliesToAll": "Changes apply immediately for everyone it is shared with.",
-    "groupCalendar": "Calendar",
-    "groupNotifications": "Notifications",
     "groupAccount": "Account",
-    "groupApp": "App"
+    "groupApp": "App",
+    "viewOn": "on",
+    "viewOff": "off",
+    "groupPersonal": "Just for you",
+    "personalCaption": "Applies in every calendar, others don't see it"
   },
   "presetSheet": {
     "title": "Presets",

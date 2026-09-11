@@ -248,7 +248,7 @@
     "overriddenByCalendar": "«{calendar}» tiene su propia vista. Allí no se aplica tu vista personal.",
     "calendarOwn": "Vista propia para este calendario",
     "calendarOwnHint": "Se aplica a todas las personas con acceso a este calendario.",
-    "calendarOffNote": "Aquí cada persona ve su vista personal. La tuya está en menú de usuario → «Mi vista».",
+    "calendarOffNote": "Aquí cada persona ve su vista personal. La tuya se ajusta en «Mi vista».",
     "calendarLocked": "Definida para este calendario. Solo quienes gestionan el calendario pueden cambiarla."
   },
   "stats": {
@@ -734,7 +734,7 @@
   },
   "settings": {
     "title": "Ajustes",
-    "description": "Calendario, plantillas, sincronización y compartir",
+    "description": "Se aplica a todas las personas con acceso a este calendario",
     "general": "Nombre y color",
     "generalHint": "Nombre visible, color del calendario, eliminar",
     "presets": "Plantillas",
@@ -745,17 +745,19 @@
     "sharingHint": "{count, plural, =0 {Personas, acceso público, enlaces} one {Personas, acceso público, # enlace activo} other {Personas, acceso público, # enlaces activos}}",
     "export": "Exportar",
     "exportHint": "Archivo ICS o PDF",
-    "view": "Vista",
+    "view": "Vista del calendario",
     "viewHint": "Vista propia, densidad, orden",
     "notifications": "Notificaciones",
     "notificationsHint": "Sincronización",
     "notificationsError": "Error de sincronización",
     "deleteImpact": "{count, plural, =0 {El calendario se elimina definitivamente} one {También se eliminará # turno} other {También se eliminarán # turnos}}",
     "appliesToAll": "Los cambios se aplican de inmediato para todas las personas con acceso.",
-    "groupCalendar": "Calendario",
-    "groupNotifications": "Notificaciones",
     "groupAccount": "Cuenta",
-    "groupApp": "App"
+    "groupApp": "App",
+    "viewOn": "activada",
+    "viewOff": "desactivada",
+    "groupPersonal": "Solo para ti",
+    "personalCaption": "Se aplica en todos los calendarios, nadie más lo ve"
   },
   "presetSheet": {
     "title": "Preajustes",
