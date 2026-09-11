@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format, getISOWeek } from "date-fns";
-import { ChevronDown, ChevronRight, ChevronUp, List, Plus, StickyNote } from "lucide-react";
+import { ChevronDown, ChevronRight, List, Plus, StickyNote } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -20,7 +20,6 @@ import {
 import { DayActions, DayViewModel, useDayLabels } from "@/components/day-inspector";
 import { PeriodSummary, StatsPeriod } from "@/hooks/useDaySummary";
 import { getDateLocale } from "@/lib/locales";
-import { formatHours } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 
 type SheetTab = "day" | "stats";
@@ -35,45 +34,55 @@ interface MobileDaySheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Collapsed one-line summary of the selected day that opens the sheet. */
-export function MobileDayPeek({
+/** Bottom bar under the phone grid: the selected day in brief and a button to add a shift. */
+export function MobileDayFooter({
   model,
   onOpen,
+  onAddShift,
 }: {
   model: DayViewModel;
   onOpen: () => void;
+  /** Hidden when the calendar can't be edited */
+  onAddShift?: () => void;
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const { selectedDay, dayShifts, totalMinutes, dayNotes } = model;
-  const title = new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-  }).format(selectedDay);
-  const parts = dayShifts.map((s) =>
-    s.isAllDay ? s.title : `${s.title} ${s.startTime.slice(0, 5)}`
+  const { selectedDay, dayShifts, dayNotes } = model;
+  const day = new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric" }).format(
+    selectedDay
   );
-  if (totalMinutes > 0) parts.push(formatHours(totalMinutes, locale));
+  const shifts =
+    dayShifts.length > 0 ? dayShifts.map((s) => s.title).join(", ") : t("calendarView.dayFree");
+  const events = dayNotes.filter((n) => n.type === "event").length;
+  const notes = dayNotes.length - events;
+  const extras = [
+    events > 0 && t("calendarView.eventCount", { count: events }),
+    notes > 0 && t("calendarView.notesCount", { count: notes }),
+  ].filter(Boolean);
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 border-t border-line bg-background px-4 py-2.5 text-left"
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-[14px] font-semibold text-fg-strong">{title}</span>
-        <span className="block truncate font-mono text-[12px] text-fg-tertiary">
-          {parts.length > 0
-            ? parts.join(" · ")
-            : dayNotes.length > 0
-              ? t("calendarView.notesCount", { count: dayNotes.length })
-              : t("calendarView.dayFree")}
+    <div className="flex items-center gap-2.5 border-t border-line bg-surface-panel px-3.5 pb-[max(9px,env(safe-area-inset-bottom))] pt-[9px]">
+      <button type="button" onClick={onOpen} className="min-w-0 flex-1 py-1 text-left">
+        <span className="block truncate text-[12.5px] font-semibold text-fg-strong">
+          {day}: {shifts}
         </span>
-      </span>
-      <ChevronUp className="size-[18px] shrink-0 text-fg-secondary" />
-    </button>
+        {extras.length > 0 && (
+          <span className="mt-px block truncate text-[11px] text-fg-tertiary">
+            {extras.join(" · ")}
+          </span>
+        )}
+      </button>
+      {onAddShift && (
+        <button
+          type="button"
+          onClick={onAddShift}
+          aria-label={t("calendarView.addShiftManually")}
+          className="flex size-10 shrink-0 items-center justify-center rounded-[11px] bg-brand text-white"
+        >
+          <Plus className="size-[19px]" />
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -228,9 +228,7 @@
     "combinedSort": "Řadit všechny směny dohromady",
     "combinedSortHint": "Řadit běžné a externí směny dohromady místo odděleně",
     "showNotes": "Zobrazit poznámky směn",
-    "showNotesHint": "Zobrazit poznámky směn v mřížce kalendáře",
-    "showFullTitles": "Zobrazit celé názvy směn",
-    "showFullTitlesHint": "Zobrazit úplné názvy směn bez zkracování",
+    "showNotesHint": "Zobrazit poznámky směn v měsíčním zobrazení na počítači",
     "dayHighlighting": "Zvýraznění dnů",
     "highlightWeekends": "Zvýraznit víkendy",
     "highlightWeekendsHint": "Zvýraznit soboty a neděle barvou",
@@ -675,8 +673,6 @@
       "sunday": "Ne"
     },
     "allDayShort": "celý den",
-    "allDayTiny": "den",
-    "moreShifts": "+{count} další",
     "externalCount": "{count} externí",
     "hasNotes": "{count, plural, one {# poznámka} few {# poznámky} other {# poznámek}}",
     "shift": "Směna",
@@ -719,7 +715,8 @@
     "offlineMessage": "Vidíte naposledy načtený stav. Změny budou znovu možné po obnovení spojení; mezitím se neukládají.",
     "retry": "Zkusit znovu",
     "note": "Poznámka",
-    "event": "Událost"
+    "event": "Událost",
+    "eventCount": "{count, plural, one {# událost} few {# události} other {# událostí}}"
   },
   "calendarCompare": {
     "title": "Porovnání",

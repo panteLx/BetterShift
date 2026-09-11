@@ -7,7 +7,6 @@ export interface CalendarViewSettings {
   shiftsPerDay: number | null;
   externalShiftsPerDay: number | null;
   showShiftNotes: boolean;
-  showFullTitles: boolean;
   sortType: ShiftSortType;
   sortOrder: ShiftSortOrder;
   combinedSort: boolean;
@@ -35,7 +34,6 @@ export const DEFAULT_CALENDAR_VIEW_SETTINGS: CalendarViewSettings = {
   shiftsPerDay: 3,
   externalShiftsPerDay: 3,
   showShiftNotes: false,
-  showFullTitles: false,
   sortType: "createdAt",
   sortOrder: "asc",
   combinedSort: false,
@@ -89,7 +87,6 @@ export function sanitizeCalendarViewSettings(input: unknown): CalendarViewSettin
     shiftsPerDay: sanitizeLimit(src.shiftsPerDay, d.shiftsPerDay),
     externalShiftsPerDay: sanitizeLimit(src.externalShiftsPerDay, d.externalShiftsPerDay),
     showShiftNotes: sanitizeBoolean(src.showShiftNotes, d.showShiftNotes),
-    showFullTitles: sanitizeBoolean(src.showFullTitles, d.showFullTitles),
     sortType: sanitizeEnum(src.sortType, SORT_TYPES, d.sortType),
     sortOrder: sanitizeEnum(src.sortOrder, SORT_ORDERS, d.sortOrder),
     combinedSort: sanitizeBoolean(src.combinedSort, d.combinedSort),

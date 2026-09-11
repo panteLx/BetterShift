@@ -53,7 +53,6 @@ interface CompareWorkspaceProps {
   togglingDatesMap: Map<string, Set<string>>;
   layout: DayLayoutOptions;
   showShiftNotes: boolean;
-  showFullTitles: boolean;
   highlightedWeekdays: number[];
   highlightColor: string;
   selectedPresetId: string | undefined;
@@ -284,7 +283,6 @@ function CompareColumn({
   togglingDatesMap,
   layout,
   showShiftNotes,
-  showFullTitles,
   highlightedWeekdays,
   highlightColor,
   selectedPresetId,
@@ -393,7 +391,6 @@ function CompareColumn({
         togglingDates={togglingDatesMap.get(calendar.id) ?? new Set()}
         layout={layout}
         showShiftNotes={showShiftNotes}
-        showFullTitles={showFullTitles}
         highlightedWeekdays={highlightedWeekdays}
         highlightColor={highlightColor}
         onDayClick={(date) => onDayClick(calendar.id, date)}

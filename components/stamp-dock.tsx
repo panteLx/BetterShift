@@ -327,8 +327,7 @@ export function MobilePresetBar({
   selectedPresetId,
   onSelectPreset,
   onManage,
-  onAddShift,
-}: StampProps & { onAddShift: () => void }) {
+}: StampProps) {
   const t = useTranslations();
   const [moreOpen, setMoreOpen] = useState(false);
   const { primary, secondary } = splitStampPresets(presets);
@@ -420,14 +419,6 @@ export function MobilePresetBar({
             />
           )}
         </div>
-        <button
-          type="button"
-          onClick={onAddShift}
-          aria-label={t("calendarView.addShiftManually")}
-          className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-brand text-white shadow-[0_8px_18px_-6px_rgb(37_99_235/0.55)]"
-        >
-          <Plus className="size-6" />
-        </button>
       </div>
       {active && (
         <div className="flex items-center gap-2 px-4 pb-2.5 text-[12px] leading-snug text-fg-secondary">

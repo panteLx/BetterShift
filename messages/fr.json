@@ -228,9 +228,7 @@
     "combinedSort": "Trier tous les créneaux ensemble",
     "combinedSortHint": "Trier les créneaux réguliers et externes ensemble plutôt que séparément",
     "showNotes": "Afficher les notes des créneaux",
-    "showNotesHint": "Afficher les notes des créneaux dans la grille du calendrier",
-    "showFullTitles": "Afficher les titres complets",
-    "showFullTitlesHint": "Afficher les titres des créneaux en entier sans les tronquer",
+    "showNotesHint": "Afficher les notes des créneaux dans la vue mensuelle sur ordinateur",
     "dayHighlighting": "Mise en évidence des jours",
     "highlightWeekends": "Mettre en évidence les week-ends",
     "highlightWeekendsHint": "Mettre en évidence les samedis et dimanches avec une couleur",
@@ -675,8 +673,6 @@
       "sunday": "Di"
     },
     "allDayShort": "journée",
-    "allDayTiny": "jour",
-    "moreShifts": "+{count} de plus",
     "externalCount": "{count} externes",
     "hasNotes": "{count, plural, one {# note} other {# notes}}",
     "shift": "Service",
@@ -719,7 +715,8 @@
     "offlineMessage": "Vous voyez le dernier état chargé. Les modifications seront de nouveau possibles une fois la connexion rétablie ; elles ne sont pas mises en attente.",
     "retry": "Réessayer",
     "note": "Note",
-    "event": "Événement"
+    "event": "Événement",
+    "eventCount": "{count, plural, one {# événement} other {# événements}}"
   },
   "calendarCompare": {
     "title": "Comparer",

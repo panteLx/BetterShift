@@ -18,6 +18,8 @@ export interface DayShiftLayout {
   visible: ShiftWithCalendar[];
   /** Shifts cut by the per-day limits */
   hiddenCount: number;
+  /** The part of hiddenCount that came from external syncs */
+  hiddenExternalCount: number;
   /** Everything that would render as a chip without limits */
   displayable: ShiftWithCalendar[];
   /** External syncs in "minimal" mode collapse into one counter each */
@@ -124,6 +126,7 @@ export function buildDayShiftLayout(
     visible,
     hiddenCount:
       regular.length - shownRegular.length + external.length - shownExternal.length,
+    hiddenExternalCount: external.length - shownExternal.length,
     displayable: [...regular, ...external],
     minimalGroups: [...minimal.entries()].flatMap(([id, shifts]) => {
       const sync = syncById.get(id);

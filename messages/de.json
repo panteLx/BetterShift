@@ -228,9 +228,7 @@
     "combinedSort": "Alle Schichten zusammen sortieren",
     "combinedSortHint": "Normale und externe Schichten gemeinsam sortieren statt separat",
     "showNotes": "Schichtnotizen anzeigen",
-    "showNotesHint": "Notizen der Schichten im Kalender anzeigen",
-    "showFullTitles": "Vollständige Schichttitel anzeigen",
-    "showFullTitlesHint": "Schichttitel vollständig ohne Kürzung anzeigen",
+    "showNotesHint": "Notizen der Schichten in der Monatsansicht am Desktop anzeigen",
     "dayHighlighting": "Tage hervorheben",
     "highlightWeekends": "Wochenenden hervorheben",
     "highlightWeekendsHint": "Samstage und Sonntage farbig hervorheben",
@@ -675,8 +673,6 @@
       "sunday": "So"
     },
     "allDayShort": "ganztg.",
-    "allDayTiny": "ganzt.",
-    "moreShifts": "+{count} weitere",
     "externalCount": "{count} extern",
     "hasNotes": "{count, plural, one {# Notiz} other {# Notizen}}",
     "shift": "Schicht",
@@ -719,7 +715,8 @@
     "offlineMessage": "Du siehst den zuletzt geladenen Stand. Änderungen sind erst wieder möglich, wenn die Verbindung steht — sie werden nicht zwischengespeichert.",
     "retry": "Erneut versuchen",
     "note": "Notiz",
-    "event": "Event"
+    "event": "Event",
+    "eventCount": "{count, plural, one {# Event} other {# Events}}"
   },
   "calendarCompare": {
     "title": "Vergleich",

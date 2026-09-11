@@ -510,7 +510,6 @@ function HomeContent() {
           togglingDatesMap={togglingDatesMap}
           layout={toDayLayout(personalView)}
           showShiftNotes={personalView.showShiftNotes}
-          showFullTitles={personalView.showFullTitles}
           highlightedWeekdays={personalView.highlightedWeekdays}
           highlightColor={personalView.highlightColor}
           selectedPresetId={selectedPresetId}
@@ -583,7 +582,6 @@ function HomeContent() {
         togglingDates={shiftActions.togglingDates}
         layout={toDayLayout(calendarView)}
         showShiftNotes={calendarView.showShiftNotes}
-        showFullTitles={calendarView.showFullTitles}
         highlightedWeekdays={calendarView.highlightedWeekdays}
         highlightColor={calendarView.highlightColor}
         canEdit={canEdit}

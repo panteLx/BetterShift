@@ -153,14 +153,6 @@ function ViewFields({
           onCheckedChange={(showShiftNotes) => onChange({ showShiftNotes })}
           disabled={disabled}
         />
-        <ToggleRow
-          id={`${id}-titles`}
-          title={t("view.showFullTitles")}
-          description={t("view.showFullTitlesHint")}
-          checked={value.showFullTitles}
-          onCheckedChange={(showFullTitles) => onChange({ showFullTitles })}
-          disabled={disabled}
-        />
         {stampBar && (
           <ToggleRow
             id={`${id}-dock`}

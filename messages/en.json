@@ -228,9 +228,7 @@
     "combinedSort": "Sort all shifts together",
     "combinedSortHint": "Sort regular and external shifts together instead of separately",
     "showNotes": "Show shift notes",
-    "showNotesHint": "Display shift notes in calendar grid",
-    "showFullTitles": "Show full shift titles",
-    "showFullTitlesHint": "Display complete shift titles without truncation",
+    "showNotesHint": "Show shift notes in the month view on desktop",
     "dayHighlighting": "Day Highlighting",
     "highlightWeekends": "Highlight Weekends",
     "highlightWeekendsHint": "Highlight Saturdays and Sundays with color",
@@ -675,8 +673,6 @@
       "sunday": "Su"
     },
     "allDayShort": "all day",
-    "allDayTiny": "all day",
-    "moreShifts": "+{count} more",
     "externalCount": "{count} external",
     "hasNotes": "{count, plural, one {# note} other {# notes}}",
     "shift": "Shift",
@@ -719,7 +715,8 @@
     "offlineMessage": "You are looking at the last loaded state. Changes are possible again once the connection is back — they are not stored in between.",
     "retry": "Try again",
     "note": "Note",
-    "event": "Event"
+    "event": "Event",
+    "eventCount": "{count, plural, one {# event} other {# events}}"
   },
   "calendarCompare": {
     "title": "Compare",

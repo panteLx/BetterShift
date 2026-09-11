@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { isToday } from "date-fns";
-import { RefreshCw, StickyNote } from "lucide-react";
+import { CalendarClock, RefreshCw, StickyNote } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
@@ -15,7 +15,6 @@ import {
   getShiftsForDay,
   isSameLocalDay,
 } from "@/lib/shift-display";
-import { DESKTOP_QUERY } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_KEYS = [
@@ -30,82 +29,59 @@ const WEEKDAY_KEYS = [
 
 const LONG_PRESS_MS = 500;
 
-// Phone cell geometry in px. These mirror the Tailwind sizes of the phone markup
-// below; change both together or the capacity math clips items.
-const PHONE_MIN_ROW = 86; // two shift rows fit: 86 - CHROME = 2 * ITEM + GAP
-const PHONE_CHROME = 31; // 3 padding + 22 day number + 3 gap + 3 padding
+// Cell geometry in px. These mirror the Tailwind sizes of the cell markup below;
+// change both together or the fitting clips rows.
+const DESKTOP_MAX_ROWS = 4;
+const DESKTOP_CHROME = 37; // 7 + 7 padding, 20 day number, 3 gap
+const DESKTOP_GAP = 3;
+const DESKTOP_ROW = 20;
+const DESKTOP_PLAIN_ROW = 18;
+const DESKTOP_SUB_LINE = 14;
+const DESKTOP_OVERFLOW = 14;
+
+const PHONE_MIN_ROW = 84; // two fields plus the counter
+const PHONE_CHROME = 30; // 5 padding, 22 head, 3 gap
 const PHONE_GAP = 2;
-const PHONE_ITEM_PAD = 4;
-const PHONE_TITLE_LINE = 12;
-const PHONE_SUB_LINE = 10;
-const PHONE_PILL = 14;
-const PHONE_EVENT = 14;
-const PHONE_TEXT_INSET = 14; // cell padding 6 + rail 2 + item padding 6
-const PHONE_CHAR_PX = 6.2; // generous average for 10.5px semibold
-const PHONE_SYNC_ICON = 10;
+const PHONE_FIELD = 19;
+const PHONE_COUNTER = 12;
+const PHONE_MAX_FIELDS = 3;
+const PHONE_HEAD_FIXED = 32; // 4 cell padding, 3 head padding, 22 day number, 3 gap
+const PHONE_MARK = 10;
+const PHONE_MAX_MARKS = 3;
+const PHONE_FALLBACK_COL = 54; // 390px viewport, used until the grid is measured
 
-type MinimalGroup = DayShiftLayout["minimalGroups"][number];
+type Variant = "desktop" | "phone" | "compare";
 
-interface PhoneFit {
-  shifts: ShiftWithCalendar[];
-  groups: MinimalGroup[];
-  hidden: number;
+/** Desktop rows in cell order; "count" is a count-only external sync */
+type CellEntry =
+  | { kind: "shift" | "external"; key: string; shift: ShiftWithCalendar }
+  | { kind: "event" | "note"; key: string; note: CalendarNote }
+  | { kind: "count"; key: string; sync: ExternalSync; count: number };
+
+/** How many items fit into `space`, keeping room for an overflow line whenever something stays hidden. */
+function fitCount(
+  heights: number[],
+  alreadyHidden: number,
+  space: number,
+  max: number,
+  gap: number,
+  overflow: number
+): number {
+  let used = 0;
+  let shown = 0;
+  for (let i = 0; i < heights.length && shown < max; i++) {
+    const cost = heights[i] + (shown > 0 ? gap : 0);
+    const hiddenAfter = heights.length - i - 1 + alreadyHidden;
+    const reserve = hiddenAfter > 0 ? gap + overflow : 0;
+    if (used + cost + reserve > space) break;
+    used += cost;
+    shown++;
+  }
+  return shown;
 }
 
-/** Picks what fits into one phone cell, in layout order with minimal-sync pills last. */
-function fitPhoneCell(
-  { visible, hiddenCount, minimalGroups }: DayShiftLayout,
-  hasEvents: boolean,
-  rowHeight: number,
-  colWidth: number,
-  showFullTitles: boolean,
-  showShiftNotes: boolean
-): PhoneFit {
-  let space = rowHeight - PHONE_CHROME - (hasEvents ? PHONE_EVENT + PHONE_GAP : 0);
-  let placed = 0;
-  const place = (height: number) => {
-    const cost = placed === 0 ? height : height + PHONE_GAP;
-    if (cost > space) return false;
-    space -= cost;
-    placed++;
-    return true;
-  };
-
-  const textWidth = colWidth - PHONE_TEXT_INSET;
-  const shifts: ShiftWithCalendar[] = [];
-  for (const shift of visible) {
-    const titleWidth =
-      shift.title.length * PHONE_CHAR_PX + (shift.syncedFromExternal ? PHONE_SYNC_ICON : 0);
-    const titleLines = showFullTitles && titleWidth > textWidth ? 2 : 1;
-    const height =
-      PHONE_ITEM_PAD +
-      titleLines * PHONE_TITLE_LINE +
-      PHONE_SUB_LINE +
-      (showShiftNotes && shift.notes ? PHONE_SUB_LINE : 0);
-    if (!place(height)) break;
-    shifts.push(shift);
-  }
-
-  const groups: MinimalGroup[] = [];
-  if (shifts.length === visible.length) {
-    for (const group of minimalGroups) {
-      if (!place(PHONE_PILL)) break;
-      groups.push(group);
-    }
-  }
-
-  const droppedMinimal = minimalGroups
-    .slice(groups.length)
-    .reduce((sum, group) => sum + group.shifts.length, 0);
-  return {
-    shifts,
-    groups,
-    hidden: hiddenCount + visible.length - shifts.length + droppedMinimal,
-  };
-}
-
-/** Grid box size, tracked only below the desktop breakpoint where the phone cells need it. */
-function usePhoneGridSize(enabled: boolean) {
+/** Grid box size; both month layouts fit their cells to it. */
+function useGridSize(enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -113,7 +89,6 @@ function usePhoneGridSize(enabled: boolean) {
     const el = ref.current;
     if (!enabled || !el) return;
     const observer = new ResizeObserver(() => {
-      if (window.matchMedia(DESKTOP_QUERY).matches) return;
       const width = el.offsetWidth;
       const height = el.offsetHeight;
       setSize((prev) =>
@@ -127,6 +102,12 @@ function usePhoneGridSize(enabled: boolean) {
   return [ref, size] as const;
 }
 
+interface DayContent {
+  layout: DayShiftLayout;
+  events: CalendarNote[];
+  notes: CalendarNote[];
+}
+
 interface MonthGridProps {
   calendarDays: Date[];
   currentDate: Date;
@@ -136,14 +117,14 @@ interface MonthGridProps {
   externalSyncs: ExternalSync[];
   togglingDates: Set<string>;
   layout: DayLayoutOptions;
+  /** Desktop only: a shift's own note as a second line */
   showShiftNotes?: boolean;
-  showFullTitles?: boolean;
   highlightedWeekdays?: number[];
   highlightColor?: string;
   onDayClick: (date: Date) => void;
   onDayContextMenu?: (date: Date) => void;
   /** "compare" is the narrow desktop column used side by side in compare mode */
-  variant?: "full" | "compare";
+  variant?: Variant;
 }
 
 export function MonthGrid({
@@ -156,30 +137,29 @@ export function MonthGrid({
   togglingDates,
   layout,
   showShiftNotes = false,
-  showFullTitles = false,
   highlightedWeekdays = [],
   highlightColor,
   onDayClick,
   onDayContextMenu,
-  variant = "full",
+  variant = "desktop",
 }: MonthGridProps) {
   const t = useTranslations();
-  const full = variant === "full";
   const locale = useLocale();
+  const phone = variant === "phone";
+  const desktop = variant === "desktop";
   // 2024-01-01 was a Monday
   const longWeekdays = WEEKDAY_KEYS.map((_, i) =>
     new Intl.DateTimeFormat(locale, { weekday: "long" }).format(new Date(2024, 0, 1 + i))
   );
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
-  const [gridRef, gridSize] = usePhoneGridSize(full);
+  const [gridRef, gridSize] = useGridSize(variant !== "compare");
   const rows = Math.max(1, Math.ceil(calendarDays.length / 7));
-  // Until measured this falls back to the minimum row height
-  const phoneRowHeight = Math.max(
-    PHONE_MIN_ROW,
-    Math.floor((gridSize.height - (rows - 1)) / rows)
-  );
-  const phoneColWidth = gridSize.width > 0 ? (gridSize.width - 6) / 7 : 48;
+  const measured = gridSize.height > 0;
+  const rowHeight = phone
+    ? Math.max(PHONE_MIN_ROW, (gridSize.height - (rows - 1) * PHONE_GAP) / rows)
+    : (gridSize.height - (rows - 1)) / rows;
+  const colWidth = gridSize.width > 0 ? (gridSize.width - 8) / 7 : PHONE_FALLBACK_COL;
 
   useEffect(
     () => () => {
@@ -193,40 +173,356 @@ export function MonthGrid({
     pressTimer.current = null;
   };
 
-  return (
-    // On phones the grid may not shrink below its minimum rows, so the page scrolls instead
-    <div className={cn("flex flex-1 flex-col", full ? "lg:min-h-0" : "min-h-0")}>
-      <div
-        className={cn(
-          "grid grid-cols-7 border-b border-line",
-          full ? "px-2 lg:px-[18px] lg:pt-3.5" : "px-4 pt-3"
+  const renderDesktop = (content: DayContent) => {
+    const { visible, hiddenCount, hiddenExternalCount, minimalGroups } = content.layout;
+    const entries: CellEntry[] = [
+      ...visible.map((shift) => ({
+        kind: shift.syncedFromExternal ? ("external" as const) : ("shift" as const),
+        key: shift.id,
+        shift,
+      })),
+      ...content.events.map((note) => ({ kind: "event" as const, key: note.id, note })),
+      ...content.notes.map((note) => ({ kind: "note" as const, key: note.id, note })),
+      ...minimalGroups.map(({ sync, shifts: synced }) => ({
+        kind: "count" as const,
+        key: sync.id,
+        sync,
+        count: synced.length,
+      })),
+    ];
+    const heights = entries.map((entry) => {
+      if (entry.kind === "shift") {
+        return DESKTOP_ROW + (showShiftNotes && entry.shift.notes ? DESKTOP_SUB_LINE : 0);
+      }
+      return entry.kind === "note" ? DESKTOP_PLAIN_ROW : DESKTOP_ROW;
+    });
+    const shown = fitCount(
+      heights,
+      hiddenCount,
+      measured ? rowHeight - DESKTOP_CHROME : Infinity,
+      DESKTOP_MAX_ROWS,
+      DESKTOP_GAP,
+      DESKTOP_OVERFLOW
+    );
+
+    let hiddenShifts = hiddenCount - hiddenExternalCount;
+    let hiddenExternal = hiddenExternalCount;
+    let hiddenEvents = 0;
+    let hiddenNotes = 0;
+    for (const entry of entries.slice(shown)) {
+      if (entry.kind === "shift") hiddenShifts++;
+      else if (entry.kind === "external") hiddenExternal++;
+      else if (entry.kind === "count") hiddenExternal += entry.count;
+      else if (entry.kind === "event") hiddenEvents++;
+      else hiddenNotes++;
+    }
+    const overflow = [
+      hiddenShifts > 0 && t("calendarView.shiftCount", { count: hiddenShifts }),
+      hiddenEvents > 0 && t("calendarView.eventCount", { count: hiddenEvents }),
+      hiddenNotes > 0 && t("calendarView.notesCount", { count: hiddenNotes }),
+      hiddenExternal > 0 && t("calendarView.externalCount", { count: hiddenExternal }),
+    ].filter(Boolean);
+
+    const chip =
+      "shift-chip flex min-w-0 shrink-0 gap-1.5 rounded-[6px] py-0.5 pr-[7px] dark:[--shift-tint:14%]";
+    const time = (shift: ShiftWithCalendar) => (
+      <span className="shrink-0 font-mono text-[10.5px] leading-4 opacity-75">
+        {shift.isAllDay ? t("calendarView.allDayShort") : shift.startTime.slice(0, 5)}
+      </span>
+    );
+
+    return (
+      <>
+        {entries.slice(0, shown).map((entry) => {
+          switch (entry.kind) {
+            case "shift": {
+              const { shift } = entry;
+              return (
+                <span
+                  key={entry.key}
+                  className={cn(chip, "pl-[5px]")}
+                  style={{ "--shift": shift.color } as React.CSSProperties}
+                  title={`${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`}
+                >
+                  <span className="shift-rail w-[3px] shrink-0 self-stretch rounded-full" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[11.5px] font-medium leading-4">
+                      {shift.title}
+                    </span>
+                    {showShiftNotes && shift.notes && (
+                      <span className="block truncate text-[10.5px] leading-[14px] opacity-75">
+                        {shift.notes}
+                      </span>
+                    )}
+                  </span>
+                  {time(shift)}
+                </span>
+              );
+            }
+            case "external":
+              // The sync icon takes the rail's place so imported entries stay recognisable
+              return (
+                <span
+                  key={entry.key}
+                  className={cn(chip, "items-center pl-[5px]")}
+                  style={{ "--shift": entry.shift.color } as React.CSSProperties}
+                  title={entry.shift.title}
+                >
+                  <RefreshCw className="size-3 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium leading-4">
+                    {entry.shift.title}
+                  </span>
+                  {time(entry.shift)}
+                </span>
+              );
+            case "count":
+              return (
+                <span
+                  key={entry.key}
+                  className={cn(chip, "items-center self-start pl-[5px]")}
+                  style={{ "--shift": entry.sync.color } as React.CSSProperties}
+                  title={entry.sync.name}
+                >
+                  <RefreshCw className="size-3 shrink-0" />
+                  <span className="font-mono text-[11px] font-semibold leading-4">{entry.count}</span>
+                </span>
+              );
+            case "event":
+              return (
+                <span
+                  key={entry.key}
+                  className="flex h-5 min-w-0 shrink-0 items-center gap-1.5 rounded-[6px] bg-cell-event px-[7px] shadow-[inset_0_0_0_1px_var(--cell-event-line)]"
+                  title={entry.note.note}
+                >
+                  <CalendarClock
+                    className="shift-icon size-3 shrink-0"
+                    style={{ "--shift": entry.note.color || undefined } as React.CSSProperties}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-cell-event-ink">
+                    {entry.note.note}
+                  </span>
+                </span>
+              );
+            case "note":
+              return (
+                <span
+                  key={entry.key}
+                  className="flex h-[18px] min-w-0 shrink-0 items-center gap-1.5 px-1"
+                  title={entry.note.note}
+                >
+                  <StickyNote className="size-3 shrink-0 text-cell-note" />
+                  <span className="min-w-0 flex-1 truncate text-[11.5px] text-fg-body dark:text-fg-secondary">
+                    {entry.note.note}
+                  </span>
+                </span>
+              );
+          }
+        })}
+        {overflow.length > 0 && (
+          <span
+            className="shrink-0 truncate pl-[5px] text-[11px] font-medium leading-[14px] text-brand-ink"
+            title={`+ ${overflow.join(", ")}`}
+          >
+            + {overflow.join(", ")}
+          </span>
         )}
-      >
-        {WEEKDAY_KEYS.map((key, index) => (
-          <div
-            key={key}
+      </>
+    );
+  };
+
+  const renderPhoneBody = (content: DayContent) => {
+    const { visible, hiddenCount, minimalGroups } = content.layout;
+    const fields = [
+      ...visible.map((shift) => ({ key: shift.id, color: shift.color, count: 1, shift })),
+      ...minimalGroups.map(({ sync, shifts: synced }) => ({
+        key: sync.id,
+        color: sync.color,
+        count: synced.length,
+        shift: undefined,
+      })),
+    ];
+    const shown = fitCount(
+      fields.map(() => PHONE_FIELD),
+      hiddenCount,
+      rowHeight - PHONE_CHROME,
+      PHONE_MAX_FIELDS,
+      PHONE_GAP,
+      PHONE_COUNTER
+    );
+    const rest = fields.slice(shown).reduce((sum, field) => sum + field.count, hiddenCount);
+
+    return (
+      <span className="flex min-w-0 flex-col gap-[2px]">
+        {fields.slice(0, shown).map((field) => (
+          // Cut hard at the field edge, no ellipsis: the first letters identify a shift
+          <span
+            key={field.key}
+            className="shift-field flex h-[19px] shrink-0 items-center gap-[2px] overflow-hidden whitespace-nowrap rounded-[4px] px-1 text-[11px] font-semibold leading-[19px]"
+            style={{ "--shift": field.color } as React.CSSProperties}
+          >
+            {field.shift ? (
+              field.shift.title
+            ) : (
+              <>
+                <RefreshCw className="size-2.5 shrink-0" />
+                <span className="font-mono">{field.count}</span>
+              </>
+            )}
+          </span>
+        ))}
+        {rest > 0 && (
+          <span className="shrink-0 pl-1 font-mono text-[10px] font-semibold leading-3 text-brand-ink">
+            +{rest}
+          </span>
+        )}
+      </span>
+    );
+  };
+
+  /** One mark per event, then one for notes; extra events give way to the note mark. */
+  const renderPhoneMarks = (content: DayContent) => {
+    const room = Math.min(
+      PHONE_MAX_MARKS,
+      Math.floor((colWidth - PHONE_HEAD_FIXED + PHONE_GAP) / (PHONE_MARK + PHONE_GAP))
+    );
+    const hasEvent = content.events.length > 0;
+    const noteShown = content.notes.length > 0 && room >= (hasEvent ? 2 : 1);
+    const eventCount = Math.min(content.events.length, room - (noteShown ? 1 : 0));
+    if (eventCount + (noteShown ? 1 : 0) <= 0) return null;
+
+    return (
+      <span className="flex shrink-0 items-center gap-[2px]" aria-hidden>
+        {content.events.slice(0, Math.max(0, eventCount)).map((event) => (
+          <CalendarClock
+            key={event.id}
+            className="shift-icon size-2.5 shrink-0"
+            style={{ "--shift": event.color || undefined } as React.CSSProperties}
+          />
+        ))}
+        {noteShown && <StickyNote className="size-2.5 shrink-0 text-cell-note" />}
+      </span>
+    );
+  };
+
+  const renderCompare = (content: DayContent, day: Date, inMonth: boolean, today: boolean) => {
+    const { visible, hiddenCount, minimalGroups } = content.layout;
+    const { events, notes: plainNotes } = content;
+    return (
+      <>
+        <div className="mb-1.5 flex w-full items-center justify-between gap-1.5">
+          <span
             className={cn(
-              "font-semibold uppercase tracking-[0.06em] text-fg-tertiary",
-              full
-                ? "py-2 text-center text-[11px] lg:px-2.5 lg:pb-2 lg:pt-0 lg:text-left lg:text-[11.5px]"
-                : "px-2.5 pb-2 text-[11px]"
+              "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
+              today
+                ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
+                : inMonth
+                  ? "text-fg-body"
+                  : "text-fg-tertiary"
             )}
           >
-            <span className={full ? "lg:hidden" : ""}>
-              {t(`calendarView.weekdayShort.${key}`)}
+            {day.getDate()}
+          </span>
+          {hiddenCount > 0 && (
+            <span className="ml-auto rounded-[4px] bg-brand-soft px-1 py-px font-mono text-[10px] font-bold text-brand-ink">
+              +{hiddenCount}
             </span>
-            {full && <span className="hidden lg:inline">{longWeekdays[index]}</span>}
-          </div>
-        ))}
+          )}
+          <span className="flex min-w-0 items-center gap-1">
+            {plainNotes.length > 0 && (
+              <StickyNote
+                className="size-3.5 shrink-0 text-warning"
+                aria-label={t("calendarView.hasNotes", { count: plainNotes.length })}
+              />
+            )}
+            {events[0] && (
+              <span
+                className="shift-chip max-w-[88px] truncate rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-semibold"
+                style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
+                title={events.map((e) => e.note).join("\n")}
+              >
+                {events[0].note}
+                {events.length > 1 && ` +${events.length - 1}`}
+              </span>
+            )}
+          </span>
+        </div>
+        <div className="flex min-w-0 flex-col gap-[3px]">
+          {visible.map((shift) => (
+            <span
+              key={shift.id}
+              className="flex min-w-0 items-center gap-1.5 rounded-sm bg-surface-sunken/70 px-1.5 py-[3px] text-[11.5px] text-fg-body"
+              title={`${shift.title} · ${
+                shift.isAllDay ? t("shift.allDayShift") : `${shift.startTime}–${shift.endTime}`
+              }`}
+            >
+              <span
+                className="shift-rail h-[13px] w-[3px] shrink-0 rounded-full"
+                style={{ "--shift": shift.color } as React.CSSProperties}
+              />
+              <span className="min-w-0 flex-1 truncate">{shift.title}</span>
+            </span>
+          ))}
+          {minimalGroups.map(({ sync, shifts: syncShifts }) => (
+            <span
+              key={sync.id}
+              className="shift-chip flex items-center gap-1.5 rounded-sm px-[7px] py-[3px] text-[11.5px] font-medium"
+              style={{ "--shift": sync.color } as React.CSSProperties}
+              title={sync.name}
+            >
+              <RefreshCw className="size-3 shrink-0" />
+              <span className="truncate">
+                {t("calendarView.externalCount", { count: syncShifts.length })}
+              </span>
+            </span>
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  return (
+    // On phones the grid may not shrink below its minimum rows, so the page scrolls instead
+    <div className={cn("flex flex-1 flex-col", !phone && "min-h-0")}>
+      <div
+        className={cn(
+          "grid grid-cols-7",
+          phone ? "px-1 pb-[5px]" : "border-b border-line",
+          desktop && "px-[18px] pt-3.5",
+          variant === "compare" && "px-4 pt-3"
+        )}
+      >
+        {WEEKDAY_KEYS.map((key, index) =>
+          phone ? (
+            // Sits right above the left-aligned day number
+            <div
+              key={key}
+              className="ml-1 w-[22px] text-center text-[10.5px] font-semibold uppercase tracking-[0.06em] text-cell-muted"
+            >
+              {t(`calendarView.weekdayShort.${key}`)}
+            </div>
+          ) : (
+            <div
+              key={key}
+              className={cn(
+                "px-2.5 pb-2 font-semibold uppercase tracking-[0.06em] text-fg-tertiary",
+                desktop ? "text-[11.5px]" : "text-[11px]"
+              )}
+            >
+              {desktop ? longWeekdays[index] : t(`calendarView.weekdayShort.${key}`)}
+            </div>
+          )
+        )}
       </div>
 
       <div
         ref={gridRef}
         className={cn(
-          "grid flex-1 grid-cols-7 gap-px bg-line-grid",
-          full
-            ? "mx-2 auto-rows-[minmax(86px,1fr)] lg:mx-[18px] lg:min-h-0 lg:auto-rows-[minmax(0,1fr)]"
-            : "mx-4 min-h-0 auto-rows-[minmax(0,1fr)]"
+          "grid flex-1 grid-cols-7",
+          phone
+            ? "auto-rows-[minmax(84px,1fr)] gap-y-[2px] px-1"
+            : "min-h-0 auto-rows-[minmax(0,1fr)] gap-px bg-line-grid",
+          desktop && "mx-[18px]",
+          variant === "compare" && "mx-4"
         )}
       >
         {calendarDays.map((day) => {
@@ -240,21 +536,11 @@ export function MonthGrid({
           const toggling = togglingDates.has(key);
 
           const dayNotes = inMonth ? findNotesForDate(notes, day) : [];
-          const events = dayNotes.filter((n) => n.type === "event");
-          const plainNotes = dayNotes.length - events.length;
-          const dayShifts = inMonth ? getShiftsForDay(shifts, day) : [];
-          const dayLayout = buildDayShiftLayout(dayShifts, externalSyncs, layout);
-          const { visible, hiddenCount, minimalGroups } = dayLayout;
-          const phone = full
-            ? fitPhoneCell(
-                dayLayout,
-                events.length > 0,
-                phoneRowHeight,
-                phoneColWidth,
-                showFullTitles,
-                showShiftNotes
-              )
-            : null;
+          const content: DayContent = {
+            layout: buildDayShiftLayout(inMonth ? getShiftsForDay(shifts, day) : [], externalSyncs, layout),
+            events: dayNotes.filter((n) => n.type === "event"),
+            notes: dayNotes.filter((n) => n.type !== "event"),
+          };
 
           return (
             <button
@@ -288,214 +574,71 @@ export function MonthGrid({
                 highlighted ? ({ "--highlight": highlightColor } as React.CSSProperties) : undefined
               }
               className={cn(
-                "relative flex min-h-0 min-w-0 select-none flex-col overflow-hidden text-left outline-none transition-colors [-webkit-touch-callout:none]",
-                // Size containment keeps phone cell content from growing the rows
-                full
-                  ? "items-stretch p-[3px] max-lg:[contain:size] lg:px-[9px] lg:py-2"
-                  : "items-stretch px-[9px] py-2",
-                today
-                  ? "bg-surface-today"
-                  : weekend
-                    ? "bg-surface-weekend"
-                    : "bg-surface-cell",
-                !today && "hover:bg-surface-panel",
+                "relative flex min-h-0 min-w-0 select-none flex-col items-stretch overflow-hidden text-left outline-none transition-colors [-webkit-touch-callout:none]",
+                // Phone cells have no surface and no lines; the fields carry the grid
+                phone
+                  ? "gap-[3px] rounded-[6px] px-[2px] pt-[5px] [contain:size]"
+                  : cn(
+                      today
+                        ? "bg-surface-today"
+                        : weekend
+                          ? "bg-surface-weekend"
+                          : "bg-surface-cell",
+                      !today && "hover:bg-surface-panel",
+                      selected && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]"
+                    ),
+                desktop && "gap-[3px] px-2 py-[7px]",
+                variant === "compare" && "px-[9px] py-2",
                 highlighted && "day-highlight",
-                !inMonth && "opacity-45",
-                selected && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]",
+                !inMonth && (phone ? "opacity-30" : desktop ? "opacity-35" : "opacity-45"),
                 toggling && "cursor-wait opacity-60",
                 "focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]"
               )}
             >
-              {/* Day number row */}
-              <div
-                className={cn(
-                  "flex w-full items-center gap-1.5",
-                  full ? "mb-[3px] justify-between lg:mb-1.5" : "mb-1.5 justify-between"
-                )}
-              >
-                <span
-                  className={cn(
-                    "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
-                    today
-                      ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
-                      : inMonth
-                        ? "text-fg-body"
-                        : "text-fg-tertiary"
-                  )}
-                >
-                  {day.getDate()}
-                </span>
-                {!full && hiddenCount > 0 && (
-                  <span className="ml-auto rounded-[4px] bg-brand-soft px-1 py-px font-mono text-[10px] font-bold text-brand-ink">
-                    +{hiddenCount}
-                  </span>
-                )}
-                {phone && (plainNotes > 0 || phone.hidden > 0) && (
-                  // Negative margin lets both indicators reach into the number box's empty side on narrow phones
-                  <span className="-ml-3.5 flex shrink-0 items-center gap-px lg:hidden">
-                    {plainNotes > 0 && (
-                      <StickyNote
-                        className="size-2.5 shrink-0 text-warning"
-                        aria-label={t("calendarView.hasNotes", { count: plainNotes })}
-                      />
-                    )}
-                    {phone.hidden > 0 && (
-                      <span className="rounded-[3px] bg-brand-soft px-[2px] font-mono text-[9px] font-bold leading-[12px] text-brand-ink">
-                        +{phone.hidden}
-                      </span>
-                    )}
-                  </span>
-                )}
-                <span
-                  className={cn(
-                    "min-w-0 items-center gap-1",
-                    full ? "hidden lg:flex" : "flex"
-                  )}
-                >
-                  {plainNotes > 0 && (
-                    <StickyNote
-                      className="size-3.5 shrink-0 text-warning"
-                      aria-label={t("calendarView.hasNotes", { count: plainNotes })}
-                    />
-                  )}
-                  {events[0] && (
-                    <span
-                      className="shift-chip max-w-[88px] truncate rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-semibold"
-                      style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
-                      title={events.map((e) => e.note).join("\n")}
-                    >
-                      {events[0].note}
-                      {events.length > 1 && ` +${events.length - 1}`}
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              {/* Desktop chips */}
-              <div
-                className={cn(
-                  "min-w-0 flex-col gap-[3px]",
-                  full ? "hidden lg:flex" : "flex"
-                )}
-              >
-                {!full &&
-                  visible.map((shift) => (
-                    <span
-                      key={shift.id}
-                      className="flex min-w-0 items-center gap-1.5 rounded-sm bg-surface-sunken/70 px-1.5 py-[3px] text-[11.5px] text-fg-body"
-                      title={`${shift.title} · ${
-                        shift.isAllDay ? t("shift.allDayShift") : `${shift.startTime}–${shift.endTime}`
-                      }`}
-                    >
-                      <span
-                        className="shift-rail h-[13px] w-[3px] shrink-0 rounded-full"
-                        style={{ "--shift": shift.color } as React.CSSProperties}
-                      />
-                      <span className="min-w-0 flex-1 truncate">{shift.title}</span>
-                    </span>
-                  ))}
-                {full && visible.map((shift) => (
+              {desktop && (
+                <>
                   <span
-                    key={shift.id}
-                    className="shift-chip flex min-w-0 items-center gap-1.5 rounded-sm px-[7px] py-[3px] text-[11.5px]"
-                    style={{ "--shift": shift.color } as React.CSSProperties}
-                    title={`${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`}
+                    className={cn(
+                      "inline-flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
+                      today
+                        ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
+                        : inMonth
+                          ? "text-fg-body dark:text-fg-secondary"
+                          : "text-fg-faint"
+                    )}
                   >
+                    {day.getDate()}
+                  </span>
+                  {renderDesktop(content)}
+                </>
+              )}
+
+              {phone && (
+                <>
+                  <span className="flex min-h-[22px] shrink-0 items-center gap-[3px] overflow-hidden pl-[2px] pr-px">
                     <span
                       className={cn(
-                        "min-w-0 flex-1 font-medium",
-                        showFullTitles ? "break-words" : "truncate"
+                        "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full font-mono text-[14px] leading-none",
+                        today
+                          ? "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]"
+                          : selected
+                            ? "bg-cell-selected font-semibold text-fg-strong"
+                            : !inMonth
+                              ? "font-normal text-cell-outside-num"
+                              : weekend
+                                ? "font-[450] text-cell-weekend-num"
+                                : "font-[450] text-fg-body"
                       )}
                     >
-                      {shift.title}
-                      {showShiftNotes && shift.notes && (
-                        <span className="block truncate text-[10.5px] font-normal opacity-75">
-                          {shift.notes}
-                        </span>
-                      )}
+                      {day.getDate()}
                     </span>
-                    <span className="shrink-0 self-start font-mono text-[10.5px] opacity-75">
-                      {shift.isAllDay
-                        ? t("calendarView.allDayShort")
-                        : shift.startTime.slice(0, 5)}
-                    </span>
+                    {renderPhoneMarks(content)}
                   </span>
-                ))}
-                {minimalGroups.map(({ sync, shifts: syncShifts }) => (
-                  <span
-                    key={sync.id}
-                    className="shift-chip flex items-center gap-1.5 rounded-sm px-[7px] py-[3px] text-[11.5px] font-medium"
-                    style={{ "--shift": sync.color } as React.CSSProperties}
-                    title={sync.name}
-                  >
-                    <RefreshCw className="size-3 shrink-0" />
-                    <span className="truncate">
-                      {t("calendarView.externalCount", { count: syncShifts.length })}
-                    </span>
-                  </span>
-                ))}
-                {full && hiddenCount > 0 && (
-                  <span className="pl-0.5 text-[11.5px] font-medium text-brand-ink">
-                    {t("calendarView.moreShifts", { count: hiddenCount })}
-                  </span>
-                )}
-              </div>
+                  {renderPhoneBody(content)}
+                </>
+              )}
 
-              {/* Phone rows; heights must match the PHONE_* constants */}
-              {phone && (
-                <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-[2px] overflow-hidden lg:hidden">
-                  {phone.shifts.map((shift) => (
-                    <span
-                      key={shift.id}
-                      className="shift-chip flex min-w-0 shrink-0 flex-col rounded-[4px] border-l-2 border-l-[color:var(--shift-base)] px-[3px] py-[2px]"
-                      style={{ "--shift": shift.color } as React.CSSProperties}
-                    >
-                      <span
-                        className={cn(
-                          "text-[10.5px] font-semibold leading-[12px]",
-                          showFullTitles ? "line-clamp-2 break-words" : "truncate"
-                        )}
-                      >
-                        {shift.syncedFromExternal && (
-                          <RefreshCw className="mr-px inline size-2 align-baseline" />
-                        )}
-                        {shift.title}
-                      </span>
-                      <span className="font-mono text-[9.5px] leading-[10px] opacity-75">
-                        {shift.isAllDay
-                          ? t("calendarView.allDayTiny")
-                          : shift.startTime.slice(0, 5)}
-                      </span>
-                      {showShiftNotes && shift.notes && (
-                        <span className="truncate text-[9px] leading-[10px] opacity-70">
-                          {shift.notes}
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                  {phone.groups.map(({ sync, shifts: syncShifts }) => (
-                    <span
-                      key={sync.id}
-                      className="shift-chip flex shrink-0 items-center gap-[2px] self-start rounded-[4px] px-[3px] py-px font-mono text-[9.5px] font-semibold leading-[12px]"
-                      style={{ "--shift": sync.color } as React.CSSProperties}
-                    >
-                      <RefreshCw className="size-2 shrink-0" />
-                      {syncShifts.length}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {phone && events[0] && (
-                <span
-                  className="shift-chip mt-[2px] flex w-full min-w-0 shrink-0 items-center gap-px rounded-[4px] px-[3px] py-px text-[10px] font-semibold leading-[12px] lg:hidden"
-                  style={{ "--shift": events[0].color || "var(--brand)" } as React.CSSProperties}
-                >
-                  <span className="min-w-0 truncate">{events[0].note}</span>
-                  {events.length > 1 && (
-                    <span className="shrink-0 font-mono">+{events.length - 1}</span>
-                  )}
-                </span>
-              )}
+              {variant === "compare" && renderCompare(content, day, inMonth, today)}
             </button>
           );
         })}

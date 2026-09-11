@@ -228,9 +228,7 @@
     "combinedSort": "Ordina tutti i turni insieme",
     "combinedSortHint": "Ordina i turni regolari ed esterni insieme invece che separatamente",
     "showNotes": "Mostra note turni",
-    "showNotesHint": "Visualizza note dei turni nella griglia calendario",
-    "showFullTitles": "Mostra titoli completi",
-    "showFullTitlesHint": "Visualizza titoli completi dei turni senza troncamento",
+    "showNotesHint": "Visualizza le note dei turni nella vista mensile su desktop",
     "dayHighlighting": "Evidenziazione Giorni",
     "highlightWeekends": "Evidenzia Fine Settimana",
     "highlightWeekendsHint": "Evidenzia sabato e domenica con colore",
@@ -675,8 +673,6 @@
       "sunday": "Do"
     },
     "allDayShort": "giornata",
-    "allDayTiny": "gior.",
-    "moreShifts": "+{count} altri",
     "externalCount": "{count} esterni",
     "hasNotes": "{count, plural, one {# nota} other {# note}}",
     "shift": "Turno",
@@ -719,7 +715,8 @@
     "offlineMessage": "Stai vedendo l’ultimo stato caricato. Le modifiche torneranno possibili quando la connessione sarà ripristinata; non vengono salvate nel frattempo.",
     "retry": "Riprova",
     "note": "Nota",
-    "event": "Evento"
+    "event": "Evento",
+    "eventCount": "{count, plural, one {# evento} other {# eventi}}"
   },
   "calendarCompare": {
     "title": "Confronto",

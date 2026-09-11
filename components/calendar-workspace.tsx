@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MonthGrid } from "@/components/month-grid";
 import { DayInspector, DayActions, DayViewModel } from "@/components/day-inspector";
-import { MobileDayPeek, MobileDaySheet } from "@/components/mobile-day-sheet";
+import { MobileDayFooter, MobileDaySheet } from "@/components/mobile-day-sheet";
 import { MobilePresetBar, StampDock, orderStampPresets } from "@/components/stamp-dock";
 import { GuestBanner } from "@/components/guest-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
@@ -39,7 +39,6 @@ interface CalendarWorkspaceProps {
   togglingDates: Set<string>;
   layout: DayLayoutOptions;
   showShiftNotes: boolean;
-  showFullTitles: boolean;
   highlightedWeekdays: number[];
   highlightColor: string;
   canEdit: boolean;
@@ -68,7 +67,6 @@ export function CalendarWorkspace({
   togglingDates,
   layout,
   showShiftNotes,
-  showFullTitles,
   highlightedWeekdays,
   highlightColor,
   canEdit,
@@ -142,6 +140,7 @@ export function CalendarWorkspace({
 
   const grid = (
     <MonthGrid
+      variant={desktop ? "desktop" : "phone"}
       calendarDays={calendarDays}
       currentDate={currentDate}
       selectedDay={selectedDay}
@@ -151,7 +150,6 @@ export function CalendarWorkspace({
       togglingDates={togglingDates}
       layout={layout}
       showShiftNotes={showShiftNotes}
-      showFullTitles={showFullTitles}
       highlightedWeekdays={highlightedWeekdays}
       highlightColor={highlightColor}
       onDayClick={onDayClick}
@@ -191,8 +189,8 @@ export function CalendarWorkspace({
       {header}
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {hasBanner && <div className="flex flex-col gap-2 px-3 pt-3">{banners}</div>}
-        <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
-          <h1 className="text-[17px] font-semibold tracking-[-0.01em] text-fg-strong">
+        <div className="flex items-center justify-between gap-2 px-3.5 pb-[9px] pt-3">
+          <h1 className="text-[19px] font-semibold tracking-[-0.015em] text-fg-strong">
             {format(currentDate, "LLLL yyyy", { locale: dateLocale })}
           </h1>
           {isOnline ? (
@@ -227,19 +225,22 @@ export function CalendarWorkspace({
             </Button>
           )}
         </div>
-        <div className={`flex flex-1 flex-col pb-2${isOnline ? "" : " opacity-60"}`}>{grid}</div>
+        <div className={`flex flex-1 flex-col pb-1${isOnline ? "" : " opacity-60"}`}>{grid}</div>
       </main>
       <div className="shrink-0">
-        <MobileDayPeek model={model} onOpen={() => onSheetOpenChange(true)} />
         {stampingEnabled && (
           <MobilePresetBar
             presets={presets}
             selectedPresetId={selectedPresetId}
             onSelectPreset={onSelectPreset}
             onManage={onManagePresets}
-            onAddShift={actions.onAddShift}
           />
         )}
+        <MobileDayFooter
+          model={model}
+          onOpen={() => onSheetOpenChange(true)}
+          onAddShift={model.canEdit ? actions.onAddShift : undefined}
+        />
       </div>
       <MobileDaySheet
         model={model}

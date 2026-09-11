@@ -18,7 +18,6 @@ const STORAGE_KEYS = {
   shiftsPerDay: "shifts-per-day",
   externalShiftsPerDay: "external-shifts-per-day",
   showShiftNotes: "show-shift-notes",
-  showFullTitles: "show-full-titles",
   sortType: "shift-sort-type",
   sortOrder: "shift-sort-order",
   combinedSort: "combined-sort-mode",
@@ -74,7 +73,6 @@ function readLocalViewSettings(): PersonalViewSettings {
     shiftsPerDay: parseLimit(readStorage(STORAGE_KEYS.shiftsPerDay)),
     externalShiftsPerDay: parseLimit(readStorage(STORAGE_KEYS.externalShiftsPerDay)),
     showShiftNotes: parseBoolean(readStorage(STORAGE_KEYS.showShiftNotes)),
-    showFullTitles: parseBoolean(readStorage(STORAGE_KEYS.showFullTitles)),
     sortType: readStorage(STORAGE_KEYS.sortType) ?? undefined,
     sortOrder: readStorage(STORAGE_KEYS.sortOrder) ?? undefined,
     combinedSort: parseBoolean(readStorage(STORAGE_KEYS.combinedSort)),
@@ -89,7 +87,6 @@ function writeLocalViewSettings(settings: PersonalViewSettings) {
   writeStorage(STORAGE_KEYS.shiftsPerDay, limit(settings.shiftsPerDay));
   writeStorage(STORAGE_KEYS.externalShiftsPerDay, limit(settings.externalShiftsPerDay));
   writeStorage(STORAGE_KEYS.showShiftNotes, String(settings.showShiftNotes));
-  writeStorage(STORAGE_KEYS.showFullTitles, String(settings.showFullTitles));
   writeStorage(STORAGE_KEYS.sortType, settings.sortType);
   writeStorage(STORAGE_KEYS.sortOrder, settings.sortOrder);
   writeStorage(STORAGE_KEYS.combinedSort, String(settings.combinedSort));

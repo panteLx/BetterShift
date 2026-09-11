@@ -58,6 +58,16 @@
   --color-line-grid: var(--line-grid);
   --color-control: var(--control);
 
+  /* Month cell entries */
+  --color-cell-event: var(--cell-event);
+  --color-cell-event-line: var(--cell-event-line);
+  --color-cell-event-ink: var(--cell-event-ink);
+  --color-cell-note: var(--cell-note);
+  --color-cell-muted: var(--cell-muted);
+  --color-cell-weekend-num: var(--cell-weekend-num);
+  --color-cell-outside-num: var(--cell-outside-num);
+  --color-cell-selected: var(--cell-selected);
+
   /* Brand accent */
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
@@ -114,6 +124,15 @@
   --line-subtle: #f2f4f7;
   --line-grid: #eef0f3;
   --control: #d0d5dd;
+
+  --cell-event: #f3f9fd;
+  --cell-event-line: #cde6f6;
+  --cell-event-ink: #075985;
+  --cell-note: #d97706;
+  --cell-muted: #667085;
+  --cell-weekend-num: #667085;
+  --cell-outside-num: #98a2b3;
+  --cell-selected: #e4e7ec;
 
   --brand: #2563eb;
   --brand-ink: #1d4ed8;
@@ -200,6 +219,15 @@
   --line-subtle: #1a2130;
   --line-grid: #1e2637;
   --control: #29334a;
+
+  --cell-event: #0f1b28;
+  --cell-event-line: #1d3247;
+  --cell-event-ink: #8fd4f8;
+  --cell-note: #fbbf24;
+  --cell-muted: #7c879b;
+  --cell-weekend-num: #8c99ad;
+  --cell-outside-num: #5a6478;
+  --cell-selected: #2a3349;
 
   --brand: #2563eb;
   --brand-ink: #7fa8fb;
@@ -345,6 +373,23 @@
   }
   .dark .shift-text {
     color: color-mix(in oklch, var(--shift-base) 55%, white);
+  }
+  .shift-icon {
+    color: var(--shift, var(--brand));
+  }
+  .dark .shift-icon {
+    color: color-mix(in oklch, var(--shift, var(--brand)) 72%, white);
+  }
+  /* Phone month field: small type on a stronger fill, so the ink moves further from the hue */
+  .shift-field {
+    --shift-base: var(--shift, var(--brand));
+    background-color: color-mix(in oklch, var(--shift-base) 13%, transparent);
+    color: color-mix(in oklch, var(--shift-base), #101828 35%);
+  }
+  .dark .shift-field {
+    --shift-base: color-mix(in oklch, var(--shift, var(--brand)) 72%, white);
+    background-color: color-mix(in oklch, var(--shift-base) 19%, transparent);
+    color: color-mix(in oklch, var(--shift-base) 32%, white);
   }
 
   /*

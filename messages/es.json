@@ -228,9 +228,7 @@
     "combinedSort": "Ordenar todos los turnos juntos",
     "combinedSortHint": "Ordena los turnos regulares y externos juntos en lugar de por separado",
     "showNotes": "Mostrar notas del turno",
-    "showNotesHint": "Muestra las notas del turno en la cuadrícula del calendario",
-    "showFullTitles": "Mostrar títulos completos",
-    "showFullTitlesHint": "Muestra los títulos de los turnos completos sin recortar",
+    "showNotesHint": "Muestra las notas del turno en la vista mensual del escritorio",
     "dayHighlighting": "Resaltado de días",
     "highlightWeekends": "Resaltar fines de semana",
     "highlightWeekendsHint": "Resalta sábados y domingos con color",
@@ -675,8 +673,6 @@
       "sunday": "Do"
     },
     "allDayShort": "todo el día",
-    "allDayTiny": "día",
-    "moreShifts": "+{count} más",
     "externalCount": "{count} externos",
     "hasNotes": "{count, plural, one {# nota} other {# notas}}",
     "shift": "Turno",
@@ -719,7 +715,8 @@
     "offlineMessage": "Ves el último estado cargado. Podrás hacer cambios cuando vuelva la conexión; no se guardan entretanto.",
     "retry": "Reintentar",
     "note": "Nota",
-    "event": "Evento"
+    "event": "Evento",
+    "eventCount": "{count, plural, one {# evento} other {# eventos}}"
   },
   "calendarCompare": {
     "title": "Comparar",
