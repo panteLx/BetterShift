@@ -207,8 +207,8 @@
     "hideFromStats": "Nascondi dalle statistiche"
   },
   "view": {
-    "settingsTitle": "Impostazioni Vista",
-    "settingsDescription": "Personalizza come vengono visualizzati i turni in tutti i calendari",
+    "settingsTitle": "La mia vista",
+    "settingsDescription": "La tua vista personale. Vale per tutti i calendari senza una vista propria ed è visibile solo a te.",
     "shiftsPerDay": "Turni regolari al giorno",
     "shiftsPerDayHint": "Numero massimo di turni regolari da visualizzare per giorno",
     "externalShiftsPerDay": "Turni esterni al giorno",
@@ -243,7 +243,13 @@
     "highlightColor": "Colore Evidenziazione",
     "density": "Densità",
     "showPresetBar": "Mostra barra dei modelli",
-    "showPresetBarHint": "Barra dei timbri sotto o sopra il calendario"
+    "showPresetBarHint": "Barra dei timbri sotto o sopra il calendario",
+    "settingsDescriptionLocal": "La tua vista personale su questo dispositivo. Vale per tutti i calendari senza una vista propria.",
+    "overriddenByCalendar": "«{calendar}» ha una vista propria. Lì la tua vista personale non vale.",
+    "calendarOwn": "Vista propria per questo calendario",
+    "calendarOwnHint": "Vale per tutte le persone con accesso a questo calendario.",
+    "calendarOffNote": "Qui ognuno vede la propria vista personale. La tua si trova in menu utente → «La mia vista».",
+    "calendarLocked": "Impostata per questo calendario. Solo chi gestisce il calendario può modificarla."
   },
   "stats": {
     "title": "Statistiche Turni",
@@ -644,7 +650,7 @@
     "account": "Account",
     "language": "Lingua",
     "preferences": "Preferenze",
-    "viewSettings": "Visualizzazione"
+    "viewSettings": "La mia vista"
   },
   "calendarView": {
     "previousMonth": "Mese precedente",
@@ -741,14 +747,13 @@
     "export": "Esporta",
     "exportHint": "File ICS o PDF",
     "view": "Visualizzazione",
-    "viewHint": "Densità, ordinamento, evidenziazione",
+    "viewHint": "Vista propria, densità, ordinamento",
     "notifications": "Notifiche",
     "notificationsHint": "Sincronizzazione",
     "notificationsError": "Errore di sincronizzazione",
     "deleteImpact": "{count, plural, =0 {Il calendario viene eliminato definitivamente} one {Verrà eliminato anche # turno} other {Verranno eliminati anche # turni}}",
     "appliesToAll": "Le modifiche valgono subito per tutte le persone con accesso.",
     "groupCalendar": "Calendario",
-    "groupView": "Visualizzazione",
     "groupNotifications": "Notifiche",
     "groupAccount": "Account",
     "groupApp": "App"

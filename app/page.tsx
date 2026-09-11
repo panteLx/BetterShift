@@ -34,6 +34,18 @@ import { ShiftFormData } from "@/components/shift-sheet";
 import { getCalendarDays } from "@/lib/calendar-utils";
 import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
+import { DayLayoutOptions } from "@/lib/shift-display";
+import { CalendarViewSettings } from "@/lib/view-settings";
+
+function toDayLayout(view: CalendarViewSettings): DayLayoutOptions {
+  return {
+    maxShifts: view.shiftsPerDay ?? undefined,
+    maxExternalShifts: view.externalShiftsPerDay ?? undefined,
+    sortType: view.sortType,
+    sortOrder: view.sortOrder,
+    combinedSort: view.combinedSort,
+  };
+}
 
 function toDate(date: Date | string): Date {
   return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -455,18 +467,17 @@ function HomeContent() {
     />
   );
 
-  const dayLayout = {
-    maxShifts: viewSettings.shiftsPerDay ?? undefined,
-    maxExternalShifts: viewSettings.externalShiftsPerDay ?? undefined,
-    sortType: viewSettings.shiftSortType,
-    sortOrder: viewSettings.shiftSortOrder,
-    combinedSort: viewSettings.combinedSortMode,
-  };
+  // Compare mode shares one grid, so it always uses the personal view
+  const personalView = viewSettings.personal;
+  const calendarView = viewSettings.forCalendar(
+    calendars.find((c) => c.id === selectedCalendar)
+  );
 
   if (
     (!hasLoadedOnce && loading) ||
     (!shiftsLoadedOnce && shiftsLoading) ||
-    (!presetsLoadedOnce && presetsLoading)
+    (!presetsLoadedOnce && presetsLoading) ||
+    viewSettings.loading
   ) {
     return <FullscreenLoader message={t("common.loading")} />;
   }
@@ -497,11 +508,11 @@ function HomeContent() {
           externalSyncsMap={compareData.externalSyncsMap}
           presetsMap={compareData.presetsMap}
           togglingDatesMap={togglingDatesMap}
-          layout={dayLayout}
-          showShiftNotes={viewSettings.showShiftNotes}
-          showFullTitles={viewSettings.showFullTitles}
-          highlightedWeekdays={viewSettings.highlightedWeekdays}
-          highlightColor={viewSettings.highlightColor}
+          layout={toDayLayout(personalView)}
+          showShiftNotes={personalView.showShiftNotes}
+          showFullTitles={personalView.showFullTitles}
+          highlightedWeekdays={personalView.highlightedWeekdays}
+          highlightColor={personalView.highlightColor}
           selectedPresetId={selectedPresetId}
           onSelectPreset={setSelectedPresetId}
           onDayClick={handleCompareDayClick}
@@ -570,13 +581,13 @@ function HomeContent() {
         presets={presets}
         externalSyncs={externalSyncs}
         togglingDates={shiftActions.togglingDates}
-        layout={dayLayout}
-        showShiftNotes={viewSettings.showShiftNotes}
-        showFullTitles={viewSettings.showFullTitles}
-        highlightedWeekdays={viewSettings.highlightedWeekdays}
-        highlightColor={viewSettings.highlightColor}
+        layout={toDayLayout(calendarView)}
+        showShiftNotes={calendarView.showShiftNotes}
+        showFullTitles={calendarView.showFullTitles}
+        highlightedWeekdays={calendarView.highlightedWeekdays}
+        highlightColor={calendarView.highlightColor}
         canEdit={canEdit}
-        showStampBar={!viewSettings.hidePresetHeader}
+        showStampBar={calendarView.showStampBar}
         selectedPresetId={selectedPresetId}
         onSelectPreset={setSelectedPresetId}
         onManagePresets={() => dialogStates.setShowPresetManageDialog(true)}

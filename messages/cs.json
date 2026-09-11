@@ -207,8 +207,8 @@
     "hideFromStats": "Skrýt ze statistik"
   },
   "view": {
-    "settingsTitle": "Nastavení zobrazení",
-    "settingsDescription": "Přizpůsobte, jak se směny zobrazují ve všech kalendářích",
+    "settingsTitle": "Moje zobrazení",
+    "settingsDescription": "Vaše osobní zobrazení. Platí pro všechny kalendáře bez vlastního zobrazení a vidíte ho jen vy.",
     "shiftsPerDay": "Běžné směny za den",
     "shiftsPerDayHint": "Maximální počet běžných směn zobrazených za den",
     "externalShiftsPerDay": "Externí směny za den",
@@ -243,7 +243,13 @@
     "highlightColor": "Barva zvýraznění",
     "density": "Hustota",
     "showPresetBar": "Zobrazit lištu šablon",
-    "showPresetBarHint": "Lišta razítek pod nebo nad kalendářem"
+    "showPresetBarHint": "Lišta razítek pod nebo nad kalendářem",
+    "settingsDescriptionLocal": "Vaše osobní zobrazení na tomto zařízení. Platí pro všechny kalendáře bez vlastního zobrazení.",
+    "overriddenByCalendar": "„{calendar}“ má vlastní zobrazení. Vaše osobní zobrazení tam neplatí.",
+    "calendarOwn": "Vlastní zobrazení pro tento kalendář",
+    "calendarOwnHint": "Platí pro všechny, kdo mají k tomuto kalendáři přístup.",
+    "calendarOffNote": "Každý tu vidí své osobní zobrazení. To vaše najdete v uživatelské nabídce → „Moje zobrazení“.",
+    "calendarLocked": "Nastaveno pro tento kalendář. Změnit ho mohou jen ti, kdo kalendář spravují."
   },
   "stats": {
     "title": "Statistiky směn",
@@ -644,7 +650,7 @@
     "account": "Účet",
     "language": "Jazyk",
     "preferences": "Předvolby",
-    "viewSettings": "Zobrazení"
+    "viewSettings": "Moje zobrazení"
   },
   "calendarView": {
     "previousMonth": "Předchozí měsíc",
@@ -741,14 +747,13 @@
     "export": "Export",
     "exportHint": "Soubor ICS nebo PDF",
     "view": "Zobrazení",
-    "viewHint": "Hustota, řazení, zvýraznění",
+    "viewHint": "Vlastní zobrazení, hustota, řazení",
     "notifications": "Oznámení",
     "notificationsHint": "Synchronizace",
     "notificationsError": "Chyba synchronizace",
     "deleteImpact": "{count, plural, =0 {Kalendář bude trvale smazán} one {Smaže se i # směna} few {Smažou se i # směny} other {Smaže se i # směn}}",
     "appliesToAll": "Změny platí okamžitě pro všechny, se kterými je kalendář sdílen.",
     "groupCalendar": "Kalendář",
-    "groupView": "Zobrazení",
     "groupNotifications": "Oznámení",
     "groupAccount": "Účet",
     "groupApp": "Aplikace"

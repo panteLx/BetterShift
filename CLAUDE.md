@@ -50,7 +50,7 @@ Anything added here affects every request, so weigh cost and check the exempt li
 
 The product is essentially one client page. `app/page.tsx` pulls data hooks (`useCalendars`, `useShifts`, `usePresets`, `useNotes`, `useExternalSync`), pairs them with action hooks (`useShiftActions`, `useNoteActions`) and dialog state (`useDialogStates`), and renders every sheet and dialog through `components/dialog-manager.tsx` — add new dialogs there rather than inline. Real routes exist only for `/login`, `/register`, `/profile`, `/admin/*` and `/system-unavailable`.
 
-Purely visual preferences (shifts shown per day, note visibility, full titles) live in `localStorage` via `hooks/useViewSettings.ts`, never in the database.
+View preferences (shifts per day, sorting, note visibility, day highlighting) come from `hooks/useViewSettings.ts` and exist on two levels. The personal view is stored per account in `userPreferences` via `/api/user/view-settings`; guests and `AUTH_ENABLED=false` keep it in `localStorage`, and a signed-in account without a stored view gets the device's values once. A calendar can pin its own view in `calendars.viewSettings` (`null` = off), which replaces the personal view as a whole for everyone with access; the stamp-bar toggle always stays personal, and compare mode always uses the personal view. `lib/view-settings.ts` holds the types, defaults and the sanitiser shared by routes and client.
 
 ### Calendar access model
 

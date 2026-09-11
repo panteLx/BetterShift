@@ -207,8 +207,8 @@
     "hideFromStats": "Exclure des statistiques"
   },
   "view": {
-    "settingsTitle": "Paramètres d'affichage",
-    "settingsDescription": "Personnalisez l'affichage des créneaux dans tous les calendriers",
+    "settingsTitle": "Mon affichage",
+    "settingsDescription": "Votre affichage personnel. Il s’applique à tous les calendriers sans affichage propre et n’est visible que par vous.",
     "shiftsPerDay": "Créneaux réguliers par jour",
     "shiftsPerDayHint": "Nombre maximum de créneaux réguliers affichés par jour",
     "externalShiftsPerDay": "Créneaux externes par jour",
@@ -243,7 +243,13 @@
     "highlightColor": "Couleur de mise en évidence",
     "density": "Densité",
     "showPresetBar": "Afficher la barre de modèles",
-    "showPresetBarHint": "Barre de tampons sous ou au-dessus du calendrier"
+    "showPresetBarHint": "Barre de tampons sous ou au-dessus du calendrier",
+    "settingsDescriptionLocal": "Votre affichage personnel sur cet appareil. Il s’applique à tous les calendriers sans affichage propre.",
+    "overriddenByCalendar": "« {calendar} » a son propre affichage. Votre affichage personnel ne s’y applique pas.",
+    "calendarOwn": "Affichage propre à ce calendrier",
+    "calendarOwnHint": "S’applique à toutes les personnes ayant accès à ce calendrier.",
+    "calendarOffNote": "Chacun voit ici son affichage personnel. Le vôtre se trouve dans menu utilisateur → « Mon affichage ».",
+    "calendarLocked": "Défini pour ce calendrier. Seules les personnes qui gèrent le calendrier peuvent le modifier."
   },
   "stats": {
     "title": "Statistiques des créneaux",
@@ -644,7 +650,7 @@
     "account": "Compte",
     "language": "Langue",
     "preferences": "Préférences",
-    "viewSettings": "Affichage"
+    "viewSettings": "Mon affichage"
   },
   "calendarView": {
     "previousMonth": "Mois précédent",
@@ -741,14 +747,13 @@
     "export": "Exporter",
     "exportHint": "Fichier ICS ou PDF",
     "view": "Affichage",
-    "viewHint": "Densité, tri, mise en évidence",
+    "viewHint": "Affichage propre, densité, tri",
     "notifications": "Notifications",
     "notificationsHint": "Synchronisation",
     "notificationsError": "Erreur de synchronisation",
     "deleteImpact": "{count, plural, =0 {Le calendrier est supprimé définitivement} one {# service sera aussi supprimé} other {# services seront aussi supprimés}}",
     "appliesToAll": "Les modifications s’appliquent immédiatement à toutes les personnes ayant accès.",
     "groupCalendar": "Calendrier",
-    "groupView": "Affichage",
     "groupNotifications": "Notifications",
     "groupAccount": "Compte",
     "groupApp": "App"

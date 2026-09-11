@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarWithCount } from "@/lib/types";
+import type { CalendarViewSettings } from "@/lib/view-settings";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -65,6 +66,7 @@ async function updateCalendarApi(
     name?: string;
     color?: string;
     guestPermission?: "none" | "read" | "write";
+    viewSettings?: CalendarViewSettings | null;
   }
 ): Promise<CalendarWithCount> {
   const response = await fetch(`/api/calendars/${calendarId}`, {
@@ -217,6 +219,7 @@ export function useCalendars(initialCalendarId?: string | null) {
         name?: string;
         color?: string;
         guestPermission?: "none" | "read" | "write";
+        viewSettings?: CalendarViewSettings | null;
       };
     },
     UpdateCalendarContext
@@ -340,6 +343,7 @@ export function useCalendars(initialCalendarId?: string | null) {
       name?: string;
       color?: string;
       guestPermission?: "none" | "read" | "write";
+      viewSettings?: CalendarViewSettings | null;
     }
   ) => {
     try {

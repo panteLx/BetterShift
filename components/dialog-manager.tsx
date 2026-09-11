@@ -26,7 +26,7 @@ interface DialogManagerProps {
   onPresetsChange?: () => void;
   editingShift?: ShiftWithCalendar;
 
-  // Unified settings (calendar sections + per-device view settings)
+  // Unified settings (calendar sections incl. the calendar's own view)
   showSettingsDialog: boolean;
   onSettingsDialogChange: (open: boolean) => void;
   settingsSection?: SettingsSection;
@@ -34,7 +34,7 @@ interface DialogManagerProps {
   onSyncComplete: () => void;
   viewSettings: ViewSettingsState;
 
-  // Standalone view settings, e.g. from compare mode
+  // Personal view ("Meine Ansicht") from the user menu, header and compare mode
   showViewSettingsDialog: boolean;
   onViewSettingsDialogChange: (open: boolean) => void;
 
@@ -124,6 +124,7 @@ export function DialogManager(props: DialogManagerProps) {
         open={props.showViewSettingsDialog}
         onOpenChange={props.onViewSettingsDialogChange}
         settings={props.viewSettings}
+        calendarId={props.selectedCalendar}
       />
 
       {props.selectedCalendar && (
