@@ -19,6 +19,9 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import { resolveDatabasePath } from "../lib/db/db-path.mjs";
 
+// Match `next dev`, which reads .env; the Docker image ships none. Existing env vars win.
+if (fs.existsSync(".env")) process.loadEnvFile(".env");
+
 const dbPath = resolveDatabasePath();
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
@@ -28,7 +31,7 @@ try {
   migrate(drizzle(sqlite), {
     migrationsFolder: path.join(process.cwd(), "drizzle"),
   });
-  console.log(`[Migrate] Schema is up to date: ${dbPath}`);
+  console.log(`[Migrate] Schema is up to date: ${path.resolve(dbPath)}`);
 } finally {
   sqlite.close();
 }
