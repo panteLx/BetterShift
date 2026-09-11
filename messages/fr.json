@@ -95,7 +95,10 @@
     },
     "filters": {
       "allSeverities": "Toutes les gravités",
-      "clearFilters": "Réinitialiser les filtres"
+      "clearFilters": "Réinitialiser les filtres",
+      "title": "Filtres",
+      "done": "Terminé",
+      "remove": "Retirer {filter}"
     },
     "severity": {
       "info": "Info",
@@ -462,7 +465,7 @@
     "details": "Détails",
     "clearAll": "Tout effacer",
     "confirmClear": "Voulez-vous vraiment effacer tous les journaux d'activité ? Cette action est irréversible.",
-    "totalLogs": "{count} entrées au total",
+    "totalLogs": "{count, plural, one {# entrée} other {# entrées}}",
     "showingResults": "Affichage de {start} à {end} sur {total}",
     "searchPlaceholder": "Rechercher par action, ressource ou ID...",
     "noMetadata": "Aucun détail supplémentaire disponible",

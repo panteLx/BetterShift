@@ -95,7 +95,10 @@
     },
     "filters": {
       "allSeverities": "Todas las severidades",
-      "clearFilters": "Limpiar filtros"
+      "clearFilters": "Limpiar filtros",
+      "title": "Filtros",
+      "done": "Listo",
+      "remove": "Quitar {filter}"
     },
     "severity": {
       "info": "Información",
@@ -462,7 +465,7 @@
     "details": "Detalles",
     "clearAll": "Limpiar todo",
     "confirmClear": "¿Estás seguro de que quieres limpiar todos los registros? Esta acción no se puede deshacer.",
-    "totalLogs": "{count} registros en total",
+    "totalLogs": "{count, plural, one {# entrada} other {# entradas}}",
     "showingResults": "Mostrando {start}-{end} de {total}",
     "searchPlaceholder": "Buscar por acción, recurso o ID...",
     "noMetadata": "No hay detalles adicionales disponibles",

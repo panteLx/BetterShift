@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
@@ -129,6 +129,7 @@ export function useActivityLogs(
   const {
     data: logsData,
     isLoading,
+    isPlaceholderData,
     error,
     refetch,
   } = useQuery({
@@ -136,6 +137,8 @@ export function useActivityLogs(
     queryFn: () => fetchActivityLogsApi(filters, pagination, t),
     refetchInterval: REFETCH_INTERVAL,
     refetchIntervalInBackground: true, // Continue polling in background
+    // Keeps the current page visible while the next page or filter loads
+    placeholderData: keepPreviousData,
   });
 
   // Clear logs mutation
@@ -161,6 +164,7 @@ export function useActivityLogs(
     limit: logsData?.limit || pagination.limit,
     offset: logsData?.offset || pagination.offset,
     isLoading,
+    isPlaceholderData,
     error,
 
     // Functions

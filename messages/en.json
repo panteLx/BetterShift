@@ -95,7 +95,10 @@
     },
     "filters": {
       "allSeverities": "All Severities",
-      "clearFilters": "Clear Filters"
+      "clearFilters": "Clear Filters",
+      "title": "Filters",
+      "done": "Done",
+      "remove": "Remove {filter}"
     },
     "severity": {
       "info": "Info",
@@ -462,7 +465,7 @@
     "details": "Details",
     "clearAll": "Clear All",
     "confirmClear": "Are you sure you want to clear all activity logs? This cannot be undone.",
-    "totalLogs": "{count} total logs",
+    "totalLogs": "{count, plural, one {# entry} other {# entries}}",
     "showingResults": "Showing {start}-{end} of {total}",
     "searchPlaceholder": "Search by action, resource, or ID...",
     "noMetadata": "No additional details available",
