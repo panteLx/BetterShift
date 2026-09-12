@@ -109,12 +109,8 @@ function HomeContent() {
 
   const {
     isCompareMode,
-    setIsCompareMode,
     showCompareSelector,
-    setShowCompareSelector,
     selectedCompareIds,
-    setSelectedCompareIds,
-    compareSnapshot,
     compareTogglingDates,
     compareNoteCalendarId,
     setCompareNoteCalendarId,
@@ -122,6 +118,8 @@ function HomeContent() {
     handleToggleCompareCalendar,
     handleExitCompare,
     openComparePicker,
+    startCompare,
+    cancelComparePicker,
     handleCompareDayClick,
   } = useCompareMode({
     calendars,
@@ -345,14 +343,8 @@ function HomeContent() {
       calendars={calendars}
       selectedIds={selectedCompareIds}
       onToggleCalendar={handleToggleCompareCalendar}
-      onStartCompare={() => {
-        setShowCompareSelector(false);
-        setIsCompareMode(true);
-      }}
-      onCancel={() => {
-        setShowCompareSelector(false);
-        setSelectedCompareIds(compareSnapshot);
-      }}
+      onStartCompare={startCompare}
+      onCancel={cancelComparePicker}
     />
   );
 

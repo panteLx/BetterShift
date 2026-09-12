@@ -50,6 +50,11 @@ function revealInPanel(field: HTMLElement) {
   else if (above > 0) scroller.scrollTop -= above;
 }
 
+/** Waits for the sheet to settle at its new size before measuring the field. */
+function scheduleReveal(field: HTMLElement) {
+  return requestAnimationFrame(() => revealInPanel(field));
+}
+
 /** Scrollable body of a panel; use inside `bare` panels or settings sections. */
 export function PanelBody({
   children,
@@ -143,7 +148,7 @@ export function PanelDialog({
     const field = document.activeElement;
     if (!(field instanceof HTMLElement)) return;
 
-    const frame = requestAnimationFrame(() => revealInPanel(field));
+    const frame = scheduleReveal(field);
     return () => cancelAnimationFrame(frame);
   }, [keyboard]);
 
@@ -220,9 +225,7 @@ export function PanelDialog({
         }
         // Moving between fields while the keyboard is already up changes no viewport
         onFocusCapture={(event) => {
-          if (!keyboard) return;
-          const field = event.target as HTMLElement;
-          requestAnimationFrame(() => revealInPanel(field));
+          if (keyboard) scheduleReveal(event.target as HTMLElement);
         }}
       >
         <div className="flex shrink-0 justify-center pb-1 pt-2">

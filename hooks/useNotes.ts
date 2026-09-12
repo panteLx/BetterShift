@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CalendarNote } from "@/lib/db/schema";
-import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate, toLocalDate } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
@@ -10,11 +10,7 @@ import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 
 // Helper to convert API response timestamps to Date objects
 export function normalizeNote(note: Record<string, unknown>): CalendarNote {
-  const dateValue = note.date as string | number | Date;
-  const parsedDate =
-    typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-      ? parseLocalDate(dateValue)
-      : new Date(dateValue);
+  const parsedDate = toLocalDate(note.date as string | number | Date);
 
   return {
     ...(note as Omit<CalendarNote, "date" | "createdAt" | "updatedAt">),

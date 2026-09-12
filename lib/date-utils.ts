@@ -34,6 +34,8 @@ export function formatLongDate(
   return formatter.format(date);
 }
 
+const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * Parses a YYYY-MM-DD date string as a local date (NOT UTC!)
  * This fixes the timezone bug where "2025-01-15" was interpreted as UTC midnight
@@ -51,8 +53,7 @@ export function parseLocalDate(dateString: string): Date {
   }
 
   // 2. Match strict YYYY-MM-DD pattern
-  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-  if (!datePattern.test(dateString)) {
+  if (!LOCAL_DATE_PATTERN.test(dateString)) {
     throw new TypeError(
       `Invalid date format: expected YYYY-MM-DD, got "${dateString}"`
     );
@@ -99,6 +100,17 @@ export function parseLocalDate(dateString: string): Date {
   }
 
   return date;
+}
+
+/**
+ * Normalises an API date field, which is either a local YYYY-MM-DD string or a
+ * timestamp. Passing the former to `new Date()` would read it as UTC midnight
+ * and shift the day in negative offsets.
+ */
+export function toLocalDate(value: Date | string | number): Date {
+  return typeof value === "string" && LOCAL_DATE_PATTERN.test(value)
+    ? parseLocalDate(value)
+    : new Date(value);
 }
 
 /**

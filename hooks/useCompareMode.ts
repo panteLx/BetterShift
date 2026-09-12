@@ -7,13 +7,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { CalendarWithCount } from "@/lib/types";
 import { useCompareData } from "@/hooks/useCompareData";
-import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
-
-function toDate(date: Date | string): Date {
-  return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
-    ? parseLocalDate(date)
-    : new Date(date);
-}
+import { formatDateToLocal, toLocalDate } from "@/lib/date-utils";
 
 interface UseCompareModeProps {
   calendars: CalendarWithCount[];
@@ -134,9 +128,19 @@ export function useCompareMode({
     setShowCompareSelector(true);
   }, [isCompareMode, selectedCompareIds]);
 
+  const startCompare = useCallback(() => {
+    setShowCompareSelector(false);
+    setIsCompareMode(true);
+  }, []);
+
+  const cancelComparePicker = useCallback(() => {
+    setShowCompareSelector(false);
+    setSelectedCompareIds(compareSnapshot);
+  }, [compareSnapshot]);
+
   const handleCompareDayClick = useCallback(
     async (calendarId: string, date: Date | string) => {
-      const targetDate = toDate(date);
+      const targetDate = toLocalDate(date);
       selectDay(targetDate);
       if (!isSameMonth(targetDate, currentDate)) setCurrentDate(targetDate);
       if (!selectedPresetId) return;
@@ -198,12 +202,8 @@ export function useCompareMode({
 
   return {
     isCompareMode,
-    setIsCompareMode,
     showCompareSelector,
-    setShowCompareSelector,
     selectedCompareIds,
-    setSelectedCompareIds,
-    compareSnapshot,
     compareTogglingDates,
     compareNoteCalendarId,
     setCompareNoteCalendarId,
@@ -211,6 +211,8 @@ export function useCompareMode({
     handleToggleCompareCalendar,
     handleExitCompare,
     openComparePicker,
+    startCompare,
+    cancelComparePicker,
     handleCompareDayClick,
   };
 }

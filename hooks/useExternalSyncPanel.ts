@@ -269,7 +269,6 @@ export function useExternalSyncPanel({
     syncErrors,
     editingSync,
     formOpen,
-    itemLabel,
     values,
     setField,
     isSubmitting,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 
 export interface KeyboardInset {
   /** Pixels the on-screen keyboard covers at the bottom of the layout viewport */
@@ -12,29 +12,13 @@ export interface KeyboardInset {
 // Below this a shrinking visual viewport is a collapsing browser toolbar, not a keyboard
 const KEYBOARD_MIN_HEIGHT = 120;
 
-// useSyncExternalStore compares by identity, so an unchanged reading must stay the same object
-let lastInset: KeyboardInset | null = null;
-
-function readInset(): KeyboardInset | null {
-  const viewport = window.visualViewport;
-  if (!viewport) return null;
-
+function readInset(viewport: VisualViewport): KeyboardInset | null {
   const bottom = Math.max(
     0,
     window.innerHeight - viewport.height - viewport.offsetTop
   );
-  if (bottom <= KEYBOARD_MIN_HEIGHT) {
-    lastInset = null;
-    return null;
-  }
-  if (
-    !lastInset ||
-    lastInset.bottom !== bottom ||
-    lastInset.viewportHeight !== viewport.height
-  ) {
-    lastInset = { bottom, viewportHeight: viewport.height };
-  }
-  return lastInset;
+  if (bottom <= KEYBOARD_MIN_HEIGHT) return null;
+  return { bottom, viewportHeight: viewport.height };
 }
 
 /**
@@ -43,6 +27,10 @@ function readInset(): KeyboardInset | null {
  * to the visible area itself.
  */
 export function useKeyboardInset(enabled: boolean): KeyboardInset | null {
+  // useSyncExternalStore compares by identity, so an unchanged reading must
+  // stay the same object. Per instance, not shared across mounted panels.
+  const last = useRef<KeyboardInset | null>(null);
+
   const subscribe = useCallback(
     (notify: () => void) => {
       const viewport = enabled ? window.visualViewport : null;
@@ -58,9 +46,21 @@ export function useKeyboardInset(enabled: boolean): KeyboardInset | null {
     [enabled]
   );
 
-  return useSyncExternalStore(
-    subscribe,
-    () => (enabled ? readInset() : null),
-    () => null
-  );
+  const getSnapshot = useCallback(() => {
+    const viewport = enabled ? window.visualViewport : null;
+    const next = viewport ? readInset(viewport) : null;
+    const prev = last.current;
+    if (
+      next &&
+      prev &&
+      prev.bottom === next.bottom &&
+      prev.viewportHeight === next.viewportHeight
+    ) {
+      return prev;
+    }
+    last.current = next;
+    return next;
+  }, [enabled]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, () => null);
 }
