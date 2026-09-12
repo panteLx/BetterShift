@@ -95,15 +95,22 @@ function redirectToLogin(request: NextRequest) {
  * 'strict-dynamic' drops host-based sources like 'self' for script-src by spec,
  * which also blocks same-origin scripts a reverse proxy injects into the HTML
  * (e.g. Cloudflare Rocket Loader's cdn-cgi/scripts/... loader) since they never
- * carry our nonce. CSP_STRICT_DYNAMIC=false keeps the nonce but drops
- * 'strict-dynamic', falling back to normal 'self' matching for those cases.
+ * carry our nonce. Rocket Loader turned out to go further than that: it
+ * reconstructs every inline <script> on the page (Next's own hydration
+ * bootstrap included) to "activate" it, and drops the nonce attribute while
+ * doing so -- so dropping only 'strict-dynamic' still leaves those blocked and
+ * the app fails to hydrate. CSP_STRICT_DYNAMIC_BYPASS=true therefore drops
+ * the nonce entirely and falls back to 'unsafe-inline', same as our other apps.
  */
 function buildCsp(nonce: string) {
   const isDev = process.env.NODE_ENV === "development";
-  const strictDynamic = process.env.CSP_STRICT_DYNAMIC !== "false";
+  const bypassStrictDynamic = process.env.CSP_STRICT_DYNAMIC_BYPASS === "true";
+  const scriptSrc = bypassStrictDynamic
+    ? "'self' 'unsafe-inline'"
+    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'${strictDynamic ? " 'strict-dynamic'" : ""}${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src ${scriptSrc}${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
