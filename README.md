@@ -17,8 +17,27 @@ _BetterShift is a self-hosted shift management application for teams and individ
 
 <details>
 <summary>Show Screenshots</summary>
-<img width="1920" height="1080" alt="calendar_page" src="https://github.com/user-attachments/assets/9b8b01b5-0a5d-4359-8024-5764866cf92a" />
-<img width="1920" height="1080" alt="admin_panel" src="https://github.com/user-attachments/assets/976e1c4d-6c7c-4462-abe7-8d81edb33666" />
+
+**Desktop**
+
+<img width="1920" alt="Calendar" src="docs/screenshots/desktop/calendar.png" />
+<img width="1920" alt="Presets" src="docs/screenshots/desktop/presets.png" />
+<img width="1920" alt="Sharing" src="docs/screenshots/desktop/sharing.png" />
+<img width="1920" alt="Statistics" src="docs/screenshots/desktop/statistics.png" />
+<img width="1920" alt="Export" src="docs/screenshots/desktop/export.png" />
+<img width="1920" alt="External calendar sync" src="docs/screenshots/desktop/external-sync.png" />
+<img width="1920" alt="Admin panel" src="docs/screenshots/desktop/admin.png" />
+<img width="1920" alt="Login" src="docs/screenshots/desktop/login.png" />
+
+**Mobile**
+
+<p>
+<img width="270" alt="Calendar on mobile" src="docs/screenshots/mobile/calendar.png" />
+<img width="270" alt="Settings on mobile" src="docs/screenshots/mobile/settings.png" />
+<img width="270" alt="Statistics on mobile" src="docs/screenshots/mobile/statistics.png" />
+<img width="270" alt="Admin panel on mobile" src="docs/screenshots/mobile/admin.png" />
+</p>
+
 </details>
 
 ## Features
