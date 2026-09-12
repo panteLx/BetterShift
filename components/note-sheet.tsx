@@ -46,6 +46,8 @@ interface NoteFormState {
   interval: number;
 }
 
+const MAX_INTERVAL = 52;
+
 const EMPTY_STATE: NoteFormState = {
   text: "",
   type: "note",
@@ -97,16 +99,27 @@ export function NoteSheet({
   const [form, setForm] = useState<NoteFormState>(initial);
   const [source, setSource] = useState({ open, note });
   const [isSaving, setIsSaving] = useState(false);
+  // Raw field text, so the interval can be cleared before a new number is typed
+  const [intervalDraft, setIntervalDraft] = useState<string | null>(null);
 
   // Reset whenever the sheet opens, closes or switches notes
   if (source.open !== open || source.note !== note) {
     setSource({ open, note });
     setForm(initial);
+    setIntervalDraft(null);
   }
 
   const isReadOnly = readOnly || !permission.canEdit;
   const isEvent = form.type === "event";
   const update = (patch: Partial<NoteFormState>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const clampInterval = (value: number) => Math.min(MAX_INTERVAL, Math.max(1, value));
+
+  const commitInterval = () => {
+    const parsed = parseInt(intervalDraft ?? "", 10);
+    if (!Number.isNaN(parsed)) update({ interval: clampInterval(parsed) });
+    setIntervalDraft(null);
+  };
 
   const hasChanges = () => {
     if (note) {
@@ -243,7 +256,7 @@ export function NoteSheet({
             onChange={(e) => update({ text: e.target.value })}
             placeholder={isEvent ? t("note.eventPlaceholder") : t("note.placeholder")}
             rows={3}
-            className="min-h-[74px] resize-none rounded-[9px] px-3 py-2.5 text-[14px] md:text-[14px]"
+            className="min-h-[74px] resize-none rounded-[9px] px-3 py-2.5 text-base md:text-[14px]"
             disabled={isReadOnly}
           />
         </Field>
@@ -283,10 +296,16 @@ export function NoteSheet({
                   type="number"
                   inputMode="numeric"
                   min={1}
-                  max={52}
+                  max={MAX_INTERVAL}
                   aria-label={t("note.customInterval")}
-                  value={form.interval}
-                  onChange={(e) => update({ interval: Math.max(1, parseInt(e.target.value) || 1) })}
+                  value={intervalDraft ?? String(form.interval)}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setIntervalDraft(raw);
+                    const parsed = parseInt(raw, 10);
+                    if (parsed >= 1 && parsed <= MAX_INTERVAL) update({ interval: parsed });
+                  }}
+                  onBlur={commitInterval}
                   disabled={isReadOnly || form.repeat === "none"}
                   className="h-[34px] w-[58px] rounded-lg px-2 text-center font-mono text-base md:text-[14px]"
                 />
