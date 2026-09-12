@@ -87,6 +87,37 @@ function redirectToLogin(request: NextRequest) {
 }
 
 /**
+ * Every route is already dynamically rendered (next-intl's request config reads
+ * cookies()/headers()), so a fresh nonce per request costs nothing extra here.
+ * 'unsafe-inline' stays in style-src because Radix sets inline `style` attributes
+ * at runtime, which a nonce cannot cover.
+ */
+function buildCsp(nonce: string) {
+  const isDev = process.env.NODE_ENV === "development";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+/** NextResponse.next() carrying the request-side x-nonce header and the CSP response header. */
+function nextWithNonce(request: NextRequest, nonce: string, csp: string) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
+
+/**
  * Proxy for authentication and route protection (Next.js 16)
  *
  * Features:
@@ -100,6 +131,8 @@ function redirectToLogin(request: NextRequest) {
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildCsp(nonce);
 
   // =====================================================
   // Health Check - Block all routes if system unhealthy
@@ -127,7 +160,7 @@ export async function proxy(request: NextRequest) {
       }
 
       // System is unhealthy - allow access to error page
-      return NextResponse.next();
+      return nextWithNonce(request, nonce, csp);
     } catch (error) {
       // Log the error instead of silently swallowing it
       console.error(
@@ -135,7 +168,7 @@ export async function proxy(request: NextRequest) {
         error instanceof Error ? error.message : String(error)
       );
       // Always treat fetch failures/timeouts as "unhealthy" to allow access to error page
-      return NextResponse.next();
+      return nextWithNonce(request, nonce, csp);
     }
   }
 
@@ -233,7 +266,7 @@ export async function proxy(request: NextRequest) {
 
   // If auth is disabled, allow all routes
   if (!isAuthEnabled()) {
-    return NextResponse.next();
+    return nextWithNonce(request, nonce, csp);
   }
 
   // Public routes that don't require authentication
@@ -254,7 +287,7 @@ export async function proxy(request: NextRequest) {
 
   // Allow public routes
   if (isPublicRoute) {
-    return NextResponse.next();
+    return nextWithNonce(request, nonce, csp);
   }
 
   // =====================================================
@@ -321,7 +354,7 @@ export async function proxy(request: NextRequest) {
   if (!sessionToken) {
     // If guest access is enabled, allow viewing without login
     if (allowGuestAccess()) {
-      return NextResponse.next();
+      return nextWithNonce(request, nonce, csp);
     }
 
     // Otherwise, redirect to login with return URL
@@ -331,10 +364,10 @@ export async function proxy(request: NextRequest) {
   // Session token validation happens in API routes via getSessionUser()
   // Middleware only checks for cookie presence (fast routing decision)
 
-  // Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
-  // X-XSS-Protection, Content-Security-Policy) are set globally in next.config.ts
-  // so they apply to every response, not just this fall-through branch.
-  return NextResponse.next();
+  // The remaining security headers (X-Content-Type-Options, X-Frame-Options,
+  // Referrer-Policy, X-XSS-Protection) are set globally in next.config.ts;
+  // only the nonce-based Content-Security-Policy has to be per-request.
+  return nextWithNonce(request, nonce, csp);
 }
 
 // Configure which routes to run proxy on

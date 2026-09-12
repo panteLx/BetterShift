@@ -44,6 +44,7 @@ _BetterShift is a self-hosted shift management application for teams and individ
 docker run -d \
   -p 3000:3000 \
   -v ./data:/app/data \
+  -v ./uploads:/app/public/uploads \
   -e BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
   -e BETTER_AUTH_URL=http://localhost:3000 \
   -e TZ=Europe/Berlin \

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -71,12 +72,14 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
   const publicConfig = getPublicConfig();
+  const nonce = (await headers()).get("x-nonce") || undefined;
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
         {/* Inject public config for immediate client-side access (zero latency) */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `window.__PUBLIC_CONFIG__=${JSON.stringify(publicConfig)};`,
           }}
@@ -90,6 +93,7 @@ export default async function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           <NextIntlClientProvider messages={messages} locale={locale}>
             <QueryProvider>
