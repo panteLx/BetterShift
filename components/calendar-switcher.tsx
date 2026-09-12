@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  Check,
   ChevronDown,
   Columns2,
   Globe,
@@ -18,8 +19,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -155,29 +154,37 @@ export function CalendarSwitcher({
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuRadioGroup value={selectedId} onValueChange={onSelect}>
-          {groups.map((group, index) => (
-            <div key={group.key}>
-              {index > 0 && <DropdownMenuSeparator />}
-              {group.label && (
-                <DropdownMenuLabel className="flex items-center gap-1.5 eyebrow">
-                  <group.icon className="size-3" />
-                  {group.label}
-                </DropdownMenuLabel>
-              )}
-              {group.items.map((calendar) => (
-                <DropdownMenuRadioItem key={calendar.id} value={calendar.id} className="gap-2.5">
+        {groups.map((group, index) => (
+          <div key={group.key}>
+            {index > 0 && <DropdownMenuSeparator />}
+            {group.label && (
+              <DropdownMenuLabel className="flex items-center gap-1.5 eyebrow">
+                <group.icon className="size-3" />
+                {group.label}
+              </DropdownMenuLabel>
+            )}
+            {group.items.map((calendar) => {
+              const active = calendar.id === selectedId;
+              return (
+                <DropdownMenuItem
+                  key={calendar.id}
+                  onSelect={() => onSelect(calendar.id)}
+                  className={cn("gap-2.5", active && "bg-brand-soft text-brand-ink")}
+                >
                   <span
                     className="size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: calendar.color }}
                   />
-                  <span className="flex-1 truncate">{calendar.name}</span>
+                  <span className={cn("flex-1 truncate", active && "font-semibold")}>
+                    {calendar.name}
+                  </span>
                   {statusIcon(calendar)}
-                </DropdownMenuRadioItem>
-              ))}
-            </div>
-          ))}
-        </DropdownMenuRadioGroup>
+                  {active && <Check className="size-3.5 shrink-0 text-brand-ink" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
+        ))}
         {(!isGuest || (onCompare && visible.length >= 2)) && <DropdownMenuSeparator />}
         {onCompare && visible.length >= 2 && (
           <DropdownMenuItem onClick={onCompare}>
