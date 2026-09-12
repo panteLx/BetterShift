@@ -649,7 +649,7 @@ export function MonthGrid({
                   : cn(
                       weekend ? "bg-surface-weekend" : "bg-surface-cell",
                       "hover:bg-surface-panel",
-                      (selected || today) && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]"
+                      selected && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]"
                     ),
                 desktop && "gap-[3px] px-2 py-[7px]",
                 variant === "compare" && "px-[9px] py-2",
