@@ -313,6 +313,22 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  /*
+   * iOS Safari styles date and time inputs natively and gives them an intrinsic
+   * min-width that ignores `width: 100%`, so a start/end pair overflows its
+   * column and the two fields overlap.
+   */
+  input[type="time"],
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
+  input[type="time"]::-webkit-date-and-time-value,
+  input[type="date"]::-webkit-date-and-time-value {
+    margin: 0;
+    text-align: left;
+  }
 }
 
 /* Scrim behind dialogs and bottom sheets; unlayered so it beats the primitives' bg utility */
