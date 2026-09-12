@@ -232,16 +232,19 @@ export function useCalendarSettings(calendarId: string | null) {
       title: t("settings.view"),
       description: t("settings.viewHint"),
       meta: calendar.viewSettings ? t("settings.viewOn") : t("settings.viewOff"),
-    },
-    {
+    }
+  );
+  // Sync notifications manage external syncs, so they need the same permission
+  // tier as that section — guests only ever get read/write, never manage.
+  if (permission.canManage)
+    items.push({
       id: "notifications",
       icon: Bell,
       title: t("settings.notifications"),
       description: hasSyncErrors ? t("settings.notificationsError") : t("settings.notificationsHint"),
       meta: hasSyncErrors ? t("common.error") : undefined,
       metaTone: hasSyncErrors ? "danger" : undefined,
-    }
-  );
+    });
   return { calendar, items };
 }
 

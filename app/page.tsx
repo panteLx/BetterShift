@@ -81,7 +81,7 @@ function HomeContent() {
     hasLoadedOnce: presetsLoadedOnce,
   } = usePresets(selectedCalendar);
 
-  const { canEdit } = useCalendarPermission(selectedCalendar);
+  const { canEdit, canManage } = useCalendarPermission(selectedCalendar);
   // Toasts are owned by CalendarWorkspace; this is only the stamping gate
   const { isOnline } = useConnectionStatus({ toasts: false });
 
@@ -137,7 +137,9 @@ function HomeContent() {
     updateNote: updateNoteHook,
     deleteNote: deleteNoteHook,
   } = useNotes(isCompareMode ? compareNoteCalendarId : selectedCalendar);
-  const { externalSyncs, hasSyncErrors } = useExternalSync(selectedCalendar || null);
+  const { externalSyncs, hasSyncErrors } = useExternalSync(
+    canManage ? selectedCalendar || null : null
+  );
 
   const viewSettings = useViewSettings();
   const dialogStates = useDialogStates();
@@ -427,6 +429,7 @@ function HomeContent() {
       selectedCalendar={selectedCalendar}
       currentDate={currentDate}
       hasSyncErrors={hasSyncErrors}
+      canManageSync={canManage}
       onDateChange={handleDateChange}
       onSelectCalendar={setSelectedCalendar}
       onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}

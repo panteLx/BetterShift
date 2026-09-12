@@ -27,6 +27,8 @@ interface AppHeaderProps {
   selectedCalendar: string | undefined;
   currentDate: Date;
   hasSyncErrors?: boolean;
+  /** Sync notifications manage external syncs — hidden for guests and other non-managers */
+  canManageSync?: boolean;
   onDateChange: (date: Date) => void;
   onSelectCalendar: (id: string) => void;
   onCreateCalendar: () => void;
@@ -142,6 +144,7 @@ export function AppHeader({
   selectedCalendar,
   currentDate,
   hasSyncErrors = false,
+  canManageSync = false,
   onDateChange,
   onSelectCalendar,
   onCreateCalendar,
@@ -172,7 +175,7 @@ export function AppHeader({
 
   const actions = (
     <>
-      {selectedCalendar && (
+      {selectedCalendar && canManageSync && (
         <HeaderIconButton
           label={
             hasSyncErrors
