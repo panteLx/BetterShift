@@ -57,8 +57,7 @@ type Variant = "desktop" | "phone" | "compare";
 /** Desktop rows in cell order; "count" is a count-only external sync */
 type CellEntry =
   | { kind: "shift" | "external"; key: string; shift: ShiftWithCalendar }
-  | { kind: "event" | "note"; key: string; note: CalendarNote }
-  | { kind: "count"; key: string; sync: ExternalSync; count: number };
+  | { kind: "event" | "note"; key: string; note: CalendarNote };
 
 /** How many items fit into `space`, keeping room for an overflow line whenever something stays hidden. */
 function fitCount(
@@ -230,8 +229,47 @@ export function MonthGrid({
     pressTimer.current = null;
   };
 
+  /**
+   * Day number, plus one counter per minimal-mode sync. Those carry no text, so
+   * the header row has space for them and the cell body keeps its full budget.
+   */
+  const renderDesktopHead = (
+    content: DayContent,
+    day: Date,
+    inMonth: boolean,
+    today: boolean
+  ) => (
+    <span className="flex shrink-0 items-center gap-1">
+      <span
+        className={cn(
+          "inline-flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
+          today ? TODAY_BADGE : inMonth ? "text-fg-body dark:text-fg-secondary" : "text-fg-faint"
+        )}
+      >
+        {day.getDate()}
+      </span>
+      {content.layout.minimalGroups.length > 0 && (
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          {content.layout.minimalGroups.map(({ sync, shifts: synced }) => (
+            <span
+              key={sync.id}
+              className="shift-chip flex shrink-0 items-center gap-1 rounded-[6px] px-[5px] py-0.5 dark:[--shift-tint:14%]"
+              style={shiftVars(sync.color)}
+              title={sync.name}
+            >
+              <RefreshCw className="size-3 shrink-0" />
+              <span className="font-mono text-[11px] font-semibold leading-4">
+                {synced.length}
+              </span>
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+
   const renderDesktop = (content: DayContent) => {
-    const { visible, hiddenCount, hiddenExternalCount, minimalGroups } = content.layout;
+    const { visible, hiddenCount, hiddenExternalCount } = content.layout;
     const entries: CellEntry[] = [
       ...visible.map((shift) => ({
         kind: shift.syncedFromExternal ? ("external" as const) : ("shift" as const),
@@ -240,12 +278,6 @@ export function MonthGrid({
       })),
       ...content.events.map((note) => ({ kind: "event" as const, key: note.id, note })),
       ...content.notes.map((note) => ({ kind: "note" as const, key: note.id, note })),
-      ...minimalGroups.map(({ sync, shifts: synced }) => ({
-        kind: "count" as const,
-        key: sync.id,
-        sync,
-        count: synced.length,
-      })),
     ];
     const heights = entries.map((entry) => {
       if (entry.kind === "shift") {
@@ -269,7 +301,6 @@ export function MonthGrid({
     for (const entry of entries.slice(shown)) {
       if (entry.kind === "shift") hiddenShifts++;
       else if (entry.kind === "external") hiddenExternal++;
-      else if (entry.kind === "count") hiddenExternal += entry.count;
       else if (entry.kind === "event") hiddenEvents++;
       else hiddenNotes++;
     }
@@ -330,18 +361,6 @@ export function MonthGrid({
                     {entry.shift.title}
                   </span>
                   {time(entry.shift)}
-                </span>
-              );
-            case "count":
-              return (
-                <span
-                  key={entry.key}
-                  className={cn(chip, "items-center self-start pl-[5px]")}
-                  style={shiftVars(entry.sync.color)}
-                  title={entry.sync.name}
-                >
-                  <RefreshCw className="size-3 shrink-0" />
-                  <span className="font-mono text-[11px] font-semibold leading-4">{entry.count}</span>
                 </span>
               );
             case "event":
@@ -661,18 +680,7 @@ export function MonthGrid({
             >
               {desktop && (
                 <>
-                  <span
-                    className={cn(
-                      "inline-flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[12.5px] font-medium leading-none",
-                      today
-                        ? TODAY_BADGE
-                        : inMonth
-                          ? "text-fg-body dark:text-fg-secondary"
-                          : "text-fg-faint"
-                    )}
-                  >
-                    {day.getDate()}
-                  </span>
+                  {renderDesktopHead(content, day, inMonth, today)}
                   {renderDesktop(content)}
                 </>
               )}
