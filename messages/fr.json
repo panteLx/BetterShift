@@ -207,7 +207,11 @@
     "noPresets": "Aucun modèle de créneau pour l'instant",
     "deleteConfirm": "Supprimer ce modèle ? Tous les créneaux créés à partir de ce modèle seront également supprimés.",
     "secondary": "Plus",
-    "hideFromStats": "Exclure des statistiques"
+    "hideFromStats": "Exclure des statistiques",
+    "group": "Groupe (facultatif)",
+    "groupPlaceholder": "p. ex. Semaine, Week-end...",
+    "selectGroupHint": "Sélectionner tous les modèles de ce groupe",
+    "copiedSuffix": "copié"
   },
   "view": {
     "settingsTitle": "Mon affichage",
@@ -703,6 +707,8 @@
     "createPreset": "Créer un modèle",
     "manage": "Gérer",
     "stampHint": "Touchez un jour pour ajouter {title}, touchez à nouveau pour le retirer.",
+    "stampHintMulti": "Touchez un jour pour ajouter {count} modèles, touchez à nouveau pour les retirer.",
+    "multiSelect": "Sélection multiple",
     "addShiftManually": "Ajouter un service manuellement",
     "sheetDescription": "Services et notes du jour sélectionné",
     "sheetExpand": "Agrandir",

@@ -85,7 +85,24 @@ function HomeContent() {
   // Toasts are owned by CalendarWorkspace; this is only the stamping gate
   const { isOnline } = useConnectionStatus({ toasts: false });
 
-  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
+  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
+  const handlePresetSelection = useCallback(
+    (presetId: string | undefined, multiSelect = false) => {
+      if (!presetId) {
+        setSelectedPresetIds([]);
+        return;
+      }
+      setSelectedPresetIds((prev) => {
+        if (multiSelect) {
+          return prev.includes(presetId)
+            ? prev.filter((id) => id !== presetId)
+            : [...prev, presetId];
+        }
+        return prev.includes(presetId) ? [] : [presetId];
+      });
+    },
+    []
+  );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [editingShift, setEditingShift] = useState<ShiftWithCalendar | undefined>();
@@ -128,7 +145,7 @@ function HomeContent() {
     currentDate,
     setCurrentDate,
     selectDay,
-    selectedPresetId,
+    selectedPresetIds,
   });
 
   const {
@@ -265,22 +282,20 @@ function HomeContent() {
     calendars.find((c) => c.id === selectedCalendar)
   );
 
-  // The armed preset is page state that outlives the stamp bar: it survives a
+  // The armed presets are page state that outlives the stamp bar: it survives a
   // calendar switch, going offline and the personal toggle, none of which render
   // the dock. Derived here so a day click can never stamp without it on screen.
-  const armedPresetId =
-    canEdit &&
-    isOnline &&
-    calendarView.showStampBar &&
-    presets.some((p) => p.id === selectedPresetId)
-      ? selectedPresetId
-      : undefined;
+  const presetIdSet = new Set(presets.map((p) => p.id));
+  const armedPresetIds =
+    canEdit && isOnline && calendarView.showStampBar
+      ? selectedPresetIds.filter((id) => presetIdSet.has(id))
+      : [];
 
   const handleDayClick = (day: Date) => {
     selectDay(day);
     if (!isSameMonth(day, currentDate)) setCurrentDate(day);
-    if (armedPresetId) {
-      shiftActions.handleAddShift(day, armedPresetId);
+    if (armedPresetIds.length > 0) {
+      shiftActions.handleAddShift(day, armedPresetIds);
     } else if (!desktop) {
       setDaySheetOpen(true);
     }
@@ -389,8 +404,8 @@ function HomeContent() {
           showShiftNotes={personalView.showShiftNotes}
           highlightedWeekdays={personalView.highlightedWeekdays}
           highlightColor={personalView.highlightColor}
-          selectedPresetId={selectedPresetId}
-          onSelectPreset={setSelectedPresetId}
+          selectedPresetIds={selectedPresetIds}
+          onSelectPreset={handlePresetSelection}
           onDayClick={handleCompareDayClick}
           onDayContextMenu={openCompareNotes}
           onOpenDayShifts={openDayShifts}
@@ -464,8 +479,8 @@ function HomeContent() {
         highlightColor={calendarView.highlightColor}
         canEdit={canEdit}
         showStampBar={calendarView.showStampBar}
-        selectedPresetId={armedPresetId}
-        onSelectPreset={setSelectedPresetId}
+        selectedPresetIds={armedPresetIds}
+        onSelectPreset={handlePresetSelection}
         onManagePresets={() => dialogStates.setShowPresetManageDialog(true)}
         sheetOpen={daySheetOpen}
         onSheetOpenChange={setDaySheetOpen}

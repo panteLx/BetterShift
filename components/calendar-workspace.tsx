@@ -44,8 +44,8 @@ interface CalendarWorkspaceProps {
   highlightColor: string;
   canEdit: boolean;
   showStampBar: boolean;
-  selectedPresetId: string | undefined;
-  onSelectPreset: (id: string | undefined) => void;
+  selectedPresetIds: string[];
+  onSelectPreset: (id: string | undefined, multiSelect?: boolean) => void;
   onManagePresets: () => void;
   actions: DayActions;
   sheetOpen: boolean;
@@ -72,7 +72,7 @@ export function CalendarWorkspace({
   highlightColor,
   canEdit,
   showStampBar,
-  selectedPresetId,
+  selectedPresetIds,
   onSelectPreset,
   onManagePresets,
   actions,
@@ -110,7 +110,7 @@ export function CalendarWorkspace({
   );
   useStampShortcuts({
     presetIds: stampPresetIds,
-    selectedPresetId,
+    selectedPresetIds,
     onSelectPreset,
     enabled: stampingEnabled && desktop,
   });
@@ -175,7 +175,7 @@ export function CalendarWorkspace({
             {stampingEnabled && (
               <StampDock
                 presets={presets}
-                selectedPresetId={selectedPresetId}
+                selectedPresetIds={selectedPresetIds}
                 onSelectPreset={onSelectPreset}
                 onManage={onManagePresets}
               />
@@ -218,7 +218,7 @@ export function CalendarWorkspace({
         {stampingEnabled && (
           <MobilePresetBar
             presets={presets}
-            selectedPresetId={selectedPresetId}
+            selectedPresetIds={selectedPresetIds}
             onSelectPreset={onSelectPreset}
             onManage={onManagePresets}
           />

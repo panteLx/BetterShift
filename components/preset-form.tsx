@@ -15,6 +15,7 @@ export const EMPTY_PRESET_FORM: PresetFormData = {
   endTime: "17:00",
   color: DEFAULT_COLOR,
   notes: "",
+  groupName: "",
   isSecondary: false,
   isAllDay: false,
   hideFromStats: false,
@@ -27,6 +28,7 @@ export function presetToFormData(preset: ShiftPreset): PresetFormData {
     endTime: preset.endTime,
     color: preset.color,
     notes: preset.notes || "",
+    groupName: preset.groupName || "",
     isSecondary: preset.isSecondary || false,
     isAllDay: preset.isAllDay || false,
     hideFromStats: preset.hideFromStats || false,
@@ -47,6 +49,8 @@ interface PresetFormCardProps {
   disabled?: boolean;
   cardRef?: Ref<HTMLFormElement>;
   titleRef?: Ref<HTMLInputElement>;
+  /** Existing group names across this calendar's presets, offered as datalist suggestions. */
+  existingGroupNames?: string[];
 }
 
 /** "Neue Vorlage" card; the same card edits an existing preset. */
@@ -59,6 +63,7 @@ export function PresetFormCard({
   disabled,
   cardRef,
   titleRef,
+  existingGroupNames = [],
 }: PresetFormCardProps) {
   const t = useTranslations();
   const id = useId();
@@ -131,6 +136,23 @@ export function PresetFormCard({
           className={fieldClass}
           disabled={disabled}
         />
+      </Field>
+
+      <Field label={t("preset.group")} htmlFor={`${id}-group`}>
+        <Input
+          id={`${id}-group`}
+          list={`${id}-group-names`}
+          value={value.groupName}
+          onChange={(e) => onChange({ groupName: e.target.value })}
+          placeholder={t("preset.groupPlaceholder")}
+          className={fieldClass}
+          disabled={disabled}
+        />
+        <datalist id={`${id}-group-names`}>
+          {existingGroupNames.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
       </Field>
 
       <div className="flex flex-col gap-2.5 pt-0.5">

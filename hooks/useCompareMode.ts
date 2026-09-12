@@ -16,7 +16,7 @@ interface UseCompareModeProps {
   currentDate: Date;
   setCurrentDate: (date: Date) => void;
   selectDay: (day: Date) => void;
-  selectedPresetId: string | undefined;
+  selectedPresetIds: string[];
 }
 
 export function useCompareMode({
@@ -26,7 +26,7 @@ export function useCompareMode({
   currentDate,
   setCurrentDate,
   selectDay,
-  selectedPresetId,
+  selectedPresetIds,
 }: UseCompareModeProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,44 +143,49 @@ export function useCompareMode({
       const targetDate = toLocalDate(date);
       selectDay(targetDate);
       if (!isSameMonth(targetDate, currentDate)) setCurrentDate(targetDate);
-      if (!selectedPresetId) return;
+      if (selectedPresetIds.length === 0) return;
 
       const calendarPresets = compareData.presetsMap.get(calendarId) || [];
       const calendarShifts = compareData.shiftsMap.get(calendarId) || [];
-      const preset = calendarPresets.find((p) => p.id === selectedPresetId);
-      if (!preset) return;
 
       const dateKey = formatDateToLocal(targetDate);
       if (compareTogglingDates.get(calendarId)?.has(dateKey)) return;
       updateCompareToggling(calendarId, dateKey, true);
 
       try {
-        const existingShift = calendarShifts.find(
-          (shift) =>
-            shift.date &&
-            isSameDay(shift.date as Date, targetDate) &&
-            shift.title === preset.title &&
-            shift.startTime === preset.startTime &&
-            shift.endTime === preset.endTime
-        );
+        await Promise.all(
+          selectedPresetIds.map(async (presetId) => {
+            const preset = calendarPresets.find((p) => p.id === presetId);
+            if (!preset) return;
 
-        if (existingShift) {
-          await compareData.deleteShift({ calendarId, shiftId: existingShift.id });
-        } else {
-          await compareData.createShift({
-            calendarId,
-            formData: {
-              date: dateKey,
-              startTime: preset.startTime,
-              endTime: preset.endTime,
-              title: preset.title,
-              color: preset.color,
-              notes: preset.notes || "",
-              presetId: preset.id,
-              isAllDay: preset.isAllDay || false,
-            },
-          });
-        }
+            const existingShift = calendarShifts.find(
+              (shift) =>
+                shift.date &&
+                isSameDay(shift.date as Date, targetDate) &&
+                shift.title === preset.title &&
+                shift.startTime === preset.startTime &&
+                shift.endTime === preset.endTime
+            );
+
+            if (existingShift) {
+              await compareData.deleteShift({ calendarId, shiftId: existingShift.id });
+            } else {
+              await compareData.createShift({
+                calendarId,
+                formData: {
+                  date: dateKey,
+                  startTime: preset.startTime,
+                  endTime: preset.endTime,
+                  title: preset.title,
+                  color: preset.color,
+                  notes: preset.notes || "",
+                  presetId: preset.id,
+                  isAllDay: preset.isAllDay || false,
+                },
+              });
+            }
+          })
+        );
       } catch (error) {
         console.error("Failed to toggle shift:", error);
         toast.error(t("common.error"));
@@ -192,7 +197,7 @@ export function useCompareMode({
       selectDay,
       currentDate,
       setCurrentDate,
-      selectedPresetId,
+      selectedPresetIds,
       compareData,
       compareTogglingDates,
       updateCompareToggling,

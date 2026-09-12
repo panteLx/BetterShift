@@ -185,7 +185,7 @@ export function useCalendarShares(calendarId: string) {
 
       // Optimistic update
       const optimisticShare: CalendarShare = {
-        id: `temp-${Date.now()}`,
+        id: `temp-${crypto.randomUUID()}`,
         calendarId,
         userId,
         permission,

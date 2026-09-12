@@ -106,6 +106,13 @@
       "when": 1789142634528,
       "tag": "0014_long_the_liberteens",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1789245373291,
+      "tag": "0015_neat_serpent_society",
+      "breakpoints": true
     }
   ]
 }

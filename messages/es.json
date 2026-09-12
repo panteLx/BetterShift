@@ -207,7 +207,11 @@
     "noPresets": "Aún no hay preajustes de turno",
     "deleteConfirm": "¿Eliminar este preajuste? Esto también eliminará todos los turnos creados a partir de él.",
     "secondary": "Más",
-    "hideFromStats": "Ocultar de las estadísticas"
+    "hideFromStats": "Ocultar de las estadísticas",
+    "group": "Grupo (opcional)",
+    "groupPlaceholder": "p. ej. Día laboral, Fin de semana...",
+    "selectGroupHint": "Seleccionar todos los preajustes de este grupo",
+    "copiedSuffix": "copiado"
   },
   "view": {
     "settingsTitle": "Mi vista",
@@ -703,6 +707,8 @@
     "createPreset": "Crear plantilla",
     "manage": "Gestionar",
     "stampHint": "Toca un día para añadir {title}; vuelve a tocar para quitarlo.",
+    "stampHintMulti": "Toca un día para añadir {count} preajustes; vuelve a tocar para quitarlos.",
+    "multiSelect": "Selección múltiple",
     "addShiftManually": "Añadir turno manualmente",
     "sheetDescription": "Turnos y notas del día seleccionado",
     "sheetExpand": "Ampliar",

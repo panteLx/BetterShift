@@ -1,7 +1,7 @@
 import { CSSProperties } from "react";
 import { isSameDay } from "date-fns";
 import { ShiftWithCalendar } from "@/lib/types";
-import { ExternalSync } from "@/lib/db/schema";
+import { ExternalSync, ShiftPreset } from "@/lib/db/schema";
 import { calculateShiftDuration } from "@/lib/date-utils";
 
 export type ShiftSortType = "startTime" | "createdAt" | "title";
@@ -185,4 +185,31 @@ export function formatTimeRange(times: {
   endTime: string;
 }): string {
   return `${times.startTime.slice(0, 5)} – ${times.endTime.slice(0, 5)}`;
+}
+
+export interface PresetGroup {
+  name: string;
+  items: ShiftPreset[];
+}
+
+/** Buckets presets by trimmed groupName; ungrouped ones stay separate, named groups sort alphabetically. */
+export function groupPresetsByName(presets: ShiftPreset[]): {
+  ungrouped: ShiftPreset[];
+  groups: PresetGroup[];
+} {
+  const ungrouped: ShiftPreset[] = [];
+  const groupsMap = new Map<string, ShiftPreset[]>();
+  for (const preset of presets) {
+    const name = preset.groupName?.trim();
+    if (!name) {
+      ungrouped.push(preset);
+      continue;
+    }
+    if (!groupsMap.has(name)) groupsMap.set(name, []);
+    groupsMap.get(name)!.push(preset);
+  }
+  const groups = [...groupsMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, items]) => ({ name, items }));
+  return { ungrouped, groups };
 }

@@ -15,6 +15,7 @@ import {
   samePresetForm,
 } from "@/components/preset-form";
 import { ShiftPreset } from "@/lib/db/schema";
+import { groupPresetsByName } from "@/lib/shift-display";
 import { usePresets, type PresetFormData } from "@/hooks/usePresets";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useReportDirty } from "@/hooks/useDirtyState";
@@ -53,6 +54,7 @@ export function PresetsPanel({
   const [baseline, setBaseline] = useState<PresetFormData>(EMPTY_PRESET_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cloningId, setCloningId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ShiftPreset | null>(null);
   const [pendingDiscard, setPendingDiscard] = useState<(() => void) | null>(null);
   // Holds the dropped order until the reorder request settles, so rows don't snap back.
@@ -71,6 +73,10 @@ export function PresetsPanel({
   }, [presets, pendingOrder]);
   const primary = ordered.filter((p) => !p.isSecondary);
   const secondary = ordered.filter((p) => p.isSecondary);
+  const existingGroupNames = useMemo(
+    () => groupPresetsByName(presets).groups.map((g) => g.name),
+    [presets]
+  );
 
   const resetForm = () => {
     setEditingPreset(null);
@@ -105,6 +111,20 @@ export function PresetsPanel({
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const clonePreset = async (preset: ShiftPreset) => {
+    if (isReadOnly || isSaving || cloningId) return;
+    setCloningId(preset.id);
+    try {
+      const success = await createPreset({
+        ...presetToFormData(preset),
+        title: `${preset.title} (${t("preset.copiedSuffix")})`,
+      });
+      if (success) onPresetsChange?.();
+    } finally {
+      setCloningId(null);
     }
   };
 
@@ -148,7 +168,9 @@ export function PresetsPanel({
     readOnly: isReadOnly,
     editingId: editingPreset?.id ?? null,
     deletingId,
+    cloningId,
     onEdit: startEdit,
+    onClone: clonePreset,
     onDelete: setDeleteTarget,
   };
 
@@ -195,6 +217,7 @@ export function PresetsPanel({
             disabled={isSaving}
             cardRef={formRef}
             titleRef={titleRef}
+            existingGroupNames={existingGroupNames}
           />
         )}
       </PanelBody>

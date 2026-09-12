@@ -207,7 +207,11 @@
     "noPresets": "No shift presets yet",
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
     "secondary": "More",
-    "hideFromStats": "Hide from statistics"
+    "hideFromStats": "Hide from statistics",
+    "group": "Group (optional)",
+    "groupPlaceholder": "e.g. Weekday, Weekend...",
+    "selectGroupHint": "Select all presets in this group",
+    "copiedSuffix": "copied"
   },
   "view": {
     "settingsTitle": "My view",
@@ -703,6 +707,8 @@
     "createPreset": "Create preset",
     "manage": "Manage",
     "stampHint": "Tap a day to add {title}, tap again to remove it.",
+    "stampHintMulti": "Tap a day to add {count} presets, tap again to remove them.",
+    "multiSelect": "Multi-select",
     "addShiftManually": "Add shift manually",
     "sheetDescription": "Shifts and notes for the selected day",
     "sheetExpand": "Expand",

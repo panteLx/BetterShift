@@ -50,11 +50,8 @@ export function useShiftActions({
   );
 
   const handleAddShift = useCallback(
-    async (date: Date | string, selectedPresetId: string | undefined) => {
-      if (!selectedPresetId) return;
-
-      const preset = presets.find((p) => p.id === selectedPresetId);
-      if (!preset) return;
+    async (date: Date | string, presetIds: string[]) => {
+      if (presetIds.length === 0) return;
 
       const targetDate = toLocalDate(date);
       const dateKey = formatDateToLocal(targetDate);
@@ -64,39 +61,46 @@ export function useShiftActions({
       setTogglingDates((prev) => new Set(prev).add(dateKey));
 
       try {
-        const existingShift = shifts.find(
-          (shift) =>
-            shift.date &&
-            isSameDay(shift.date as Date, targetDate) &&
-            shift.title === preset.title &&
-            shift.startTime === preset.startTime &&
-            shift.endTime === preset.endTime
+        await Promise.all(
+          presetIds.map(async (presetId) => {
+            const preset = presets.find((p) => p.id === presetId);
+            if (!preset) return;
+
+            const existingShift = shifts.find(
+              (shift) =>
+                shift.date &&
+                isSameDay(shift.date as Date, targetDate) &&
+                shift.title === preset.title &&
+                shift.startTime === preset.startTime &&
+                shift.endTime === preset.endTime
+            );
+
+            if (existingShift) {
+              try {
+                await deleteShift(existingShift.id);
+              } catch (error) {
+                console.error("Failed to delete shift:", error);
+              }
+            } else {
+              const shiftData: ShiftFormData = {
+                date: dateKey,
+                startTime: preset.startTime,
+                endTime: preset.endTime,
+                title: preset.title,
+                color: preset.color,
+                notes: preset.notes || "",
+                presetId: preset.id,
+                isAllDay: preset.isAllDay || false,
+              };
+
+              try {
+                await createShift(shiftData);
+              } catch (error) {
+                console.error("Failed to create shift:", error);
+              }
+            }
+          })
         );
-
-        if (existingShift) {
-          try {
-            await deleteShift(existingShift.id);
-          } catch (error) {
-            console.error("Failed to delete shift:", error);
-          }
-        } else {
-          const shiftData: ShiftFormData = {
-            date: dateKey,
-            startTime: preset.startTime,
-            endTime: preset.endTime,
-            title: preset.title,
-            color: preset.color,
-            notes: preset.notes || "",
-            presetId: preset.id,
-            isAllDay: preset.isAllDay || false,
-          };
-
-          try {
-            await createShift(shiftData);
-          } catch (error) {
-            console.error("Failed to create shift:", error);
-          }
-        }
       } finally {
         setTogglingDates((prev) => {
           const next = new Set(prev);

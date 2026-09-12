@@ -207,7 +207,11 @@
     "noPresets": "Ancora nessun preset turno",
     "deleteConfirm": "Eliminare questo preset? Verranno eliminati anche tutti i turni creati da questo preset.",
     "secondary": "Altri",
-    "hideFromStats": "Nascondi dalle statistiche"
+    "hideFromStats": "Nascondi dalle statistiche",
+    "group": "Gruppo (opzionale)",
+    "groupPlaceholder": "es. Giorno feriale, Fine settimana...",
+    "selectGroupHint": "Seleziona tutti i preset di questo gruppo",
+    "copiedSuffix": "copiato"
   },
   "view": {
     "settingsTitle": "La mia vista",
@@ -703,6 +707,8 @@
     "createPreset": "Crea modello",
     "manage": "Gestisci",
     "stampHint": "Tocca un giorno per aggiungere {title}, tocca di nuovo per rimuoverlo.",
+    "stampHintMulti": "Tocca un giorno per aggiungere {count} preset, tocca di nuovo per rimuoverli.",
+    "multiSelect": "Selezione multipla",
     "addShiftManually": "Aggiungi turno manualmente",
     "sheetDescription": "Turni e note del giorno selezionato",
     "sheetExpand": "Espandi",

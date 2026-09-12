@@ -4,8 +4,8 @@ import { useEffect } from "react";
 
 interface UseStampShortcutsOptions {
   presetIds: string[];
-  selectedPresetId: string | undefined;
-  onSelectPreset: (id: string | undefined) => void;
+  selectedPresetIds: string[];
+  onSelectPreset: (id: string | undefined, multiSelect?: boolean) => void;
   enabled?: boolean;
 }
 
@@ -17,10 +17,13 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** Digits 1–9 arm or disarm the matching preset, Escape disarms. */
+/**
+ * Digits 1–9 arm or disarm the matching preset (replacing the selection),
+ * Shift+digit adds/removes it from the selection instead, Escape clears all.
+ */
 export function useStampShortcuts({
   presetIds,
-  selectedPresetId,
+  selectedPresetIds,
   onSelectPreset,
   enabled = true,
 }: UseStampShortcutsOptions) {
@@ -33,7 +36,7 @@ export function useStampShortcuts({
       // Leave keys alone while a dialog or sheet owns the focus
       if (document.querySelector("[role='dialog'][data-state='open']")) return;
 
-      if (event.key === "Escape" && selectedPresetId) {
+      if (event.key === "Escape" && selectedPresetIds.length > 0) {
         onSelectPreset(undefined);
         return;
       }
@@ -43,10 +46,10 @@ export function useStampShortcuts({
       const id = presetIds[index];
       if (!id) return;
       event.preventDefault();
-      onSelectPreset(id === selectedPresetId ? undefined : id);
+      onSelectPreset(id, event.shiftKey);
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [enabled, presetIds, selectedPresetId, onSelectPreset]);
+  }, [enabled, presetIds, selectedPresetIds, onSelectPreset]);
 }

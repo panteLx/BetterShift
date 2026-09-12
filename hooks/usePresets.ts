@@ -13,6 +13,7 @@ export interface PresetFormData {
   endTime: string;
   color: string;
   notes: string;
+  groupName: string;
   isSecondary: boolean;
   isAllDay: boolean;
   hideFromStats: boolean;
@@ -101,13 +102,14 @@ function createOptimisticPreset(
   formData: PresetFormData
 ): ShiftPreset {
   return {
-    id: `temp-${Date.now()}`,
+    id: `temp-${crypto.randomUUID()}`,
     calendarId,
     title: formData.title,
     startTime: formData.startTime,
     endTime: formData.endTime,
     color: formData.color,
     notes: formData.notes,
+    groupName: formData.groupName || null,
     isSecondary: formData.isSecondary,
     isAllDay: formData.isAllDay,
     hideFromStats: formData.hideFromStats,

@@ -207,7 +207,11 @@
     "noPresets": "Zatím žádné předvolby směn",
     "deleteConfirm": "Smazat tuto předvolbu? Tím se smažou i všechny směny vytvořené z této předvolby.",
     "secondary": "Další",
-    "hideFromStats": "Skrýt ze statistik"
+    "hideFromStats": "Skrýt ze statistik",
+    "group": "Skupina (volitelné)",
+    "groupPlaceholder": "např. Pracovní den, Víkend...",
+    "selectGroupHint": "Vybrat všechny předvolby v této skupině",
+    "copiedSuffix": "kopie"
   },
   "view": {
     "settingsTitle": "Moje zobrazení",
@@ -703,6 +707,8 @@
     "createPreset": "Vytvořit šablonu",
     "manage": "Spravovat",
     "stampHint": "Klepnutím na den přidáte {title}, dalším klepnutím ji odeberete.",
+    "stampHintMulti": "Klepnutím na den přidáte {count} předvoleb, dalším klepnutím je odeberete.",
+    "multiSelect": "Vícenásobný výběr",
     "addShiftManually": "Přidat směnu ručně",
     "sheetDescription": "Směny a poznámky vybraného dne",
     "sheetExpand": "Rozbalit",

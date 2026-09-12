@@ -207,7 +207,11 @@
     "noPresets": "Noch keine Schichtvorlagen",
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
     "secondary": "Weitere",
-    "hideFromStats": "Aus Statistik ausblenden"
+    "hideFromStats": "Aus Statistik ausblenden",
+    "group": "Gruppe (optional)",
+    "groupPlaceholder": "z.B. Wochentag, Wochenende...",
+    "selectGroupHint": "Alle Vorlagen dieser Gruppe auswählen",
+    "copiedSuffix": "kopiert"
   },
   "view": {
     "settingsTitle": "Meine Ansicht",
@@ -703,6 +707,8 @@
     "createPreset": "Vorlage anlegen",
     "manage": "Verwalten",
     "stampHint": "Tag antippen setzt {title}, nochmal antippen entfernt ihn.",
+    "stampHintMulti": "Tag antippen setzt {count} Vorlagen, nochmal antippen entfernt sie.",
+    "multiSelect": "Mehrfachauswahl",
     "addShiftManually": "Schicht manuell anlegen",
     "sheetDescription": "Schichten und Notizen des gewählten Tages",
     "sheetExpand": "Aufziehen",

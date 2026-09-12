@@ -152,7 +152,7 @@ export function useNotes(calendarId: string | undefined) {
 
       // Create optimistic note
       const optimisticNote: CalendarNote = {
-        id: `temp-${Date.now()}`,
+        id: `temp-${crypto.randomUUID()}`,
         date: parseLocalDate(formData.date),
         note: formData.note,
         type: formData.type || "note",

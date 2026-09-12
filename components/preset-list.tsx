@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -18,9 +19,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Copy, GripVertical, Pencil, Tag, Trash2 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
-import { getShiftCode, presetTime, shiftVars } from "@/lib/shift-display";
+import { getShiftCode, groupPresetsByName, presetTime, shiftVars } from "@/lib/shift-display";
 import { ListRow, Pill, RowIconButton, SectionLabel } from "@/components/form-kit";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,9 @@ interface PresetRowActions {
   readOnly: boolean;
   editingId: string | null;
   deletingId: string | null;
+  cloningId: string | null;
   onEdit: (preset: ShiftPreset) => void;
+  onClone: (preset: ShiftPreset) => void;
   onDelete: (preset: ShiftPreset) => void;
 }
 
@@ -43,7 +46,9 @@ function SortablePresetRow({
   readOnly,
   editingId,
   deletingId,
+  cloningId,
   onEdit,
+  onClone,
   onDelete,
 }: SortablePresetRowProps) {
   const t = useTranslations();
@@ -56,7 +61,7 @@ function SortablePresetRow({
     transition,
     isDragging,
   } = useSortable({ id: preset.id, disabled: !draggable });
-  const busy = deletingId === preset.id;
+  const busy = deletingId === preset.id || cloningId === preset.id;
 
   return (
     <div
@@ -106,6 +111,12 @@ function SortablePresetRow({
         {!readOnly && (
           <>
             <RowIconButton
+              icon={Copy}
+              label={t("common.copy")}
+              onClick={() => onClone(preset)}
+              disabled={busy}
+            />
+            <RowIconButton
               icon={Pencil}
               label={t("preset.edit")}
               onClick={() => onEdit(preset)}
@@ -131,39 +142,89 @@ interface PresetSectionProps extends PresetRowActions {
   onReorder: (next: ShiftPreset[]) => void;
 }
 
-/** One sortable group; primary and secondary presets are reordered separately. */
+interface PresetSubgroupProps extends PresetRowActions {
+  subgroupPresets: ShiftPreset[];
+  allPresets: ShiftPreset[];
+  onReorder: (next: ShiftPreset[]) => void;
+  sensors: ReturnType<typeof useSensors>;
+}
+
+// One DndContext per subgroup, so a drag can never cross a group boundary;
+// on drop the reordered slice is spliced back into the section's full order.
+function PresetSubgroup({
+  subgroupPresets,
+  allPresets,
+  onReorder,
+  sensors,
+  ...actions
+}: PresetSubgroupProps) {
+  const ids = subgroupPresets.map((p) => p.id);
+  const draggable = !actions.readOnly && subgroupPresets.length > 1;
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const idSet = new Set(ids);
+    const queue = arrayMove(subgroupPresets, oldIndex, newIndex);
+    onReorder(allPresets.map((p) => (idSet.has(p.id) ? queue.shift()! : p)));
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <div className="flex flex-col gap-2">
+          {subgroupPresets.map((preset) => (
+            <SortablePresetRow
+              key={preset.id}
+              preset={preset}
+              draggable={draggable}
+              {...actions}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+/** One section (primary or secondary); presets cluster under their group name. */
 export function PresetSection({ label, presets, onReorder, ...actions }: PresetSectionProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-  const draggable = !actions.readOnly && presets.length > 1;
-
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
-    const oldIndex = presets.findIndex((p) => p.id === active.id);
-    const newIndex = presets.findIndex((p) => p.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    onReorder(arrayMove(presets, oldIndex, newIndex));
-  };
+  const { ungrouped, groups } = useMemo(() => groupPresetsByName(presets), [presets]);
 
   return (
     <section>
       <SectionLabel>{label}</SectionLabel>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={presets.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-2">
-            {presets.map((preset) => (
-              <SortablePresetRow
-                key={preset.id}
-                preset={preset}
-                draggable={draggable}
-                {...actions}
-              />
-            ))}
+      {ungrouped.length > 0 && (
+        <PresetSubgroup
+          subgroupPresets={ungrouped}
+          allPresets={presets}
+          onReorder={onReorder}
+          sensors={sensors}
+          {...actions}
+        />
+      )}
+      {groups.map(({ name, items }) => (
+        <div key={name} className="mt-2.5 flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 px-1 text-[12px] font-medium text-fg-tertiary">
+            <Tag className="size-3" />
+            {name}
+            <span className="opacity-70">({items.length})</span>
           </div>
-        </SortableContext>
-      </DndContext>
+          <PresetSubgroup
+            subgroupPresets={items}
+            allPresets={presets}
+            onReorder={onReorder}
+            sensors={sensors}
+            {...actions}
+          />
+        </div>
+      ))}
     </section>
   );
 }

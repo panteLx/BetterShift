@@ -4,6 +4,7 @@ import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { trimOrNull } from "@/lib/utils";
 
 // GET all presets for a calendar
 export async function GET(request: NextRequest) {
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       endTime,
       color,
       notes,
+      groupName,
       isSecondary,
       isAllDay,
       hideFromStats,
@@ -124,6 +126,7 @@ export async function POST(request: NextRequest) {
         endTime: isAllDay ? "23:59" : endTime,
         color: color || "#3b82f6",
         notes: notes || null,
+        groupName: groupName ? trimOrNull(groupName) : null,
         isSecondary: isSecondary || false,
         isAllDay: isAllDay || false,
         hideFromStats: hideFromStats || false,

@@ -203,7 +203,7 @@ export function useCalendars(initialCalendarId?: string | null) {
       );
 
       const optimisticCalendar: CalendarWithCount = {
-        id: `temp-${Date.now()}`,
+        id: `temp-${crypto.randomUUID()}`,
         name,
         color,
         guestPermission: "none",

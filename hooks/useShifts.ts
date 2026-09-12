@@ -145,7 +145,7 @@ export function useShifts(calendarId: string | undefined) {
 
       // Create optimistic shift
       const optimisticShift: ShiftWithCalendar = {
-        id: `temp-${Date.now()}`,
+        id: `temp-${crypto.randomUUID()}`,
         date: parseLocalDate(formData.date),
         startTime: formData.startTime,
         endTime: formData.endTime,

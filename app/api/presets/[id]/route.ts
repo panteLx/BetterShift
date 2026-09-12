@@ -4,6 +4,7 @@ import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { trimOrNull } from "@/lib/utils";
 
 // GET single preset
 export async function GET(
@@ -69,10 +70,22 @@ export async function PATCH(
       endTime,
       color,
       notes,
+      groupName,
       isSecondary,
       isAllDay,
       hideFromStats,
     } = body;
+
+    // groupName: undefined leaves it unchanged, null explicitly clears it,
+    // strings are trimmed (empty -> cleared), anything else is invalid input.
+    let normalizedGroupName: string | null | undefined;
+    if (groupName === undefined || groupName === null) {
+      normalizedGroupName = groupName;
+    } else if (typeof groupName === "string") {
+      normalizedGroupName = trimOrNull(groupName);
+    } else {
+      return NextResponse.json({ error: "Invalid groupName" }, { status: 400 });
+    }
 
     const user = await getSessionUser(request.headers);
 
@@ -119,6 +132,7 @@ export async function PATCH(
         endTime: isAllDay ? "23:59" : endTime,
         color,
         notes: notes || null,
+        groupName: normalizedGroupName,
         isSecondary: isSecondary !== undefined ? isSecondary : undefined,
         isAllDay: isAllDay !== undefined ? isAllDay : undefined,
         hideFromStats: hideFromStats !== undefined ? hideFromStats : undefined,
