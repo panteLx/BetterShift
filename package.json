@@ -70,7 +70,7 @@
     "@tailwindcss/postcss": "^4",
     "@tanstack/eslint-plugin-query": "^5.91.2",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^24.10.1",
+    "@types/node": "^26.5.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "eslint": "^9",
