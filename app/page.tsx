@@ -202,6 +202,8 @@ function HomeContent() {
           calendars.some((cal) => cal.id === id)
         );
         if (validIds.length >= 2) {
+          // Syncing from the URL (an external source), not from render state.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSelectedCompareIds(validIds);
           setIsCompareMode(true);
         }
