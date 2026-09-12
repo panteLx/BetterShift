@@ -263,12 +263,12 @@ interface StampProps {
 }
 
 /** Toggle button that switches primary chips from replace-on-click to add/remove-on-click. */
-function MultiSelectToggle({
+export function MultiSelectToggle({
   variant,
   active,
   onClick,
 }: {
-  variant: "dock" | "bar";
+  variant: "dock" | "bar" | "compare";
   active: boolean;
   onClick: () => void;
 }) {
@@ -282,16 +282,28 @@ function MultiSelectToggle({
       aria-label={label}
       title={label}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-lg transition-colors",
-        variant === "dock" ? "size-[30px]" : "size-9",
+        "flex shrink-0 items-center justify-center transition-colors",
+        variant === "dock"
+          ? "size-[30px] rounded-lg"
+          : variant === "bar"
+            ? "size-9 rounded-lg"
+            : "size-7 rounded-[7px]",
         active
-          ? "bg-brand text-white"
+          ? variant === "compare"
+            ? "bg-brand-soft text-brand-ink"
+            : "bg-brand text-white"
           : variant === "dock"
             ? "text-fg-faint hover:bg-white/10 hover:text-white"
-            : "text-fg-secondary hover:bg-surface-sunken"
+            : variant === "bar"
+              ? "text-fg-secondary hover:bg-surface-sunken"
+              : "text-fg-tertiary hover:bg-surface-sunken"
       )}
     >
-      <ListChecks className={variant === "dock" ? "size-[15px]" : "size-[18px]"} />
+      <ListChecks
+        className={cn(
+          variant === "bar" ? "size-[18px]" : variant === "dock" ? "size-[15px]" : "size-3.5"
+        )}
+      />
     </button>
   );
 }

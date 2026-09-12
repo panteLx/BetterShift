@@ -17,7 +17,12 @@ import { Button } from "@/components/ui/button";
 import { MonthGrid } from "@/components/month-grid";
 import { MonthArrows, MonthStepper } from "@/components/app-header";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
-import { MorePresets, orderStampPresets, splitStampPresets } from "@/components/stamp-dock";
+import {
+  MorePresets,
+  MultiSelectToggle,
+  orderStampPresets,
+  splitStampPresets,
+} from "@/components/stamp-dock";
 import { MAX_COMPARE_CALENDARS } from "@/components/calendar-compare-sheet";
 import { useDayLabels } from "@/components/day-inspector";
 import { CalendarWithCount, ShiftWithCalendar } from "@/lib/types";
@@ -320,6 +325,7 @@ function CompareColumn({
   const { primary, secondary } = splitStampPresets(presetsMap.get(calendar.id) ?? []);
   const activeIds = new Set(selectedPresetIds);
   const totals = monthTotals(shifts, currentDate);
+  const [multiMode, setMultiMode] = useState(false);
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col pb-3">
@@ -347,7 +353,9 @@ function CompareColumn({
                     key={preset.id}
                     type="button"
                     aria-pressed={active}
-                    onClick={(event) => onSelectPreset(preset.id, isMultiSelectClick(event))}
+                    onClick={(event) =>
+                      onSelectPreset(preset.id, multiMode || isMultiSelectClick(event))
+                    }
                     className={cn(
                       "flex h-7 shrink-0 items-center gap-[7px] rounded-[7px] border px-2.5 text-[12.5px] font-medium transition-colors",
                       active
@@ -371,6 +379,12 @@ function CompareColumn({
               presets={secondary}
               selectedPresetIds={selectedPresetIds}
               onSelectPreset={onSelectPreset}
+              multiMode={multiMode}
+            />
+            <MultiSelectToggle
+              variant="compare"
+              active={multiMode}
+              onClick={() => setMultiMode((m) => !m)}
             />
             <button
               type="button"
