@@ -33,7 +33,7 @@ export function Field({
 }) {
   const t = useTranslations();
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div className={cn("flex flex-col gap-1.5 lg:gap-2", className)}>
       <Label htmlFor={htmlFor} className="text-[13px] font-semibold text-fg-body">
         {label}
         {optional && (

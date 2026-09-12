@@ -177,7 +177,7 @@ export function ShiftSheet({
       saveLabel={shift ? undefined : t("shiftSheet.createAction")}
       hasUnsavedChanges={!isReadOnly && hasChanges()}
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 lg:gap-4">
         {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
         {!shift && !isReadOnly && (
