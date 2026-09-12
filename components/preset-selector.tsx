@@ -10,7 +10,8 @@ interface PresetSelectorProps {
   calendars: CalendarWithCount[];
   presets: ShiftPreset[];
   selectedPresetId?: string;
-  onSelectPreset: (presetId: string | undefined) => void;
+  selectedPresetIds?: string[];
+  onSelectPreset: (presetId: string | undefined, multiSelect?: boolean) => void;
   onPresetsChange?: () => void;
   onShiftsChange?: () => void;
   calendarId: string;
@@ -25,6 +26,7 @@ export function PresetSelector({
   calendars,
   presets,
   selectedPresetId,
+  selectedPresetIds,
   onSelectPreset,
   onPresetsChange,
   onShiftsChange,
@@ -52,6 +54,7 @@ export function PresetSelector({
         calendarId={calendarId}
         presets={presets}
         selectedPresetId={selectedPresetId}
+        selectedPresetIds={selectedPresetIds}
         onSelectPreset={onSelectPreset}
         onCreateNew={handleManageClick}
         onManageClick={handleManageClick}

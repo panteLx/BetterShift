@@ -266,7 +266,11 @@
     "showPresets": "Vorlagen anzeigen",
     "hidePresets": "Vorlagen ausblenden",
     "hiddenFromStats": "Aus Statistik ausgeblendet",
-    "cannotAddPresetHint": "Diese Vorlage gehört zu einem anderen Kalender und kann hier nicht hinzugefügt werden."
+    "cannotAddPresetHint": "Diese Vorlage gehört zu einem anderen Kalender und kann hier nicht hinzugefügt werden.",
+    "group": "Gruppe",
+    "groupPlaceholder": "z.B. Wochentag, Wochenende...",
+    "groups": "Gruppen",
+    "selectGroupHint": "Alle Vorlagen dieser Gruppe auswählen"
   },
   "view": {
     "settingsTitle": "Ansichtseinstellungen",

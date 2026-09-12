@@ -260,6 +260,7 @@ export const shiftPresets = sqliteTable("shift_presets", {
   endTime: text("end_time").notNull(),
   color: text("color").notNull().default("#3b82f6"),
   notes: text("notes"),
+  groupName: text("group_name"),
   isSecondary: integer("is_secondary", { mode: "boolean" })
     .notNull()
     .default(false),

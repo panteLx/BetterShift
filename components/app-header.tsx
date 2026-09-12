@@ -34,10 +34,11 @@ interface AppHeaderProps {
   selectedCalendar: string | undefined;
   presets: ShiftPreset[];
   selectedPresetId: string | undefined;
+  selectedPresetIds?: string[];
   showMobileCalendarDialog: boolean;
   hasSyncErrors?: boolean;
   onSelectCalendar: (id: string) => void;
-  onSelectPreset: (id: string | undefined) => void;
+  onSelectPreset: (id: string | undefined, multiSelect?: boolean) => void;
   onCreateCalendar: () => void;
   onSettings: () => void;
   onSyncNotifications: () => void;
@@ -57,6 +58,7 @@ export function AppHeader({
   selectedCalendar,
   presets,
   selectedPresetId,
+  selectedPresetIds,
   showMobileCalendarDialog,
   hasSyncErrors = false,
   onSelectCalendar,
@@ -310,6 +312,7 @@ export function AppHeader({
                   calendars={calendars}
                   presets={presets}
                   selectedPresetId={selectedPresetId}
+                  selectedPresetIds={selectedPresetIds}
                   onSelectPreset={onSelectPreset}
                   onPresetsChange={onPresetsChange}
                   onShiftsChange={onShiftsChange}

@@ -15,6 +15,7 @@ interface CalendarGridProps {
   shifts: ShiftWithCalendar[];
   notes: CalendarNote[];
   selectedPresetId: string | undefined;
+  selectedPresetIds?: string[];
   togglingDates: Set<string>;
   externalSyncs: ExternalSync[];
   maxShiftsToShow?: number; // undefined = show all (regular shifts)
@@ -41,6 +42,7 @@ export function CalendarGrid({
   shifts,
   notes,
   selectedPresetId,
+  selectedPresetIds,
   togglingDates,
   externalSyncs,
   maxShiftsToShow,
@@ -86,6 +88,11 @@ export function CalendarGrid({
       date1.getDate() === date2.getDate()
     );
   };
+
+  // A date click should be treated as preset-driven whenever either a single or a
+  // multi-selection is active, so note actions remain available when no preset is selected.
+  const hasAnySelectedPreset =
+    !!selectedPresetId || !!selectedPresetIds?.length;
 
   const sortShifts = (shiftsToSort: ShiftWithCalendar[]) => {
     return [...shiftsToSort].sort((a, b) => {
@@ -230,7 +237,7 @@ export function CalendarGrid({
               ${
                 isCurrentMonth
                   ? "hover:bg-accent cursor-pointer active:bg-accent/80 hover:border-border"
-                  : selectedPresetId
+                  : hasAnySelectedPreset
                     ? "cursor-not-allowed"
                     : "cursor-pointer"
               }
@@ -249,7 +256,7 @@ export function CalendarGrid({
                 {totalNotesCount > 1 && (
                   <span
                     className={`inline-flex items-center justify-center text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 ${
-                      !selectedPresetId && onNoteIconClick
+                      !hasAnySelectedPreset && onNoteIconClick
                         ? "cursor-pointer hover:bg-primary/30 transition-colors"
                         : ""
                     }`}
@@ -257,7 +264,7 @@ export function CalendarGrid({
                       count: totalNotesCount,
                     })}
                     onClick={(e) => {
-                      if (!selectedPresetId && onNoteIconClick) {
+                      if (!hasAnySelectedPreset && onNoteIconClick) {
                         e.stopPropagation();
                         onNoteIconClick(e, day);
                       }
@@ -270,14 +277,14 @@ export function CalendarGrid({
                 {dayEvent && totalNotesCount === 1 && (
                   <span
                     className={`text-[10px] sm:text-xs font-medium truncate opacity-75 min-w-0 ${
-                      !selectedPresetId && onNoteIconClick
+                      !hasAnySelectedPreset && onNoteIconClick
                         ? "cursor-pointer hover:opacity-100 transition-opacity"
                         : ""
                     }`}
                     style={{ color: dayEvent.color || "#3b82f6" }}
                     title={dayEvent.note}
                     onClick={(e) => {
-                      if (!selectedPresetId && onNoteIconClick) {
+                      if (!hasAnySelectedPreset && onNoteIconClick) {
                         e.stopPropagation();
                         onNoteIconClick(e, day);
                       }
@@ -290,13 +297,13 @@ export function CalendarGrid({
                 {!dayEvent && dayNote && totalNotesCount === 1 && (
                   <span
                     className={`text-[10px] sm:text-xs font-medium text-orange-500 truncate opacity-75 min-w-0 ${
-                      !selectedPresetId && onNoteIconClick
+                      !hasAnySelectedPreset && onNoteIconClick
                         ? "cursor-pointer hover:opacity-100 transition-opacity"
                         : ""
                     }`}
                     title={dayNote.note}
                     onClick={(e) => {
-                      if (!selectedPresetId && onNoteIconClick) {
+                      if (!hasAnySelectedPreset && onNoteIconClick) {
                         e.stopPropagation();
                         onNoteIconClick(e, day);
                       }

@@ -18,6 +18,7 @@ interface CalendarContentProps {
   shifts: ShiftWithCalendar[];
   notes: CalendarNote[];
   selectedPresetId?: string;
+  selectedPresetIds?: string[];
   togglingDates: Set<string>;
   externalSyncs: ExternalSync[];
   maxShiftsToShow?: number;
@@ -71,6 +72,7 @@ export function CalendarContent(props: CalendarContentProps) {
         shifts={props.shifts}
         notes={props.notes}
         selectedPresetId={props.selectedPresetId}
+        selectedPresetIds={props.selectedPresetIds}
         togglingDates={props.togglingDates}
         externalSyncs={props.externalSyncs}
         maxShiftsToShow={props.maxShiftsToShow}

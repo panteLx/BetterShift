@@ -79,9 +79,11 @@ function HomeContent() {
   } = usePresets(selectedCalendar);
 
   // Local state
-  const [selectedPresetId, setSelectedPresetId] = useState<
-    string | undefined
-  >();
+  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
+  const selectedPresetId =
+    selectedPresetIds.length > 0
+      ? selectedPresetIds[selectedPresetIds.length - 1]
+      : undefined;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [compareNoteCalendarId, setCompareNoteCalendarId] = useState<
@@ -273,6 +275,28 @@ function HomeContent() {
     dialogStates.setShowShiftDialog(true);
   };
 
+  // Use a multi-select list at the page level while keeping the last picked preset
+  // as the compatibility value for any code that still expects a single active preset.
+  const handlePresetSelection = (
+    presetId: string | undefined,
+    multiSelect = false
+  ) => {
+    if (!presetId) {
+      setSelectedPresetIds([]);
+      return;
+    }
+
+    setSelectedPresetIds((prev) => {
+      if (multiSelect) {
+        return prev.includes(presetId)
+          ? prev.filter((id) => id !== presetId)
+          : [...prev, presetId];
+      }
+
+      return prev.includes(presetId) ? [] : [presetId];
+    });
+  };
+
   // Day interaction handlers
   const handleDayClick = (date: Date | string) => {
     // Parse date to ensure it's a Date object
@@ -280,7 +304,7 @@ function HomeContent() {
       typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
         ? parseLocalDate(date)
         : new Date(date);
-    shiftActions.handleAddShift(targetDate, selectedPresetId);
+    shiftActions.handleAddShift(targetDate, selectedPresetIds);
   };
 
   const handleDayRightClick = (e: React.MouseEvent, date: Date | string) => {
@@ -424,16 +448,27 @@ function HomeContent() {
     calendarId: string,
     date: Date | string
   ) => {
-    // Always parse date to ensure it's a Date object
     const targetDate =
       typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
         ? parseLocalDate(date)
         : new Date(date);
 
-    if (!selectedPresetId) {
-      // No preset selected, just show existing shifts if any
-      const shifts = compareData.shiftsMap.get(calendarId) || [];
+    // Compare mode can apply one or many presets to the clicked date, so normalize
+    // to a deduplicated list before toggling shifts.
+    const activePresetIds = [
+      ...new Set(
+        (
+          selectedPresetIds.length > 0
+            ? selectedPresetIds
+            : selectedPresetId
+              ? [selectedPresetId]
+              : []
+        ).filter(Boolean)
+      ),
+    ];
 
+    if (activePresetIds.length === 0) {
+      const shifts = compareData.shiftsMap.get(calendarId) || [];
       const dayShifts = shifts.filter(
         (shift) => shift.date && isSameDay(shift.date as Date, targetDate)
       );
@@ -446,19 +481,13 @@ function HomeContent() {
       return;
     }
 
-    // Preset selected, add or remove shift
     const presets = compareData.presetsMap.get(calendarId) || [];
     const shifts = compareData.shiftsMap.get(calendarId) || [];
-    const preset = presets.find((p) => p.id === selectedPresetId);
-    if (!preset) return;
-
     const dateKey = formatDateToLocal(targetDate);
 
-    // Check if already toggling
     const togglingDates = compareTogglingDates.get(calendarId) || new Set();
     if (togglingDates.has(dateKey)) return;
 
-    // Mark as toggling
     setCompareTogglingDates((prev) => {
       const updated = new Map(prev);
       const current = updated.get(calendarId) || new Set();
@@ -469,42 +498,43 @@ function HomeContent() {
     });
 
     try {
-      // Check if shift already exists
-      const existingShift = shifts.find(
-        (shift) =>
-          shift.date &&
-          isSameDay(shift.date as Date, targetDate) &&
-          shift.title === preset.title &&
-          shift.startTime === preset.startTime &&
-          shift.endTime === preset.endTime
-      );
+      for (const presetId of activePresetIds) {
+        const preset = presets.find((p) => p.id === presetId);
+        if (!preset) continue;
 
-      if (existingShift) {
-        // Delete existing shift using mutation
-        await compareData.deleteShift({
-          calendarId,
-          shiftId: existingShift.id,
-        });
-      } else {
-        // Create new shift using mutation
-        const shiftData = {
-          date: dateKey,
-          startTime: preset.startTime,
-          endTime: preset.endTime,
-          title: preset.title,
-          color: preset.color,
-          notes: preset.notes || "",
-          presetId: preset.id,
-          isAllDay: preset.isAllDay || false,
-        };
+        const existingShift = shifts.find(
+          (shift) =>
+            shift.date &&
+            isSameDay(shift.date as Date, targetDate) &&
+            shift.title === preset.title &&
+            shift.startTime === preset.startTime &&
+            shift.endTime === preset.endTime
+        );
 
-        await compareData.createShift({ calendarId, formData: shiftData });
+        if (existingShift) {
+          await compareData.deleteShift({
+            calendarId,
+            shiftId: existingShift.id,
+          });
+        } else {
+          const shiftData = {
+            date: dateKey,
+            startTime: preset.startTime,
+            endTime: preset.endTime,
+            title: preset.title,
+            color: preset.color,
+            notes: preset.notes || "",
+            presetId: preset.id,
+            isAllDay: preset.isAllDay || false,
+          };
+
+          await compareData.createShift({ calendarId, formData: shiftData });
+        }
       }
     } catch (error) {
       console.error("Failed to toggle shift:", error);
       toast.error(t("common.error"));
     } finally {
-      // Remove toggling state
       setCompareTogglingDates((prev) => {
         const updated = new Map(prev);
         const current = updated.get(calendarId) || new Set();
@@ -643,7 +673,8 @@ function HomeContent() {
           externalSyncsMap={compareData.externalSyncsMap}
           presetsMap={compareData.presetsMap}
           selectedPresetId={selectedPresetId}
-          onSelectPreset={setSelectedPresetId}
+          selectedPresetIds={selectedPresetIds}
+          onSelectPreset={handlePresetSelection}
           togglingDatesMap={togglingDatesMap}
           maxShiftsToShow={
             viewSettings.shiftsPerDay === null
@@ -875,10 +906,11 @@ function HomeContent() {
         selectedCalendar={selectedCalendar}
         presets={presets}
         selectedPresetId={selectedPresetId}
+        selectedPresetIds={selectedPresetIds}
         showMobileCalendarDialog={dialogStates.showMobileCalendarDialog}
         hasSyncErrors={hasSyncErrors}
         onSelectCalendar={setSelectedCalendar}
-        onSelectPreset={setSelectedPresetId}
+        onSelectPreset={handlePresetSelection}
         onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
         onSettings={() => dialogStates.setShowCalendarSettingsDialog(true)}
         onSyncNotifications={handleSyncNotifications}
@@ -900,6 +932,7 @@ function HomeContent() {
           shifts={shifts}
           notes={notes}
           selectedPresetId={selectedPresetId}
+          selectedPresetIds={selectedPresetIds}
           togglingDates={shiftActions.togglingDates}
           externalSyncs={externalSyncs}
           maxShiftsToShow={

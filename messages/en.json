@@ -266,7 +266,11 @@
     "showPresets": "Show presets",
     "hidePresets": "Hide presets",
     "hiddenFromStats": "Hidden from statistics",
-    "cannotAddPresetHint": "This preset belongs to a different calendar and cannot be added here."
+    "cannotAddPresetHint": "This preset belongs to a different calendar and cannot be added here.",
+    "group": "Group",
+    "groupPlaceholder": "e.g., Weekday, Weekend...",
+    "groups": "Groups",
+    "selectGroupHint": "Select all presets in this group"
   },
   "view": {
     "settingsTitle": "View Settings",

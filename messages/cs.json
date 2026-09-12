@@ -266,7 +266,11 @@
     "showPresets": "Zobrazit předvolby",
     "hidePresets": "Skrýt předvolby",
     "hiddenFromStats": "Skryto ze statistik",
-    "cannotAddPresetHint": "Tato předvolba patří jinému kalendáři a nelze ji sem přidat."
+    "cannotAddPresetHint": "Tato předvolba patří jinému kalendáři a nelze ji sem přidat.",
+    "group": "Skupina",
+    "groupPlaceholder": "např. Všední den, Víkend...",
+    "groups": "Skupiny",
+    "selectGroupHint": "Vybrat všechny předvolby v této skupině"
   },
   "view": {
     "settingsTitle": "Nastavení zobrazení",

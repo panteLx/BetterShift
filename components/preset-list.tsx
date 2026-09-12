@@ -9,6 +9,7 @@ import {
   Settings2,
   ChevronDown,
   ChevronUp,
+  Tag,
 } from "lucide-react";
 
 import { ShiftPreset } from "@/lib/db/schema";
@@ -20,7 +21,8 @@ interface PresetListProps {
   calendarId: string;
   presets: ShiftPreset[];
   selectedPresetId?: string;
-  onSelectPreset: (presetId: string | undefined) => void;
+  selectedPresetIds?: string[];
+  onSelectPreset: (presetId: string | undefined, multiSelect?: boolean) => void;
   onCreateNew?: () => void;
   onManageClick?: () => void;
   onViewSettingsClick?: () => void;
@@ -33,6 +35,7 @@ export function PresetList({
   calendarId,
   presets,
   selectedPresetId,
+  selectedPresetIds,
   onSelectPreset,
   onManageClick,
   onViewSettingsClick,
@@ -44,8 +47,56 @@ export function PresetList({
   const permission = useCalendarPermission(calendarId);
   const [showSecondary, setShowSecondary] = React.useState(false);
 
+  const activePresetIds = new Set(
+    selectedPresetIds && selectedPresetIds.length > 0
+      ? selectedPresetIds
+      : selectedPresetId
+        ? [selectedPresetId]
+        : []
+  );
   const primaryPresets = presets.filter((p) => !p.isSecondary);
   const secondaryPresets = presets.filter((p) => p.isSecondary);
+
+  const groups = React.useMemo(() => {
+    const map = new Map<string, ShiftPreset[]>();
+    for (const preset of presets) {
+      const name = preset.groupName?.trim();
+      if (!name) continue;
+      if (!map.has(name)) map.set(name, []);
+      map.get(name)!.push(preset);
+    }
+    return [...map.entries()]
+      .map(([name, items]) => ({ name, items }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [presets]);
+
+  const handlePresetToggle = (
+    presetId: string,
+    event?: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    const multiSelect =
+      !!event && (event.metaKey || event.ctrlKey || event.shiftKey);
+
+    if (multiSelect) {
+      onSelectPreset(presetId, true);
+      return;
+    }
+
+    onSelectPreset(activePresetIds.has(presetId) ? undefined : presetId, false);
+  };
+
+  // A group chip applies (or removes) every preset in that group at once,
+  // layering on top of whatever is already individually selected: fully
+  // selected -> deselect the whole group, otherwise -> select what's missing.
+  const handleGroupToggle = (groupPresets: ShiftPreset[]) => {
+    const ids = groupPresets.map((p) => p.id);
+    const allSelected = ids.every((id) => activePresetIds.has(id));
+    ids.forEach((id) => {
+      if (allSelected || !activePresetIds.has(id)) {
+        onSelectPreset(id, true);
+      }
+    });
+  };
 
   // Check if current calendar is read-only
   const isReadOnly = !permission.canEdit;
@@ -91,15 +142,48 @@ export function PresetList({
             <PresetButton
               key={preset.id}
               preset={preset}
-              isSelected={selectedPresetId === preset.id}
-              onSelect={() =>
-                onSelectPreset(
-                  selectedPresetId === preset.id ? undefined : preset.id
-                )
-              }
+              isSelected={activePresetIds.has(preset.id)}
+              onSelect={(event) => handlePresetToggle(preset.id, event)}
               isReadOnly={isReadOnly}
             />
           ))}
+        </div>
+      )}
+
+      {/* Group Chips - selecting one toggles every preset in that group */}
+      {!hidePresetHeader && groups.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-xs text-muted-foreground px-2">
+            {t("preset.groups")}
+          </span>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            {groups.map((group) => {
+              const ids = group.items.map((p) => p.id);
+              const isFullySelected = ids.every((id) => activePresetIds.has(id));
+              return (
+                <Button
+                  key={group.name}
+                  variant={isFullySelected ? "default" : "outline"}
+                  size="sm"
+                  onClick={
+                    isReadOnly ? undefined : () => handleGroupToggle(group.items)
+                  }
+                  disabled={isReadOnly}
+                  className="gap-1 text-xs sm:text-sm px-2.5 sm:px-3 h-8 sm:h-9 rounded-full border-dashed"
+                  title={t("preset.selectGroupHint")}
+                >
+                  {isFullySelected ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Tag className="h-3 w-3" />
+                  )}
+                  <span className="font-medium truncate max-w-[120px] sm:max-w-none">
+                    {group.name} ({group.items.length})
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -127,12 +211,8 @@ export function PresetList({
                 <PresetButton
                   key={preset.id}
                   preset={preset}
-                  isSelected={selectedPresetId === preset.id}
-                  onSelect={() =>
-                    onSelectPreset(
-                      selectedPresetId === preset.id ? undefined : preset.id
-                    )
-                  }
+                  isSelected={activePresetIds.has(preset.id)}
+                  onSelect={(event) => handlePresetToggle(preset.id, event)}
                   compact
                   isReadOnly={isReadOnly}
                 />
@@ -195,7 +275,7 @@ export function PresetList({
 interface PresetButtonProps {
   preset: ShiftPreset;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (event?: React.MouseEvent<HTMLButtonElement>) => void;
   compact?: boolean;
   isReadOnly?: boolean;
 }
@@ -214,7 +294,7 @@ function PresetButton({
       <Button
         variant={isSelected ? "default" : "outline"}
         size="sm"
-        onClick={isReadOnly ? undefined : onSelect}
+        onClick={isReadOnly ? undefined : (event) => onSelect(event)}
         disabled={isReadOnly}
         className="relative text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
         style={{
@@ -251,7 +331,7 @@ function PresetButton({
       <Button
         variant={isSelected ? "default" : "outline"}
         size="sm"
-        onClick={isReadOnly ? undefined : onSelect}
+        onClick={isReadOnly ? undefined : (event) => onSelect(event)}
         disabled={isReadOnly}
         className="relative text-[11px] sm:text-sm px-2 sm:px-4 h-8 sm:h-10 rounded-full font-semibold transition-all"
         style={{
