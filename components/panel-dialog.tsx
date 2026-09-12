@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import {
@@ -15,6 +15,7 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,28 @@ const WIDTHS = {
 
 export type PanelWidth = keyof typeof WIDTHS;
 
+/** Air kept between the focused field and the keyboard edge */
+const FIELD_MARGIN = 20;
+/** Rounded top corners stay visible even on a full-height phone sheet */
+const SHEET_TOP_GAP = 12;
+
+/**
+ * Scrolls the panel body only. Scrolling the document instead would drag the
+ * fixed sheet along and push the field back out of view.
+ */
+function revealInPanel(field: HTMLElement) {
+  const scroller = field.closest<HTMLElement>("[data-panel-scroll]");
+  if (!scroller) return;
+
+  const target = field.getBoundingClientRect();
+  const box = scroller.getBoundingClientRect();
+  const below = target.bottom + FIELD_MARGIN - box.bottom;
+  const above = box.top - (target.top - FIELD_MARGIN);
+
+  if (below > 0) scroller.scrollTop += below;
+  else if (above > 0) scroller.scrollTop -= above;
+}
+
 /** Scrollable body of a panel; use inside `bare` panels or settings sections. */
 export function PanelBody({
   children,
@@ -36,7 +59,10 @@ export function PanelBody({
   className?: string;
 }) {
   return (
-    <div className={cn("min-h-0 flex-1 overflow-y-auto px-[22px] py-[18px]", className)}>
+    <div
+      data-panel-scroll=""
+      className={cn("min-h-0 flex-1 overflow-y-auto px-[22px] py-[18px]", className)}
+    >
       {children}
     </div>
   );
@@ -108,7 +134,18 @@ export function PanelDialog({
   fixedHeight,
 }: PanelDialogProps) {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
+  const keyboard = useKeyboardInset(open && !desktop);
   const close = () => onOpenChange(false);
+
+  // The sheet has just been resized around the keyboard; bring the field back into view
+  useEffect(() => {
+    if (!keyboard) return;
+    const field = document.activeElement;
+    if (!(field instanceof HTMLElement)) return;
+
+    const frame = requestAnimationFrame(() => revealInPanel(field));
+    return () => cancelAnimationFrame(frame);
+  }, [keyboard]);
 
   const content = bare ? (
     children
@@ -167,8 +204,27 @@ export function PanelDialog({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="rounded-t-[18px] border-line bg-background shadow-sheet data-[vaul-drawer-direction=bottom]:max-h-[94dvh] data-[vaul-drawer-direction=bottom]:rounded-t-[18px] dark:bg-surface-panel [&>div:first-child]:hidden">
+    // repositionInputs off: vaul moves the whole sheet by the keyboard height,
+    // which pushes the header and long bodies off screen. useKeyboardInset
+    // pins the sheet to the visible area instead.
+    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+      <DrawerContent
+        className="rounded-t-[18px] border-line bg-background shadow-sheet data-[vaul-drawer-direction=bottom]:max-h-[calc(100dvh-12px)] data-[vaul-drawer-direction=bottom]:rounded-t-[18px] dark:bg-surface-panel [&>div:first-child]:hidden"
+        style={
+          keyboard
+            ? {
+                bottom: keyboard.bottom,
+                maxHeight: keyboard.viewportHeight - SHEET_TOP_GAP,
+              }
+            : undefined
+        }
+        // Moving between fields while the keyboard is already up changes no viewport
+        onFocusCapture={(event) => {
+          if (!keyboard) return;
+          const field = event.target as HTMLElement;
+          requestAnimationFrame(() => revealInPanel(field));
+        }}
+      >
         <div className="flex shrink-0 justify-center pb-1 pt-2">
           <span className="h-1 w-[34px] rounded-full bg-control" />
         </div>
