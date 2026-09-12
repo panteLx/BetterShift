@@ -1,21 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useLocale, useTranslations } from "next-intl";
+import { format } from "date-fns";
+import { TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, Trash2, X } from "lucide-react";
+import { Field, inputClass } from "@/components/form-kit";
+import { PanelDialog } from "@/components/panel-dialog";
+import { StatusBanner } from "@/components/status-banner";
 import { useAdminAuditLogs } from "@/hooks/useAdminAuditLogs";
-import { toast } from "sonner";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
+import { getDateLocale } from "@/lib/locales";
 
 interface AuditLogDeleteDialogProps {
   open: boolean;
@@ -31,13 +29,25 @@ export function AuditLogDeleteDialog({
   onSuccess,
 }: AuditLogDeleteDialogProps) {
   const t = useTranslations();
-  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAdminAuditLogs();
+  const locale = useLocale();
+  const dateLocale = getDateLocale(locale);
+  const { deleteLogsByDate, deleteLogsByIds, isLoading } = useAdminAuditLogs(
+    undefined,
+    undefined,
+    undefined,
+    { listEnabled: false }
+  );
 
   const [beforeDate, setBeforeDate] = useState("");
   const [confirmed, setConfirmed] = useState(false);
 
-  // Determine mode: by IDs (if provided) or by date
+  // Selected rows take precedence over the date cut-off
   const deleteByIds = selectedLogIds.length > 0;
+
+  const reset = () => {
+    setBeforeDate("");
+    setConfirmed(false);
+  };
 
   const handleDelete = async () => {
     if (!confirmed) {
@@ -45,13 +55,10 @@ export function AuditLogDeleteDialog({
       return;
     }
 
-    let success = false;
-
+    let success: boolean;
     if (deleteByIds) {
-      // Delete by IDs
       success = await deleteLogsByIds(selectedLogIds);
     } else {
-      // Delete by date
       if (!beforeDate) {
         toast.error(t("admin.pleaseSelectDate"));
         return;
@@ -61,132 +68,96 @@ export function AuditLogDeleteDialog({
 
     if (success) {
       onOpenChange(false);
-      setBeforeDate("");
-      setConfirmed(false);
+      reset();
       onSuccess?.();
     }
   };
 
-  const handleClose = () => {
-    if (!isLoading) {
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      onOpenChange(true);
+    } else if (!isLoading) {
       onOpenChange(false);
-      setBeforeDate("");
-      setConfirmed(false);
+      reset();
     }
   };
 
+  const title = deleteByIds ? t("common.deleteSelected") : t("admin.deleteOldLogs");
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            <DialogTitle>
-              {deleteByIds
-                ? t("common.deleteSelected")
-                : t("admin.deleteOldLogs")}
-            </DialogTitle>
-          </div>
-          <DialogDescription className="pt-2">
-            {deleteByIds
-              ? t("admin.deleteSelectedLogsDescription", {
-                  count: selectedLogIds.length,
-                })
-              : t("admin.deleteLogsDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {!deleteByIds && (
-            <>
-              {/* Date Picker */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  {t("admin.deleteLogsBefore")}
-                </label>
-                <Input
-                  type="date"
-                  value={beforeDate}
-                  onChange={(e) => setBeforeDate(e.target.value)}
-                  max={new Date().toISOString().split("T")[0]}
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("admin.deleteLogsBeforeHint")}
-                </p>
-              </div>
-
-              {/* Preview */}
-              {beforeDate && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <div className="font-medium mb-1">{t("admin.preview")}:</div>
-                  <div className="text-muted-foreground">
-                    {t("admin.willDeleteLogsOlderThan", {
-                      date: new Date(beforeDate).toLocaleDateString(),
-                    })}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {deleteByIds && (
-            <div className="p-3 bg-muted rounded-lg text-sm">
-              <div className="font-medium mb-1">{t("admin.preview")}:</div>
-              <div className="text-muted-foreground">
-                {t("admin.willDeleteSelectedLogs", {
-                  count: selectedLogIds.length,
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Warning */}
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-            <div className="flex gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-              <div className="text-sm text-destructive">
-                {t("admin.deleteLogsWarning")}
-              </div>
-            </div>
-          </div>
-
-          {/* Confirmation Checkbox */}
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="confirm-delete"
-              checked={confirmed}
-              onCheckedChange={(checked) => setConfirmed(checked === true)}
-              disabled={isLoading}
-            />
-            <label
-              htmlFor="confirm-delete"
-              className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              {t("admin.confirmPermanentDeletion")}
-            </label>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            <X className="h-4 w-4 mr-2" />
+    <PanelDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      width="sm"
+      title={title}
+      description={
+        deleteByIds
+          ? t("admin.deleteSelectedLogsDescription", { count: selectedLogIds.length })
+          : t("admin.deleteLogsDescription")
+      }
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={isLoading}
+            className="h-10 flex-1 font-semibold"
+          >
             {t("common.cancel")}
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
             disabled={isLoading || (!deleteByIds && !beforeDate) || !confirmed}
+            className="h-10 flex-1 font-semibold"
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {isLoading
-              ? t("common.loading")
-              : deleteByIds
-              ? t("common.deleteSelected")
-              : t("admin.deleteOldLogs")}
+            {isLoading ? t("common.loading") : title}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      {deleteByIds ? (
+        <div className="rounded-[10px] border border-line bg-surface-panel px-3 py-2.5 text-[13px] text-fg-secondary">
+          {t("admin.willDeleteSelectedLogs", { count: selectedLogIds.length })}
+        </div>
+      ) : (
+        <>
+          <Field label={t("admin.deleteLogsBefore")} htmlFor="audit-delete-before" hint={t("admin.deleteLogsBeforeHint")}>
+            <Input
+              id="audit-delete-before"
+              type="date"
+              value={beforeDate}
+              onChange={(e) => setBeforeDate(e.target.value)}
+              max={formatDateToLocal(new Date())}
+              disabled={isLoading}
+              className={inputClass}
+            />
+          </Field>
+          {beforeDate && (
+            <div className="rounded-[10px] border border-line bg-surface-panel px-3 py-2.5 text-[13px] text-fg-secondary">
+              {t("admin.willDeleteLogsOlderThan", {
+                date: format(parseLocalDate(beforeDate), "PP", { locale: dateLocale }),
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      <StatusBanner tone="danger" icon={TriangleAlert}>
+        {t("admin.deleteLogsWarning")}
+      </StatusBanner>
+
+      <label htmlFor="confirm-delete" className="flex cursor-pointer items-start gap-3 text-[13px] text-fg-body">
+        <Checkbox
+          id="confirm-delete"
+          checked={confirmed}
+          onCheckedChange={(checked) => setConfirmed(checked === true)}
+          disabled={isLoading}
+          className="mt-px"
+        />
+        {t("admin.confirmPermanentDeletion")}
+      </label>
+    </PanelDialog>
   );
 }

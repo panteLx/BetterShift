@@ -7,6 +7,7 @@ import {
   type CalendarPermission,
 } from "@/lib/auth/permissions";
 import { eq, and, desc, gte, lte, inArray, sql } from "drizzle-orm";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // Unified activity log format
 interface UnifiedActivityLog {
@@ -25,8 +26,8 @@ interface UnifiedActivityLog {
  *
  * Query params:
  * - type: Filter by action type prefix (security, calendar, sync, auth)
- * - startDate: ISO date string (inclusive)
- * - endDate: ISO date string (inclusive)
+ * - startDate: local day YYYY-MM-DD (inclusive)
+ * - endDate: local day YYYY-MM-DD (inclusive)
  * - page: Page number (0-based, default: 0)
  * - limit: Items per page (default: 50, max: 100)
  */
@@ -46,6 +47,18 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search"); // search text for action/metadata
   const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
   const offset = parseInt(searchParams.get("offset") || "0", 10);
+
+  let start: Date | null = null;
+  let end: Date | null = null;
+  try {
+    if (startDate) start = parseLocalDate(startDate);
+    if (endDate) {
+      end = parseLocalDate(endDate);
+      end.setHours(23, 59, 59, 999);
+    }
+  } catch {
+    return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+  }
 
   try {
     // Fetch all logs and merge them before pagination
@@ -71,13 +84,11 @@ export async function GET(request: NextRequest) {
       }
 
       // Filter by date range
-      if (startDate) {
-        const start = new Date(startDate);
+      if (start) {
         auditConditions.push(gte(auditLogs.timestamp, start));
       }
 
-      if (endDate) {
-        const end = new Date(endDate);
+      if (end) {
         auditConditions.push(lte(auditLogs.timestamp, end));
       }
 
@@ -122,13 +133,11 @@ export async function GET(request: NextRequest) {
         const syncConditions = [inArray(syncLogs.calendarId, calendarIds)];
 
         // Filter by date range
-        if (startDate) {
-          const start = new Date(startDate);
+        if (start) {
           syncConditions.push(gte(syncLogs.syncedAt, start));
         }
 
-        if (endDate) {
-          const end = new Date(endDate);
+        if (end) {
           syncConditions.push(lte(syncLogs.syncedAt, end));
         }
 

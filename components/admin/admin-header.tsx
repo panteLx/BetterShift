@@ -1,150 +1,35 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
-import { useConnectionStatus } from "@/hooks/useConnectionStatus";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { useTranslations } from "next-intl";
+import { ChevronRight } from "lucide-react";
+import { UserMenu } from "@/components/user-menu";
+import { isActiveSection, useAdminSections } from "@/components/admin/admin-sidebar";
 
-interface BreadcrumbSegment {
-  label: string;
-  href?: string;
-}
-
-interface AdminHeaderProps {
-  onMenuClick?: () => void;
-}
-
-/**
- * Admin Panel Header
- *
- * Features:
- * - Automatic breadcrumb navigation from URL
- * - Theme + Language switchers
- * - Mobile menu toggle
- */
-export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
+/** Desktop top bar: breadcrumb and account menu (which also holds appearance and language). */
+export function AdminHeader() {
   const t = useTranslations();
   const pathname = usePathname();
-  const { isOnline } = useConnectionStatus();
-
-  // Generate breadcrumbs from pathname
-  const generateBreadcrumbs = (): BreadcrumbSegment[] => {
-    const segments: BreadcrumbSegment[] = [
-      { label: t("admin.title"), href: "/admin" },
-    ];
-
-    // Parse pathname segments
-    const pathParts = pathname.split("/").filter(Boolean);
-
-    // Remove "admin" prefix (already in first segment)
-    const adminIndex = pathParts.indexOf("admin");
-    if (adminIndex !== -1) {
-      pathParts.splice(adminIndex, 1);
-    }
-
-    // Map path segments to breadcrumb items
-    let currentPath = "/admin";
-    for (let i = 0; i < pathParts.length; i++) {
-      const part = pathParts[i];
-      currentPath += `/${part}`;
-
-      // Check if it's the last segment (current page - no link)
-      const isLast = i === pathParts.length - 1;
-
-      // Map known segments to translations
-      let label = part;
-      if (part === "users") {
-        label = t("admin.usersMenu");
-      } else if (part === "calendars") {
-        label = t("admin.calendarsMenu");
-      } else if (part === "orphaned") {
-        label = t("admin.orphanedCalendars");
-      } else if (part === "logs") {
-        label = t("admin.auditLogs");
-      }
-
-      segments.push({
-        label,
-        href: isLast ? undefined : currentPath,
-      });
-    }
-
-    return segments;
-  };
-
-  const breadcrumbs = generateBreadcrumbs();
+  const sections = useAdminSections();
+  const current = sections.find((section) => isActiveSection(pathname, section.href));
 
   return (
-    <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
-      <div className="p-4 space-y-3">
-        {/* Top row: Breadcrumbs + Controls */}
-        <div className="flex items-center justify-between gap-4">
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMenuClick}
-            className="lg:hidden flex-shrink-0"
-            aria-label="Toggle menu"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-
-          {/* Breadcrumbs */}
-          <Breadcrumb className="flex-1 min-w-0">
-            <BreadcrumbList>
-              {breadcrumbs.map((segment, index) => {
-                const isLast = index === breadcrumbs.length - 1;
-
-                return (
-                  <div key={segment.href || segment.label} className="contents">
-                    <BreadcrumbItem>
-                      {segment.href ? (
-                        <BreadcrumbLink asChild>
-                          <Link href={segment.href}>{segment.label}</Link>
-                        </BreadcrumbLink>
-                      ) : (
-                        <BreadcrumbPage>{segment.label}</BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-                    {!isLast && <BreadcrumbSeparator />}
-                  </div>
-                );
-              })}
-            </BreadcrumbList>
-          </Breadcrumb>
-
-          {/* Controls: Connection Status + Theme + Language */}
-          <div className="flex items-center gap-2">
-            {/* Connection Status Indicator */}
-            <div
-              title={isOnline ? t("sync.connected") : t("sync.disconnected")}
-            >
-              <div
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  isOnline
-                    ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"
-                    : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-                }`}
-              ></div>
-            </div>
-            <LanguageSwitcher />
-            <ThemeSwitcher />
-          </div>
-        </div>
-      </div>
+    <header className="hidden h-14 shrink-0 items-center gap-2.5 border-b border-line bg-background px-[18px] lg:flex">
+      <nav aria-label={t("adminShell.breadcrumb")} className="flex min-w-0 flex-1 items-center gap-2.5">
+        <Link href="/admin" className="text-[13.5px] text-fg-tertiary transition-colors hover:text-fg-body">
+          {t("admin.title")}
+        </Link>
+        {current && (
+          <>
+            <ChevronRight className="size-[15px] shrink-0 text-fg-faint" />
+            <span aria-current="page" className="truncate text-[13.5px] font-semibold text-fg-strong">
+              {current.label}
+            </span>
+          </>
+        )}
+      </nav>
+      <UserMenu />
     </header>
   );
 }

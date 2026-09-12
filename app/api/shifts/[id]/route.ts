@@ -4,6 +4,7 @@ import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // GET single shift
 export async function GET(
@@ -140,11 +141,23 @@ export async function PUT(
       );
     }
 
+    let date = existingShift.date;
+    if (body.date) {
+      try {
+        date = parseLocalDate(body.date);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update the shift
     const [updatedShift] = await db
       .update(shifts)
       .set({
-        date: body.date ? new Date(body.date) : existingShift.date,
+        date,
         startTime: body.startTime ?? existingShift.startTime,
         endTime: body.endTime ?? existingShift.endTime,
         title: body.title ?? existingShift.title,

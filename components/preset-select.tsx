@@ -1,20 +1,21 @@
 import { useTranslations } from "next-intl";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Field } from "@/components/form-kit";
 import { ShiftPreset } from "@/lib/db/schema";
+import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 interface PresetSelectProps {
   presets: ShiftPreset[];
+  /** Id of the applied preset, `null` for a free entry */
+  value: string | null;
   onPresetSelect: (preset: ShiftPreset) => void;
+  onClear: () => void;
 }
 
-export function PresetSelect({ presets, onPresetSelect }: PresetSelectProps) {
+const chipClass =
+  "flex h-8 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors";
+
+export function PresetSelect({ presets, value, onPresetSelect, onClear }: PresetSelectProps) {
   const t = useTranslations();
 
   if (presets.length === 0) {
@@ -22,31 +23,48 @@ export function PresetSelect({ presets, onPresetSelect }: PresetSelectProps) {
   }
 
   return (
-    <div className="space-y-2.5 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-      <Label className="text-sm font-medium flex items-center gap-2">
-        <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-        {t("shift.selectPreset")}
-      </Label>
-      <Select
-        onValueChange={(value) => {
-          const preset = presets.find((p) => p.id === value);
-          if (preset) onPresetSelect(preset);
-        }}
-      >
-        <SelectTrigger className="h-11 border-primary/30 focus:border-primary/50 focus:ring-primary/20 bg-background/80">
-          <SelectValue placeholder={t("shift.none")} />
-        </SelectTrigger>
-        <SelectContent>
-          {presets.map((preset) => (
-            <SelectItem key={preset.id} value={preset.id}>
-              {preset.title}{" "}
-              {preset.isAllDay
-                ? `(${t("shift.allDay")})`
-                : `(${preset.startTime} - ${preset.endTime})`}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Field label={t("preset.preset")}>
+      <div role="radiogroup" aria-label={t("preset.preset")} className="flex flex-wrap gap-2">
+        {presets.map((preset) => {
+          const selected = preset.id === value;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onPresetSelect(preset)}
+              className={cn(
+                chipClass,
+                selected
+                  ? "border-brand bg-brand-soft font-semibold text-brand-ink"
+                  : "border-line bg-surface-card text-fg-body hover:bg-surface-panel"
+              )}
+            >
+              <span
+                className="shift-rail size-[7px] shrink-0 rounded-full"
+                style={shiftVars(preset.color)}
+              />
+              {preset.title}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={value === null}
+          onClick={onClear}
+          className={cn(
+            chipClass,
+            "border-dashed",
+            value === null
+              ? "border-brand bg-brand-soft font-semibold text-brand-ink"
+              : "border-control text-fg-secondary hover:bg-surface-panel"
+          )}
+        >
+          {t("shiftSheet.noPreset")}
+        </button>
+      </div>
+    </Field>
   );
 }

@@ -79,6 +79,67 @@ async function getCachedHealthStatus(): Promise<"healthy" | "unhealthy"> {
   return status;
 }
 
+function redirectToLogin(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("returnUrl", pathname + search);
+  return NextResponse.redirect(loginUrl);
+}
+
+const IS_DEV = process.env.NODE_ENV === "development";
+const BYPASS_STRICT_DYNAMIC = process.env.CSP_STRICT_DYNAMIC_BYPASS === "true";
+
+/**
+ * Every route is already dynamically rendered (next-intl's request config reads
+ * cookies()/headers()), so a fresh nonce per request costs nothing extra here.
+ * 'unsafe-inline' stays in style-src because Radix sets inline `style` attributes
+ * at runtime, which a nonce cannot cover.
+ *
+ * 'strict-dynamic' drops host-based sources like 'self' for script-src by spec,
+ * which also blocks same-origin scripts a reverse proxy injects into the HTML
+ * (e.g. Cloudflare Rocket Loader's cdn-cgi/scripts/... loader) since they never
+ * carry our nonce. Rocket Loader turned out to go further than that: it
+ * reconstructs every inline <script> on the page (Next's own hydration
+ * bootstrap included) to "activate" it, and drops the nonce attribute while
+ * doing so -- so dropping only 'strict-dynamic' still leaves those blocked and
+ * the app fails to hydrate. CSP_STRICT_DYNAMIC_BYPASS=true therefore drops
+ * the nonce entirely and falls back to 'unsafe-inline', same as our other apps.
+ */
+function buildCsp(nonce: string | null) {
+  const scriptSrc = nonce
+    ? `'self' 'nonce-${nonce}' 'strict-dynamic'`
+    : "'self' 'unsafe-inline'";
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc}${IS_DEV ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+/**
+ * NextResponse.next() carrying the request-side x-nonce header and the CSP
+ * response header. Only the paths that actually render pay for this; the
+ * redirect branches above return before it.
+ */
+function nextWithNonce(request: NextRequest) {
+  const nonce = BYPASS_STRICT_DYNAMIC
+    ? null
+    : Buffer.from(crypto.randomUUID()).toString("base64");
+
+  const requestHeaders = new Headers(request.headers);
+  if (nonce) requestHeaders.set("x-nonce", nonce);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+  return response;
+}
+
 /**
  * Proxy for authentication and route protection (Next.js 16)
  *
@@ -120,7 +181,7 @@ export async function proxy(request: NextRequest) {
       }
 
       // System is unhealthy - allow access to error page
-      return NextResponse.next();
+      return nextWithNonce(request);
     } catch (error) {
       // Log the error instead of silently swallowing it
       console.error(
@@ -128,7 +189,7 @@ export async function proxy(request: NextRequest) {
         error instanceof Error ? error.message : String(error)
       );
       // Always treat fetch failures/timeouts as "unhealthy" to allow access to error page
-      return NextResponse.next();
+      return nextWithNonce(request);
     }
   }
 
@@ -226,7 +287,7 @@ export async function proxy(request: NextRequest) {
 
   // If auth is disabled, allow all routes
   if (!isAuthEnabled()) {
-    return NextResponse.next();
+    return nextWithNonce(request);
   }
 
   // Public routes that don't require authentication
@@ -237,6 +298,7 @@ export async function proxy(request: NextRequest) {
     "/api/version", // Version info (always public)
     "/api/releases", // Changelog/releases (always public)
     "/api/health", // Health check endpoint
+    "/manifest.json", // Browsers fetch the PWA manifest without cookies
   ];
 
   // Check if the current route is public
@@ -246,7 +308,7 @@ export async function proxy(request: NextRequest) {
 
   // Allow public routes
   if (isPublicRoute) {
-    return NextResponse.next();
+    return nextWithNonce(request);
   }
 
   // =====================================================
@@ -261,9 +323,7 @@ export async function proxy(request: NextRequest) {
 
     if (!sessionToken) {
       // Not authenticated - redirect to login
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("returnUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectToLogin(request);
     }
 
     // Validate session and check admin role
@@ -272,9 +332,7 @@ export async function proxy(request: NextRequest) {
 
       if (!session?.user) {
         // Invalid session - redirect to login
-        const loginUrl = new URL("/login", request.url);
-        loginUrl.searchParams.set("returnUrl", pathname);
-        return NextResponse.redirect(loginUrl);
+        return redirectToLogin(request);
       }
 
       // Check if user is admin
@@ -303,9 +361,7 @@ export async function proxy(request: NextRequest) {
     } catch (error) {
       console.error("[Proxy] Admin access check failed:", error);
       // Session validation failed - redirect to login
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("returnUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectToLogin(request);
     }
   }
 
@@ -319,22 +375,20 @@ export async function proxy(request: NextRequest) {
   if (!sessionToken) {
     // If guest access is enabled, allow viewing without login
     if (allowGuestAccess()) {
-      return NextResponse.next();
+      return nextWithNonce(request);
     }
 
     // Otherwise, redirect to login with return URL
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("returnUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    return redirectToLogin(request);
   }
 
   // Session token validation happens in API routes via getSessionUser()
   // Middleware only checks for cookie presence (fast routing decision)
 
-  // Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
-  // X-XSS-Protection, Content-Security-Policy) are set globally in next.config.ts
-  // so they apply to every response, not just this fall-through branch.
-  return NextResponse.next();
+  // The remaining security headers (X-Content-Type-Options, X-Frame-Options,
+  // Referrer-Policy, X-XSS-Protection) are set globally in next.config.ts;
+  // only the nonce-based Content-Security-Policy has to be per-request.
+  return nextWithNonce(request);
 }
 
 // Configure which routes to run proxy on

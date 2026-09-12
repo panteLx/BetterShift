@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Redirect unauthenticated users from protected routes to login
     // ONLY if guest access is NOT allowed
     if (!isPublicRoute && !isAuthenticated && !auth.allowGuestAccess) {
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname)}`;
+      const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname + window.location.search)}`;
       router.replace(loginUrl);
     }
   }, [

@@ -1,17 +1,10 @@
 "use client";
 
 import { ReactNode } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { PanelDialog, PanelWidth } from "@/components/panel-dialog";
 import { useDirtyState } from "@/hooks/useDirtyState";
 
 interface BaseSheetProps {
@@ -28,16 +21,10 @@ interface BaseSheetProps {
   saveDisabled?: boolean;
   saveLabel?: string;
   hasUnsavedChanges?: boolean;
-  maxWidth?: "sm" | "md" | "lg" | "xl";
+  width?: PanelWidth;
 }
 
-const maxWidthClasses = {
-  sm: "sm:max-w-[480px]",
-  md: "sm:max-w-[600px]",
-  lg: "sm:max-w-[700px]",
-  xl: "sm:max-w-[800px]",
-};
-
+/** Form panel with cancel/save footer and an unsaved-changes guard. */
 export function BaseSheet({
   open,
   onOpenChange,
@@ -52,85 +39,55 @@ export function BaseSheet({
   saveDisabled = false,
   saveLabel,
   hasUnsavedChanges = false,
-  maxWidth = "md",
+  width = "md",
 }: BaseSheetProps) {
   const t = useTranslations();
 
-  const {
-    handleClose,
-    showConfirmDialog,
-    setShowConfirmDialog,
-    handleConfirmClose,
-  } = useDirtyState({
-    onClose: onOpenChange,
-    hasChanges: () => hasUnsavedChanges,
-  });
+  const { handleClose, showConfirmDialog, setShowConfirmDialog, handleConfirmClose } =
+    useDirtyState({
+      onClose: onOpenChange,
+      hasChanges: () => hasUnsavedChanges,
+    });
 
-  const handleSave = async () => {
-    if (onSave) {
-      await onSave();
-    }
-  };
-
-  const handleCancelClick = () => {
-    handleClose();
-  };
+  const defaultFooter =
+    showSaveButton || showCancelButton ? (
+      <>
+        {showCancelButton && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleClose()}
+            disabled={isSaving}
+            className="h-10 flex-1 font-semibold"
+          >
+            {t("common.cancel")}
+          </Button>
+        )}
+        {showSaveButton && (
+          <Button
+            type="button"
+            onClick={() => onSave?.()}
+            disabled={saveDisabled || isSaving}
+            className="h-10 flex-1 font-semibold"
+          >
+            {isSaving ? t("common.saving") : saveLabel || t("common.save")}
+          </Button>
+        )}
+      </>
+    ) : undefined;
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent
-          side="right"
-          className={`w-full ${maxWidthClasses[maxWidth]} p-0 flex flex-col gap-0 border-l border-border/50 overflow-hidden`}
-        >
-          <SheetHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-5 space-y-1.5">
-            <SheetTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              {title}
-            </SheetTitle>
-            {description && (
-              <SheetDescription className="text-sm text-muted-foreground">
-                {description}
-              </SheetDescription>
-            )}
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
-
-          {(footer || showSaveButton || showCancelButton) && (
-            <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
-              {footer ? (
-                footer
-              ) : (
-                <div className="flex gap-2.5 w-full">
-                  {showCancelButton && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancelClick}
-                      disabled={isSaving}
-                      className="flex-1 h-11 border-border/50 hover:bg-muted/50"
-                    >
-                      {t("common.cancel")}
-                    </Button>
-                  )}
-                  {showSaveButton && (
-                    <Button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saveDisabled || isSaving}
-                      className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-                    >
-                      {isSaving
-                        ? t("common.saving")
-                        : saveLabel || t("common.save")}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </SheetFooter>
-          )}
-        </SheetContent>
-      </Sheet>
+      <PanelDialog
+        open={open}
+        onOpenChange={(next) => (next ? onOpenChange(true) : handleClose())}
+        title={title}
+        description={description}
+        width={width}
+        footer={footer ?? defaultFooter}
+      >
+        {children}
+      </PanelDialog>
 
       <ConfirmationDialog
         open={showConfirmDialog}

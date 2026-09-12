@@ -5,11 +5,12 @@ This guide covers the admin panel features in BetterShift, including user manage
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Roles and Permissions](#roles-and-permissions)
-3. [User Management](#user-management)
-4. [Calendar Management](#calendar-management)
-5. [Audit Logs](#audit-logs)
-6. [Rate Limiting](#rate-limiting)
+2. [Dashboard](#dashboard)
+3. [Roles and Permissions](#roles-and-permissions)
+4. [User Management](#user-management)
+5. [Calendar Management](#calendar-management)
+6. [Audit Logs](#audit-logs)
+7. [Rate Limiting](#rate-limiting)
 
 ---
 
@@ -24,6 +25,26 @@ The admin panel is available at `/admin` and provides system-wide management cap
 3. Select "Admin Panel"
 
 Or navigate directly to `/admin`.
+
+### Navigation
+
+- **Desktop**: a sidebar on the left links to Dashboard, Users, Calendars, and Audit Logs.
+- **Phone**: the same four areas are reached through a bottom tab bar instead of a sidebar.
+- Viewing or editing a single user or calendar opens as a side panel over the current list, not as a separate page — the list stays where you left it underneath.
+
+---
+
+## Dashboard
+
+Location: `/admin` (the page you land on when opening the admin panel)
+
+The dashboard exists so you can tell at a glance whether anything needs attention, without opening every section.
+
+- **Header**: instance version, build date, and commit hash, with an update indicator that links to the GitHub release when a newer version is available.
+- **Attention banners**: shown here directly rather than buried in a section — an orphaned-calendars warning (links straight to `/admin/calendars`) and an available-update notice.
+- **Recent Activity**: admin actions and security events combined into one feed (the same entries as [Audit Logs](#audit-logs)), each with a severity indicator, a plain-language description, and a relative timestamp. "View all" links to `/admin/logs`.
+- **Scope**: one list with total users (by role), total calendars (orphaned count called out separately), total shifts, active shares (by user vs. token), and events in the last 7 days — this replaced an earlier grid of separate stat cards.
+- **Jump links**: below Scope, direct links to Users, Calendars, and Audit Logs. On phones, use the bottom tab bar for this instead.
 
 ---
 

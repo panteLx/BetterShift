@@ -1,20 +1,17 @@
 "use client";
 
-import { useTranslations, useLocale } from "next-intl";
+import { ReactNode } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { getDateLocale } from "@/lib/locales";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Copy, X } from "lucide-react";
+import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { SectionLabel } from "@/components/form-kit";
+import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
+import { SeverityPill, UserAvatar } from "@/components/admin/admin-kit";
+import { useAuditDescription } from "@/components/admin/audit-describe";
+import { getDateLocale } from "@/lib/locales";
+import { cn } from "@/lib/utils";
 import type { AuditLog } from "@/hooks/useAdminAuditLogs";
 
 interface AuditLogDetailsDialogProps {
@@ -23,60 +20,28 @@ interface AuditLogDetailsDialogProps {
   log: AuditLog;
 }
 
-export function AuditLogDetailsDialog({
-  open,
-  onOpenChange,
-  log,
-}: AuditLogDetailsDialogProps) {
+function DetailRow({ label, children, mono }: { label: string; children: ReactNode; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-line-subtle px-3.5 py-2.5 last:border-b-0">
+      <span className="shrink-0 text-[12.5px] text-fg-tertiary">{label}</span>
+      <span
+        className={cn(
+          "min-w-0 break-all text-right text-fg-body",
+          mono ? "font-mono text-[12px]" : "text-[13px]"
+        )}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
+export function AuditLogDetailsDialog({ open, onOpenChange, log }: AuditLogDetailsDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = getDateLocale(locale);
+  const describe = useAuditDescription();
 
-  // Get user initials
-  const getUserInitials = (name: string | null) => {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Severity badge color
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "info":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      case "warning":
-        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      case "error":
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-      case "critical":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      default:
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-    }
-  };
-
-  // Action category badge color
-  const getActionColor = (action: string) => {
-    if (action.startsWith("admin.")) {
-      return "bg-red-500/10 text-red-500 border-red-500/20";
-    }
-    if (action.startsWith("calendar")) {
-      return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    }
-    if (action.startsWith("auth")) {
-      return "bg-green-500/10 text-green-500 border-green-500/20";
-    }
-    if (action.startsWith("security")) {
-      return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-    }
-    return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-  };
-
-  // Copy JSON to clipboard
   const copyToClipboard = () => {
     const jsonString = JSON.stringify(
       {
@@ -103,164 +68,88 @@ export function AuditLogDetailsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t("admin.auditLogDetails")}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Action & Severity */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("common.labels.action")}
-              </div>
-              <Badge variant="outline" className={getActionColor(log.action)}>
-                {log.action}
-              </Badge>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("common.labels.severity")}
-              </div>
-              <Badge
-                variant="outline"
-                className={getSeverityColor(log.severity)}
-              >
-                {log.severity}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Timestamp */}
-          <div>
-            <div className="text-sm font-medium text-muted-foreground mb-2">
-              {t("admin.timestamp")}
-            </div>
-            <div className="text-sm">
-              {format(new Date(log.timestamp), "PPpp", { locale: dateLocale })}
-            </div>
-          </div>
-
-          {/* User Details */}
-          {log.userId != null && (
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("common.labels.user")}
-              </div>
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
-                <Avatar className="h-10 w-10">
-                  {log.userImage && (
-                    <AvatarImage src={log.userImage} alt={log.userName || ""} />
-                  )}
-                  <AvatarFallback>
-                    {getUserInitials(log.userName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="text-sm font-medium">
-                    {log.userName || t("admin.unknownUser")}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {log.userEmail || "—"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Resource */}
-          {log.resourceType != null && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">
-                  {t("admin.resourceType")}
-                </div>
-                <div className="text-sm">{log.resourceType}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">
-                  {t("admin.resourceId")}
-                </div>
-                <div className="text-sm font-mono text-xs">
-                  {log.resourceId || "—"}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* IP Address */}
-          {log.ipAddress != null && (
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("common.labels.ipAddress")}
-              </div>
-              <div className="text-sm font-mono">{log.ipAddress}</div>
-            </div>
-          )}
-
-          {/* User Agent */}
-          {log.userAgent != null && (
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.userAgent")}
-              </div>
-              <div className="text-xs text-muted-foreground break-all">
-                {log.userAgent}
-              </div>
-            </div>
-          )}
-
-          {/* Metadata */}
-          {log.metadata != null && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium text-muted-foreground">
-                  {t("admin.metadata")}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyToClipboard}
-                  className="h-7"
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  {t("common.copy")}
-                </Button>
-              </div>
-              <pre className="text-xs bg-muted p-4 rounded-lg border overflow-x-auto">
-                {JSON.stringify(log.metadata, null, 2)}
-              </pre>
-            </div>
-          )}
-
-          {/* Additional Info */}
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.logId")}
-              </div>
-              <div className="text-xs font-mono">{log.id}</div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                {t("admin.userVisible")}
-              </div>
-              <div className="text-sm">
-                {log.isUserVisible ? t("common.yes") : t("common.no")}
-              </div>
-            </div>
-          </div>
+    <AdminDetailPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("admin.auditLogDetails")}
+      subtitle={format(new Date(log.timestamp), "PPpp", { locale: dateLocale })}
+      footer={
+        <Button variant="outline" onClick={() => onOpenChange(false)} className="h-10 flex-1 font-semibold">
+          {t("common.close")}
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
+            {log.action}
+          </span>
+          <SeverityPill severity={log.severity} />
         </div>
+        <p className="text-[14px] leading-snug text-fg-strong">{describe(log)}</p>
+      </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <X className="h-4 w-4 mr-2" />
-            {t("common.close")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div>
+        <SectionLabel>{t("common.labels.user")}</SectionLabel>
+        {log.userId != null ? (
+          <div className="flex items-center gap-3 rounded-[11px] border border-line px-3.5 py-3">
+            <UserAvatar name={log.userName} image={log.userImage} size={36} />
+            <div className="min-w-0">
+              <div className="truncate text-[13.5px] font-semibold text-fg-strong">
+                {log.userName || t("admin.unknownUser")}
+              </div>
+              <div className="truncate text-[12.5px] text-fg-tertiary">{log.userEmail || "—"}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[11px] border border-line px-3.5 py-3 text-[13px] text-fg-secondary">
+            {t("admin.systemAction")}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <SectionLabel>{t("adminAudit.details")}</SectionLabel>
+        <div className="overflow-hidden rounded-[11px] border border-line">
+          {log.resourceType != null && (
+            <>
+              <DetailRow label={t("admin.resourceType")}>{log.resourceType}</DetailRow>
+              <DetailRow label={t("admin.resourceId")} mono>
+                {log.resourceId || "—"}
+              </DetailRow>
+            </>
+          )}
+          {log.ipAddress != null && (
+            <DetailRow label={t("common.labels.ipAddress")} mono>
+              {log.ipAddress}
+            </DetailRow>
+          )}
+          <DetailRow label={t("admin.userVisible")}>{log.isUserVisible ? t("common.yes") : t("common.no")}</DetailRow>
+          <DetailRow label={t("admin.logId")} mono>
+            {log.id}
+          </DetailRow>
+        </div>
+        {log.userAgent != null && (
+          <p className="mt-2 break-all text-[12px] leading-relaxed text-fg-tertiary">
+            <span className="font-semibold text-fg-secondary">{t("admin.userAgent")}:</span> {log.userAgent}
+          </p>
+        )}
+      </div>
+
+      {log.metadata != null && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <SectionLabel className="mb-0">{t("admin.metadata")}</SectionLabel>
+            <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-7 gap-1.5 px-2 text-fg-secondary">
+              <Copy className="size-3.5" />
+              {t("common.copy")}
+            </Button>
+          </div>
+          <pre className="overflow-x-auto rounded-[10px] border border-line bg-surface-panel p-3 font-mono text-[12px] leading-relaxed text-fg-body">
+            {JSON.stringify(log.metadata, null, 2)}
+          </pre>
+        </div>
+      )}
+    </AdminDetailPanel>
   );
 }

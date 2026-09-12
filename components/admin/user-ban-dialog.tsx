@@ -2,20 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { PanelDialog } from "@/components/panel-dialog";
+import { Field, ToggleRow, inputClass } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import type { AdminUser } from "@/hooks/useAdminUsers";
 
 interface UserBanDialogProps {
@@ -25,30 +19,27 @@ interface UserBanDialogProps {
   onConfirm: (reason: string, expiresAt?: Date) => Promise<void>;
 }
 
-export function UserBanDialog({
-  open,
-  onOpenChange,
-  user,
-  onConfirm,
-}: UserBanDialogProps) {
+export function UserBanDialog({ open, onOpenChange, user, onConfirm }: UserBanDialogProps) {
   const t = useTranslations();
   const [reason, setReason] = useState("");
   const [isPermanent, setIsPermanent] = useState(true);
   const [expiresAt, setExpiresAt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const reset = () => {
+    setReason("");
+    setIsPermanent(true);
+    setExpiresAt("");
+  };
+
   const handleConfirm = async () => {
     if (!reason.trim()) return;
 
     setIsSubmitting(true);
     try {
-      const expirationDate =
-        isPermanent || !expiresAt ? undefined : new Date(expiresAt);
+      const expirationDate = isPermanent || !expiresAt ? undefined : parseLocalDate(expiresAt);
       await onConfirm(reason.trim(), expirationDate);
-      // Reset form
-      setReason("");
-      setIsPermanent(true);
-      setExpiresAt("");
+      reset();
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -56,84 +47,25 @@ export function UserBanDialog({
   };
 
   const handleCancel = () => {
-    // Reset form
-    setReason("");
-    setIsPermanent(true);
-    setExpiresAt("");
+    reset();
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{t("admin.banUser")}</DialogTitle>
-          <DialogDescription>
-            {t("admin.banUserConfirm", {
-              name: user.name || user.email,
-            })}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Warning */}
-          <div className="flex gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              {t("admin.banWarning")}
-            </p>
-          </div>
-
-          {/* Reason */}
-          <div className="space-y-2">
-            <Label htmlFor="reason">
-              {t("admin.banReason")} <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={t("admin.banReasonPlaceholder")}
-              rows={4}
-              className="resize-none"
-            />
-          </div>
-
-          {/* Permanent Ban Checkbox */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="permanent"
-              checked={isPermanent}
-              onCheckedChange={(checked) => setIsPermanent(checked === true)}
-            />
-            <Label
-              htmlFor="permanent"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              {t("admin.permanentBan")}
-            </Label>
-          </div>
-
-          {/* Expiration Date */}
-          {!isPermanent && (
-            <div className="space-y-2">
-              <Label htmlFor="expires">{t("admin.banExpires")}</Label>
-              <Input
-                id="expires"
-                type="date"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-              />
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
+    <PanelDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("admin.banUser")}
+      description={t("admin.banUserConfirm", { name: user.name || user.email })}
+      width="sm"
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
           <Button
             variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
             {t("common.cancel")}
           </Button>
@@ -141,11 +73,47 @@ export function UserBanDialog({
             variant="destructive"
             onClick={handleConfirm}
             disabled={!reason.trim() || isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
             {isSubmitting ? t("common.saving") : t("admin.confirmBan")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <StatusBanner tone="warning" icon={TriangleAlert}>
+        {t("admin.banWarning")}
+      </StatusBanner>
+
+      <Field label={t("admin.banReason")} htmlFor="ban-reason">
+        <Textarea
+          id="ban-reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t("admin.banReasonPlaceholder")}
+          rows={3}
+          className="resize-none rounded-[9px] px-3 text-[14px]"
+        />
+      </Field>
+
+      <ToggleRow
+        id="ban-permanent"
+        title={t("admin.permanentBan")}
+        checked={isPermanent}
+        onCheckedChange={setIsPermanent}
+      />
+
+      {!isPermanent && (
+        <Field label={t("admin.banExpires")} htmlFor="ban-expires">
+          <Input
+            id="ban-expires"
+            type="date"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+            min={formatDateToLocal(new Date())}
+            className={inputClass}
+          />
+        </Field>
+      )}
+    </PanelDialog>
   );
 }

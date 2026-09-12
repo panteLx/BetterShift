@@ -1,1228 +1,150 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import { ExternalSync, SyncLog } from "@/lib/db/schema";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { Slider } from "@/components/ui/slider";
 import { useTranslations } from "next-intl";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
-import {
-  Trash2,
-  RefreshCw,
-  Plus,
-  Edit2,
-  ChevronDown,
-  Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import {
-  isRateLimitError,
-  handleRateLimitError,
-} from "@/lib/rate-limit-client";
-import { PRESET_COLORS } from "@/lib/constants";
-import {
-  isValidCalendarUrl,
-  detectCalendarSyncType,
-  type CalendarSyncType,
-} from "@/lib/external-calendar-utils";
+import { Loader2, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { useDirtyState } from "@/hooks/useDirtyState";
-import { queryKeys } from "@/lib/query-keys";
+import { PanelBody, PanelFooter } from "@/components/panel-dialog";
+import { ExternalSyncRow } from "@/components/external-sync-list";
+import { ExternalSyncForm } from "@/components/external-sync-form";
+import { useExternalSyncPanel } from "@/hooks/useExternalSyncPanel";
 
-interface ExternalSyncManageSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  calendarId: string | null;
+interface ExternalSyncPanelProps {
+  calendarId: string;
+  onClose: () => void;
   onSyncComplete?: () => void;
-  syncErrorRefreshTrigger?: number;
+  /** Lets the surrounding frame guard its close button against unsaved changes */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function ExternalSyncManageSheet({
-  open,
-  onOpenChange,
+export function ExternalSyncPanel({
   calendarId,
+  onClose,
   onSyncComplete,
-}: // syncErrorRefreshTrigger is no longer needed - React Query polls automatically
-ExternalSyncManageSheetProps) {
+  onDirtyChange,
+}: ExternalSyncPanelProps) {
   const t = useTranslations();
-  const [isSyncing, setIsSyncing] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingSync, setEditingSync] = useState<ExternalSync | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); // For form submission loading
-
-  // Form state
-  const [formName, setFormName] = useState("");
-  const [formUrl, setFormUrl] = useState("");
-  const [formColor, setFormColor] = useState("#3b82f6");
-  const [formDisplayMode, setFormDisplayMode] = useState("normal");
-  const [formAutoSyncInterval, setFormAutoSyncInterval] = useState(0);
-  const [icsFile, setIcsFile] = useState<File | null>(null);
-  const [importType, setImportType] = useState<"url" | "file">("url");
-  const [formIsHidden, setFormIsHidden] = useState(false);
-  const [formHideFromStats, setFormHideFromStats] = useState(false);
-  const [expandedHint, setExpandedHint] = useState<CalendarSyncType | null>(
-    null
-  );
-
-  const initialFormDataRef = useRef<{
-    name: string;
-    url: string;
-    color: string;
-    displayMode: string;
-    autoSyncInterval: number;
-  } | null>(null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const queryClient = useQueryClient();
-
-  // Fetch external syncs with React Query for live updates
-  const { data: syncsData = [] } = useQuery({
-    queryKey: queryKeys.externalSyncs.byCalendar(calendarId!),
-    queryFn: async () => {
-      const params = new URLSearchParams({ calendarId: calendarId! });
-      const response = await fetch(`/api/external-syncs?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch syncs");
-      return (await response.json()) as ExternalSync[];
-    },
-    enabled: !!calendarId && open,
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
-  });
-
-  // Fetch sync logs with React Query for live updates
-  const { data: syncLogsData = [] } = useQuery({
-    queryKey: queryKeys.externalSyncs.logs(calendarId!),
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        calendarId: calendarId!,
-        limit: "50",
-      });
-      const response = await fetch(`/api/sync-logs?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch sync logs");
-      return (await response.json()) as SyncLog[];
-    },
-    enabled: !!calendarId && open,
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
-  });
-
-  // Compute sync errors from logs
-  const syncErrors = useMemo(() => {
-    const errors: Record<string, string> = {};
-    syncsData.forEach((sync: ExternalSync) => {
-      const syncLogs = syncLogsData.filter(
-        (log: SyncLog) => log.externalSyncId === sync.id
-      );
-      const latestError = syncLogs.find(
-        (log: SyncLog) => log.status === "error" && !log.isRead
-      );
-      if (latestError) {
-        errors[sync.id] =
-          latestError.errorMessage || t("syncNotifications.statusError");
-      }
-    });
-    return errors;
-  }, [syncsData, syncLogsData, t]);
-
-  // Use syncsData from React Query
-  const syncs = syncsData;
-
-  // Invalidate queries function to refetch data
-  const invalidateSyncs = useCallback(() => {
-    if (calendarId) {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.externalSyncs.byCalendar(calendarId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.externalSyncs.logs(calendarId),
-      });
-    }
-  }, [calendarId, queryClient]);
-
-  // Reset form state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      // Reset all internal state when dialog closes
-      setIsSyncing(null);
-      setIsDeleting(null);
-      setShowAddForm(false);
-      setEditingSync(null);
-      setFormName("");
-      setFormUrl("");
-      setFormColor("#3b82f6");
-      setFormDisplayMode("normal");
-      setFormAutoSyncInterval(0);
-      setIcsFile(null);
-      setImportType("url");
-      setFormIsHidden(false);
-      setFormHideFromStats(false);
-      setIsSubmitting(false);
-    }
-  }, [open]);
-
-  const handleAddSync = async () => {
-    if (!calendarId || !formName.trim()) return;
-
-    // For file upload
-    if (importType === "file") {
-      if (!icsFile) {
-        toast.error(t("validation.fileRequired"));
-        return;
-      }
-    } else {
-      // For URL-based imports
-      if (!formUrl.trim()) {
-        toast.error(t("validation.urlRequired"));
-        return;
-      }
-
-      // Detect and validate calendar URL format
-      const detectedType = detectCalendarSyncType(formUrl.trim());
-      if (!isValidCalendarUrl(formUrl.trim(), detectedType)) {
-        toast.error(t("validation.urlInvalid"));
-        return;
-      }
-
-      // Check if URL already exists (only for URL-based imports, not file uploads)
-      const normalizedUrl = formUrl.trim().toLowerCase();
-      const urlExists = syncs.some(
-        (sync) =>
-          !sync.isOneTimeImport &&
-          sync.calendarUrl.toLowerCase() === normalizedUrl
-      );
-
-      if (urlExists) {
-        toast.error(t("validation.urlAlreadyExists"));
-        return;
-      }
-    }
-
-    setIsSubmitting(true);
-    try {
-      let icsContent: string | undefined;
-
-      // Read file content if file upload
-      if (importType === "file" && icsFile) {
-        // Check file size (limit: 5MB)
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-        if (icsFile.size > MAX_FILE_SIZE) {
-          toast.error(t("validation.fileTooLarge", { maxSize: "5MB" }));
-          setIsSubmitting(false);
-          return;
-        }
-        icsContent = await icsFile.text();
-      }
-
-      const response = await fetch("/api/external-syncs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          calendarId,
-          name: formName.trim(),
-          calendarUrl: formUrl.trim() || undefined,
-          color: formColor,
-          displayMode: formDisplayMode,
-          autoSyncInterval: formAutoSyncInterval,
-          icsContent,
-          isHidden: formIsHidden,
-          hideFromStats: formHideFromStats,
-        }),
-      });
-
-      if (response.ok) {
-        const newSync = await response.json();
-        setFormName("");
-        setFormUrl("");
-        setFormColor("#3b82f6");
-        setFormDisplayMode("normal");
-        setFormAutoSyncInterval(0);
-        setIcsFile(null);
-        setImportType("url");
-        setFormIsHidden(false);
-        setFormHideFromStats(false);
-        setShowAddForm(false);
-        invalidateSyncs();
-        onSyncComplete?.(); // Trigger refresh to update parent state
-        toast.success(
-          t("common.created", { item: t("externalSync.syncTypeCustom") })
-        );
-        // Auto-sync the newly created sync
-        await handleSync(newSync.id);
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error ||
-            t("common.createError", { item: t("externalSync.syncTypeCustom") })
-        );
-      }
-    } catch (error) {
-      console.error("Failed to create sync:", error);
-      toast.error(
-        t("common.createError", { item: t("externalSync.syncTypeCustom") })
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSync = async (syncId: string) => {
-    setIsSyncing(syncId);
-    try {
-      const response = await fetch(`/api/external-syncs/${syncId}/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (isRateLimitError(response)) {
-        await handleRateLimitError(response, t);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to sync calendar");
-      }
-
-      invalidateSyncs();
-      onSyncComplete?.();
-
-      // Show sync statistics
-      const stats = data.stats || { created: 0, updated: 0, deleted: 0 };
-      toast.success(
-        `${t("common.success")}: ${t("common.createdCount", {
-          count: stats.created,
-        })}, ${t("common.updatedCount", {
-          count: stats.updated,
-        })}, ${t("common.deletedCount", { count: stats.deleted })}`
-      );
-    } catch (error) {
-      console.error("Sync error:", error);
-      toast.error(error instanceof Error ? error.message : t("common.error"));
-    } finally {
-      setIsSyncing(null);
-    }
-  };
-
-  const handleDelete = async (syncId: string) => {
-    setDeleteTargetId(syncId);
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
-
-    setIsDeleting(deleteTargetId);
-    try {
-      const response = await fetch(`/api/external-syncs/${deleteTargetId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        invalidateSyncs();
-        onSyncComplete?.();
-        toast.success(
-          t("common.deleted", { item: t("externalSync.syncTypeCustom") })
-        );
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error ||
-            t("common.deleteError", { item: t("externalSync.syncTypeCustom") })
-        );
-      }
-    } catch (error) {
-      console.error("Error deleting sync:", error);
-      toast.error(
-        t("common.deleteError", { item: t("externalSync.syncTypeCustom") })
-      );
-    } finally {
-      setIsDeleting(null);
-      setDeleteTargetId(null);
-      setShowDeleteConfirm(false);
-    }
-  };
-
-  const startEdit = (sync: ExternalSync) => {
-    setEditingSync(sync);
-    setFormName(sync.name || "");
-    setFormUrl(sync.calendarUrl || "");
-    setFormColor(sync.color || "#3b82f6");
-    setFormDisplayMode(sync.displayMode || "normal");
-    setFormAutoSyncInterval(sync.autoSyncInterval || 0);
-    setFormIsHidden(sync.isHidden || false);
-    setFormHideFromStats(sync.hideFromStats || false);
-    setShowAddForm(false);
-
-    // Set initial data for change detection
-    initialFormDataRef.current = {
-      name: sync.name || "",
-      url: sync.calendarUrl || "",
-      color: sync.color || "#3b82f6",
-      displayMode: sync.displayMode || "normal",
-      autoSyncInterval: sync.autoSyncInterval || 0,
-    };
-  };
-
-  const cancelEdit = () => {
-    setEditingSync(null);
-    setFormName("");
-    setFormUrl("");
-    setFormColor("#3b82f6");
-    setFormDisplayMode("normal");
-    setFormAutoSyncInterval(0);
-    initialFormDataRef.current = null;
-  };
-
-  const handleToggleVisibility = async (
-    syncId: string,
-    field: "isHidden" | "hideFromStats",
-    currentValue: boolean
-  ) => {
-    // Optimistically update local editingSync state for immediate UI feedback
-    if (editingSync && editingSync.id === syncId) {
-      setEditingSync({
-        ...editingSync,
-        [field]: !currentValue,
-      });
-    }
-
-    try {
-      const response = await fetch(`/api/external-syncs/${syncId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          [field]: !currentValue,
-        }),
-      });
-
-      if (response.ok) {
-        invalidateSyncs();
-        onSyncComplete?.(); // Trigger refresh
-        toast.success(
-          t("common.updated", { item: t("externalSync.syncTypeCustom") })
-        );
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error ||
-            t("common.updateError", { item: t("externalSync.syncTypeCustom") })
-        );
-
-        // Revert optimistic update on error
-        if (editingSync && editingSync.id === syncId) {
-          setEditingSync({
-            ...editingSync,
-            [field]: currentValue,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to update visibility:", error);
-      toast.error(
-        t("common.updateError", { item: t("externalSync.syncTypeCustom") })
-      );
-
-      // Revert optimistic update on error
-      if (editingSync && editingSync.id === syncId) {
-        setEditingSync({
-          ...editingSync,
-          [field]: currentValue,
-        });
-      }
-    }
-  };
-
-  const startAdd = () => {
-    setShowAddForm(true);
-    setEditingSync(null);
-    setFormName("");
-    setFormUrl("");
-    setFormColor("#3b82f6");
-    setFormDisplayMode("normal");
-    setFormAutoSyncInterval(0);
-    setIcsFile(null);
-    setImportType("url");
-    setFormIsHidden(false);
-    setFormHideFromStats(false);
-  };
-
-  // Function to check if form has changes
-  const hasFormChanges = useCallback((): boolean => {
-    // For edit mode: compare with initial values
-    if (editingSync && initialFormDataRef.current) {
-      const currentFormData = {
-        name: formName,
-        url: formUrl,
-        color: formColor,
-        displayMode: formDisplayMode,
-        autoSyncInterval: formAutoSyncInterval,
-      };
-
-      return (
-        JSON.stringify(currentFormData) !==
-        JSON.stringify(initialFormDataRef.current)
-      );
-    }
-
-    // For add mode: check if any field has been filled
-    if (showAddForm) {
-      return !!(
-        formName.trim() ||
-        formUrl.trim() ||
-        formColor !== "#3b82f6" ||
-        formDisplayMode !== "normal" ||
-        formAutoSyncInterval !== 0 ||
-        icsFile
-      );
-    }
-
-    return false;
-  }, [
-    editingSync,
-    showAddForm,
-    formName,
-    formUrl,
-    formColor,
-    formDisplayMode,
-    formAutoSyncInterval,
-    icsFile,
-  ]);
-
-  // Shared function to save external sync changes
-  const saveExternalSyncChanges = useCallback(async (): Promise<boolean> => {
-    if (!editingSync) return false;
-
-    setIsSavingEdit(true);
-    try {
-      const response = await fetch(`/api/external-syncs/${editingSync.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formName.trim(),
-          calendarUrl: !editingSync.isOneTimeImport
-            ? formUrl.trim()
-            : undefined,
-          color: formColor,
-          displayMode: formDisplayMode,
-          autoSyncInterval: formAutoSyncInterval,
-        }),
-      });
-
-      if (response.ok) {
-        invalidateSyncs();
-        onSyncComplete?.();
-        // Update initial data ref after successful save
-        initialFormDataRef.current = {
-          name: formName,
-          url: formUrl,
-          color: formColor,
-          displayMode: formDisplayMode,
-          autoSyncInterval: formAutoSyncInterval,
-        };
-        toast.success(
-          t("common.updated", { item: t("externalSync.syncTypeCustom") })
-        );
-        return true;
-      } else {
-        const data = await response.json();
-        toast.error(
-          data.error ||
-            t("common.updateError", {
-              item: t("externalSync.syncTypeCustom"),
-            })
-        );
-        return false;
-      }
-    } catch (error) {
-      console.error("Failed to save sync:", error);
-      toast.error(
-        t("common.updateError", { item: t("externalSync.syncTypeCustom") })
-      );
-      return false;
-    } finally {
-      setIsSavingEdit(false);
-    }
-  }, [
-    editingSync,
-    formName,
-    formUrl,
-    formColor,
-    formDisplayMode,
-    formAutoSyncInterval,
-    invalidateSyncs,
-    onSyncComplete,
-    t,
-  ]);
-
   const {
-    isDirty,
-    handleClose: handleDialogClose,
-    showConfirmDialog,
-    setShowConfirmDialog,
-    handleConfirmClose,
-  } = useDirtyState({
-    onClose: onOpenChange,
-    hasChanges: hasFormChanges,
-    onConfirm: () => {
-      // Reset form state for both add and edit modes
-      if (showAddForm) {
-        setShowAddForm(false);
-      }
-      if (editingSync) {
-        cancelEdit();
-      }
-      // Ensure the sheet closes
-      onOpenChange(false);
-    },
-  });
-
-  // Get URL placeholder - show generic placeholder for all
-  const getUrlPlaceholder = () => {
-    return t("form.urlPlaceholder");
-  };
-
-  const getUrlHint = () => {
-    if (!editingSync) {
-      // When creating new calendar, show custom hint
-      return t("externalSync.urlHintCustom");
-    }
-  };
+    syncs,
+    syncErrors,
+    editingSync,
+    formOpen,
+    values,
+    setField,
+    isSubmitting,
+    isSyncing,
+    isDeleting,
+    busy,
+    canSubmit,
+    deleteTargetId,
+    setDeleteTargetId,
+    showList,
+    startAdd,
+    startEdit,
+    guardUnsaved,
+    confirmProps,
+    handleSync,
+    handleAdd,
+    handleSave,
+    confirmDelete,
+  } = useExternalSyncPanel({ calendarId, onSyncComplete, onDirtyChange });
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleDialogClose}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-[600px] p-0 flex flex-col gap-0 border-l border-border/50 overflow-hidden"
-        >
-          <SheetHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-5 space-y-1.5">
-            <SheetTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              {t("externalSync.manageTitle")}
-            </SheetTitle>
-            <SheetDescription className="text-sm text-muted-foreground">
-              {t("externalSync.manageDescription")}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
-            {/* Empty state when no syncs exist */}
-            {syncs.length === 0 && !showAddForm && !editingSync && (
-              <p className="text-center text-muted-foreground py-8">
-                {t("externalSync.noSyncs")}
-              </p>
-            )}
-
-            {/* Existing Syncs List - hide when adding new sync, show only edited sync when editing */}
-            {syncs.length > 0 && !showAddForm && (
-              <div className="space-y-3">
-                {syncs
-                  .filter((sync) => !editingSync || sync.id === editingSync.id)
-                  .map((sync) => (
-                    <div
-                      key={sync.id}
-                      className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-all"
-                      style={{
-                        borderLeftColor: sync.color,
-                        borderLeftWidth: 4,
-                      }}
-                    >
-                      {/* Title row - always full width on mobile */}
-                      <div className="flex items-start gap-2">
-                        <div
-                          className="w-1 h-4 rounded-full shrink-0 mt-0.5"
-                          style={{ backgroundColor: sync.color }}
-                        />
-                        <span className="font-semibold flex-1 min-w-0 break-words">
-                          {sync.name}
-                        </span>
-                      </div>
-
-                      {/* Badges and buttons row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-medium">
-                            {sync.syncType === "google"
-                              ? t("externalSync.syncTypeGoogle")
-                              : sync.syncType === "custom"
-                              ? t("externalSync.syncTypeCustom")
-                              : t("externalSync.syncTypeICloud")}
-                          </span>
-                          {sync.isOneTimeImport && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
-                              {t("externalSync.oneTimeImport")}
-                            </span>
-                          )}
-                          {!sync.isOneTimeImport &&
-                          sync.autoSyncInterval > 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 text-xs font-medium">
-                              <RefreshCw className="h-3 w-3" />
-                              {sync.autoSyncInterval < 60
-                                ? `${sync.autoSyncInterval} min`
-                                : sync.autoSyncInterval < 1440
-                                ? `${sync.autoSyncInterval / 60} h`
-                                : `${sync.autoSyncInterval / 1440} d`}
-                            </span>
-                          ) : (
-                            !sync.isOneTimeImport && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20 text-xs font-medium">
-                                {t("externalSync.autoSyncManual")}
-                              </span>
-                            )
-                          )}
-                        </div>
-                        <div className="flex gap-1 shrink-0">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => startEdit(sync)}
-                            disabled={!!isSyncing || !!isDeleting}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          {!sync.isOneTimeImport && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => handleSync(sync.id)}
-                              disabled={!!isSyncing || !!isDeleting}
-                            >
-                              {isSyncing === sync.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4" />
-                              )}
-                            </Button>
-                          )}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDelete(sync.id)}
-                            disabled={!!isSyncing || !!isDeleting}
-                          >
-                            {isDeleting === sync.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Last synced info and errors - always below badges */}
-                      {(sync.lastSyncedAt || syncErrors[sync.id]) && (
-                        <div className="pt-1 border-t border-border/30 space-y-1.5">
-                          {sync.lastSyncedAt && (
-                            <div className="text-xs text-muted-foreground">
-                              {t("externalSync.lastSynced")}:{" "}
-                              {new Date(sync.lastSyncedAt).toLocaleString()}
-                            </div>
-                          )}
-                          {syncErrors[sync.id] && (
-                            <div className="text-xs text-red-100 bg-red-950/90 p-2 rounded border border-red-800">
-                              <div className="font-medium mb-0.5">
-                                {t("syncNotifications.errorMessage")}:
-                              </div>
-                              <div className="text-red-200">
-                                {syncErrors[sync.id]}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            {/* Add/Edit Form */}
-            {(showAddForm || editingSync) && (
-              <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
-                <h3 className="font-semibold">
-                  {editingSync ? t("externalSync.editSync") : t("common.add")}
-                </h3>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sync-name">{t("common.labels.name")}</Label>
-                  <Input
-                    id="sync-name"
-                    type="text"
-                    placeholder={t("form.namePlaceholder", {
-                      example: t("externalSync.syncTypeCustom"),
-                    })}
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {!editingSync && (
-                  <div className="space-y-2">
-                    <Label htmlFor="import-type">
-                      {t("externalSync.importMethod")}
-                    </Label>
-                    <Select
-                      value={importType}
-                      onValueChange={(value: "url" | "file") => {
-                        setImportType(value);
-                        setFormUrl("");
-                        setIcsFile(null);
-                      }}
-                    >
-                      <SelectTrigger
-                        id="import-type"
-                        className="bg-background/50"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="url">
-                          {t("externalSync.importMethodUrl")}
-                        </SelectItem>
-                        <SelectItem value="file">
-                          {t("externalSync.importMethodFile")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {importType === "url"
-                        ? t("externalSync.importMethodUrlHint")
-                        : t("externalSync.importMethodFileHint")}
-                    </p>
-                  </div>
-                )}
-
-                {!editingSync && importType === "file" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="ics-file">
-                      {t("externalSync.fileLabel")}
-                    </Label>
-                    <Input
-                      id="ics-file"
-                      type="file"
-                      accept=".ics,.ical"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        setIcsFile(file || null);
-                      }}
-                      disabled={isSubmitting}
-                      className="cursor-pointer"
-                      value=""
-                    />
-                    {icsFile && (
-                      <p className="text-xs text-muted-foreground">
-                        {t("externalSync.fileSelected")}: {icsFile.name}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  // Show URL input for new syncs OR when editing non-one-time-import syncs
-                  (!editingSync || !editingSync.isOneTimeImport) && (
-                    <div className="space-y-2">
-                      <Label htmlFor="sync-url">{t("form.urlLabel")}</Label>
-                      <Input
-                        id="sync-url"
-                        type="text"
-                        placeholder={getUrlPlaceholder()}
-                        value={formUrl || ""}
-                        onChange={(e) => setFormUrl(e.target.value)}
-                        disabled={isSubmitting}
-                        readOnly={!!editingSync}
-                        className={
-                          editingSync
-                            ? "bg-muted/30 cursor-default font-mono text-sm"
-                            : ""
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {getUrlHint()}
-                      </p>
-                    </div>
-                  )
-                )}
-
-                <div className="space-y-2">
-                  <ColorPicker
-                    color={formColor}
-                    onChange={setFormColor}
-                    label={t("form.colorLabel")}
-                    presetColors={PRESET_COLORS}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("externalSync.colorHint")}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sync-display-mode">
-                    {t("externalSync.displayMode")}
-                  </Label>
-                  <Select
-                    value={formDisplayMode}
-                    onValueChange={setFormDisplayMode}
-                  >
-                    <SelectTrigger
-                      id="sync-display-mode"
-                      className="bg-background/50"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">
-                        {t("externalSync.displayModeNormal")}
-                      </SelectItem>
-                      <SelectItem value="minimal">
-                        {t("externalSync.displayModeMinimal")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {t("externalSync.displayModeHint")}
-                  </p>
-                </div>
-
-                {/* Only show auto-sync for URL-based imports (both creating and editing) */}
-                {!(importType === "file") &&
-                  !(editingSync && editingSync.isOneTimeImport) && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>{t("externalSync.autoSyncLabel")}</Label>
-                        <span className="text-sm font-medium text-primary">
-                          {formAutoSyncInterval === 0
-                            ? t("externalSync.autoSyncManual")
-                            : formAutoSyncInterval < 60
-                            ? `${formAutoSyncInterval} min`
-                            : formAutoSyncInterval < 1440
-                            ? `${formAutoSyncInterval / 60} h`
-                            : `${formAutoSyncInterval / 1440} d`}
-                        </span>
-                      </div>
-                      <Slider
-                        value={[
-                          (() => {
-                            const intervals = [
-                              0, 5, 15, 30, 60, 120, 360, 720, 1440,
-                            ];
-                            const index =
-                              intervals.indexOf(formAutoSyncInterval);
-                            return index >= 0 ? index : 0;
-                          })(),
-                        ]}
-                        onValueChange={(value: number[]) => {
-                          const intervals = [
-                            0, 5, 15, 30, 60, 120, 360, 720, 1440,
-                          ];
-                          setFormAutoSyncInterval(intervals[value[0]]);
-                        }}
-                        max={8}
-                        step={1}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("externalSync.autoSyncManual")}</span>
-                        <span>{t("externalSync.autoSync24hShort")}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t("externalSync.autoSyncHint")}
-                      </p>
-                    </div>
-                  )}
-
-                {/* Visibility options - both for creating and editing */}
-                <div className="space-y-3 pt-2 border-t border-border/30">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="hide-calendar"
-                      checked={
-                        editingSync
-                          ? editingSync.isHidden || false
-                          : formIsHidden
-                      }
-                      onCheckedChange={(checked) => {
-                        if (editingSync) {
-                          handleToggleVisibility(
-                            editingSync.id,
-                            "isHidden",
-                            editingSync.isHidden || false
-                          );
-                        } else {
-                          setFormIsHidden(checked as boolean);
-                        }
-                      }}
-                    />
-                    <Label
-                      htmlFor="hide-calendar"
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {t("externalSync.hideCalendar")}
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground pl-6">
-                    {t("externalSync.hideCalendarHint")}
-                  </p>
-
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="hide-from-stats"
-                      checked={
-                        editingSync
-                          ? editingSync.isHidden ||
-                            editingSync.hideFromStats ||
-                            false
-                          : formIsHidden || formHideFromStats
-                      }
-                      onCheckedChange={(checked) => {
-                        if (editingSync) {
-                          handleToggleVisibility(
-                            editingSync.id,
-                            "hideFromStats",
-                            editingSync.hideFromStats || false
-                          );
-                        } else {
-                          setFormHideFromStats(checked as boolean);
-                        }
-                      }}
-                      disabled={
-                        editingSync ? editingSync.isHidden : formIsHidden
-                      }
-                    />
-                    <Label
-                      htmlFor="hide-from-stats"
-                      className={`text-sm font-normal ${
-                        (editingSync ? editingSync.isHidden : formIsHidden)
-                          ? "cursor-not-allowed opacity-50"
-                          : "cursor-pointer"
-                      }`}
-                    >
-                      {t("externalSync.hideFromStats")}
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground pl-6">
-                    {t("externalSync.hideFromStatsHint")}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Hints Section - show only when creating */}
-            {showAddForm && (
-              <div className="rounded-xl border border-border/50 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 space-y-2">
-                <h4 className="text-sm font-semibold text-foreground/90">
-                  {t("externalSync.hintsTitle")}
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  {t("externalSync.hintsDescription")}
-                </p>
-
-                {/* iCloud Hint */}
-                <div className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedHint(
-                        expandedHint === "icloud" ? null : "icloud"
-                      )
-                    }
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium">
-                      {t("externalSync.syncTypeICloud")}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        expandedHint === "icloud" ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {expandedHint === "icloud" && (
-                    <div className="px-3 pb-3 text-sm text-muted-foreground space-y-1">
-                      <p>{t("externalSync.hintICloud")}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Google Hint */}
-                <div className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedHint(
-                        expandedHint === "google" ? null : "google"
-                      )
-                    }
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium">
-                      {t("externalSync.syncTypeGoogle")}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        expandedHint === "google" ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {expandedHint === "google" && (
-                    <div className="px-3 pb-3 text-sm text-muted-foreground space-y-1">
-                      <p>{t("externalSync.hintGoogle")}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Custom Calendar Hint */}
-                <div className="border border-border/50 rounded-lg overflow-hidden bg-background/50">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedHint(
-                        expandedHint === "custom" ? null : "custom"
-                      )
-                    }
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium">
-                      {t("externalSync.customCalendar")}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        expandedHint === "custom" ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {expandedHint === "custom" && (
-                    <div className="px-3 pb-3 text-sm text-muted-foreground space-y-1">
-                      <p>{t("externalSync.hintCustom")}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sticky Footer */}
-          {!showAddForm && !editingSync && (
-            <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
-              <Button
-                onClick={startAdd}
-                className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25"
-                disabled={!!isSyncing || !!isDeleting}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {t("externalSync.addNewSync")}
-              </Button>
-            </SheetFooter>
+      <PanelBody>
+        <div className="flex flex-col gap-3.5">
+          {syncs.length === 0 && !formOpen && (
+            <p className="rounded-[11px] border border-dashed border-control px-4 py-8 text-center text-[13px] text-fg-tertiary">
+              {t("externalSync.noSyncs")}
+            </p>
           )}
 
-          {/* Sticky Footer for Edit Form */}
-          {editingSync && (
-            <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
-              <div className="flex gap-2.5 w-full">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => cancelEdit()}
-                  disabled={isSavingEdit}
-                  className="flex-1 h-11 border-border/50 hover:bg-muted/50"
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={saveExternalSyncChanges}
-                  disabled={isSavingEdit || !formName.trim() || !isDirty}
-                  className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-                >
-                  {isSavingEdit ? t("common.saving") : t("common.save")}
-                </Button>
-              </div>
-            </SheetFooter>
-          )}
-
-          {/* Sticky Footer for Add Form */}
-          {showAddForm && (
-            <SheetFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 mt-auto">
-              <div className="flex gap-2.5 w-full">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setFormName("");
-                    setFormUrl("");
-                    setFormColor("#3b82f6");
-                    setFormDisplayMode("normal");
-                    setFormAutoSyncInterval(0);
-                    setIcsFile(null);
-                    setImportType("url");
-                    setFormIsHidden(false);
-                    setFormHideFromStats(false);
-                  }}
-                  disabled={isSubmitting}
-                  className="flex-1 h-11 border-border/50 hover:bg-muted/50"
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleAddSync}
-                  disabled={
-                    isSubmitting ||
-                    !formName.trim() ||
-                    (importType === "file" ? !icsFile : !formUrl.trim())
+          {syncs.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {syncs.map((sync) => (
+                <ExternalSyncRow
+                  key={sync.id}
+                  sync={sync}
+                  error={syncErrors[sync.id]}
+                  selected={editingSync?.id === sync.id}
+                  syncing={isSyncing === sync.id}
+                  deleting={isDeleting === sync.id}
+                  busy={busy}
+                  onSelect={() =>
+                    guardUnsaved(() =>
+                      editingSync?.id === sync.id ? showList() : startEdit(sync)
+                    )
                   }
-                  className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t("common.saving")}
-                    </>
-                  ) : (
-                    t("common.add")
-                  )}
-                </Button>
-              </div>
-            </SheetFooter>
+                  onSync={() => handleSync(sync.id)}
+                  onDelete={() =>
+                    // Deleting the sync being edited closes the form; other rows leave it alone
+                    editingSync?.id === sync.id
+                      ? guardUnsaved(() => setDeleteTargetId(sync.id))
+                      : setDeleteTargetId(sync.id)
+                  }
+                />
+              ))}
+            </div>
           )}
-        </SheetContent>
-      </Sheet>
+
+          {formOpen && (
+            <>
+              {syncs.length > 0 && <div className="h-px shrink-0 bg-line" />}
+              <ExternalSyncForm
+                key={editingSync?.id ?? "new"}
+                values={values}
+                setField={setField}
+                mode={editingSync ? "edit" : "add"}
+                isOneTimeImport={editingSync?.isOneTimeImport}
+                disabled={isSubmitting}
+              />
+            </>
+          )}
+        </div>
+      </PanelBody>
+
+      <PanelFooter>
+        {formOpen ? (
+          <>
+            <Button
+              variant="outline"
+              className="h-10 flex-1 font-semibold"
+              onClick={showList}
+              disabled={isSubmitting}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              className="h-10 flex-1 font-semibold"
+              onClick={editingSync ? handleSave : handleAdd}
+              disabled={!canSubmit}
+            >
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isSubmitting
+                ? t("common.saving")
+                : editingSync
+                  ? t("common.save")
+                  : t("syncSheet.addSubscription")}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose}>
+              {t("common.close")}
+            </Button>
+            <Button className="h-10 flex-1 font-semibold" onClick={startAdd} disabled={busy}>
+              <Plus className="size-4" />
+              {t("syncSheet.addSubscription")}
+            </Button>
+          </>
+        )}
+      </PanelFooter>
+
+      <ConfirmationDialog {...confirmProps} />
 
       <ConfirmationDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        onConfirm={handleConfirmClose}
-      />
-
-      <ConfirmationDialog
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => !open && setDeleteTargetId(null)}
         onConfirm={confirmDelete}
         title={t("externalSync.delete")}
         description={t("externalSync.deleteConfirm")}

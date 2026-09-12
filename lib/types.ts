@@ -1,3 +1,5 @@
+import type { CalendarViewSettings } from "./view-settings";
+
 // Re-export types from Drizzle schema
 export type { Calendar, Shift, ExternalSync } from "./db/schema";
 
@@ -7,6 +9,8 @@ export interface CalendarWithCount {
   color: string;
   ownerId?: string | null;
   guestPermission?: "none" | "read" | "write";
+  /** The calendar's own view; null means everyone sees their personal view */
+  viewSettings?: CalendarViewSettings | null;
   createdAt: Date | null;
   updatedAt: Date | null;
   _count?: number;

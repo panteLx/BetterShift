@@ -9,11 +9,18 @@
  * 3. Reports keys that are never used
  * 4. Reports keys that are used in code but missing in de.json
  * 5. Checks if en.json and it.json are synchronized with de.json
+ * 6. Validates the message values themselves: ICU syntax, placeholder names
+ *    against de.json, and empty strings
  */
 
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  parse,
+  TYPE,
+  type MessageFormatElement,
+} from "@formatjs/icu-messageformat-parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,6 +79,125 @@ function getAvailableLocales(): string[] {
     .filter((f) => f.endsWith(".json"))
     .map((f) => f.replace(".json", ""))
     .sort();
+}
+
+/**
+ * Flatten a locale file to dot-notation key -> string value
+ */
+function getTranslationValues(locale: string): Map<string, string> {
+  const messagesPath = path.join(rootDir, "messages", `${locale}.json`);
+  const messages = JSON.parse(fs.readFileSync(messagesPath, "utf-8"));
+  const values = new Map<string, string>();
+
+  const walk = (obj: Record<string, unknown>, prefix = "") => {
+    for (const [key, value] of Object.entries(obj)) {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        walk(value as Record<string, unknown>, fullKey);
+      } else if (typeof value === "string") {
+        values.set(fullKey, value);
+      }
+    }
+  };
+
+  walk(messages);
+  return values;
+}
+
+/**
+ * Collect every placeholder name an ICU message references, including the ones
+ * nested inside plural/select branches and rich-text tags.
+ */
+function collectPlaceholders(
+  elements: MessageFormatElement[],
+  found = new Set<string>(),
+): Set<string> {
+  for (const el of elements) {
+    switch (el.type) {
+      case TYPE.argument:
+      case TYPE.number:
+      case TYPE.date:
+      case TYPE.time:
+        found.add(el.value);
+        break;
+      case TYPE.select:
+      case TYPE.plural:
+        found.add(el.value);
+        for (const option of Object.values(el.options)) {
+          collectPlaceholders(option.value, found);
+        }
+        break;
+      case TYPE.tag:
+        found.add(el.value);
+        collectPlaceholders(el.children, found);
+        break;
+    }
+  }
+
+  return found;
+}
+
+type ValueIssue = { key: string; problem: string };
+
+/**
+ * Validate message values across all locales. Key presence is checked
+ * elsewhere; this catches the failures that only surface when a message is
+ * actually rendered.
+ */
+function checkMessageValues(): { [locale: string]: ValueIssue[] } {
+  const locales = getAvailableLocales();
+  const deValues = getTranslationValues("de");
+
+  // de.json is the source of truth for placeholder names, so parse it first.
+  const dePlaceholders = new Map<string, Set<string>>();
+  for (const [key, value] of deValues) {
+    try {
+      dePlaceholders.set(key, collectPlaceholders(parse(value)));
+    } catch {
+      // Reported as a de.json ICU error in the loop below.
+    }
+  }
+
+  const results: { [locale: string]: ValueIssue[] } = {};
+
+  for (const locale of locales) {
+    const issues: ValueIssue[] = [];
+    const values = locale === "de" ? deValues : getTranslationValues(locale);
+
+    for (const [key, value] of values) {
+      if (value.trim() === "") {
+        issues.push({ key, problem: "empty string" });
+        continue;
+      }
+
+      let placeholders: Set<string>;
+      try {
+        placeholders = collectPlaceholders(parse(value));
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        issues.push({ key, problem: `invalid ICU syntax (${message})` });
+        continue;
+      }
+
+      const expected = dePlaceholders.get(key);
+      if (!expected || locale === "de") continue;
+
+      const missing = [...expected].filter((p) => !placeholders.has(p));
+      const unexpected = [...placeholders].filter((p) => !expected.has(p));
+      if (missing.length > 0 || unexpected.length > 0) {
+        const parts: string[] = [];
+        if (missing.length > 0) parts.push(`missing {${missing.join("}, {")}}`);
+        if (unexpected.length > 0)
+          parts.push(`unknown {${unexpected.join("}, {")}}`);
+        issues.push({ key, problem: `placeholder mismatch: ${parts.join(", ")}` });
+      }
+    }
+
+    results[locale] = issues;
+  }
+
+  return results;
 }
 
 /**
@@ -582,6 +708,34 @@ function main() {
     }
   }
 
+  // 4. Validate the message values themselves
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("4️⃣  MESSAGE VALUES (ICU syntax, placeholders, empty strings)");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  const valueResults = checkMessageValues();
+  const totalValueIssues = Object.values(valueResults).reduce(
+    (sum, issues) => sum + issues.length,
+    0,
+  );
+
+  if (totalValueIssues === 0) {
+    console.log("✅ All message values are valid!\n");
+  } else {
+    hasIssues = true;
+
+    for (const locale of allLocales) {
+      const issues = valueResults[locale];
+      if (issues.length === 0) continue;
+
+      console.log(`❌ ${locale}.json (${issues.length} issues):`);
+      for (const { key, problem } of issues) {
+        console.log(`   - ${key}: ${problem}`);
+      }
+      console.log();
+    }
+  }
+
   // Summary
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("📊 SUMMARY");
@@ -598,7 +752,8 @@ function main() {
     unusedKeys.length +
     phantomKeys.length +
     missingKeys.length +
-    totalSyncIssuesInSummary;
+    totalSyncIssuesInSummary +
+    totalValueIssues;
   const healthScore =
     totalIssues === 0 ? 100 : Math.max(0, 100 - totalIssues * 2);
   const healthIcon =
@@ -636,6 +791,14 @@ function main() {
       issues === 0
         ? "✅ Synced"
         : `⚠️  ${missing.length} missing, ${extra.length} extra`;
+    console.log(`   ${locale}.json:             ${status}`);
+  }
+  console.log();
+
+  console.log("🔤 Message Values:");
+  for (const locale of allLocales) {
+    const issues = valueResults[locale].length;
+    const status = issues === 0 ? "✅ Valid" : `❌ ${issues} issues`;
     console.log(`   ${locale}.json:             ${status}`);
   }
   console.log();

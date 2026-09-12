@@ -1,233 +1,229 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { queryKeys } from "@/lib/query-keys";
+import {
+  CalendarViewSettings,
+  DEFAULT_PERSONAL_VIEW_SETTINGS,
+  PersonalViewSettings,
+  resolveViewSettings,
+  sanitizePersonalViewSettings,
+} from "@/lib/view-settings";
 
+// Per-device keys: guests and auth-less instances keep using them, accounts migrate them once
+const STORAGE_KEYS = {
+  shiftsPerDay: "shifts-per-day",
+  externalShiftsPerDay: "external-shifts-per-day",
+  showShiftNotes: "show-shift-notes",
+  sortType: "shift-sort-type",
+  sortOrder: "shift-sort-order",
+  combinedSort: "combined-sort-mode",
+  hidePresetHeader: "hide-preset-header",
+  highlightedWeekdays: "highlighted-weekdays",
+  highlightColor: "highlight-color",
+} as const;
+
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable (private mode, quota); the in-memory state still applies
+  }
+}
+
+function parseLimit(raw: string | null): number | null | undefined {
+  if (raw === null) return undefined;
+  if (raw === "null") return null;
+  const parsed = parseInt(raw, 10);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+function parseBoolean(raw: string | null): boolean | undefined {
+  return raw === null ? undefined : raw === "true";
+}
+
+function parseJson(raw: string | null): unknown {
+  if (raw === null) return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function hasLocalViewSettings(): boolean {
+  return Object.values(STORAGE_KEYS).some((key) => readStorage(key) !== null);
+}
+
+function readLocalViewSettings(): PersonalViewSettings {
+  if (typeof window === "undefined") return DEFAULT_PERSONAL_VIEW_SETTINGS;
+  const hidePresetHeader = parseBoolean(readStorage(STORAGE_KEYS.hidePresetHeader));
+  return sanitizePersonalViewSettings({
+    shiftsPerDay: parseLimit(readStorage(STORAGE_KEYS.shiftsPerDay)),
+    externalShiftsPerDay: parseLimit(readStorage(STORAGE_KEYS.externalShiftsPerDay)),
+    showShiftNotes: parseBoolean(readStorage(STORAGE_KEYS.showShiftNotes)),
+    sortType: readStorage(STORAGE_KEYS.sortType) ?? undefined,
+    sortOrder: readStorage(STORAGE_KEYS.sortOrder) ?? undefined,
+    combinedSort: parseBoolean(readStorage(STORAGE_KEYS.combinedSort)),
+    showStampBar: hidePresetHeader === undefined ? undefined : !hidePresetHeader,
+    highlightedWeekdays: parseJson(readStorage(STORAGE_KEYS.highlightedWeekdays)),
+    highlightColor: readStorage(STORAGE_KEYS.highlightColor) ?? undefined,
+  });
+}
+
+function writeLocalViewSettings(settings: PersonalViewSettings) {
+  const limit = (value: number | null) => (value === null ? "null" : String(value));
+  writeStorage(STORAGE_KEYS.shiftsPerDay, limit(settings.shiftsPerDay));
+  writeStorage(STORAGE_KEYS.externalShiftsPerDay, limit(settings.externalShiftsPerDay));
+  writeStorage(STORAGE_KEYS.showShiftNotes, String(settings.showShiftNotes));
+  writeStorage(STORAGE_KEYS.sortType, settings.sortType);
+  writeStorage(STORAGE_KEYS.sortOrder, settings.sortOrder);
+  writeStorage(STORAGE_KEYS.combinedSort, String(settings.combinedSort));
+  writeStorage(STORAGE_KEYS.hidePresetHeader, String(!settings.showStampBar));
+  writeStorage(STORAGE_KEYS.highlightedWeekdays, JSON.stringify(settings.highlightedWeekdays));
+  writeStorage(STORAGE_KEYS.highlightColor, settings.highlightColor);
+}
+
+async function fetchPersonalViewSettingsApi(): Promise<PersonalViewSettings | null> {
+  const response = await fetch("/api/user/view-settings");
+  if (!response.ok) {
+    throw new Error(`Failed to fetch view settings: ${response.statusText}`);
+  }
+  const data = await response.json();
+  return data.viewSettings ? sanitizePersonalViewSettings(data.viewSettings) : null;
+}
+
+async function updatePersonalViewSettingsApi(
+  patch: Partial<PersonalViewSettings>
+): Promise<PersonalViewSettings> {
+  const response = await fetch("/api/user/view-settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ viewSettings: patch }),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to update view settings: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+  const data = await response.json();
+  return sanitizePersonalViewSettings(data.viewSettings);
+}
+
+interface UpdateViewSettingsContext {
+  previous: PersonalViewSettings | null | undefined;
+}
+
+/**
+ * The personal view: stored in the account when signed in, in localStorage for
+ * guests and with auth disabled. `forCalendar` applies a calendar's own view on top.
+ */
 export function useViewSettings() {
-  const [shiftsPerDay, setShiftsPerDay] = useState<number | null>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("shifts-per-day");
-      if (stored === "null") return null;
-      if (stored) {
-        const parsed = parseInt(stored);
-        return isNaN(parsed) ? 3 : parsed;
-      }
-    }
-    return 3;
+  const t = useTranslations();
+  const queryClient = useQueryClient();
+  const { user, isLoading: sessionLoading } = useAuth();
+  const { isAuthEnabled } = useAuthFeatures();
+  const userId = isAuthEnabled && user ? user.id : null;
+
+  // better-auth reports pending again on every guest refetch, so only the first load counts
+  const [sessionSettled, setSessionSettled] = useState(!isAuthEnabled);
+  if (!sessionSettled && !sessionLoading) setSessionSettled(true);
+  const queryKey = queryKeys.userPreferences.viewSettings(userId ?? "");
+
+  const [local, setLocal] = useState<PersonalViewSettings>(readLocalViewSettings);
+
+  const {
+    data: stored,
+    isSuccess,
+    isPending,
+  } = useQuery({
+    queryKey,
+    queryFn: fetchPersonalViewSettingsApi,
+    enabled: !!userId,
+    refetchInterval: false,
+    retry: 1,
   });
 
-  const [externalShiftsPerDay, setExternalShiftsPerDay] = useState<
-    number | null
-  >(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("external-shifts-per-day");
-      if (stored === "null") return null;
-      if (stored) {
-        const parsed = parseInt(stored);
-        return isNaN(parsed) ? 3 : parsed;
-      }
-    }
-    return 3;
-  });
+  // Until the account has a stored view, this device's values stand in for it
+  const personal = userId ? (stored ?? local) : local;
 
-  const [showShiftNotes, setShowShiftNotes] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("show-shift-notes");
-      return stored === "true";
-    }
-    return false;
-  });
-
-  const [showFullTitles, setShowFullTitles] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("show-full-titles");
-      return stored === "true";
-    }
-    return false;
-  });
-
-  const [shiftSortType, setShiftSortType] = useState<
-    "startTime" | "createdAt" | "title"
-  >(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("shift-sort-type");
-      if (
-        stored === "startTime" ||
-        stored === "createdAt" ||
-        stored === "title"
-      ) {
-        return stored;
-      }
-    }
-    return "createdAt";
-  });
-
-  const [shiftSortOrder, setShiftSortOrder] = useState<"asc" | "desc">(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("shift-sort-order");
-      if (stored === "asc" || stored === "desc") {
-        return stored;
-      }
-    }
-    return "asc";
-  });
-
-  const [combinedSortMode, setCombinedSortMode] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("combined-sort-mode");
-      return stored === "true";
-    }
-    return false;
-  });
-
-  const [hidePresetHeader, setHidePresetHeader] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("hide-preset-header");
-      return stored === "true";
-    }
-    return false;
-  });
-
-  const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("highlight-weekends");
-      return stored === "true";
-    }
-    return false;
-  });
-
-  const [highlightedWeekdays, setHighlightedWeekdays] = useState<number[]>(
-    () => {
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("highlighted-weekdays");
-        if (stored) {
-          try {
-            return JSON.parse(stored);
-          } catch {
-            return [];
-          }
-        }
-      }
-      return [];
-    }
-  );
-
-  const [highlightColor, setHighlightColor] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("highlight-color");
-      if (stored) return stored;
-    }
-    return "#fbbf24"; // Default amber
-  });
-
-  const handleShiftsPerDayChange = useCallback((count: number | null) => {
-    setShiftsPerDay(count);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "shifts-per-day",
-        count === null ? "null" : count.toString()
+  const { mutate } = useMutation<
+    PersonalViewSettings,
+    Error,
+    Partial<PersonalViewSettings>,
+    UpdateViewSettingsContext
+  >({
+    mutationKey: queryKey,
+    mutationFn: updatePersonalViewSettingsApi,
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<PersonalViewSettings | null>(queryKey);
+      queryClient.setQueryData<PersonalViewSettings | null>(queryKey, (old) =>
+        sanitizePersonalViewSettings({ ...(old ?? personal), ...patch })
       );
-    }
-  }, []);
-
-  const handleExternalShiftsPerDayChange = useCallback(
-    (count: number | null) => {
-      setExternalShiftsPerDay(count);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          "external-shifts-per-day",
-          count === null ? "null" : count.toString()
-        );
+      return { previous };
+    },
+    onError: (err, patch, context) => {
+      if (context) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+      console.error("Failed to update view settings:", err);
+      toast.error(t("common.updateError", { item: t("view.settingsTitle") }));
+    },
+    onSettled: () => {
+      // Refetching while a later toggle is still in flight would flash the older value
+      if (queryClient.isMutating({ mutationKey: queryKey }) === 1) {
+        queryClient.invalidateQueries({ queryKey });
       }
     },
-    []
-  );
+  });
 
-  const handleShowShiftNotesChange = useCallback((show: boolean) => {
-    setShowShiftNotes(show);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("show-shift-notes", show.toString());
-    }
-  }, []);
+  // One-time move of this device's settings into an account that has none yet
+  const migratedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!userId || !isSuccess || stored !== null || migratedFor.current === userId) return;
+    migratedFor.current = userId;
+    if (hasLocalViewSettings()) mutate(readLocalViewSettings());
+  }, [userId, isSuccess, stored, mutate]);
 
-  const handleShowFullTitlesChange = useCallback((show: boolean) => {
-    setShowFullTitles(show);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("show-full-titles", show.toString());
-    }
-  }, []);
-
-  const handleShiftSortTypeChange = useCallback(
-    (type: "startTime" | "createdAt" | "title") => {
-      setShiftSortType(type);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("shift-sort-type", type);
+  const updatePersonal = useCallback(
+    (patch: Partial<PersonalViewSettings>) => {
+      if (userId) {
+        mutate(patch);
+        return;
       }
+      const next = sanitizePersonalViewSettings({ ...local, ...patch });
+      setLocal(next);
+      writeLocalViewSettings(next);
     },
-    []
+    [userId, mutate, local]
   );
 
-  const handleShiftSortOrderChange = useCallback((order: "asc" | "desc") => {
-    setShiftSortOrder(order);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("shift-sort-order", order);
-    }
-  }, []);
-
-  const handleCombinedSortModeChange = useCallback((combined: boolean) => {
-    setCombinedSortMode(combined);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("combined-sort-mode", combined.toString());
-    }
-  }, []);
-
-  const handleHidePresetHeaderChange = useCallback((hide: boolean) => {
-    setHidePresetHeader(hide);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("hide-preset-header", hide.toString());
-    }
-  }, []);
-
-  const handleHighlightWeekendsChange = useCallback((highlight: boolean) => {
-    setHighlightWeekends(highlight);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("highlight-weekends", highlight.toString());
-    }
-  }, []);
-
-  const handleHighlightedWeekdaysChange = useCallback((days: number[]) => {
-    setHighlightedWeekdays(days);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("highlighted-weekdays", JSON.stringify(days));
-    }
-  }, []);
-
-  const handleHighlightColorChange = useCallback((color: string) => {
-    setHighlightColor(color);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("highlight-color", color);
-    }
-  }, []);
+  const forCalendar = useCallback(
+    (calendar?: { viewSettings?: CalendarViewSettings | null } | null) =>
+      resolveViewSettings(personal, calendar?.viewSettings),
+    [personal]
+  );
 
   return {
-    shiftsPerDay,
-    externalShiftsPerDay,
-    showShiftNotes,
-    showFullTitles,
-    shiftSortType,
-    shiftSortOrder,
-    combinedSortMode,
-    hidePresetHeader,
-    highlightWeekends,
-    highlightedWeekdays,
-    highlightColor,
-    handleShiftsPerDayChange,
-    handleExternalShiftsPerDayChange,
-    handleShowShiftNotesChange,
-    handleShowFullTitlesChange,
-    handleShiftSortTypeChange,
-    handleShiftSortOrderChange,
-    handleCombinedSortModeChange,
-    handleHidePresetHeaderChange,
-    handleHighlightWeekendsChange,
-    handleHighlightedWeekdaysChange,
-    handleHighlightColorChange,
+    personal,
+    updatePersonal,
+    forCalendar,
+    /** True while a signed-in account's view is still loading, to avoid a flash of device values */
+    loading: !sessionSettled || (!!userId && isPending),
+    /** false for guests and auth-less instances, whose view lives on this device */
+    storedInAccount: !!userId,
   };
 }

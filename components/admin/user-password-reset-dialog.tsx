@@ -2,19 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Eye, EyeOff, Copy, RefreshCw, AlertCircle } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Copy, Eye, EyeOff, RefreshCw, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PanelDialog } from "@/components/panel-dialog";
+import { Field, inputClass } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
+import { cn } from "@/lib/utils";
 import type { AdminUser } from "@/hooks/useAdminUsers";
 
 interface UserPasswordResetDialogProps {
@@ -22,6 +17,53 @@ interface UserPasswordResetDialogProps {
   onOpenChange: (open: boolean) => void;
   user: AdminUser;
   onConfirm: (newPassword: string) => Promise<void>;
+}
+
+const CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+
+function randomPassword(length = 16) {
+  const values = crypto.getRandomValues(new Uint32Array(length));
+  return Array.from(values, (v) => CHARSET[v % CHARSET.length]).join("");
+}
+
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  visible,
+  onToggle,
+  placeholder,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggle: () => void;
+  placeholder: string;
+}) {
+  const t = useTranslations();
+  const Icon = visible ? EyeOff : Eye;
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete="new-password"
+        className={cn(inputClass, "pr-10", visible && value && "font-mono")}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={visible ? t("adminUsers.hidePassword") : t("adminUsers.showPassword")}
+        className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:text-fg-strong"
+      >
+        <Icon className="size-4" />
+      </button>
+    </div>
+  );
 }
 
 export function UserPasswordResetDialog({
@@ -41,13 +83,7 @@ export function UserPasswordResetDialog({
   const isValid = password.length >= 8 && passwordsMatch;
 
   const generateRandomPassword = () => {
-    const length = 16;
-    const charset =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let newPassword = "";
-    for (let i = 0; i < length; i++) {
-      newPassword += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
+    const newPassword = randomPassword();
     setPassword(newPassword);
     setConfirmPassword(newPassword);
     setShowPassword(true);
@@ -59,17 +95,20 @@ export function UserPasswordResetDialog({
     toast.success(t("common.copied", { item: t("common.labels.password") }));
   };
 
+  const reset = () => {
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
   const handleConfirm = async () => {
     if (!isValid) return;
 
     setIsSubmitting(true);
     try {
       await onConfirm(password);
-      // Reset form
-      setPassword("");
-      setConfirmPassword("");
-      setShowPassword(false);
-      setShowConfirmPassword(false);
+      reset();
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -77,142 +116,91 @@ export function UserPasswordResetDialog({
   };
 
   const handleCancel = () => {
-    // Reset form
-    setPassword("");
-    setConfirmPassword("");
-    setShowPassword(false);
-    setShowConfirmPassword(false);
+    reset();
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{t("admin.resetPassword")}</DialogTitle>
-          <DialogDescription>
-            {t("admin.resetPasswordFor", {
-              name: user.name || user.email,
-            })}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Warning */}
-          <div className="flex gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900">
-            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-              <p className="font-medium">{t("admin.passwordResetWarning")}</p>
-              <p>{t("admin.passwordResetSecurityNote")}</p>
-            </div>
-          </div>
-
-          {/* Generate Button */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={generateRandomPassword}
-            className="w-full"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t("admin.generatePassword")}
-          </Button>
-
-          {/* New Password */}
-          <div className="space-y-2">
-            <Label htmlFor="password">
-              {t("common.labels.newPassword")}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("admin.passwordPlaceholder")}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-            {password && password.length < 8 && (
-              <p className="text-xs text-destructive">
-                {t("validation.passwordTooShort")}
-              </p>
-            )}
-          </div>
-
-          {/* Confirm Password */}
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">
-              {t("common.labels.confirmPassword")}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t("admin.confirmPasswordPlaceholder")}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-            {confirmPassword && !passwordsMatch && (
-              <p className="text-xs text-destructive">
-                {t("validation.passwordsNoMatch")}
-              </p>
-            )}
-          </div>
-
-          {/* Copy Password Button */}
-          {password && isValid && (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={copyPassword}
-              className="w-full"
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              {t("admin.copyPassword")}
-            </Button>
-          )}
-        </div>
-
-        <DialogFooter>
+    <PanelDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("admin.resetPassword")}
+      description={t("admin.resetPasswordFor", { name: user.name || user.email })}
+      width="sm"
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
           <Button
             variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting}
+            className="h-10 flex-1 font-semibold"
           >
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleConfirm} disabled={!isValid || isSubmitting}>
+          <Button
+            onClick={handleConfirm}
+            disabled={!isValid || isSubmitting}
+            className="h-10 flex-1 font-semibold"
+          >
             {isSubmitting ? t("common.saving") : t("admin.setPassword")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <StatusBanner tone="warning" icon={TriangleAlert} title={t("admin.passwordResetWarning")}>
+        {t("admin.passwordResetSecurityNote")}
+      </StatusBanner>
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={generateRandomPassword}
+        className="h-10 w-full rounded-[9px] font-semibold"
+      >
+        <RefreshCw className="size-4 text-fg-secondary" />
+        {t("admin.generatePassword")}
+      </Button>
+
+      <Field label={t("common.labels.newPassword")} htmlFor="reset-password">
+        <PasswordInput
+          id="reset-password"
+          value={password}
+          onChange={setPassword}
+          visible={showPassword}
+          onToggle={() => setShowPassword(!showPassword)}
+          placeholder={t("admin.passwordPlaceholder")}
+        />
+        {password && password.length < 8 && (
+          <p className="text-[12px] text-danger">{t("validation.passwordTooShort")}</p>
+        )}
+      </Field>
+
+      <Field label={t("common.labels.confirmPassword")} htmlFor="reset-password-confirm">
+        <PasswordInput
+          id="reset-password-confirm"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          visible={showConfirmPassword}
+          onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+          placeholder={t("admin.confirmPasswordPlaceholder")}
+        />
+        {confirmPassword && !passwordsMatch && (
+          <p className="text-[12px] text-danger">{t("validation.passwordsNoMatch")}</p>
+        )}
+      </Field>
+
+      {isValid && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={copyPassword}
+          className="h-10 w-full rounded-[9px] font-semibold"
+        >
+          <Copy className="size-4" />
+          {t("admin.copyPassword")}
+        </Button>
+      )}
+    </PanelDialog>
   );
 }

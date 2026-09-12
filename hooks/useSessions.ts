@@ -62,7 +62,10 @@ export function useSessions() {
   }> => {
     try {
       // Use Better Auth's built-in revokeOtherSessions
-      await authClient.revokeOtherSessions();
+      const { error } = await authClient.revokeOtherSessions();
+      if (error) {
+        throw new Error(error.message || "Failed to revoke sessions");
+      }
 
       // Count sessions before refresh
       const beforeCount = sessions.length - 1; // -1 for current session
@@ -79,6 +82,28 @@ export function useSessions() {
       };
     }
   }, [fetchSessions, sessions.length]);
+
+  const revokeSession = useCallback(
+    async (token: string): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const { error } = await authClient.revokeSession({ token });
+        if (error) {
+          throw new Error(error.message || "Failed to revoke session");
+        }
+
+        await fetchSessions();
+
+        return { success: true };
+      } catch (err) {
+        console.error("Error revoking session:", err);
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        };
+      }
+    },
+    [fetchSessions]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -116,5 +141,6 @@ export function useSessions() {
     error,
     refetch: fetchSessions,
     revokeAllSessions,
+    revokeSession,
   };
 }

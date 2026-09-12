@@ -1,304 +1,200 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { Check, Copy, Link as LinkIcon, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format } from "date-fns";
-import { Copy, Check, AlertTriangle, Link as LinkIcon } from "lucide-react";
-import { useCalendarTokens } from "@/hooks/useCalendarTokens";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Field, InfoNote, OptionCards, inputClass } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
+import type {
+  CreatedAccessLink,
+  LinkPermission,
+  LinkValidity,
+  useAccessLinkForm,
+} from "@/hooks/useAccessLinkForm";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { getDateLocale } from "@/lib/locales";
-import { useLocale } from "next-intl";
+import { cn } from "@/lib/utils";
 
-interface CalendarTokenCreateDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  calendarId: string;
-  onSuccess?: () => void;
+type AccessLinkForm = ReturnType<typeof useAccessLinkForm>;
+
+function useValidityLabel() {
+  const t = useTranslations();
+  return (validity: LinkValidity) =>
+    validity === "1"
+      ? t("token.expiration1Day")
+      : validity === "7"
+        ? t("token.expiration7Days")
+        : validity === "30"
+          ? t("token.expiration30Days")
+          : t("sharingSheet.validityUnlimited");
 }
 
-export function CalendarTokenCreateDialog({
-  open,
-  onOpenChange,
-  calendarId,
-  onSuccess,
-}: CalendarTokenCreateDialogProps) {
+function usePermissionLabel() {
+  const t = useTranslations();
+  return (permission: LinkPermission) =>
+    permission === "read" ? t("sharingSheet.permRead") : t("sharingSheet.permWrite");
+}
+
+/** Fields of the "Neuen Link erzeugen" block; submit lives in the owning panel's footer. */
+export function AccessLinkCreateForm({ form }: { form: AccessLinkForm }) {
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
-  const { createToken, getShareLink } = useCalendarTokens(calendarId);
+  const validityLabel = useValidityLabel();
 
-  const [step, setStep] = useState<"config" | "success">("config");
-  const [name, setName] = useState("");
-  const [permission, setPermission] = useState<"read" | "write">("read");
-  const [expiresAt, setExpiresAt] = useState<Date | undefined>(undefined);
-  const [isCreating, setIsCreating] = useState(false);
-  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
-  const [shareLink, setShareLink] = useState<string | null>(null);
+  return (
+    <section className="flex flex-col gap-3.5">
+      <h3 className="text-[14px] font-semibold text-fg-strong">
+        {t("sharingSheet.newLink")}
+      </h3>
+
+      <Field
+        htmlFor="access-link-name"
+        label={
+          <>
+            {t("sharingSheet.linkName")}{" "}
+            <span className="font-normal text-fg-tertiary">
+              {t("sharingSheet.linkNameHint")}
+            </span>
+          </>
+        }
+      >
+        <Input
+          id="access-link-name"
+          value={form.name}
+          onChange={(e) => form.setName(e.target.value)}
+          placeholder={t("sharingSheet.linkNamePlaceholder")}
+          maxLength={50}
+          className={inputClass}
+        />
+      </Field>
+
+      <Field label={t("common.labels.permission")}>
+        <OptionCards<LinkPermission>
+          label={t("common.labels.permission")}
+          value={form.permission}
+          onChange={form.setPermission}
+          options={[
+            {
+              value: "read",
+              title: t("sharingSheet.permRead"),
+              description: t("sharingSheet.permReadDesc"),
+            },
+            {
+              value: "write",
+              title: t("sharingSheet.permWrite"),
+              description: t("sharingSheet.permWriteDesc"),
+            },
+          ]}
+        />
+      </Field>
+
+      <Field label={t("sharingSheet.validity")}>
+        <OptionCards<LinkValidity>
+          label={t("sharingSheet.validity")}
+          columns={4}
+          value={form.validity}
+          onChange={form.setValidity}
+          options={(["1", "7", "30", "never"] as const).map((value) => ({
+            value,
+            title: validityLabel(value),
+          }))}
+        />
+        <p className="font-mono text-[12px] text-fg-tertiary">
+          {form.expiresAt
+            ? t("sharingSheet.expiresOn", {
+                date: format(form.expiresAt, "PPP", { locale: getDateLocale(locale) }),
+              })
+            : t("sharingSheet.validUntilRevoked")}
+        </p>
+      </Field>
+    </section>
+  );
+}
+
+/** Header block of the result view (9b), shown inside the panel body. */
+export function AccessLinkCreatedHeader({ created }: { created: CreatedAccessLink }) {
+  const t = useTranslations();
+  const validityLabel = useValidityLabel();
+  const permissionLabel = usePermissionLabel();
+
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+        <Check className="size-[17px]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-[17px] font-semibold leading-tight tracking-[-0.01em] text-fg-strong">
+          {t("sharingSheet.linkReady")}
+        </h3>
+        <p className="mt-1 truncate text-[13px] text-fg-secondary">
+          {[
+            created.name || t("token.unnamed"),
+            permissionLabel(created.permission),
+            validityLabel(created.validity),
+          ].join(" · ")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** The one-time view of a freshly created token. */
+export function AccessLinkCreated({ created }: { created: CreatedAccessLink }) {
+  const t = useTranslations();
+  const { allowGuest } = useAuthFeatures();
+  const linkInput = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
 
-  // Helper function to check if a preset button should be highlighted
-  const isPresetActive = (days: number): boolean => {
-    if (!expiresAt) return false;
-    const now = new Date();
-    const targetDate = new Date(now.getTime() + days * 86400000);
-    return Math.abs(expiresAt.getTime() - targetDate.getTime()) < 3600000;
-  };
-
-  const handleCreate = async () => {
-    setIsCreating(true);
-
-    const token = await createToken({
-      name: name.trim() || undefined,
-      permission,
-      expiresAt: expiresAt?.toISOString() || null,
-    });
-
-    setIsCreating(false);
-
-    if (token && token.token) {
-      setGeneratedToken(token.token);
-      setShareLink(getShareLink(token.token));
-      setStep("success");
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (!shareLink) return;
-
+  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareLink);
+      await navigator.clipboard.writeText(created.link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy:", error);
-    }
-  };
-
-  const handleClose = () => {
-    // Call onSuccess when closing after successful creation
-    if (step === "success") {
-      onSuccess?.();
-    }
-
-    // Reset state
-    setStep("config");
-    setName("");
-    setPermission("read");
-    setExpiresAt(undefined);
-    setGeneratedToken(null);
-    setShareLink(null);
-    setCopied(false);
-    onOpenChange(false);
-  };
-
-  const handleExpirationPreset = (days: number | null) => {
-    if (days === null) {
-      setExpiresAt(undefined);
-    } else {
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      setExpiresAt(date);
+    } catch {
+      // Clipboard API needs a secure context; leave the link selected for manual copying.
+      linkInput.current?.select();
+      toast.error(t("common.copyError", { item: t("sharingSheet.shareLinkLabel") }));
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        {step === "config" && (
-          <>
-            <DialogHeader>
-              <DialogTitle>{t("token.createLink")}</DialogTitle>
-              <DialogDescription>
-                {t("token.createLinkDescription")}
-              </DialogDescription>
-            </DialogHeader>
+    <div className="flex flex-col gap-3.5">
+      <AccessLinkCreatedHeader created={created} />
 
-            <div className="space-y-4 py-4">
-              {/* Name (Optional) */}
-              <div className="space-y-2">
-                <Label htmlFor="token-name">
-                  {t("common.labels.name")} {t("common.optional")}
-                </Label>
-                <Input
-                  id="token-name"
-                  placeholder={t("token.namePlaceholder")}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={50}
-                />
-              </div>
+      <StatusBanner tone="warning" icon={TriangleAlert} title={t("sharingSheet.copyNowTitle")}>
+        {t("sharingSheet.copyNowBody")}
+      </StatusBanner>
 
-              {/* Permission */}
-              <div className="space-y-2">
-                <Label htmlFor="token-permission">
-                  {t("common.labels.permission")}
-                </Label>
-                <Select
-                  value={permission}
-                  onValueChange={(value: "read" | "write") =>
-                    setPermission(value)
-                  }
-                >
-                  <SelectTrigger id="token-permission">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="read">
-                      {t("common.labels.permissions.read")} -{" "}
-                      {t("token.readOnlyDescription")}
-                    </SelectItem>
-                    <SelectItem value="write">
-                      {t("common.labels.permissions.write")} -{" "}
-                      {t("token.editDescription")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <Field label={t("sharingSheet.shareLinkLabel")} htmlFor="access-link-url">
+        <div className="flex gap-2">
+          <Input
+            id="access-link-url"
+            ref={linkInput}
+            value={created.link}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
+            className={cn(inputClass, "min-w-0 flex-1 font-mono text-[12.5px] text-fg-strong md:text-[12.5px]")}
+          />
+          <Button type="button" onClick={handleCopy} className="h-10 shrink-0 gap-1.5 px-3.5 font-semibold">
+            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+            {copied ? t("sharingSheet.copied") : t("common.copy")}
+          </Button>
+        </div>
+      </Field>
 
-              {/* Expiration */}
-              <div className="space-y-2">
-                <Label>{t("token.expiration")}</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={isPresetActive(1) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleExpirationPreset(1)}
-                  >
-                    {t("token.expiration1Day")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={isPresetActive(7) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleExpirationPreset(7)}
-                  >
-                    {t("token.expiration7Days")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={isPresetActive(30) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleExpirationPreset(30)}
-                  >
-                    {t("token.expiration30Days")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={!expiresAt ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleExpirationPreset(null)}
-                  >
-                    {t("token.expirationNever")}
-                  </Button>
-                </div>
-                {expiresAt && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {t("token.expiresOn")}:{" "}
-                    {format(expiresAt, "PPP", { locale: dateLocale })}
-                  </p>
-                )}
-              </div>
-            </div>
+      <Field label={t("token.token")}>
+        <div className="select-all break-all rounded-[9px] border border-line bg-surface-panel px-3 py-[11px] font-mono text-[12px] leading-relaxed text-fg-body">
+          {created.token}
+        </div>
+      </Field>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                {t("common.cancel")}
-              </Button>
-              <Button onClick={handleCreate} disabled={isCreating}>
-                {isCreating ? t("common.adding") : t("token.generate")}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {step === "success" && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-green-500" />
-                {t("token.linkCreated")}
-              </DialogTitle>
-              <DialogDescription>
-                {t("token.linkCreatedDescription")}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              {/* Warning */}
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{t("token.saveWarning")}</AlertDescription>
-              </Alert>
-
-              {/* Share Link */}
-              <div className="space-y-2">
-                <Label>{t("token.shareLink")}</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={shareLink || ""}
-                    readOnly
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={handleCopyLink}
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Token Preview */}
-              {generatedToken && (
-                <div className="space-y-2">
-                  <Label>{t("token.tokenValue")}</Label>
-                  <div className="p-3 bg-muted rounded-md font-mono text-xs break-all">
-                    {generatedToken}
-                  </div>
-                </div>
-              )}
-
-              {/* Info */}
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div className="flex items-start gap-2">
-                  <LinkIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{t("token.shareInfo")}</span>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button onClick={handleClose} className="w-full">
-                {t("common.close")}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+      <InfoNote icon={LinkIcon}>
+        {allowGuest ? t("sharingSheet.linkInfoGuestsOn") : t("sharingSheet.linkInfoGuestsOff")}
+      </InfoNote>
+    </div>
   );
 }

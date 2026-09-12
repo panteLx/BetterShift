@@ -1,18 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Search, Filter, AlertCircle, Send, Trash2, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
+import { SegmentedControl } from "@/components/segmented-control";
+import { StatusBanner } from "@/components/status-banner";
+import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
+import { FilterMenuButton, type SortState } from "@/components/admin/admin-table-controls";
 import { CalendarTable } from "@/components/admin/calendar-table";
 import { CalendarDetailsSheet } from "@/components/admin/calendar-details-sheet";
 import { CalendarEditSheet } from "@/components/admin/calendar-edit-sheet";
@@ -20,52 +24,60 @@ import { CalendarTransferSheet } from "@/components/admin/calendar-transfer-shee
 import { CalendarDeleteDialog } from "@/components/admin/calendar-delete-dialog";
 import { CalendarBulkDeleteDialog } from "@/components/admin/calendar-bulk-delete-dialog";
 import {
+  useAdminCalendarActions,
   useAdminCalendars,
   type AdminCalendar,
-  type CalendarFilters,
-  type CalendarSort,
 } from "@/hooks/useAdminCalendars";
-import { useAdminLevel } from "@/hooks/useAdminAccess";
+import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
+import {
+  ADMIN_PAGE_SIZE,
+  type CalendarContentFilter,
+  type CalendarListParams,
+  type CalendarOwnerFilter,
+  type CalendarSortField,
+} from "@/lib/admin-list";
+
+const NO_SELECTION: string[] = [];
 
 export default function AdminCalendarsPage() {
   const t = useTranslations();
-  const adminLevel = useAdminLevel();
-  const isSuperAdmin = adminLevel === "superadmin";
 
-  // Filters & Sort
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "orphaned" | "with-owner"
-  >("all");
-  const sortField = "createdAt" as const;
-  const sortDirection = "desc" as const;
+  const search = useDebouncedSearch();
+  const [contentFilter, setContentFilter] = useState<CalendarContentFilter>("all");
+  const [ownerFilter, setOwnerFilter] = useState<CalendarOwnerFilter>("all");
+  const [sort, setSort] = useState<SortState<CalendarSortField>>({ column: "createdAt", direction: "desc" });
 
-  // Build filters and sort
-  const filters: CalendarFilters = {
-    search: searchQuery || undefined,
-    status: statusFilter,
-  };
+  // Any change to search, filters or sort starts over on the first page
+  const listKey = [search.query, contentFilter, ownerFilter, sort.column, sort.direction].join("|");
+  const [requestedPage, setPage] = useResettableState(listKey, 1);
 
-  const sort: CalendarSort = {
-    field: sortField,
-    direction: sortDirection,
-  };
+  const params = useMemo<CalendarListParams>(
+    () => ({
+      search: search.query,
+      content: contentFilter,
+      owner: ownerFilter,
+      sort: sort.column,
+      order: sort.direction,
+      page: requestedPage,
+      limit: ADMIN_PAGE_SIZE,
+    }),
+    [search.query, contentFilter, ownerFilter, sort, requestedPage]
+  );
 
-  // Use hook with filters
-  const {
-    calendars,
-    orphanedCount,
-    isLoading,
-    deleteCalendar,
-    bulkDeleteCalendars,
-  } = useAdminCalendars(filters, sort);
+  const { calendars, total, counts, page, isLoading, isPlaceholderData } = useAdminCalendars(params);
+  const { deleteCalendar, bulkDeleteCalendars } = useAdminCalendarActions();
+  const orphanedCount = counts?.orphaned ?? 0;
 
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Selection is per page: it clears when the page, search, filters or sort change
+  const [selection, setSelection] = useResettableState(`${listKey}|${page}`, NO_SELECTION);
+  const selectedIds = useMemo(
+    () => selection.filter((id) => calendars.some((cal) => cal.id === id)),
+    [selection, calendars]
+  );
+  const selectedCalendars = calendars.filter((cal) => selectedIds.includes(cal.id));
 
   // Dialogs & Sheets
-  const [selectedCalendar, setSelectedCalendar] =
-    useState<AdminCalendar | null>(null);
+  const [selectedCalendar, setSelectedCalendar] = useState<AdminCalendar | null>(null);
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
   const [showEditSheet, setShowEditSheet] = useState(false);
   const [showTransferSheet, setShowTransferSheet] = useState(false);
@@ -74,56 +86,31 @@ export default function AdminCalendarsPage() {
 
   // Bulk operations
   const [showBulkTransferSheet, setShowBulkTransferSheet] = useState(false);
-  const [calendarsForBulkTransfer, setCalendarsForBulkTransfer] = useState<
-    AdminCalendar[]
-  >([]);
+  const [calendarsForBulkTransfer, setCalendarsForBulkTransfer] = useState<AdminCalendar[]>([]);
 
-  // Selection handlers
   const handleToggleSelect = (calendarId: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(calendarId)
-        ? prev.filter((id) => id !== calendarId)
-        : [...prev, calendarId]
+    setSelection((prev) =>
+      prev.includes(calendarId) ? prev.filter((id) => id !== calendarId) : [...prev, calendarId]
     );
   };
 
+  const isAllSelected = calendars.length > 0 && selectedIds.length === calendars.length;
+
   const handleToggleSelectAll = () => {
-    if (selectedIds.length === calendars.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(calendars.map((cal) => cal.id));
-    }
+    setSelection(isAllSelected ? [] : calendars.map((cal) => cal.id));
   };
 
-  const handleClearSelection = () => {
-    setSelectedIds([]);
-  };
-
-  // Handlers
-  const handleCalendarClick = (calendar: AdminCalendar) => {
+  const openFor = (setter: (open: boolean) => void) => (calendar: AdminCalendar) => {
     setSelectedCalendar(calendar);
-    setShowDetailsSheet(true);
+    setter(true);
   };
 
-  const handleEditCalendar = (calendar: AdminCalendar) => {
-    setSelectedCalendar(calendar);
-    setShowEditSheet(true);
-  };
-
-  const handleTransferCalendar = (calendar: AdminCalendar) => {
-    setSelectedCalendar(calendar);
-    setShowTransferSheet(true);
-  };
-
-  const handleDeleteCalendar = (calendar: AdminCalendar) => {
-    setSelectedCalendar(calendar);
-    setShowDeleteDialog(true);
+  const fromDetails = (setter: (open: boolean) => void) => () => {
+    setShowDetailsSheet(false);
+    setter(true);
   };
 
   const handleBulkTransfer = () => {
-    const selectedCalendars = calendars.filter((cal) =>
-      selectedIds.includes(cal.id)
-    );
     setCalendarsForBulkTransfer(selectedCalendars);
     setShowBulkTransferSheet(true);
   };
@@ -135,17 +122,12 @@ export default function AdminCalendarsPage() {
 
   const handleBulkDeleteConfirm = async () => {
     if (selectedIds.length === 0) return;
-
-    const success = await bulkDeleteCalendars(selectedIds);
-    if (success) {
-      setSelectedIds([]);
-    }
+    if (await bulkDeleteCalendars(selectedIds)) setSelection([]);
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedCalendar) return;
-    const success = await deleteCalendar(selectedCalendar.id);
-    if (success) {
+    if (await deleteCalendar(selectedCalendar.id)) {
       setShowDeleteDialog(false);
       setSelectedCalendar(null);
     }
@@ -157,228 +139,166 @@ export default function AdminCalendarsPage() {
     setShowBulkTransferSheet(false);
     setSelectedCalendar(null);
     setCalendarsForBulkTransfer([]);
-    setSelectedIds([]);
+    setSelection([]);
   };
 
-  const handleEditFromDetails = () => {
-    setShowDetailsSheet(false);
-    setShowEditSheet(true);
-  };
+  const showOrphanedBanner = orphanedCount > 0 && ownerFilter !== "with-owner";
 
-  const handleTransferFromDetails = () => {
-    setShowDetailsSheet(false);
-    setShowTransferSheet(true);
-  };
-
-  const handleDeleteFromDetails = () => {
-    setShowDetailsSheet(false);
-    setShowDeleteDialog(true);
-  };
-
-  const isAllSelected =
-    calendars.length > 0 && selectedIds.length === calendars.length;
-  const hasOrphanedCalendars = orphanedCount > 0;
-  const showOrphanedBanner =
-    hasOrphanedCalendars && statusFilter !== "with-owner";
-
-  if (isLoading && calendars.length === 0) {
+  if (isLoading && !counts) {
     return <FullscreenLoader />;
   }
 
   return (
     <>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">
-              {t("admin.calendars.title")}
-            </h2>
-            <p className="text-muted-foreground mt-2">
-              {t("admin.calendars.description")}
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-col gap-4">
+        <AdminPageHeader
+          title={t("admin.calendarsMenu")}
+          subtitle={
+            counts
+              ? t("adminCalendars.subtitle", { count: counts.total, shifts: counts.shifts })
+              : undefined
+          }
+        />
 
-        {/* Orphaned Calendars Warning Banner */}
         {showOrphanedBanner && (
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                {t("admin.calendars.orphanedWarning", { count: orphanedCount })}
-              </p>
-              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                {t("admin.calendars.orphanedWarningDescription")}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t("admin.calendars.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select
-            value={statusFilter}
-            onValueChange={(value: "all" | "orphaned" | "with-owner") =>
-              setStatusFilter(value)
+          <StatusBanner
+            tone="warning"
+            icon={TriangleAlert}
+            title={t("admin.calendars.orphanedWarning", { count: orphanedCount })}
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-[8px] font-semibold"
+                onClick={() => setOwnerFilter(ownerFilter === "orphaned" ? "all" : "orphaned")}
+              >
+                {ownerFilter === "orphaned" ? t("common.viewAll") : t("adminCalendars.showOrphaned")}
+              </Button>
             }
           >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {t("admin.calendars.allStatuses")}
-              </SelectItem>
-              <SelectItem value="orphaned">
-                {t("admin.calendars.orphanedOnly")}
-              </SelectItem>
-              <SelectItem value="with-owner">
-                {t("admin.calendars.withOwner")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Results Count */}
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <p>
-            {t("admin.calendars.calendarsCount", { count: calendars.length })}
-          </p>
-        </div>
-
-        {/* Bulk Actions Toolbar */}
-        {selectedIds.length > 0 && (
-          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">
-                {t("admin.calendars.selectedCount", {
-                  count: selectedIds.length,
-                })}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleBulkTransfer}>
-                <Send className="h-4 w-4 mr-2" />
-                {t("admin.calendars.transferSelected")}
-              </Button>
-              {isSuperAdmin && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {t("common.deleteSelected")}
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" onClick={handleClearSelection}>
-                <X className="h-4 w-4 mr-2" />
-                {t("admin.calendars.clearSelection")}
-              </Button>
-            </div>
-          </div>
+            {t("admin.calendars.orphanedWarningDescription")}
+          </StatusBanner>
         )}
 
-        {/* Calendar Table */}
-        {calendars.length === 0 ? (
-          <div className="text-center py-12 border border-dashed rounded-lg">
-            <p className="text-muted-foreground">
-              {searchQuery
-                ? t("admin.calendars.noSearchResults")
-                : t("admin.calendars.noCalendarsFound")}
-            </p>
-          </div>
-        ) : (
-          <CalendarTable
-            calendars={calendars}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onToggleSelectAll={handleToggleSelectAll}
-            isAllSelected={isAllSelected}
-            onCalendarClick={handleCalendarClick}
-            onEditCalendar={handleEditCalendar}
-            onTransferCalendar={handleTransferCalendar}
-            onDeleteCalendar={handleDeleteCalendar}
+        <div className="flex items-center gap-[9px] max-lg:flex-wrap">
+          <AdminSearch
+            value={search.input}
+            onChange={search.setInput}
+            placeholder={t("admin.calendars.searchPlaceholder")}
+            className="lg:w-[340px]"
           />
-        )}
+          <SegmentedControl
+            value={contentFilter}
+            onChange={setContentFilter}
+            label={t("adminCalendars.filterLabel")}
+            className="min-w-0 flex-1 lg:flex-none lg:[&>button]:flex-none lg:[&>button]:px-[13px]"
+            options={[
+              { value: "all", label: t("adminUsers.all") },
+              { value: "shared", label: t("adminCalendars.filterShared") },
+              { value: "synced", label: t("adminCalendars.filterSynced") },
+            ]}
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <FilterMenuButton
+                label={t("adminUsers.moreFilters")}
+                active={ownerFilter !== "all"}
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              <DropdownMenuLabel>{t("admin.calendars.owner")}</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={ownerFilter}
+                onValueChange={(value) => setOwnerFilter(value as CalendarOwnerFilter)}
+              >
+                <DropdownMenuRadioItem value="all">
+                  {t("admin.calendars.allStatuses")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="orphaned">
+                  {t("admin.calendars.orphanedOnly")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="with-owner">
+                  {t("admin.calendars.withOwner")}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        {/* Calendar Details Sheet */}
-        {selectedCalendar && (
+        <CalendarTable
+          calendars={calendars}
+          total={total}
+          page={page}
+          pageSize={ADMIN_PAGE_SIZE}
+          onPageChange={setPage}
+          sort={sort}
+          onSortChange={setSort}
+          isStale={isPlaceholderData}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
+          isAllSelected={isAllSelected}
+          onCalendarClick={openFor(setShowDetailsSheet)}
+          onEditCalendar={openFor(setShowEditSheet)}
+          onTransferCalendar={openFor(setShowTransferSheet)}
+          onDeleteCalendar={openFor(setShowDeleteDialog)}
+          onBulkTransfer={handleBulkTransfer}
+          onBulkDelete={handleBulkDelete}
+          onClearSelection={() => setSelection([])}
+          emptyMessage={search.query ? t("admin.calendars.noSearchResults") : undefined}
+        />
+      </div>
+
+      {selectedCalendar && (
+        <>
           <CalendarDetailsSheet
+            key={`details-${selectedCalendar.id}`}
             open={showDetailsSheet}
             onOpenChange={setShowDetailsSheet}
             calendarId={selectedCalendar.id}
-            onEdit={handleEditFromDetails}
-            onTransfer={handleTransferFromDetails}
-            onDelete={handleDeleteFromDetails}
+            onEdit={fromDetails(setShowEditSheet)}
+            onTransfer={fromDetails(setShowTransferSheet)}
+            onDelete={fromDetails(setShowDeleteDialog)}
           />
-        )}
-
-        {/* Calendar Edit Sheet */}
-        {selectedCalendar && (
           <CalendarEditSheet
+            key={`edit-${selectedCalendar.id}`}
             open={showEditSheet}
             onOpenChange={setShowEditSheet}
             calendar={selectedCalendar}
             onSuccess={handleSuccess}
           />
-        )}
-
-        {/* Calendar Transfer Sheet (Single) */}
-        {selectedCalendar && (
           <CalendarTransferSheet
             open={showTransferSheet}
             onOpenChange={setShowTransferSheet}
             calendars={[selectedCalendar]}
             onSuccess={handleSuccess}
           />
-        )}
-
-        {/* Calendar Transfer Sheet (Bulk) */}
-        {calendarsForBulkTransfer.length > 0 && (
-          <CalendarTransferSheet
-            open={showBulkTransferSheet}
-            onOpenChange={setShowBulkTransferSheet}
-            calendars={calendarsForBulkTransfer}
-            onSuccess={handleSuccess}
-          />
-        )}
-
-        {/* Calendar Delete Dialog */}
-        {selectedCalendar && (
           <CalendarDeleteDialog
             open={showDeleteDialog}
             onOpenChange={setShowDeleteDialog}
             calendar={selectedCalendar}
             onConfirm={handleDeleteConfirm}
           />
-        )}
+        </>
+      )}
 
-        {/* Calendar Bulk Delete Dialog */}
-        {selectedIds.length > 0 && (
-          <CalendarBulkDeleteDialog
-            open={showBulkDeleteDialog}
-            onOpenChange={setShowBulkDeleteDialog}
-            calendars={calendars.filter((cal) => selectedIds.includes(cal.id))}
-            onConfirm={handleBulkDeleteConfirm}
-          />
-        )}
-      </div>
+      {calendarsForBulkTransfer.length > 0 && (
+        <CalendarTransferSheet
+          open={showBulkTransferSheet}
+          onOpenChange={setShowBulkTransferSheet}
+          calendars={calendarsForBulkTransfer}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {selectedIds.length > 0 && (
+        <CalendarBulkDeleteDialog
+          open={showBulkDeleteDialog}
+          onOpenChange={setShowBulkDeleteDialog}
+          calendars={selectedCalendars}
+          onConfirm={handleBulkDeleteConfirm}
+        />
+      )}
     </>
   );
 }

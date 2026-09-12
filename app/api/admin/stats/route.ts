@@ -8,9 +8,20 @@ import {
   shifts,
   auditLogs,
 } from "@/lib/db/schema";
-import { sql, eq, and, gte, isNull } from "drizzle-orm";
+import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { requireAdmin } from "@/lib/auth/admin";
+import { isAdmin } from "@/lib/auth/admin";
+
+const RECENT_LOG_LIMIT = 5;
+
+function parseMetadata(value: string | null): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
 
 /**
  * Admin System Statistics API
@@ -42,7 +53,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    requireAdmin(currentUser);
+    if (!isAdmin(currentUser)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
 
     // Calculate date for "recent activity" (last 7 days)
     const sevenDaysAgo = new Date();
@@ -77,25 +93,17 @@ export async function GET(request: NextRequest) {
       usersByRole.total += count;
     });
 
-    // 2. Total calendars (exclude orphaned)
-    const [totalCalendarsResult] = await db
+    // 2./3. Calendars with an owner row vs. orphaned (owner_id null or dangling)
+    const [calendarCounts] = await db
       .select({
-        count: sql<number>`COUNT(*)`,
+        total: count(),
+        orphaned: sql<number>`coalesce(sum(${user.id} is null), 0)`,
       })
       .from(calendars)
-      .where(sql`${calendars.ownerId} IS NOT NULL`);
+      .leftJoin(user, eq(calendars.ownerId, user.id));
 
-    const totalCalendars = Number(totalCalendarsResult?.count || 0);
-
-    // 3. Orphaned calendars (ownerId = NULL)
-    const [orphanedCalendarsResult] = await db
-      .select({
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(calendars)
-      .where(isNull(calendars.ownerId));
-
-    const orphanedCalendars = Number(orphanedCalendarsResult?.count || 0);
+    const orphanedCalendars = Number(calendarCounts?.orphaned || 0);
+    const totalCalendars = Number(calendarCounts?.total || 0) - orphanedCalendars;
 
     // 4. Active shares count (user shares)
     const [activeSharesResult] = await db
@@ -125,17 +133,20 @@ export async function GET(request: NextRequest) {
 
     const totalShifts = Number(totalShiftsResult?.count || 0);
 
-    // 6. Recent activity count (last 7 days)
-    const [recentActivityResult] = await db
+    // 6./7./8. One pass over the fastest-growing table: all entries, the dashboard
+    // feed's subset and the last seven days — this endpoint is polled every few seconds.
+    const feedScope = sql`(${auditLogs.action} LIKE 'admin.%' OR ${auditLogs.action} LIKE 'security.%')`;
+
+    const [logCounts] = await db
       .select({
-        count: sql<number>`COUNT(*)`,
+        total: count(),
+        feed: sql<number>`coalesce(sum(${feedScope}), 0)`,
+        recent: sql<number>`coalesce(sum(${gte(auditLogs.timestamp, sevenDaysAgo)}), 0)`,
       })
-      .from(auditLogs)
-      .where(and(gte(auditLogs.timestamp, sevenDaysAgo)));
+      .from(auditLogs);
 
-    const recentActivity = Number(recentActivityResult?.count || 0);
+    const recentActivity = Number(logCounts?.recent || 0);
 
-    // 7. Recent audit logs preview (last 5 entries, admin-only logs + security events)
     const recentLogs = await db
       .select({
         id: auditLogs.id,
@@ -143,15 +154,15 @@ export async function GET(request: NextRequest) {
         resourceType: auditLogs.resourceType,
         resourceId: auditLogs.resourceId,
         userId: auditLogs.userId,
+        metadata: auditLogs.metadata,
         severity: auditLogs.severity,
         timestamp: auditLogs.timestamp,
       })
       .from(auditLogs)
-      .where(
-        sql`(${auditLogs.action} LIKE 'admin.%' OR ${auditLogs.action} LIKE 'security.%')` // Admin actions + security events (rate limits, etc.) - both user-visible and admin-only
-      )
-      .orderBy(sql`${auditLogs.timestamp} DESC`)
-      .limit(5);
+      .where(feedScope)
+      // Timestamps have second precision; rowid keeps same-second entries in insert order
+      .orderBy(desc(auditLogs.timestamp), desc(sql`rowid`))
+      .limit(RECENT_LOG_LIMIT);
 
     const stats = {
       users: usersByRole,
@@ -169,24 +180,19 @@ export async function GET(request: NextRequest) {
       },
       activity: {
         recent: recentActivity,
-        logs: recentLogs,
+        total: Number(logCounts?.feed || 0),
+        logs: recentLogs.map((log) => ({
+          ...log,
+          metadata: parseMetadata(log.metadata),
+        })),
+      },
+      auditLogs: {
+        total: Number(logCounts?.total || 0),
       },
     };
 
     return NextResponse.json(stats, { status: 200 });
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "status" in error &&
-      error.status === 403
-    ) {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
-    }
-
     console.error("Failed to fetch admin stats:", error);
     return NextResponse.json(
       { error: "Failed to fetch statistics" },

@@ -3,18 +3,17 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { parseLocalDate } from "@/lib/date-utils";
+import { parseLocalDate, toLocalDate } from "@/lib/date-utils";
 import { queryKeys } from "@/lib/query-keys";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
+import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 
 // Helper to convert API response timestamps to Date objects
 export function normalizeShift(
   shift: Record<string, unknown>
 ): ShiftWithCalendar {
-  const dateValue = shift.date as string | number | Date;
-  const parsedDate =
-    typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-      ? parseLocalDate(dateValue)
-      : new Date(dateValue);
+  const parsedDate = toLocalDate(shift.date as string | number | Date);
 
   return {
     ...(shift as Omit<ShiftWithCalendar, "date" | "createdAt" | "updatedAt">),
@@ -32,7 +31,7 @@ async function fetchShiftsApi(
   const response = await fetch(`/api/shifts?${params}`);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch shifts: ${response.statusText}`);
+    throw new ApiError(`Failed to fetch shifts: ${response.statusText}`, response.status);
   }
 
   const data = await response.json();
@@ -111,6 +110,8 @@ export function useShifts(calendarId: string | undefined) {
   const t = useTranslations();
   const queryClient = useQueryClient();
 
+  const accessible = useIsCalendarAccessible(calendarId);
+
   // Data fetching with React Query
   const {
     data: shifts = [],
@@ -119,7 +120,8 @@ export function useShifts(calendarId: string | undefined) {
   } = useQuery({
     queryKey: queryKeys.shifts.byCalendar(calendarId!),
     queryFn: () => fetchShiftsApi(calendarId!),
-    enabled: !!calendarId,
+    enabled: accessible,
+    refetchInterval: LIVE_REFETCH_INTERVAL,
   });
 
   // Create mutation with optimistic update

@@ -4,6 +4,7 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { usePresets } from "@/hooks/usePresets";
+import { DEFAULT_COLOR } from "@/lib/constants";
 
 interface UseShiftFormOptions {
   open: boolean;
@@ -29,7 +30,7 @@ export function useShiftForm({
     endTime: shift?.endTime || "17:00",
     title: shift?.title || "",
     notes: shift?.notes || "",
-    color: shift?.color || "#3b82f6",
+    color: shift?.color || DEFAULT_COLOR,
     isAllDay: false,
   });
 
@@ -45,7 +46,7 @@ export function useShiftForm({
       title: presetName,
       startTime: shiftData.startTime,
       endTime: shiftData.endTime,
-      color: shiftData.color || "#3b82f6",
+      color: shiftData.color || DEFAULT_COLOR,
       notes: shiftData.notes || "",
       isAllDay: shiftData.isAllDay || false,
       isSecondary: false,
@@ -67,6 +68,19 @@ export function useShiftForm({
     });
   };
 
+  /** Drops the values a preset filled in, keeping the date. */
+  const clearPreset = () => {
+    setFormData({
+      ...formData,
+      startTime: "09:00",
+      endTime: "17:00",
+      title: "",
+      notes: "",
+      color: DEFAULT_COLOR,
+      isAllDay: false,
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       date: selectedDate
@@ -76,7 +90,7 @@ export function useShiftForm({
       endTime: "17:00",
       title: "",
       notes: "",
-      color: "#3b82f6",
+      color: DEFAULT_COLOR,
       isAllDay: false,
     });
     setPresetName("");
@@ -103,7 +117,7 @@ export function useShiftForm({
         endTime: shift?.endTime || "17:00",
         title: shift?.title || "",
         notes: shift?.notes || "",
-        color: shift?.color || "#3b82f6",
+        color: shift?.color || DEFAULT_COLOR,
         isAllDay: shift?.isAllDay || false,
       };
 
@@ -135,6 +149,7 @@ export function useShiftForm({
     presetName,
     setPresetName,
     applyPreset,
+    clearPreset,
     saveAsPresetHandler,
     resetForm,
   };

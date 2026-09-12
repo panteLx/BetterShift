@@ -26,6 +26,10 @@ There is no unit-test framework here — "tests" means the lint/build/i18n pipel
 
 `npm run release:patch|minor|major` bumps the version and pushes the tag; the release workflow builds the image from it.
 
+## Workflow
+
+Commits follow Conventional Commits (`type(scope): summary`, e.g. `feat(ui):`, `fix(auth):`, `chore:`, `perf:`; `!` before the colon for breaking changes). `scripts/changelog.sh`, called from `.github/workflows/release.yml`, builds the release changelog straight from `git log --pretty=%s --no-merges` between tags — grouped by that prefix, with `refactor|ci|style|test|build` dropped as internal-only. It reads commit subjects, not the PR title or body, so **multi-commit PRs must merge via "Rebase and merge", not Squash** — squashing collapses every commit into one line under the merge commit's message and the per-commit changelog entries are lost. A single-commit PR can go either way since there's nothing to collapse.
+
 ## Architecture
 
 ### Request flow
@@ -50,7 +54,7 @@ Anything added here affects every request, so weigh cost and check the exempt li
 
 The product is essentially one client page. `app/page.tsx` pulls data hooks (`useCalendars`, `useShifts`, `usePresets`, `useNotes`, `useExternalSync`), pairs them with action hooks (`useShiftActions`, `useNoteActions`) and dialog state (`useDialogStates`), and renders every sheet and dialog through `components/dialog-manager.tsx` — add new dialogs there rather than inline. Real routes exist only for `/login`, `/register`, `/profile`, `/admin/*` and `/system-unavailable`.
 
-Purely visual preferences (shifts shown per day, note visibility, full titles) live in `localStorage` via `hooks/useViewSettings.ts`, never in the database.
+View preferences (shifts per day, sorting, note visibility, day highlighting) come from `hooks/useViewSettings.ts` and exist on two levels. The personal view is stored per account in `userPreferences` via `/api/user/view-settings`; guests and `AUTH_ENABLED=false` keep it in `localStorage`, and a signed-in account without a stored view gets the device's values once. A calendar can pin its own view in `calendars.viewSettings` (`null` = off), which replaces the personal view as a whole for everyone with access; the stamp-bar toggle always stays personal, and compare mode always uses the personal view. `lib/view-settings.ts` holds the types, defaults and the sanitiser shared by routes and client.
 
 ### Calendar access model
 
@@ -100,7 +104,7 @@ UI strings and log output are product text in the project's locales; code commen
 
 ## Reference
 
-`docs/AUTH_SETUP.md`, `docs/PERMISSIONS.md`, `docs/ADMIN_PANEL.md`, `docs/MIGRATION_AUTH_TOGGLE.md`; `.env.example` documents every environment variable with its default.
+`docs/AUTH_SETUP.md`, `docs/PERMISSIONS.md`, `docs/ADMIN_PANEL.md`, `docs/ENABLING_AUTH.md`, `docs/UPGRADING.md`; `.env.example` documents every environment variable with its default.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

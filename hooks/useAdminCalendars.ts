@@ -1,10 +1,28 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import {
+  AdminRequestError,
+  toSearchParams,
+  type AdminListResponse,
+  type CalendarListCounts,
+  type CalendarListParams,
+} from "@/lib/admin-list";
+import {
+  patchListPages,
+  restoreListPages,
+  run,
+  useAdminErrorToast,
+} from "@/hooks/useAdminList";
 
 /**
  * Calendar Owner Info
@@ -59,95 +77,34 @@ export interface CalendarDetails extends AdminCalendar {
   }>;
 }
 
-/**
- * Calendar Filters
- */
-export interface CalendarFilters {
-  search?: string;
-  status?: "all" | "orphaned" | "with-owner";
-}
+export type CalendarsListResponse = AdminListResponse<AdminCalendar, CalendarListCounts>;
 
-/**
- * Calendar Sort Options
- */
-export interface CalendarSort {
-  field: "name" | "createdAt" | "owner" | "shiftsCount";
-  direction: "asc" | "desc";
-}
-
-/**
- * Calendars List Response
- */
-export interface CalendarsListResponse {
-  calendars: AdminCalendar[];
-  total: number;
-  orphanedCount: number;
-}
-
-/**
- * Fetch calendars list from API
- */
-async function fetchCalendarsApi(
-  filters: CalendarFilters | undefined,
-  sort: CalendarSort | undefined,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  t: ReturnType<typeof useTranslations>,
+/** One page of calendars; omitted params fall back to the API defaults. */
+async function fetchAdminCalendars(
+  params: Partial<CalendarListParams>,
 ): Promise<CalendarsListResponse> {
-  const params = new URLSearchParams();
-
-  if (filters?.search) {
-    params.set("search", filters.search);
-  }
-  if (filters?.status && filters.status !== "all") {
-    params.set("status", filters.status);
-  }
-
-  if (sort?.field) {
-    params.set("sortBy", sort.field);
-  }
-  if (sort?.direction) {
-    params.set("sortDirection", sort.direction);
-  }
-
-  const response = await fetch(`/api/admin/calendars?${params}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch calendars");
-  }
+  const response = await fetch(`/api/admin/calendars?${toSearchParams(params)}`);
+  if (!response.ok) throw new AdminRequestError(response.status);
 
   const data = await response.json();
-
-  // Parse dates
-  const calendars = data.calendars.map((cal: AdminCalendar) => ({
-    ...cal,
-    createdAt: new Date(cal.createdAt),
-    updatedAt: new Date(cal.updatedAt),
-  }));
-
   return {
-    calendars,
-    total: data.total,
-    orphanedCount: data.orphanedCount,
+    ...data,
+    items: data.items.map((cal: AdminCalendar) => ({
+      ...cal,
+      createdAt: new Date(cal.createdAt),
+      updatedAt: new Date(cal.updatedAt),
+    })),
   };
 }
 
-/**
- * Fetch calendar details from API
- */
-async function fetchCalendarDetailsApi(
+export async function fetchAdminCalendarDetails(
   calendarId: string,
 ): Promise<CalendarDetails> {
   const response = await fetch(`/api/admin/calendars/${calendarId}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch calendar details");
-  }
+  if (!response.ok) throw new AdminRequestError(response.status);
 
   const data = await response.json();
 
-  // Parse dates
   return {
     ...data,
     createdAt: new Date(data.createdAt),
@@ -166,7 +123,7 @@ async function fetchCalendarDetailsApi(
  */
 async function updateCalendarApi(
   calendarId: string,
-  updates: { name?: string; color?: string; guestPermission?: string },
+  updates: { name?: string; color?: string; guestPermission?: AdminCalendar["guestPermission"] },
 ): Promise<void> {
   const response = await fetch(`/api/admin/calendars/${calendarId}`, {
     method: "PATCH",
@@ -255,140 +212,91 @@ async function bulkTransferCalendarsApi(
 }
 
 /**
- * Admin Calendars Management Hook
- *
- * Provides functions for managing calendars in the admin panel.
- * Uses React Query for automatic polling and cache management.
- *
- * Features:
- * - Fetch calendars with filtering and sorting
- * - Get calendar details
- * - Update calendar information
- * - Delete calendars (single and bulk)
- * - Transfer calendar ownership (single and bulk)
- * - Optimistic updates for instant UI feedback
- * - Error handling with toast notifications
- * - Automatic cache invalidation
- *
- * @param filters - Calendar filters (search, status)
- * @param sort - Sort options (field, direction)
- * @returns Object with calendar data and management functions
+ * One page of the admin calendar list, filtered, sorted and paginated by the API.
+ * The previous page stays visible while the next one loads.
  */
-export function useAdminCalendars(
-  filters?: CalendarFilters,
-  sort?: CalendarSort,
-) {
+export function useAdminCalendars(params: CalendarListParams) {
+  const t = useTranslations();
+  const { data, isLoading, isPlaceholderData, error } = useQuery({
+    queryKey: queryKeys.admin.calendars.list(params),
+    queryFn: () => fetchAdminCalendars(params),
+    placeholderData: keepPreviousData,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+  });
+
+  useAdminErrorToast(
+    error,
+    "admin-calendars-error",
+    t("common.fetchError", { item: t("admin.calendarsMenu") }),
+  );
+
+  return {
+    calendars: data?.items ?? [],
+    total: data?.total ?? 0,
+    counts: data?.counts ?? null,
+    // See useAdminUsers: the served page is only authoritative for the current request
+    page: isPlaceholderData ? params.page : (data?.page ?? params.page),
+    isLoading,
+    isPlaceholderData,
+  };
+}
+
+/**
+ * Calendar mutations for the admin panel. Edits and deletions are applied
+ * optimistically to every cached page of the calendar list.
+ */
+export function useAdminCalendarActions() {
   const t = useTranslations();
   const queryClient = useQueryClient();
 
-  // Fetch calendars list with polling
-  const {
-    data: calendarsData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: queryKeys.admin.calendars({ filters, sort, t }),
-    queryFn: () => fetchCalendarsApi(filters, sort, t),
-    refetchInterval: REFETCH_INTERVAL,
-  });
+  const patchCalendars = (patch: (calendars: AdminCalendar[]) => AdminCalendar[]) =>
+    patchListPages<AdminCalendar>(queryClient, queryKeys.admin.calendars.lists, patch);
 
-  // Update calendar mutation
+  const onSettled = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.admin.calendars.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+  };
+
   const updateMutation = useMutation({
     mutationFn: ({
       calendarId,
       updates,
     }: {
       calendarId: string;
-      updates: { name?: string; color?: string; guestPermission?: string };
+      updates: { name?: string; color?: string; guestPermission?: AdminCalendar["guestPermission"] };
     }) => updateCalendarApi(calendarId, updates),
-    onMutate: async ({ calendarId, updates }) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.calendars({ filters, sort }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-        (old: CalendarsListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            calendars: old.calendars.map((cal) =>
-              cal.id === calendarId ? { ...cal, ...updates } : cal,
-            ),
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async ({ calendarId, updates }) => ({
+      snapshot: await patchCalendars((calendars) =>
+        calendars.map((cal) => (cal.id === calendarId ? { ...cal, ...updates } : cal)),
+      ),
+    }),
     onError: (err, variables, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-        context?.previous,
-      );
-      toast.error(
-        t("common.updateError", { item: t("common.labels.calendar") }),
-      );
+      restoreListPages(queryClient, context?.snapshot);
+      toast.error(t("common.updateError", { item: t("common.labels.calendar") }));
     },
     onSuccess: () => {
       toast.success(t("common.updated", { item: t("common.labels.calendar") }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Delete calendar mutation
   const deleteMutation = useMutation({
     mutationFn: (calendarId: string) => deleteCalendarApi(calendarId),
-    onMutate: async (calendarId) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.calendars({ filters, sort }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-        (old: CalendarsListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            calendars: old.calendars.filter((cal) => cal.id !== calendarId),
-            total: old.total - 1,
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async (calendarId) => ({
+      snapshot: await patchCalendars((calendars) =>
+        calendars.filter((cal) => cal.id !== calendarId),
+      ),
+    }),
     onError: (err, calendarId, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-        context?.previous,
-      );
-      toast.error(
-        t("common.deleteError", { item: t("common.labels.calendar") }),
-      );
+      restoreListPages(queryClient, context?.snapshot);
+      toast.error(t("common.deleteError", { item: t("common.labels.calendar") }));
     },
     onSuccess: () => {
       toast.success(t("common.deleted", { item: t("common.labels.calendar") }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Transfer calendar mutation
   const transferMutation = useMutation({
     mutationFn: ({
       calendarId,
@@ -398,70 +306,31 @@ export function useAdminCalendars(
       newOwnerId: string;
     }) => transferCalendarApi(calendarId, newOwnerId),
     onError: () => {
-      toast.error(
-        t("common.transferError", { item: t("common.labels.calendar") }),
-      );
+      toast.error(t("common.transferError", { item: t("common.labels.calendar") }));
     },
     onSuccess: () => {
-      toast.success(
-        t("common.transferred", { item: t("common.labels.calendar") }),
-      );
+      toast.success(t("common.transferred", { item: t("common.labels.calendar") }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: (calendarIds: string[]) => bulkDeleteCalendarsApi(calendarIds),
-    onMutate: async (calendarIds) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.calendars({ filters, sort }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-        (old: CalendarsListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            calendars: old.calendars.filter(
-              (cal) => !calendarIds.includes(cal.id),
-            ),
-            total: old.total - calendarIds.length,
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async (calendarIds) => ({
+      snapshot: await patchCalendars((calendars) =>
+        calendars.filter((cal) => !calendarIds.includes(cal.id)),
+      ),
+    }),
     onError: (err, calendarIds, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.calendars({ filters, sort }),
-        context?.previous,
-      );
-      toast.error(
-        t("common.deleteError", { item: t("common.labels.calendar") }),
-      );
+      restoreListPages(queryClient, context?.snapshot);
+      toast.error(t("common.deleteError", { item: t("common.labels.calendar") }));
     },
     onSuccess: (data) => {
-      toast.success(
-        t("admin.calendars.calendarsDeleted", { count: data.deletedCount }),
-      );
+      toast.success(t("admin.calendars.calendarsDeleted", { count: data.deletedCount }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Bulk transfer mutation
   const bulkTransferMutation = useMutation({
     mutationFn: ({
       calendarIds,
@@ -471,83 +340,29 @@ export function useAdminCalendars(
       newOwnerId: string;
     }) => bulkTransferCalendarsApi(calendarIds, newOwnerId),
     onError: () => {
-      toast.error(
-        t("common.transferError", { item: t("common.labels.calendar") }),
-      );
+      toast.error(t("common.transferError", { item: t("common.labels.calendar") }));
     },
     onSuccess: (data) => {
       toast.success(
-        t("admin.calendars.calendarsTransferred", {
-          count: data.transferredCount,
-        }),
+        t("admin.calendars.calendarsTransferred", { count: data.transferredCount }),
       );
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "calendars"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
   return {
-    // Data
-    calendars: calendarsData?.calendars || [],
-    total: calendarsData?.total || 0,
-    orphanedCount: calendarsData?.orphanedCount || 0,
-    isLoading,
-    error,
-
-    // Functions
-    refetch,
-    fetchCalendarDetails: (calendarId: string) =>
-      fetchCalendarDetailsApi(calendarId),
-    updateCalendar: async (
+    isUpdating: updateMutation.isPending,
+    isTransferring: transferMutation.isPending || bulkTransferMutation.isPending,
+    updateCalendar: (
       calendarId: string,
-      updates: { name?: string; color?: string; guestPermission?: string },
-    ): Promise<boolean> => {
-      try {
-        await updateMutation.mutateAsync({ calendarId, updates });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    deleteCalendar: async (calendarId: string): Promise<boolean> => {
-      try {
-        await deleteMutation.mutateAsync(calendarId);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    transferCalendar: async (
-      calendarId: string,
-      newOwnerId: string,
-    ): Promise<boolean> => {
-      try {
-        await transferMutation.mutateAsync({ calendarId, newOwnerId });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    bulkDeleteCalendars: async (calendarIds: string[]): Promise<boolean> => {
-      try {
-        await bulkDeleteMutation.mutateAsync(calendarIds);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    bulkTransferCalendars: async (
-      calendarIds: string[],
-      newOwnerId: string,
-    ): Promise<boolean> => {
-      try {
-        await bulkTransferMutation.mutateAsync({ calendarIds, newOwnerId });
-        return true;
-      } catch {
-        return false;
-      }
-    },
+      updates: { name?: string; color?: string; guestPermission?: AdminCalendar["guestPermission"] },
+    ) => run(updateMutation.mutateAsync, { calendarId, updates }),
+    deleteCalendar: (calendarId: string) => run(deleteMutation.mutateAsync, calendarId),
+    transferCalendar: (calendarId: string, newOwnerId: string) =>
+      run(transferMutation.mutateAsync, { calendarId, newOwnerId }),
+    bulkDeleteCalendars: (calendarIds: string[]) =>
+      run(bulkDeleteMutation.mutateAsync, calendarIds),
+    bulkTransferCalendars: (calendarIds: string[], newOwnerId: string) =>
+      run(bulkTransferMutation.mutateAsync, { calendarIds, newOwnerId }),
   };
 }

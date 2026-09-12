@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import {
-  BarChart3,
-  ChevronDown,
-  ChevronUp,
-  PieChart,
-  Radar as RadarIcon,
-} from "lucide-react";
-import { formatDuration } from "@/lib/date-utils";
+import { useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
+import { Loader2 } from "lucide-react";
 import { useShiftStats } from "@/hooks/useShiftStats";
+import { useShifts } from "@/hooks/useShifts";
+import { usePresets } from "@/hooks/usePresets";
+import { SegmentedControl } from "@/components/segmented-control";
+import { ChoiceChips } from "@/components/form-kit";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { formatHours } from "@/lib/shift-display";
+import { countFreeDays } from "@/lib/free-days";
+import { cn } from "@/lib/utils";
 import {
   PieChart as RechartsPieChart,
   Pie,
@@ -31,29 +32,22 @@ import {
   Radar,
 } from "recharts";
 
-// Hook for responsive radius that's SSR-safe
-function useResponsiveRadius() {
-  const [radius, setRadius] = useState(120); // Safe default for SSR
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateRadius = () => {
-      setRadius(window.innerWidth < 640 ? 80 : 120);
-    };
-
-    // Set initial value
-    updateRadius();
-
-    // Add resize listener
-    window.addEventListener("resize", updateRadius);
-
-    // Cleanup
-    return () => window.removeEventListener("resize", updateRadius);
-  }, []);
-
-  return radius;
+/** Mirrors the dark-mode lightening of `.shift-rail`, which SVG fills can't inherit. */
+function lightenForDark(color: string): string {
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+  if (!match) return color;
+  const hex =
+    match[1].length === 3
+      ? match[1].split("").map((c) => c + c).join("")
+      : match[1];
+  const mix = (i: number) =>
+    Math.round(parseInt(hex.slice(i, i + 2), 16) * 0.72 + 255 * 0.28)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${mix(0)}${mix(2)}${mix(4)}`;
 }
+
+const tick = { fontSize: 12, fill: "var(--fg-tertiary)" };
 
 // CustomTooltip component - declared outside to avoid recreation on each render
 const CustomTooltip = ({
@@ -71,15 +65,18 @@ const CustomTooltip = ({
 }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg">
-        <p className="font-semibold text-sm mb-1">
+      <div className="rounded-lg border border-line bg-surface-card px-3 py-2 shadow-md">
+        <p className="mb-1 text-[12.5px] font-semibold text-fg-strong">
           {payload[0].payload.fullName || payload[0].name}
         </p>
         {payload.map((entry) => (
-          <p key={entry.name} className="text-xs text-muted-foreground">
-            <span style={{ color: entry.color }}>{entry.name}:</span>{" "}
-            {entry.value}
-            {entry.name === "hours" || entry.dataKey === "hours" ? "h" : ""}
+          <p key={entry.name} className="flex items-center gap-1.5 text-[12px] text-fg-secondary">
+            <span className="size-2 rounded-full" style={{ backgroundColor: entry.color }} />
+            {entry.name}:{" "}
+            <span className="font-mono text-fg-strong">
+              {entry.value}
+              {entry.name === "hours" || entry.dataKey === "hours" ? "h" : ""}
+            </span>
           </p>
         ))}
       </div>
@@ -88,56 +85,79 @@ const CustomTooltip = ({
   return null;
 };
 
+function KpiTile({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-line bg-surface-card px-3 py-2.5">
+      <div className="text-[11.5px] text-fg-tertiary">{label}</div>
+      <div className="mt-1 font-mono text-[21px] font-medium text-fg-strong">{value}</div>
+    </div>
+  );
+}
+
+function Swatch({ color }: { color: string }) {
+  return (
+    <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: color }} />
+  );
+}
+
 interface ShiftStatsProps {
   calendarId: string | undefined;
   currentDate: Date;
 }
 
 type ViewMode = "overview" | "pie" | "bar" | "radar";
+type Period = "week" | "month" | "year";
 
-const CHART_COLORS = [
-  "#3b82f6", // primary blue
-  "#8b5cf6", // purple
-  "#ec4899", // pink
-  "#f59e0b", // amber
-  "#10b981", // green
-  "#06b6d4", // cyan
-  "#f97316", // orange
-  "#6366f1", // indigo
-  "#14b8a6", // teal
-  "#a855f7", // violet
-  "#ef4444", // red
-  "#22c55e", // lime
-];
-
+/** Period statistics with charts; the surrounding dialog provides the frame. */
 export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
   const t = useTranslations();
-  const [period, setPeriod] = useState<"week" | "month" | "year">("month");
+  const locale = useLocale();
+  const { resolvedTheme } = useTheme();
+  const [period, setPeriod] = useState<Period>("month");
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
-  const [isExpanded, setIsExpanded] = useState(true);
-  const outerRadius = useResponsiveRadius();
+  const outerRadius = useMediaQuery("(min-width: 640px)", true) ? 120 : 80;
 
   const { stats, loading } = useShiftStats({
     calendarId,
     currentDate,
     period,
   });
+  const { shifts } = useShifts(calendarId);
+  const { presets } = usePresets(calendarId);
 
-  if (!calendarId) return null;
-
-  const totalShifts = stats?.totalShifts || 0;
-  const totalMinutes = stats?.totalMinutes || 0;
+  // The stats API groups by title without colors, so borrow them from loaded shifts and presets
+  const colorByTitle = useMemo(() => {
+    const dark = resolvedTheme === "dark";
+    const known = new Map<string, string>();
+    for (const shift of shifts) {
+      if (!known.has(shift.title)) known.set(shift.title, shift.color);
+    }
+    for (const preset of presets) {
+      if (!known.has(preset.title)) known.set(preset.title, preset.color);
+    }
+    const colors = new Map<string, string>();
+    Object.keys(stats?.stats ?? {}).forEach((title, index) => {
+      const color = known.get(title);
+      colors.set(
+        title,
+        color ? (dark ? lightenForDark(color) : color) : `var(--chart-${(index % 5) + 1})`
+      );
+    });
+    return colors;
+  }, [stats, shifts, presets, resolvedTheme]);
 
   // Prepare data for charts
-  const pieData = stats
+  const pieData = useMemo(() =>
+    stats
     ? Object.entries(stats.stats).map(([title, data]) => ({
         name: title,
         value: data.count,
         hours: Math.round((data.totalMinutes / 60) * 10) / 10,
       }))
-    : [];
+    : [], [stats]);
 
-  const barData = stats
+  const barData = useMemo(() =>
+    stats
     ? Object.entries(stats.stats)
         .map(([title, data]) => ({
           name: title.length > 15 ? title.substring(0, 15) + "..." : title,
@@ -146,10 +166,11 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
           hours: Math.round((data.totalMinutes / 60) * 10) / 10,
         }))
         .sort((a, b) => b.shifts - a.shifts)
-    : [];
+    : [], [stats]);
 
   // Prepare data for radar chart (top shift types by hours)
-  const radarData = stats
+  const radarData = useMemo(() =>
+    stats
     ? Object.entries(stats.stats)
         .sort(([, a], [, b]) => b.totalMinutes - a.totalMinutes)
         .slice(0, 6) // Top 6 shift types
@@ -162,409 +183,278 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
             ? Math.round((data.totalMinutes / data.count / 60) * 10) / 10
             : 0,
         }))
-    : [];
+    : [], [stats]);
+
+
+  if (!calendarId) return null;
+
+  const colorFor = (title: string) => colorByTitle.get(title) ?? "var(--chart-1)";
+  const totalShifts = stats?.totalShifts || 0;
+  const totalMinutes = stats?.totalMinutes || 0;
+  const hasData = !!stats && Object.keys(stats.stats).length > 0;
+  const freeDays = stats ? countFreeDays(stats) : null;
 
   return (
-    <div className="border border-border/50 rounded-xl bg-gradient-to-b from-card/80 via-card/60 to-card/40 backdrop-blur-sm overflow-hidden shadow-lg">
-      {/* Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between hover:bg-primary/5 transition-all"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20">
-            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
-          </div>
-          <h3 className="text-sm sm:text-base font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("stats.title")}
-          </h3>
+    <div className="flex flex-col gap-4">
+      <SegmentedControl
+        value={period}
+        onChange={setPeriod}
+        label={t("stats.title")}
+        options={[
+          { value: "week", label: t("stats.week") },
+          { value: "month", label: t("stats.month") },
+          { value: "year", label: t("stats.year") },
+        ]}
+      />
+
+      {hasData && (
+        <ChoiceChips
+          value={viewMode}
+          onChange={setViewMode}
+          label={t("stats.title")}
+          options={[
+            { value: "overview", label: t("stats.overview") },
+            { value: "pie", label: t("stats.distribution") },
+            { value: "bar", label: t("stats.comparison") },
+            { value: "radar", label: t("stats.radar") },
+          ]}
+        />
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="size-6 animate-spin text-fg-tertiary" />
         </div>
-        <div className="flex items-center gap-2">
-          {!isExpanded && stats && totalShifts > 0 && (
+      ) : stats && hasData ? (
+        <>
+          {viewMode === "overview" && (
             <>
-              <div className="px-2.5 py-1 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-lg">
-                <span className="font-bold text-primary text-xs sm:text-sm">
-                  {totalShifts}
-                </span>
+              {/* Without timed shifts only four tiles remain, so keep them on one row */}
+              <div
+                className={cn(
+                  "grid grid-cols-2 gap-2",
+                  stats.maxDuration > 0 ? "sm:grid-cols-3" : "sm:grid-cols-4"
+                )}
+              >
+                <KpiTile label={t("stats.totalShifts")} value={totalShifts} />
+                <KpiTile label={t("stats.totalHours")} value={formatHours(totalMinutes, locale)} />
+                <KpiTile
+                  label={t("stats.avgPerShift")}
+                  value={formatHours(stats.avgMinutesPerShift, locale)}
+                />
+                <KpiTile label={t("calendarView.kpiFreeDays")} value={freeDays ?? "–"} />
+                {stats.minDuration > 0 && (
+                  <KpiTile
+                    label={t("stats.shortestShift")}
+                    value={formatHours(stats.minDuration, locale)}
+                  />
+                )}
+                {stats.maxDuration > 0 && (
+                  <KpiTile
+                    label={t("stats.longestShift")}
+                    value={formatHours(stats.maxDuration, locale)}
+                  />
+                )}
               </div>
-              {totalMinutes > 0 && (
-                <div className="px-2.5 py-1 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-lg">
-                  <span className="font-bold text-primary text-xs sm:text-sm">
-                    {formatDuration(totalMinutes)}
-                  </span>
-                </div>
-              )}
+
+              <div className="flex flex-col gap-2">
+                <div className="eyebrow">{t("stats.byType")}</div>
+                {Object.entries(stats.stats)
+                  .sort(([, a], [, b]) => b.count - a.count)
+                  .map(([title, data]) => (
+                    <div key={title} className="flex items-center gap-[9px]">
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: colorFor(title) }}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-[13px] text-fg-body">
+                        {title}
+                      </span>
+                      <span className="h-1 w-20 shrink-0 overflow-hidden rounded-full bg-line-grid sm:w-32">
+                        <span
+                          className="block h-full rounded-full"
+                          style={{
+                            backgroundColor: colorFor(title),
+                            width: `${totalShifts ? (data.count / totalShifts) * 100 : 0}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="w-7 shrink-0 text-right font-mono text-[12px] text-fg-strong">
+                        {data.count}
+                      </span>
+                      <span className="w-12 shrink-0 text-right font-mono text-[12px] text-fg-tertiary">
+                        {data.totalMinutes > 0 ? formatHours(data.totalMinutes, locale) : "–"}
+                      </span>
+                    </div>
+                  ))}
+              </div>
             </>
           )}
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
-        </div>
-      </button>
 
-      {/* Content */}
-      {isExpanded && (
-        <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-4 border-t border-border/30 bg-muted/20">
-          {/* Period Selector */}
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant={period === "week" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPeriod("week")}
-              className="flex-1 sm:flex-none h-9 transition-all shadow-sm"
-            >
-              {t("stats.week")}
-            </Button>
-            <Button
-              variant={period === "month" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPeriod("month")}
-              className="flex-1 sm:flex-none h-9 transition-all shadow-sm"
-            >
-              {t("stats.month")}
-            </Button>
-            <Button
-              variant={period === "year" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPeriod("year")}
-              className="flex-1 sm:flex-none h-9 transition-all shadow-sm"
-            >
-              {t("stats.year")}
-            </Button>
-          </div>
-
-          {/* View Mode Selector */}
-          {stats && Object.keys(stats.stats).length > 0 && (
-            <div className="grid grid-cols-2 sm:flex gap-2">
-              <Button
-                variant={viewMode === "overview" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("overview")}
-                className="sm:flex-none h-8 text-xs transition-all"
-              >
-                <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                {t("stats.overview")}
-              </Button>
-              <Button
-                variant={viewMode === "pie" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("pie")}
-                className="sm:flex-none h-8 text-xs transition-all"
-              >
-                <PieChart className="h-3.5 w-3.5 mr-1.5" />
-                {t("stats.distribution")}
-              </Button>
-              <Button
-                variant={viewMode === "bar" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("bar")}
-                className="sm:flex-none h-8 text-xs transition-all"
-              >
-                <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                {t("stats.comparison")}
-              </Button>
-              <Button
-                variant={viewMode === "radar" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("radar")}
-                className="sm:flex-none h-8 text-xs transition-all"
-              >
-                <RadarIcon className="h-3.5 w-3.5 mr-1.5" />
-                {t("stats.radar")}
-              </Button>
-            </div>
-          )}
-
-          {/* Stats Display */}
-          {loading ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              {t("common.loading")}
-            </div>
-          ) : stats && Object.keys(stats.stats).length > 0 ? (
-            <div className="space-y-3.5">
-              {/* Overview Mode - Enhanced Cards */}
-              {viewMode === "overview" && (
-                <>
-                  {/* Summary Statistics Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    <div className="p-3 rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20">
-                      <div className="text-[10px] text-muted-foreground font-medium mb-1">
-                        {t("stats.totalShifts")}
-                      </div>
-                      <div className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        {totalShifts}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20">
-                      <div className="text-[10px] text-muted-foreground font-medium mb-1">
-                        {t("stats.totalHours")}
-                      </div>
-                      <div className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        {formatDuration(totalMinutes)}
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-gradient-to-br from-card via-card/80 to-card/60 border border-border/40">
-                      <div className="text-[10px] text-muted-foreground font-medium mb-1">
-                        {t("stats.avgPerShift")}
-                      </div>
-                      <div className="text-xl font-bold text-foreground">
-                        {formatDuration(stats.avgMinutesPerShift)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional Metrics */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {stats.minDuration > 0 && (
-                      <div className="p-3 rounded-lg bg-gradient-to-br from-card via-card/80 to-card/60 border border-border/40">
-                        <div className="text-[10px] text-muted-foreground font-medium mb-1">
-                          {t("stats.shortestShift")}
-                        </div>
-                        <div className="text-lg font-bold text-foreground">
-                          {formatDuration(stats.minDuration)}
-                        </div>
-                      </div>
-                    )}
-                    {stats.maxDuration > 0 && (
-                      <div className="p-3 rounded-lg bg-gradient-to-br from-card via-card/80 to-card/60 border border-border/40">
-                        <div className="text-[10px] text-muted-foreground font-medium mb-1">
-                          {t("stats.longestShift")}
-                        </div>
-                        <div className="text-lg font-bold text-foreground">
-                          {formatDuration(stats.maxDuration)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Individual Shift Types List */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {t("stats.byType")}
-                    </h4>
-                    {Object.entries(stats.stats)
-                      .sort(([, a], [, b]) => b.count - a.count)
-                      .map(([title, data]) => (
-                        <div
-                          key={title}
-                          className="group relative p-3 rounded-lg bg-gradient-to-br from-card via-card/80 to-card/60 border border-border/40 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all duration-200"
-                        >
-                          <div className="flex justify-between items-center gap-3">
-                            <span className="text-sm font-semibold truncate flex-shrink min-w-0 group-hover:text-primary transition-colors">
-                              {title}
-                            </span>
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="w-24 sm:w-32 h-2 bg-muted/50 rounded-full overflow-hidden border border-border/20 shadow-inner">
-                                <div
-                                  className="h-full bg-gradient-to-r from-primary via-primary/90 to-primary/80 transition-all duration-300 shadow-sm"
-                                  style={{
-                                    width: `${
-                                      (data.count / totalShifts) * 100
-                                    }%`,
-                                  }}
-                                />
-                              </div>
-                              <div className="min-w-[2.5rem] px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
-                                <span className="font-bold text-sm text-primary text-center block">
-                                  {data.count}
-                                </span>
-                              </div>
-                              {data.totalMinutes > 0 && (
-                                <div className="min-w-[3rem] sm:min-w-[3.5rem] px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
-                                  <span className="font-semibold text-xs sm:text-sm text-primary text-center block">
-                                    {formatDuration(data.totalMinutes)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+          {viewMode === "pie" && (
+            <div className="flex flex-col gap-3">
+              <div className="h-[300px] min-h-[300px] sm:h-[380px]">
+                <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
+                      outerRadius={outerRadius}
+                      stroke="var(--background)"
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={800}
+                    >
+                      {pieData.map((entry) => (
+                        <Cell key={entry.name} fill={colorFor(entry.name)} />
                       ))}
-                  </div>
-                </>
-              )}
-
-              {/* Pie Chart Mode */}
-              {viewMode === "pie" && (
-                <div className="space-y-3">
-                  <div className="h-[300px] sm:h-[400px] min-h-[300px]">
-                    <ResponsiveContainer
-                      width="100%"
-                      height="100%"
-                      minHeight={300}
-                    >
-                      <RechartsPieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) =>
-                            `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                          }
-                          outerRadius={outerRadius}
-                          fill="#8884d8"
-                          dataKey="value"
-                          animationBegin={0}
-                          animationDuration={800}
-                        >
-                          {pieData.map((_, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={CHART_COLORS[index % CHART_COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {pieData.map((entry, index) => (
-                      <div
-                        key={entry.name}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-card/50 border border-border/30 hover:bg-card/70 hover:border-primary/30 transition-all"
-                      >
-                        <div
-                          className="w-3 h-3 rounded-sm flex-shrink-0"
-                          style={{
-                            backgroundColor:
-                              CHART_COLORS[index % CHART_COLORS.length],
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium truncate">
-                            {entry.name}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {entry.value} × {entry.hours}h
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Bar Chart Mode */}
-              {viewMode === "bar" && (
-                <div className="h-[350px] sm:h-[450px] min-h-[350px]">
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                    minHeight={350}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {pieData.map((entry) => (
+                  <div
+                    key={entry.name}
+                    className="flex items-center gap-2 rounded-lg border border-line bg-surface-card px-2.5 py-2"
                   >
-                    <BarChart data={barData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 12 }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar
-                        dataKey="shifts"
-                        fill={CHART_COLORS[0]}
-                        name={t("common.shifts")}
-                        radius={[4, 4, 0, 0]}
-                        animationDuration={1000}
-                      />
-                      <Bar
-                        dataKey="hours"
-                        fill={CHART_COLORS[1]}
-                        name={t("stats.hours")}
-                        radius={[4, 4, 0, 0]}
-                        animationDuration={1000}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {/* Radar Chart - Performance metrics for top shift types */}
-              {viewMode === "radar" && radarData.length > 0 && (
-                <div className="space-y-3">
-                  <div className="h-[350px] sm:h-[450px] min-h-[350px]">
-                    <ResponsiveContainer
-                      width="100%"
-                      height="100%"
-                      minHeight={350}
-                    >
-                      <RadarChart data={radarData}>
-                        <PolarGrid stroke={CHART_COLORS[0]} opacity={0.2} />
-                        <PolarAngleAxis
-                          dataKey="type"
-                          tick={{ fontSize: 11, fill: "currentColor" }}
-                        />
-                        <PolarRadiusAxis
-                          angle={90}
-                          domain={[0, "auto"]}
-                          tick={{ fontSize: 10 }}
-                        />
-                        <Radar
-                          name={t("stats.totalHours")}
-                          dataKey="hours"
-                          stroke={CHART_COLORS[0]}
-                          fill={CHART_COLORS[0]}
-                          fillOpacity={0.6}
-                          animationDuration={1000}
-                        />
-                        <Radar
-                          name={t("stats.avgHoursPerShift")}
-                          dataKey="avgHours"
-                          stroke={CHART_COLORS[2]}
-                          fill={CHART_COLORS[2]}
-                          fillOpacity={0.4}
-                          animationDuration={1000}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {radarData.map((entry) => (
-                      <div
-                        key={entry.fullName}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-card/50 border border-border/30"
-                      >
-                        <div
-                          className="w-3 h-3 rounded-sm flex-shrink-0"
-                          style={{
-                            backgroundColor: CHART_COLORS[0],
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium truncate">
-                            {entry.fullName}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {entry.shifts} × ⌀{entry.avgHours}h
-                          </div>
-                        </div>
+                    <Swatch color={colorFor(entry.name)} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12.5px] font-medium text-fg-body">
+                        {entry.name}
                       </div>
-                    ))}
+                      <div className="font-mono text-[11px] text-fg-tertiary">
+                        {entry.value} × {entry.hours}h
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
-                    <p className="text-xs text-muted-foreground text-center">
-                      {t("stats.radarDescription")}
-                    </p>
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              {t("stats.noData")}
-            </p>
           )}
-        </div>
+
+          {viewMode === "bar" && (
+            <div className="flex flex-col gap-2">
+              <div className="h-[350px] min-h-[350px] sm:h-[420px]">
+                <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+                  <BarChart data={barData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tick={tick}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--line)" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis tick={tick} tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface-sunken)" }} />
+                    <Bar
+                      dataKey="shifts"
+                      name={t("common.shifts")}
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1000}
+                    >
+                      {barData.map((entry) => (
+                        <Cell key={entry.fullName} fill={colorFor(entry.fullName)} />
+                      ))}
+                    </Bar>
+                    <Bar
+                      dataKey="hours"
+                      name={t("stats.hours")}
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1000}
+                    >
+                      {barData.map((entry) => (
+                        <Cell
+                          key={entry.fullName}
+                          fill={colorFor(entry.fullName)}
+                          fillOpacity={0.4}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Bars take each type's color, so the legend explains solid vs. faded */}
+              <div className="flex items-center justify-center gap-4 text-[12px] text-fg-secondary">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-[3px] bg-fg-secondary" />
+                  {t("common.shifts")}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-[3px] bg-fg-secondary/40" />
+                  {t("stats.hours")}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {viewMode === "radar" && radarData.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <div className="h-[350px] min-h-[350px] sm:h-[420px]">
+                <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid stroke="var(--line)" />
+                    <PolarAngleAxis
+                      dataKey="type"
+                      tick={{ fontSize: 11, fill: "var(--fg-secondary)" }}
+                    />
+                    <PolarRadiusAxis angle={90} domain={[0, "auto"]} tick={{ ...tick, fontSize: 10 }} />
+                    <Radar
+                      name={t("stats.totalHours")}
+                      dataKey="hours"
+                      stroke="var(--chart-1)"
+                      fill="var(--chart-1)"
+                      fillOpacity={0.45}
+                      animationDuration={1000}
+                    />
+                    <Radar
+                      name={t("stats.avgHoursPerShift")}
+                      dataKey="avgHours"
+                      stroke="var(--chart-2)"
+                      fill="var(--chart-2)"
+                      fillOpacity={0.35}
+                      animationDuration={1000}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {radarData.map((entry) => (
+                  <div
+                    key={entry.fullName}
+                    className="flex items-center gap-2 rounded-lg border border-line bg-surface-card px-2.5 py-2"
+                  >
+                    <Swatch color={colorFor(entry.fullName)} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12.5px] font-medium text-fg-body">
+                        {entry.fullName}
+                      </div>
+                      <div className="font-mono text-[11px] text-fg-tertiary">
+                        {entry.shifts} × ⌀{entry.avgHours}h
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="rounded-[10px] border border-line bg-surface-panel px-3 py-2.5 text-center text-[12px] text-fg-secondary">
+                {t("stats.radarDescription")}
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="py-10 text-center text-[13px] text-fg-tertiary">{t("stats.noData")}</p>
       )}
     </div>
   );

@@ -1,27 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { user, calendars, session, calendarShares } from "@/lib/db/schema";
-import { sql, eq, desc, and, or } from "drizzle-orm";
-import { requireAdmin } from "@/lib/auth/admin";
+import { and, asc, count, desc, getTableColumns, getTableName, or, sql, type SQL } from "drizzle-orm";
+import { isAdmin } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
+import {
+  SORT_ORDERS,
+  USER_ROLE_FILTERS,
+  USER_SORT_FIELDS,
+  USER_STATUS_FILTERS,
+  clampPage,
+  containsPattern,
+  parsePaging,
+  pickParam,
+  type UserListCounts,
+} from "@/lib/admin-list";
 
 /**
  * Admin User Management API
  *
  * GET /api/admin/users
- * Lists all users with filtering, sorting, and pagination.
+ * One page of users plus instance-wide counts.
  *
  * Query Parameters:
- * - role: Filter by role (superadmin, admin, user)
- * - banned: Filter by ban status (true, false)
- * - search: Search by name or email (case-insensitive)
- * - sortBy: Sort field (createdAt, name, email, role)
- * - sortOrder: Sort direction (asc, desc)
- * - limit: Number of users to return (default: 1000)
- * - offset: Pagination offset
+ * - search: Name or email contains (case-insensitive)
+ * - role: all | superadmin | admin | user (default: all; "user" includes accounts without a role)
+ * - status: all | active | banned (default: all)
+ * - sort: name | email | role | status | createdAt | lastActivity | calendarCount (default: createdAt)
+ * - order: asc | desc (default: desc)
+ * - page: 1-based page, clamped to the last page (default: 1)
+ * - limit: Page size (default: 25, max: 100)
+ *
+ * Response: { items, total, counts, page, limit } — see lib/admin-list.ts
  *
  * Permission: Admin or Superadmin only
  */
@@ -30,121 +43,120 @@ export async function GET(request: NextRequest) {
     const currentUser = await getValidatedAdminUser(request);
     if (isErrorResponse(currentUser)) return currentUser;
 
-    requireAdmin(currentUser);
-
-    // Parse query parameters
-    const { searchParams } = new URL(request.url);
-    const roleFilter = searchParams.get("role");
-    const bannedFilter = searchParams.get("banned");
-    const searchQuery = searchParams.get("search");
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
-    const limit = parseInt(searchParams.get("limit") || "1000", 10);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
-
-    const conditions = [];
-
-    if (roleFilter) {
-      conditions.push(eq(user.role, roleFilter));
-    }
-
-    if (bannedFilter !== null) {
-      const isBanned = bannedFilter === "true";
-      conditions.push(eq(user.banned, isBanned));
-    }
-
-    if (searchQuery) {
-      const searchPattern = `%${searchQuery.toLowerCase()}%`;
-      conditions.push(
-        or(
-          sql`LOWER(${user.email}) LIKE ${searchPattern}`,
-          sql`LOWER(${user.name}) LIKE ${searchPattern}`
-        )
+    if (!isAdmin(currentUser)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
       );
     }
 
-    // Apply sorting
-    const sortField =
-      sortBy === "createdAt"
-        ? user.createdAt
-        : sortBy === "name"
-        ? user.name
-        : sortBy === "email"
-        ? user.email
-        : sortBy === "role"
-        ? user.role
-        : user.createdAt;
+    const { searchParams } = request.nextUrl;
+    const search = (searchParams.get("search") ?? "").trim();
+    const role = pickParam(searchParams.get("role"), USER_ROLE_FILTERS, "all");
+    const status = pickParam(searchParams.get("status"), USER_STATUS_FILTERS, "all");
+    const sort = pickParam(searchParams.get("sort"), USER_SORT_FIELDS, "createdAt");
+    const order = pickParam(searchParams.get("order"), SORT_ORDERS, "desc");
+    const paging = parsePaging(searchParams);
 
-    const orderByClause = sortOrder === "asc" ? sortField : desc(sortField);
+    // Single-table selects render columns unqualified, so the outer row is named explicitly
+    const userId = sql`${sql.identifier(getTableName(user))}.${sql.identifier(user.id.name)}`;
+    const calendarCount = sql<number>`(select count(*) from ${calendars} where ${calendars.ownerId} = ${userId})`;
+    const sharesCount = sql<number>`(select count(*) from ${calendarShares} where ${calendarShares.userId} = ${userId})`;
+    const lastActivity = sql<number | null>`(select max(${session.updatedAt}) from ${session} where ${session.userId} = ${userId})`;
+    const isPrivileged = sql`coalesce(${user.role}, 'user') in ('admin', 'superadmin')`;
+    const roleRank = sql`case ${user.role} when 'superadmin' then 2 when 'admin' then 1 else 0 end`;
+    const bannedFlag = sql`coalesce(${user.banned}, 0)`;
 
-    // Get total count (with filters)
-    const countQuery = db.select({ count: sql<number>`COUNT(*)` }).from(user);
+    const conditions: SQL[] = [];
 
-    const [countResult] =
-      conditions.length > 0
-        ? await countQuery.where(and(...conditions))
-        : await countQuery;
+    if (role === "user") {
+      conditions.push(sql`not ${isPrivileged}`);
+    } else if (role !== "all") {
+      conditions.push(sql`${user.role} = ${role}`);
+    }
 
-    const total = Number(countResult?.count || 0);
+    if (status !== "all") {
+      conditions.push(sql`${bannedFlag} = ${status === "banned" ? 1 : 0}`);
+    }
 
-    // Get users (with filters, sorting, pagination)
-    const usersQuery = db
-      .select()
+    if (search) {
+      const pattern = containsPattern(search);
+      conditions.push(
+        or(
+          sql`lower(${user.name}) like ${pattern} escape '\\'`,
+          sql`lower(${user.email}) like ${pattern} escape '\\'`
+        )!
+      );
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortExpressions: Record<typeof sort, SQL | typeof user.createdAt> = {
+      name: sql`lower(${user.name})`,
+      email: sql`lower(${user.email})`,
+      role: roleRank,
+      status: bannedFlag,
+      createdAt: user.createdAt,
+      lastActivity,
+      calendarCount,
+    };
+    const direction = order === "asc" ? asc : desc;
+
+    const [[{ total }], [countRow]] = await Promise.all([
+      db.select({ total: count() }).from(user).where(where),
+      db
+        .select({
+          total: count(),
+          superadmin: sql<number>`coalesce(sum(${user.role} = 'superadmin'), 0)`,
+          admin: sql<number>`coalesce(sum(${user.role} = 'admin'), 0)`,
+          banned: sql<number>`coalesce(sum(${bannedFlag} = 1), 0)`,
+        })
+        .from(user),
+    ]);
+
+    const { page, offset } = clampPage(paging.page, paging.limit, total);
+
+    const rows = await db
+      .select({
+        ...getTableColumns(user),
+        calendarCount,
+        sharesCount,
+        lastActivity,
+      })
       .from(user)
-      .orderBy(orderByClause)
-      .limit(limit)
+      .where(where)
+      // The id tie-breaker keeps pages stable when many rows share a sort value
+      .orderBy(direction(sortExpressions[sort]), direction(user.id))
+      .limit(paging.limit)
       .offset(offset);
 
-    const users =
-      conditions.length > 0
-        ? await usersQuery.where(and(...conditions))
-        : await usersQuery;
+    const items = rows.map((row) => ({
+      ...row,
+      role: row.role || "user",
+      banned: row.banned || false,
+      calendarCount: Number(row.calendarCount),
+      sharesCount: Number(row.sharesCount),
+      lastActivity: row.lastActivity === null ? null : new Date(Number(row.lastActivity)),
+    }));
 
-    // Enrich users with calendar count and last activity
-    const enrichedUsers = await Promise.all(
-      users.map(async (u) => {
-        // Count owned calendars
-        const [calendarCount] = await db
-          .select({
-            count: sql<number>`COUNT(*)`,
-          })
-          .from(calendars)
-          .where(eq(calendars.ownerId, u.id));
-
-        // Count shared calendars (via calendarShares)
-        const [sharesCount] = await db
-          .select({
-            count: sql<number>`COUNT(*)`,
-          })
-          .from(calendarShares)
-          .where(eq(calendarShares.userId, u.id));
-
-        // Get last session (most recent activity)
-        const [lastSession] = await db
-          .select({
-            updatedAt: session.updatedAt,
-          })
-          .from(session)
-          .where(eq(session.userId, u.id))
-          .orderBy(desc(session.updatedAt))
-          .limit(1);
-
-        return {
-          ...u,
-          role: u.role || "user",
-          banned: u.banned || false,
-          calendarCount: Number(calendarCount?.count || 0),
-          sharesCount: Number(sharesCount?.count || 0),
-          lastActivity: lastSession?.updatedAt || null,
-        };
-      })
-    );
+    const superadmin = Number(countRow.superadmin);
+    const admin = Number(countRow.admin);
+    const banned = Number(countRow.banned);
+    const counts: UserListCounts = {
+      total: countRow.total,
+      superadmin,
+      admin,
+      user: countRow.total - superadmin - admin,
+      banned,
+      active: countRow.total - banned,
+    };
 
     return NextResponse.json({
-      users: enrichedUsers,
+      items,
       total,
-      limit,
-      offset,
+      counts,
+      page,
+      limit: paging.limit,
     });
   } catch (error) {
     console.error("Failed to fetch users:", error);

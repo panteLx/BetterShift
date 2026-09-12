@@ -1,11 +1,29 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import type { User } from "@/lib/auth";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import {
+  AdminRequestError,
+  toSearchParams,
+  type AdminListResponse,
+  type UserListCounts,
+  type UserListParams,
+} from "@/lib/admin-list";
+import {
+  patchListPages,
+  restoreListPages,
+  run,
+  useAdminErrorToast,
+} from "@/hooks/useAdminList";
 
 /**
  * Extended User Type with Admin-specific fields
@@ -42,122 +60,35 @@ export interface UserDetails extends AdminUser {
   }>;
 }
 
-/**
- * User Filters
- */
-export interface UserFilters {
-  search?: string;
-  role?: "all" | "superadmin" | "admin" | "user";
-  status?: "all" | "active" | "banned";
-}
+export type UsersListResponse = AdminListResponse<AdminUser, UserListCounts>;
 
-/**
- * User Sort Options
- */
-export interface UserSort {
-  field: "name" | "email" | "createdAt" | "role";
-  direction: "asc" | "desc";
-}
-
-/**
- * Pagination Options
- */
-export interface Pagination {
-  page: number;
-  limit: number;
-}
-
-/**
- * Users List Response
- */
-export interface UsersListResponse {
-  users: AdminUser[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-/**
- * Fetch users list from API
- */
-async function fetchUsersApi(
-  filters: UserFilters,
-  sort: UserSort,
-  pagination: Pagination,
-  t: ReturnType<typeof useTranslations>,
-): Promise<UsersListResponse> {
-  const params = new URLSearchParams();
-  if (filters.search) params.set("search", filters.search);
-  if (filters.role && filters.role !== "all") params.set("role", filters.role);
-  if (filters.status && filters.status !== "all") {
-    params.set("banned", filters.status === "banned" ? "true" : "false");
-  }
-  params.set("sortBy", sort.field);
-  params.set("sortDir", sort.direction);
-  params.set("page", pagination.page.toString());
-  params.set("limit", pagination.limit.toString());
-
-  const response = await fetch(`/api/admin/users?${params.toString()}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 403) {
-      throw new Error(t("admin.accessDenied"));
-    }
-    throw new Error(t("common.fetchError", { item: t("common.labels.users") }));
-  }
-
-  const data = await response.json();
-
-  // Parse date strings to Date objects
-  const users = data.users.map((user: Record<string, unknown>) => ({
-    ...user,
+function parseAdminUser(user: Record<string, unknown>): AdminUser {
+  return {
+    ...(user as unknown as AdminUser),
     createdAt: new Date(user.createdAt as string),
     updatedAt: new Date(user.updatedAt as string),
-    lastActivity: user.lastActivity
-      ? new Date(user.lastActivity as string)
-      : null,
+    lastActivity: user.lastActivity ? new Date(user.lastActivity as string) : null,
     banExpires: user.banExpires ? new Date(user.banExpires as string) : null,
-  }));
-
-  return {
-    ...data,
-    users,
   };
 }
 
-/**
- * Fetch user details from API
- */
-async function fetchUserDetailsApi(
-  userId: string,
-  t: ReturnType<typeof useTranslations>,
-): Promise<UserDetails> {
-  const response = await fetch(`/api/admin/users/${userId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+/** One page of users; omitted params fall back to the API defaults. */
+export async function fetchAdminUsers(
+  params: Partial<UserListParams>,
+): Promise<UsersListResponse> {
+  const response = await fetch(`/api/admin/users?${toSearchParams(params)}`);
+  if (!response.ok) throw new AdminRequestError(response.status);
 
-  if (!response.ok) {
-    if (response.status === 403) {
-      throw new Error(t("admin.accessDenied"));
-    }
-    if (response.status === 404) {
-      throw new Error(t("admin.userNotFound"));
-    }
-    throw new Error(t("common.fetchError", { item: t("admin.userDetails") }));
-  }
+  const data = await response.json();
+  return { ...data, items: data.items.map(parseAdminUser) };
+}
+
+export async function fetchAdminUserDetails(userId: string): Promise<UserDetails> {
+  const response = await fetch(`/api/admin/users/${userId}`);
+  if (!response.ok) throw new AdminRequestError(response.status);
 
   const data = await response.json();
 
-  // Parse date strings to Date objects
   return {
     ...data.user,
     createdAt: new Date(data.user.createdAt as string),
@@ -316,48 +247,53 @@ async function resetPasswordApi(
 }
 
 /**
- * Admin Users Management Hook
- *
- * Provides functions for managing users in the admin panel.
- * Uses React Query for automatic polling and cache management.
- *
- * Features:
- * - Fetch users with filtering, sorting, and pagination
- * - Get user details
- * - Update user information
- * - Ban/Unban users
- * - Delete users
- * - Reset user passwords
- * - Optimistic updates for instant UI feedback
- * - Error handling with toast notifications
- * - Automatic cache invalidation
- *
- * @param filters - User filters (search, role, status)
- * @param sort - Sort options (field, direction)
- * @param pagination - Pagination options (page, limit)
- * @returns Object with user data and management functions
+ * One page of the admin user list, filtered, sorted and paginated by the API.
+ * The previous page stays visible while the next one loads.
  */
-export function useAdminUsers(
-  filters: UserFilters = {},
-  sort: UserSort = { field: "createdAt", direction: "desc" },
-  pagination: Pagination = { page: 1, limit: 25 },
-) {
+export function useAdminUsers(params: UserListParams) {
+  const t = useTranslations();
+  const { data, isLoading, isPlaceholderData, error } = useQuery({
+    queryKey: queryKeys.admin.users.list(params),
+    queryFn: () => fetchAdminUsers(params),
+    placeholderData: keepPreviousData,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+  });
+
+  useAdminErrorToast(
+    error,
+    "admin-users-error",
+    t("common.fetchError", { item: t("common.labels.users") }),
+  );
+
+  return {
+    users: data?.items ?? [],
+    total: data?.total ?? 0,
+    counts: data?.counts ?? null,
+    // While the previous page is still on screen its served number would make the
+    // pager target a page the user already asked for; the clamped one only counts
+    // once it belongs to the request in flight.
+    page: isPlaceholderData ? params.page : (data?.page ?? params.page),
+    isLoading,
+    isPlaceholderData,
+  };
+}
+
+/**
+ * User mutations for the admin panel. Updates are applied optimistically to every
+ * cached page of the user list and rolled back on error.
+ */
+export function useAdminUserActions() {
   const t = useTranslations();
   const queryClient = useQueryClient();
 
-  // Fetch users list with polling
-  const {
-    data: usersData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: queryKeys.admin.users({ filters, sort, pagination, t }),
-    queryFn: () => fetchUsersApi(filters, sort, pagination, t),
-    refetchInterval: REFETCH_INTERVAL,
-  });
+  const patchUsers = (patch: (users: AdminUser[]) => AdminUser[]) =>
+    patchListPages<AdminUser>(queryClient, queryKeys.admin.users.lists, patch);
 
-  // Update user mutation
+  const onSettled = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
+  };
+
   const updateMutation = useMutation({
     mutationFn: ({
       userId,
@@ -366,35 +302,13 @@ export function useAdminUsers(
       userId: string;
       data: { name?: string; email?: string; role?: string };
     }) => updateUserApi(userId, data, t),
-    onMutate: async ({ userId, data }) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.users({ filters, sort, pagination }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        (old: UsersListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            users: old.users.map((user) =>
-              user.id === userId ? { ...user, ...data } : user,
-            ),
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async ({ userId, data }) => ({
+      snapshot: await patchUsers((users) =>
+        users.map((user) => (user.id === userId ? { ...user, ...data } : user)),
+      ),
+    }),
     onError: (err, variables, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous,
-      );
+      restoreListPages(queryClient, context?.snapshot);
       toast.error(
         err instanceof Error
           ? err.message
@@ -404,14 +318,9 @@ export function useAdminUsers(
     onSuccess: () => {
       toast.success(t("common.updated", { item: t("common.labels.user") }));
     },
-    onSettled: () => {
-      // Invalidate all user queries
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Ban user mutation
   const banMutation = useMutation({
     mutationFn: ({
       userId,
@@ -422,42 +331,17 @@ export function useAdminUsers(
       reason: string;
       expiresAt?: Date;
     }) => banUserApi(userId, reason, expiresAt, t),
-    onMutate: async ({ userId, reason, expiresAt }) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.users({ filters, sort, pagination }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        (old: UsersListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            users: old.users.map((user) =>
-              user.id === userId
-                ? {
-                    ...user,
-                    banned: true,
-                    banReason: reason,
-                    banExpires: expiresAt || null,
-                  }
-                : user,
-            ),
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async ({ userId, reason, expiresAt }) => ({
+      snapshot: await patchUsers((users) =>
+        users.map((user) =>
+          user.id === userId
+            ? { ...user, banned: true, banReason: reason, banExpires: expiresAt || null }
+            : user,
+        ),
+      ),
+    }),
     onError: (err, variables, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous,
-      );
+      restoreListPages(queryClient, context?.snapshot);
       toast.error(
         err instanceof Error
           ? err.message
@@ -467,46 +351,22 @@ export function useAdminUsers(
     onSuccess: () => {
       toast.success(t("common.banned", { item: t("common.labels.user") }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Unban user mutation
   const unbanMutation = useMutation({
     mutationFn: (userId: string) => unbanUserApi(userId, t),
-    onMutate: async (userId) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.users({ filters, sort, pagination }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        (old: UsersListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            users: old.users.map((user) =>
-              user.id === userId
-                ? { ...user, banned: false, banReason: null, banExpires: null }
-                : user,
-            ),
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async (userId) => ({
+      snapshot: await patchUsers((users) =>
+        users.map((user) =>
+          user.id === userId
+            ? { ...user, banned: false, banReason: null, banExpires: null }
+            : user,
+        ),
+      ),
+    }),
     onError: (err, userId, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous,
-      );
+      restoreListPages(queryClient, context?.snapshot);
       toast.error(
         err instanceof Error
           ? err.message
@@ -516,43 +376,16 @@ export function useAdminUsers(
     onSuccess: () => {
       toast.success(t("common.unbanned", { item: t("common.labels.user") }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Delete user mutation
   const deleteMutation = useMutation({
     mutationFn: (userId: string) => deleteUserApi(userId, t),
-    onMutate: async (userId) => {
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.users({ filters, sort, pagination }),
-      });
-      const previous = queryClient.getQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-      );
-
-      // Optimistic update
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        (old: UsersListResponse | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            users: old.users.filter((user) => user.id !== userId),
-            total: old.total - 1,
-          };
-        },
-      );
-
-      return { previous };
-    },
+    onMutate: async (userId) => ({
+      snapshot: await patchUsers((users) => users.filter((user) => user.id !== userId)),
+    }),
     onError: (err, userId, context) => {
-      queryClient.setQueryData(
-        queryKeys.admin.users({ filters, sort, pagination }),
-        context?.previous,
-      );
+      restoreListPages(queryClient, context?.snapshot);
       toast.error(
         err instanceof Error
           ? err.message
@@ -562,13 +395,10 @@ export function useAdminUsers(
     onSuccess: () => {
       toast.success(t("common.deleted", { item: t("common.labels.user") }));
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
-    },
+    onSettled,
   });
 
-  // Reset password mutation (no optimistic update needed)
+  // No optimistic update: nothing in the list changes
   const resetPasswordMutation = useMutation({
     mutationFn: ({
       userId,
@@ -588,83 +418,14 @@ export function useAdminUsers(
   });
 
   return {
-    // Data
-    users: usersData?.users || [],
-    total: usersData?.total || 0,
-    page: usersData?.page || pagination.page,
-    limit: usersData?.limit || pagination.limit,
-    totalPages: usersData?.totalPages || 1,
-    isLoading,
-    error,
-
-    // Functions
-    refetch,
-    fetchUserDetails: (userId: string) => fetchUserDetailsApi(userId, t),
-    updateUser: async (
-      userId: string,
-      data: { name?: string; email?: string; role?: string },
-    ): Promise<boolean> => {
-      try {
-        await updateMutation.mutateAsync({ userId, data });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    banUser: async (
-      userId: string,
-      reason: string,
-      expiresAt?: Date,
-    ): Promise<boolean> => {
-      try {
-        await banMutation.mutateAsync({ userId, reason, expiresAt });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    unbanUser: async (userId: string): Promise<boolean> => {
-      try {
-        await unbanMutation.mutateAsync(userId);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    deleteUser: async (userId: string): Promise<boolean> => {
-      try {
-        await deleteMutation.mutateAsync(userId);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    resetPassword: async (
-      userId: string,
-      newPassword: string,
-    ): Promise<boolean> => {
-      try {
-        await resetPasswordMutation.mutateAsync({ userId, newPassword });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    fetchUsers: async (
-      searchFilters: UserFilters,
-      searchSort: UserSort,
-      searchPagination: Pagination,
-    ): Promise<UsersListResponse | null> => {
-      try {
-        return await fetchUsersApi(
-          searchFilters,
-          searchSort,
-          searchPagination,
-          t,
-        );
-      } catch {
-        return null;
-      }
-    },
+    isUpdating: updateMutation.isPending,
+    updateUser: (userId: string, data: { name?: string; email?: string; role?: string }) =>
+      run(updateMutation.mutateAsync, { userId, data }),
+    banUser: (userId: string, reason: string, expiresAt?: Date) =>
+      run(banMutation.mutateAsync, { userId, reason, expiresAt }),
+    unbanUser: (userId: string) => run(unbanMutation.mutateAsync, userId),
+    deleteUser: (userId: string) => run(deleteMutation.mutateAsync, userId),
+    resetPassword: (userId: string, newPassword: string) =>
+      run(resetPasswordMutation.mutateAsync, { userId, newPassword }),
   };
 }

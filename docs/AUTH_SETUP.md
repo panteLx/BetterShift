@@ -250,6 +250,17 @@ Rate-limited endpoints return these headers:
 - `X-RateLimit-Remaining`: Requests remaining in window
 - `X-RateLimit-Reset`: Unix timestamp when limit resets
 
+### Behind a Reverse Proxy
+
+Login and registration limits are keyed by IP address. Behind Cloudflare, Caddy, nginx, or any other reverse proxy, set `TRUSTED_PROXY_HEADER` so the real visitor IP is used instead of your proxy's own address — otherwise every visitor is lumped into the same bucket, which defeats the limit entirely.
+
+```bash
+TRUSTED_PROXY_HEADER=CF-Connecting-IP  # behind Cloudflare
+TRUSTED_PROXY_HEADER=X-Real-IP         # behind Caddy/nginx/Traefik on their own
+```
+
+See `.env.example` (section "Reverse Proxy") for the full set of options.
+
 ---
 
 ## Troubleshooting

@@ -1,17 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CalendarNote } from "@/lib/db/schema";
-import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate, toLocalDate } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
+import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 
 // Helper to convert API response timestamps to Date objects
 export function normalizeNote(note: Record<string, unknown>): CalendarNote {
-  const dateValue = note.date as string | number | Date;
-  const parsedDate =
-    typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-      ? parseLocalDate(dateValue)
-      : new Date(dateValue);
+  const parsedDate = toLocalDate(note.date as string | number | Date);
 
   return {
     ...(note as Omit<CalendarNote, "date" | "createdAt" | "updatedAt">),
@@ -37,7 +36,7 @@ async function fetchNotesApi(calendarId: string): Promise<CalendarNote[]> {
   const response = await fetch(`/api/notes?${params}`);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch notes: ${response.statusText}`);
+    throw new ApiError(`Failed to fetch notes: ${response.statusText}`, response.status);
   }
 
   const data = await response.json();
@@ -118,6 +117,8 @@ export function useNotes(calendarId: string | undefined) {
   const t = useTranslations();
   const queryClient = useQueryClient();
 
+  const accessible = useIsCalendarAccessible(calendarId);
+
   // Data fetching with React Query
   const {
     data: notes = [],
@@ -126,7 +127,8 @@ export function useNotes(calendarId: string | undefined) {
   } = useQuery({
     queryKey: queryKeys.notes.byCalendar(calendarId!),
     queryFn: () => fetchNotesApi(calendarId!),
-    enabled: !!calendarId,
+    enabled: accessible,
+    refetchInterval: LIVE_REFETCH_INTERVAL,
   });
 
   // Create mutation with optimistic update

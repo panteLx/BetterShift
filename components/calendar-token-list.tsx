@@ -1,293 +1,211 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  useCalendarTokens,
-  CalendarAccessToken,
-} from "@/hooks/useCalendarTokens";
+import { ReactNode, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { format, formatDistanceToNow } from "date-fns";
+import { Eye, EyeOff, Link as LinkIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ListRow, Pill, RowIconButton, SectionLabel } from "@/components/form-kit";
+import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { CalendarTokenCreateDialog } from "@/components/calendar-token-create-dialog";
-import {
-  Plus,
-  MoreVertical,
-  Eye,
-  EyeOff,
-  Trash2,
-  Link as LinkIcon,
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+  AccessLinkCreateForm,
+  AccessLinkCreated,
+} from "@/components/calendar-token-create-dialog";
+import { useCalendarTokens, type CalendarAccessToken } from "@/hooks/useCalendarTokens";
+import type { useAccessLinkForm } from "@/hooks/useAccessLinkForm";
 import { getDateLocale } from "@/lib/locales";
-import { useLocale } from "next-intl";
+import { cn } from "@/lib/utils";
 
-interface CalendarTokenListProps {
-  calendarId: string;
+function isExpired(token: CalendarAccessToken) {
+  return !!token.expiresAt && new Date(token.expiresAt) < new Date();
 }
 
-export function CalendarTokenList({ calendarId }: CalendarTokenListProps) {
+export function isUsableToken(token: CalendarAccessToken) {
+  return token.isActive && !isExpired(token);
+}
+
+function TokenRow({
+  token,
+  onToggleActive,
+  onRevoke,
+}: {
+  token: CalendarAccessToken;
+  onToggleActive: () => void;
+  onRevoke: () => void;
+}) {
   const t = useTranslations();
-  const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
+  const dateLocale = getDateLocale(useLocale());
+  const expired = isExpired(token);
+  const dimmed = expired || !token.isActive;
 
-  const { tokens, updateToken, deleteToken } = useCalendarTokens(calendarId);
+  const expiryDate = token.expiresAt
+    ? format(new Date(token.expiresAt), "P", { locale: dateLocale })
+    : null;
+  const expiry = !expiryDate
+    ? t("sharingSheet.noExpiry")
+    : expired
+      ? t("sharingSheet.expiredOn", { date: expiryDate })
+      : t("sharingSheet.expiresOn", { date: expiryDate });
 
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [tokenToDelete, setTokenToDelete] =
-    useState<CalendarAccessToken | null>(null);
-
-  const handleToggleActive = async (token: CalendarAccessToken) => {
-    await updateToken(token.id, { isActive: !token.isActive });
-  };
-
-  const handleDelete = async () => {
-    if (!tokenToDelete) return;
-
-    const success = await deleteToken(tokenToDelete.id);
-    if (success) {
-      setDeleteDialogOpen(false);
-      setTokenToDelete(null);
-    }
-  };
+  const usage = [
+    t("token.usedCount", { count: token.usageCount }),
+    token.lastUsedAt &&
+      t("sharingSheet.lastUsed", {
+        time: formatDistanceToNow(new Date(token.lastUsedAt), {
+          addSuffix: true,
+          locale: dateLocale,
+        }),
+      }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium">
-            {t("token.accessLinks")} ({tokens.length})
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {t("token.accessLinksDescription")}
-          </p>
-        </div>
-        <Button
-          onClick={() => setCreateDialogOpen(true)}
-          size="sm"
-          className="gap-2"
+    <ListRow className={cn(dimmed && "bg-surface-panel")}>
+      <LinkIcon className="size-4 shrink-0 text-fg-tertiary" />
+      <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            "truncate text-[14px] font-semibold",
+            dimmed ? "text-fg-secondary" : "text-fg-strong"
+          )}
         >
-          <Plus className="h-4 w-4" />
-          {t("common.add")}
-        </Button>
+          {token.name || (
+            <span className="font-normal italic text-fg-tertiary">{t("token.unnamed")}</span>
+          )}
+        </div>
+        <div
+          className={cn(
+            "mt-0.5 truncate font-mono text-[12px]",
+            expired ? "text-danger" : "text-fg-tertiary"
+          )}
+        >
+          {expiry}
+        </div>
+        <div className="truncate text-[12px] text-fg-tertiary">{usage}</div>
       </div>
-
-      {/* Token List */}
-      {tokens.length === 0 ? (
-        <div className="border rounded-lg p-8 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-              <LinkIcon className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">{t("token.noTokensYet")}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("token.noTokensDescription")}
-              </p>
-            </div>
-            <Button
-              onClick={() => setCreateDialogOpen(true)}
-              size="sm"
-              className="gap-2 mt-2"
-            >
-              <Plus className="h-4 w-4" />
-              {t("token.createFirstLink")}
-            </Button>
-          </div>
-        </div>
+      {token.permission === "write" ? (
+        <Pill tone="warning">{t("sharingSheet.permWrite")}</Pill>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.labels.name")}</TableHead>
-                <TableHead>{t("token.token")}</TableHead>
-                <TableHead>{t("common.labels.permission")}</TableHead>
-                <TableHead>{t("token.expires")}</TableHead>
-                <TableHead>{t("token.usage")}</TableHead>
-                <TableHead>{t("common.labels.status")}</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tokens.map((token) => (
-                <TableRow key={token.id}>
-                  {/* Name */}
-                  <TableCell className="font-medium">
-                    {token.name || (
-                      <span className="text-muted-foreground italic">
-                        {t("token.unnamed")}
-                      </span>
-                    )}
-                  </TableCell>
+        <Pill>{t("sharingSheet.permRead")}</Pill>
+      )}
+      <RowIconButton
+        icon={token.isActive ? EyeOff : Eye}
+        label={token.isActive ? t("token.disable") : t("token.enable")}
+        onClick={onToggleActive}
+      />
+      <RowIconButton icon={Trash2} tone="danger" label={t("token.revoke")} onClick={onRevoke} />
+    </ListRow>
+  );
+}
 
-                  {/* Token Preview */}
-                  <TableCell className="font-mono text-xs">
-                    {token.tokenPreview}
-                  </TableCell>
+/** Existing links of a calendar, split into active and inactive/expired. */
+export function CalendarTokenList({ calendarId }: { calendarId: string }) {
+  const t = useTranslations();
+  const { tokens, updateToken, deleteToken } = useCalendarTokens(calendarId);
+  const [tokenToRevoke, setTokenToRevoke] = useState<CalendarAccessToken | null>(null);
 
-                  {/* Permission */}
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {token.permission === "read"
-                        ? t("common.labels.permissions.read")
-                        : t("common.labels.permissions.write")}
-                    </Badge>
-                  </TableCell>
+  const active = tokens.filter(isUsableToken);
+  const inactive = tokens.filter((token) => !isUsableToken(token));
 
-                  {/* Expiration */}
-                  <TableCell className="text-sm">
-                    {token.expiresAt ? (
-                      <span>
-                        {new Date(token.expiresAt) < new Date() ? (
-                          <span className="text-destructive">
-                            {t("token.expired")}
-                          </span>
-                        ) : (
-                          formatDistanceToNow(new Date(token.expiresAt), {
-                            addSuffix: true,
-                            locale: dateLocale,
-                          })
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {t("common.time.never")}
-                      </span>
-                    )}
-                  </TableCell>
+  const renderRows = (list: CalendarAccessToken[]) =>
+    list.map((token) => (
+      <TokenRow
+        key={token.id}
+        token={token}
+        onToggleActive={() => updateToken(token.id, { isActive: !token.isActive })}
+        onRevoke={() => setTokenToRevoke(token)}
+      />
+    ));
 
-                  {/* Usage Stats */}
-                  <TableCell className="text-sm">
-                    <div className="space-y-0.5">
-                      <div>
-                        {t("token.usedCount", { count: token.usageCount })}
-                      </div>
-                      {token.lastUsedAt ? (
-                        <div className="text-xs text-muted-foreground">
-                          {" "}
-                          {formatDistanceToNow(new Date(token.lastUsedAt), {
-                            addSuffix: true,
-                            locale: dateLocale,
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          {t("token.neverUsed")}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
+  return (
+    <>
+      <section className="flex flex-col gap-2">
+        <SectionLabel className="mb-0">{t("sharingSheet.activeLinks")}</SectionLabel>
+        {active.length === 0 ? (
+          <p className="rounded-[11px] border border-dashed border-control px-3.5 py-3 text-center text-[13px] text-fg-tertiary">
+            {t("sharingSheet.noActiveLinks")}
+          </p>
+        ) : (
+          renderRows(active)
+        )}
+      </section>
 
-                  {/* Status */}
-                  <TableCell>
-                    <Badge variant={token.isActive ? "default" : "secondary"}>
-                      {token.isActive
-                        ? t("common.status.active")
-                        : t("common.status.inactive")}
-                    </Badge>
-                  </TableCell>
-
-                  {/* Actions */}
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleToggleActive(token)}
-                        >
-                          {token.isActive ? (
-                            <>
-                              <EyeOff className="h-4 w-4 mr-2" />
-                              {t("token.disable")}
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-4 w-4 mr-2" />
-                              {t("token.enable")}
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setTokenToDelete(token);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          {t("token.revoke")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+      {inactive.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <SectionLabel className="mb-0">{t("sharingSheet.inactiveLinks")}</SectionLabel>
+          {renderRows(inactive)}
+        </section>
       )}
 
-      {/* Create Dialog */}
-      <CalendarTokenCreateDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        calendarId={calendarId}
-      />
+      {tokenToRevoke && (
+        <ConfirmationDialog
+          open
+          onOpenChange={(open) => !open && setTokenToRevoke(null)}
+          onConfirm={async () => {
+            if (await deleteToken(tokenToRevoke.id)) setTokenToRevoke(null);
+          }}
+          title={t("token.revokeConfirm")}
+          description={t("token.revokeConfirmDescription", {
+            name: tokenToRevoke.name || t("token.unnamed"),
+          })}
+          confirmText={t("token.revoke")}
+          confirmVariant="destructive"
+        />
+      )}
+    </>
+  );
+}
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("token.revokeConfirm")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("token.revokeConfirmDescription", {
-                name: tokenToDelete?.name || t("token.unnamed"),
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive"
-            >
-              {t("token.revoke")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+/**
+ * Access links (screens 9a/9b). The owner holds `form` so its input survives tab
+ * switches; `leading` renders above the list, e.g. a tab switcher.
+ */
+export function AccessLinksPanel({
+  calendarId,
+  form,
+  onClose,
+  leading,
+}: {
+  calendarId: string;
+  form: ReturnType<typeof useAccessLinkForm>;
+  onClose: () => void;
+  leading?: ReactNode;
+}) {
+  const t = useTranslations();
+
+  if (form.created) {
+    return (
+      <>
+        <PanelBody>
+          <AccessLinkCreated created={form.created} />
+        </PanelBody>
+        <PanelFooter>
+          <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={form.reset}>
+            {t("common.close")}
+          </Button>
+        </PanelFooter>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PanelBody className="flex flex-col gap-3.5">
+        {leading}
+        <CalendarTokenList calendarId={calendarId} />
+        <div className="h-px shrink-0 bg-line" />
+        <AccessLinkCreateForm form={form} />
+      </PanelBody>
+      <PanelFooter>
+        <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose}>
+          {t("common.cancel")}
+        </Button>
+        <Button className="h-10 flex-1 font-semibold" onClick={form.create} disabled={form.creating}>
+          {form.creating ? t("sharingSheet.creating") : t("sharingSheet.createLink")}
+        </Button>
+      </PanelFooter>
+    </>
   );
 }

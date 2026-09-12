@@ -4,119 +4,419 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Text hierarchy */
+  --color-fg-strong: var(--fg-strong);
+  --color-fg-body: var(--fg-body);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-faint: var(--fg-faint);
+
+  /* Surfaces and lines */
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-card: var(--surface-card);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-cell: var(--surface-cell);
+  --color-surface-weekend: var(--surface-weekend);
+  --color-surface-today: var(--surface-today);
+  --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
+  --color-line-grid: var(--line-grid);
+  --color-control: var(--control);
+
+  /* Month cell entries */
+  --color-cell-event: var(--cell-event);
+  --color-cell-event-line: var(--cell-event-line);
+  --color-cell-event-ink: var(--cell-event-ink);
+  --color-cell-note: var(--cell-note);
+  --color-cell-muted: var(--cell-muted);
+  --color-cell-weekend-num: var(--cell-weekend-num);
+  --color-cell-outside-num: var(--cell-outside-num);
+  --color-cell-selected: var(--cell-selected);
+
+  /* Brand accent */
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-dot: var(--brand-dot);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-dot: var(--success-dot);
+  --color-warning: var(--warning);
+  --color-warning-title: var(--warning-title);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-line: var(--warning-line);
+  --color-danger: var(--danger);
+  --color-danger-body: var(--danger-body);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-line: var(--danger-line);
+
+  /* Stamp dock */
+  --color-dock: var(--dock);
+  --color-dock-line: var(--dock-line);
+  --color-dock-ink: var(--dock-ink);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+
+  --shadow-window: var(--elevation-window);
+  --shadow-sheet: var(--elevation-sheet);
+  --shadow-segment: var(--elevation-segment);
+  --shadow-dock: var(--elevation-dock);
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.96 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(0.985 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(0.985 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.95 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.95 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.95 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.8 0 0);
-  --input: oklch(0.8 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --fg-strong: #101828;
+  --fg-body: #344054;
+  --fg-secondary: #475467;
+  --fg-tertiary: #667085;
+  --fg-faint: #98a2b3;
+
+  --surface-panel: #fafbfc;
+  --surface-card: #ffffff;
+  --surface-sunken: #f2f4f7;
+  --surface-cell: #ffffff;
+  --surface-weekend: #fbfbfc;
+  --surface-today: #f7faff;
+  --line: #e4e7ec;
+  --line-subtle: #f2f4f7;
+  --line-grid: #eef0f3;
+  --control: #d0d5dd;
+
+  --cell-event: #f3f9fd;
+  --cell-event-line: #cde6f6;
+  --cell-event-ink: #075985;
+  --cell-note: #d97706;
+  --cell-muted: #667085;
+  --cell-weekend-num: #667085;
+  --cell-outside-num: #98a2b3;
+  --cell-selected: #e4e7ec;
+
+  --brand: #2563eb;
+  --brand-ink: #1d4ed8;
+  --brand-soft: #eff4ff;
+  --brand-dot: #2563eb;
+
+  --success: #027a48;
+  --success-soft: #ecfdf3;
+  --success-dot: #12b76a;
+  --warning: #b45309;
+  --warning-title: #93370d;
+  --warning-soft: #fdf3e6;
+  --warning-surface: #fffcf5;
+  --warning-line: #fbe3b8;
+  --danger: #b42318;
+  --danger-body: #912018;
+  --danger-soft: #fef3f2;
+  --danger-surface: #fffbfa;
+  --danger-line: #fda29b;
+
+  --dock: #101828;
+  --dock-line: rgb(255 255 255 / 0.14);
+  --dock-ink: #e4e7ec;
+
+  --elevation-window: 0 12px 32px -12px rgb(16 24 40 / 0.18);
+  --elevation-sheet: 0 -14px 34px -14px rgb(16 24 40 / 0.34);
+  --elevation-segment: 0 1px 2px rgb(16 24 40 / 0.08);
+  --elevation-dock: 0 16px 32px -10px rgb(16 24 40 / 0.45);
+
+  /* shadcn semantic mapping */
+  --background: #ffffff;
+  --foreground: var(--fg-strong);
+  --card: var(--surface-card);
+  --card-foreground: var(--fg-strong);
+  --popover: #ffffff;
+  --popover-foreground: var(--fg-strong);
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--fg-body);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--fg-tertiary);
+  --accent: var(--surface-sunken);
+  --accent-foreground: var(--fg-strong);
+  --destructive: #d92d20;
+  --border: var(--line);
+  --input: var(--control);
+  --ring: #2563eb;
+  --chart-1: #2563eb;
+  --chart-2: #7c3aed;
+  --chart-3: #059669;
+  --chart-4: #d97706;
+  --chart-5: #db2777;
+  --sidebar: var(--surface-panel);
+  --sidebar-foreground: var(--fg-body);
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--brand-ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: #2563eb;
+
+  /* Shift chips: arbitrary DB colors, tinted per theme */
+  --shift-tint: 8%;
+  --shift-ink-mix: #101828 22%;
+
+  /* Highlighted weekdays: share of the user's colour over the cell surface */
+  --highlight-tint: 10%;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --fg-strong: #f2f4f7;
+  --fg-body: #e4e7ec;
+  --fg-secondary: #cdd4df;
+  --fg-tertiary: #98a2b3;
+  --fg-faint: #667085;
+
+  --surface-panel: #0e141f;
+  --surface-card: #141b28;
+  --surface-sunken: #1b2333;
+  --surface-cell: #121926;
+  --surface-weekend: #0e141f;
+  --surface-today: #13203a;
+  --line: #1e2637;
+  --line-subtle: #1a2130;
+  --line-grid: #1e2637;
+  --control: #29334a;
+
+  --cell-event: #0f1b28;
+  --cell-event-line: #1d3247;
+  --cell-event-ink: #8fd4f8;
+  --cell-note: #fbbf24;
+  --cell-muted: #7c879b;
+  --cell-weekend-num: #8c99ad;
+  --cell-outside-num: #5a6478;
+  --cell-selected: #2a3349;
+
+  --brand: #2563eb;
+  --brand-ink: #7fa8fb;
+  --brand-soft: rgb(59 130 246 / 0.16);
+  --brand-dot: #3b82f6;
+
+  --success: #6ce9a6;
+  --success-soft: rgb(18 183 106 / 0.14);
+  --success-dot: #32d583;
+  --warning: #fcd34d;
+  --warning-title: #fde68a;
+  --warning-soft: rgb(245 158 11 / 0.15);
+  --warning-surface: rgb(245 158 11 / 0.07);
+  --warning-line: rgb(245 158 11 / 0.3);
+  --danger: #fda29b;
+  --danger-body: #fecdca;
+  --danger-soft: rgb(240 68 56 / 0.15);
+  --danger-surface: rgb(240 68 56 / 0.07);
+  --danger-line: rgb(240 68 56 / 0.35);
+
+  --dock: #1b2333;
+  --dock-line: #29334a;
+  --dock-ink: #e4e7ec;
+
+  --elevation-window: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+  --elevation-sheet: 0 -14px 34px -14px rgb(0 0 0 / 0.6);
+  --elevation-segment: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-dock: 0 16px 32px -10px rgb(0 0 0 / 0.6);
+
+  --background: #0c111b;
+  --foreground: var(--fg-strong);
+  --card: var(--surface-card);
+  --card-foreground: var(--fg-strong);
+  --popover: #141b28;
+  --popover-foreground: var(--fg-strong);
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--fg-body);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--fg-tertiary);
+  --accent: var(--surface-sunken);
+  --accent-foreground: var(--fg-strong);
+  --destructive: #f04438;
+  --border: var(--line);
+  --input: var(--control);
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #a78bfa;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f472b6;
+  --sidebar: var(--surface-panel);
+  --sidebar-foreground: var(--fg-body);
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--brand-ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: #3b82f6;
+
+  --shift-tint: 16%;
+  --highlight-tint: 22%;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /*
+   * iOS Safari styles date and time inputs natively and gives them an intrinsic
+   * min-width that ignores `width: 100%`, so a start/end pair overflows its
+   * column and the two fields overlap.
+   */
+  input[type="time"],
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
+  input[type="time"]::-webkit-date-and-time-value,
+  input[type="date"]::-webkit-date-and-time-value {
+    margin: 0;
+    text-align: left;
+  }
+}
+
+/* Scrim behind dialogs and bottom sheets; unlayered so it beats the primitives' bg utility */
+[data-slot="drawer-overlay"],
+[data-slot="dialog-overlay"],
+[data-slot="sheet-overlay"],
+[data-slot="alert-dialog-overlay"] {
+  background-color: rgb(16 24 40 / 0.34);
+}
+.dark :is(
+    [data-slot="drawer-overlay"],
+    [data-slot="dialog-overlay"],
+    [data-slot="sheet-overlay"],
+    [data-slot="alert-dialog-overlay"]
+  ) {
+  background-color: rgb(0 0 0 / 0.55);
+}
+
+/* Uppercase section label from the design system */
+@utility eyebrow {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+
+@layer utilities {
+  /*
+   * Shift color helpers. Set --shift on the element to the raw DB hex;
+   * dark mode lightens it because saturated colors sink on dark grounds.
+   */
+  .shift-chip,
+  .shift-rail,
+  .shift-text {
+    --shift-base: var(--shift, var(--brand));
+  }
+  .dark :is(.shift-chip, .shift-rail, .shift-text) {
+    --shift-base: color-mix(in oklch, var(--shift, var(--brand)) 72%, white);
+  }
+  .shift-chip {
+    background-color: color-mix(
+      in oklch,
+      var(--shift-base) var(--shift-tint),
+      transparent
+    );
+    color: color-mix(in oklch, var(--shift-base), var(--shift-ink-mix));
+  }
+  .dark .shift-chip {
+    color: color-mix(in oklch, var(--shift-base) 55%, white);
+  }
+  .shift-solid {
+    background-color: color-mix(in oklch, var(--shift, var(--brand)), black 8%);
+    color: #ffffff;
+  }
+  .shift-rail {
+    background-color: var(--shift-base);
+  }
+  .shift-text {
+    color: color-mix(in oklch, var(--shift-base), var(--shift-ink-mix));
+  }
+  .dark .shift-text {
+    color: color-mix(in oklch, var(--shift-base) 55%, white);
+  }
+  .shift-icon {
+    color: var(--shift, var(--brand));
+  }
+  .dark .shift-icon {
+    color: color-mix(in oklch, var(--shift, var(--brand)) 72%, white);
+  }
+  /* Phone month field: small type on a stronger fill, so the ink moves further from the hue */
+  .shift-field {
+    --shift-base: var(--shift, var(--brand));
+    background-color: color-mix(in oklch, var(--shift-base) 13%, transparent);
+    color: color-mix(in oklch, var(--shift-base), #101828 35%);
+  }
+  .dark .shift-field {
+    --shift-base: color-mix(in oklch, var(--shift, var(--brand)) 72%, white);
+    background-color: color-mix(in oklch, var(--shift-base) 19%, transparent);
+    color: color-mix(in oklch, var(--shift-base) 32%, white);
+  }
+
+  /*
+   * Weekday highlight. Set --highlight to the chosen hex. A flat layer over the cell's own
+   * background keeps weekend and hover; srgb, because oklch drags the hue toward the navy dark cell.
+   */
+  .day-highlight {
+    --highlight-layer: color-mix(in srgb, var(--highlight) var(--highlight-tint), transparent);
+    background-image: linear-gradient(var(--highlight-layer), var(--highlight-layer));
   }
 }

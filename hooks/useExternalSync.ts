@@ -4,7 +4,9 @@ import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalSync, SyncLog } from "@/lib/db/schema";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 /**
  * Fetch external syncs from API
@@ -16,7 +18,7 @@ async function fetchExternalSyncsApi(
   const response = await fetch(`/api/external-syncs?${params}`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch external syncs");
+    throw new ApiError("Failed to fetch external syncs", response.status);
   }
 
   return await response.json();
@@ -34,7 +36,7 @@ async function fetchSyncLogsApi(calendarId: string): Promise<SyncLog[]> {
   const response = await fetch(`/api/sync-logs?${params}`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch sync logs");
+    throw new ApiError("Failed to fetch sync logs", response.status);
   }
 
   return await response.json();
@@ -58,22 +60,22 @@ async function fetchSyncLogsApi(calendarId: string): Promise<SyncLog[]> {
 export function useExternalSync(selectedCalendar: string | null) {
   const queryClient = useQueryClient();
 
+  const accessible = useIsCalendarAccessible(selectedCalendar);
+
   // Fetch external syncs
   const { data: externalSyncs = [], isLoading: syncsLoading } = useQuery({
     queryKey: queryKeys.externalSyncs.byCalendar(selectedCalendar!),
     queryFn: () => fetchExternalSyncsApi(selectedCalendar!),
-    enabled: !!selectedCalendar,
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true, // Continue polling in background
+    enabled: accessible,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   // Fetch sync logs
   const { data: syncLogs = [], isLoading: logsLoading } = useQuery({
     queryKey: queryKeys.externalSyncs.logs(selectedCalendar!),
     queryFn: () => fetchSyncLogsApi(selectedCalendar!),
-    enabled: !!selectedCalendar,
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true, // Continue polling in background
+    enabled: accessible,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   // Compute error status from logs
@@ -96,6 +98,7 @@ export function useExternalSync(selectedCalendar: string | null) {
 
   return {
     externalSyncs,
+    syncLogs,
     hasSyncErrors,
     loading: syncsLoading || logsLoading,
     refetch,

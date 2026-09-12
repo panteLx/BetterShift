@@ -1,300 +1,211 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { useTranslations } from "next-intl";
-import { format } from "date-fns";
-import { UserPlus, MoreVertical, Trash2, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, ChevronDown, Trash2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { CalendarShareUserSearch } from "@/components/calendar-share-user-search";
+import { ListRow, SectionLabel } from "@/components/form-kit";
 import {
-  useCalendarShares,
-  type CalendarShare,
-} from "@/hooks/useCalendarShares";
+  CalendarShareUserSearch,
+} from "@/components/calendar-share-user-search";
+import { useCalendarShares, type CalendarShare } from "@/hooks/useCalendarShares";
 import { useAuth } from "@/hooks/useAuth";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
-import { getDateLocale } from "@/lib/locales";
-import { useLocale } from "next-intl";
+import { cn, getUserInitials } from "@/lib/utils";
+
+type SharePermission = "admin" | "write" | "read";
 
 interface CalendarShareListProps {
   calendarId: string;
   canManageShares: boolean;
 }
 
-export function CalendarShareList({
-  calendarId,
-  canManageShares,
-}: CalendarShareListProps) {
+function PersonRow({
+  user,
+  highlight,
+  suffix,
+  action,
+}: {
+  user: { name: string | null; email: string; image?: string | null };
+  highlight?: boolean;
+  suffix?: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <ListRow>
+      <Avatar className="size-8">
+        {user.image && <AvatarImage src={user.image} alt="" />}
+        <AvatarFallback
+          className={cn(
+            "text-[11.5px] font-semibold",
+            highlight ? "bg-brand-soft text-brand-ink" : "bg-surface-sunken text-fg-secondary"
+          )}
+        >
+          {getUserInitials(user)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[14px] font-semibold text-fg-strong">
+          {user.name || user.email || "…"}
+          {suffix}
+        </div>
+        {user.name && user.email && (
+          <div className="truncate text-[12px] text-fg-tertiary">{user.email}</div>
+        )}
+      </div>
+      {action}
+    </ListRow>
+  );
+}
+
+/** "Personen" tab: invite row plus everyone with access. */
+export function CalendarShareList({ calendarId, canManageShares }: CalendarShareListProps) {
   const t = useTranslations();
-  const locale = useLocale();
   const { user: currentUser } = useAuth();
   const { isOwner } = useCalendarPermission(calendarId);
   const { shares, updateShare, removeShare } = useCalendarShares(calendarId);
+  const [shareToDelete, setShareToDelete] = useState<CalendarShare | null>(null);
 
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [shareToDelete, setShareToDelete] = useState<CalendarShare | null>(
-    null
+  const permissionLabel = (permission: CalendarShare["permission"]) =>
+    permission === "owner"
+      ? t("sharingSheet.owner")
+      : permission === "admin"
+        ? t("common.labels.permissions.admin")
+        : permission === "write"
+          ? t("sharingSheet.permWrite")
+          : t("sharingSheet.permRead");
+
+  const permissionOptions: { value: SharePermission; title: string; description: string }[] = [
+    { value: "read", title: t("sharingSheet.permRead"), description: t("sharingSheet.permReadDesc") },
+    { value: "write", title: t("sharingSheet.permWrite"), description: t("sharingSheet.permWriteDesc") },
+    ...(isOwner
+      ? [
+          {
+            value: "admin" as const,
+            title: t("common.labels.permissions.admin"),
+            description: t("sharingSheet.permAdminDesc"),
+          },
+        ]
+      : []),
+  ];
+
+  const you = <span className="ml-1.5 font-normal text-fg-tertiary">({t("share.you")})</span>;
+  const staticLabel = (label: string) => (
+    <span className="shrink-0 px-[9px] text-[12.5px] font-medium text-fg-secondary">{label}</span>
   );
 
-  const getUserInitials = (share: CalendarShare) => {
-    if (share.user.name) {
-      return share.user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return share.user.email.slice(0, 2).toUpperCase();
+  const renderAction = (share: CalendarShare) => {
+    const isSelf = share.userId === currentUser?.id;
+    // Only the owner may touch admins; nobody changes their own level.
+    const canRemove = canManageShares && (isOwner || share.permission !== "admin");
+    const canChange = canRemove && !isSelf;
+    if (!canRemove) return staticLabel(permissionLabel(share.permission));
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={t("sharingSheet.changePermission", {
+            name: share.user.name || share.user.email,
+          })}
+          className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-lg border border-line px-[9px] text-[12.5px] font-medium text-fg-body transition-colors hover:bg-surface-panel data-[state=open]:bg-surface-panel"
+        >
+          {permissionLabel(share.permission)}
+          <ChevronDown className="size-[13px] text-fg-tertiary" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          {canChange && (
+            <>
+              {permissionOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => {
+                    if (option.value !== share.permission) updateShare(share.id, option.value);
+                  }}
+                  className="items-start gap-2.5 py-2"
+                >
+                  <Check
+                    className={cn(
+                      "mt-0.5 size-4 shrink-0 text-brand",
+                      option.value !== share.permission && "invisible"
+                    )}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-semibold text-fg-strong">
+                      {option.title}
+                    </span>
+                    <span className="block text-[12px] text-fg-tertiary">{option.description}</span>
+                  </span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuItem
+            onClick={() => setShareToDelete(share)}
+            className="gap-2.5 text-danger focus:text-danger"
+          >
+            <Trash2 className="size-4 text-danger" />
+            {t("share.removeAccess")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   };
 
-  const getPermissionBadgeClass = (permission: string) => {
-    switch (permission) {
-      case "owner":
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20";
-      case "admin":
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-      case "write":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      case "read":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
-  const handlePermissionChange = async (
-    shareId: string,
-    newPermission: "admin" | "write" | "read"
-  ) => {
-    await updateShare(shareId, newPermission);
-  };
-
-  const handleRemoveShare = async () => {
-    if (!shareToDelete) return;
-    await removeShare(shareToDelete.id);
-    setShareToDelete(null);
-  };
-
-  const isSelf = (share: CalendarShare) => share.userId === currentUser?.id;
+  // The shares endpoint lists grants only; the owner row is known just for the owner themself.
+  const ownerRow = isOwner && currentUser && (
+    <PersonRow
+      user={{ name: currentUser.name ?? null, email: currentUser.email, image: currentUser.image }}
+      highlight
+      suffix={you}
+      action={staticLabel(t("sharingSheet.owner"))}
+    />
+  );
 
   return (
     <>
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">
-              {t("share.userShares")} ({shares.length})
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {t("share.userSharesDescription")}
-            </p>
-          </div>
-          {canManageShares && (
-            <Button
-              onClick={() => setShowAddUser(true)}
-              size="sm"
-              className="gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
-              {t("common.add")}
-            </Button>
-          )}
-        </div>
+      {canManageShares && <CalendarShareUserSearch calendarId={calendarId} />}
 
-        {/* Shares Table */}
-        {shares.length === 0 ? (
-          <div className="border rounded-lg p-8 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                <Shield className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{t("share.noShares")}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("share.noSharesDescription")}
-                </p>
-              </div>
-              {canManageShares && (
-                <Button
-                  onClick={() => setShowAddUser(true)}
-                  size="sm"
-                  className="gap-2 mt-2"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  {t("share.addUser")}
-                </Button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("common.labels.user")}</TableHead>
-                  <TableHead>{t("common.labels.permission")}</TableHead>
-                  <TableHead>{t("share.sharedBy")}</TableHead>
-                  <TableHead>{t("share.sharedOn")}</TableHead>
-                  {canManageShares && (
-                    <TableHead className="w-[50px]"></TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {shares.map((share) => (
-                  <TableRow key={share.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          {share.user.image && (
-                            <AvatarImage src={share.user.image} />
-                          )}
-                          <AvatarFallback className="text-xs">
-                            {getUserInitials(share)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {share.user.name || share.user.email}
-                            {isSelf(share) && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({t("share.you")})
-                              </span>
-                            )}
-                          </p>
-                          {share.user.name && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {share.user.email}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {canManageShares &&
-                      !isSelf(share) &&
-                      (isOwner || share.permission !== "admin") ? (
-                        <Select
-                          value={share.permission}
-                          onValueChange={(value) =>
-                            handlePermissionChange(
-                              share.id,
-                              value as "admin" | "write" | "read"
-                            )
-                          }
-                        >
-                          <SelectTrigger className="w-[140px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="read">
-                              {t("common.labels.permissions.read")}
-                            </SelectItem>
-                            <SelectItem value="write">
-                              {t("common.labels.permissions.write")}
-                            </SelectItem>
-                            {isOwner && (
-                              <SelectItem value="admin">
-                                {t("common.labels.permissions.admin")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getPermissionBadgeClass(
-                            share.permission
-                          )}`}
-                        >
-                          {t(`common.labels.permissions.${share.permission}`)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm truncate">
-                        {share.sharedByUser.name || share.sharedByUser.email}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(share.createdAt), "PP", {
-                          locale: getDateLocale(locale),
-                        })}
-                      </p>
-                    </TableCell>
-                    {canManageShares &&
-                      (isOwner || share.permission !== "admin") && (
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => setShareToDelete(share)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {t("share.removeAccess")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+      <section className="flex flex-col gap-2">
+        <SectionLabel className="mb-0">{t("sharingSheet.haveAccess")}</SectionLabel>
+        {ownerRow}
+        {shares.map((share) => (
+          <PersonRow
+            key={share.id}
+            user={share.user}
+            suffix={share.userId === currentUser?.id ? you : undefined}
+            action={renderAction(share)}
+          />
+        ))}
+        {shares.length === 0 && (
+          <p className="rounded-[11px] border border-dashed border-control px-3.5 py-3 text-center text-[13px] text-fg-tertiary">
+            {t("share.noSharesDescription")}
+          </p>
         )}
-      </div>
+      </section>
 
-      {/* Add User Dialog */}
-      <CalendarShareUserSearch
-        open={showAddUser}
-        onOpenChange={setShowAddUser}
-        calendarId={calendarId}
-      />
-
-      {/* Remove Confirmation */}
       {shareToDelete && (
         <ConfirmationDialog
-          open={!!shareToDelete}
+          open
           onOpenChange={(open) => !open && setShareToDelete(null)}
-          onConfirm={handleRemoveShare}
+          onConfirm={async () => {
+            await removeShare(shareToDelete.id);
+            setShareToDelete(null);
+          }}
           title={t("share.removeShareConfirmTitle")}
           description={t("share.removeShareConfirmDesc", {
             user: shareToDelete.user.name || shareToDelete.user.email,
           })}
           confirmVariant="destructive"
-          confirmText={t("common.delete")}
-          cancelText={t("common.cancel")}
+          confirmText={t("share.removeAccess")}
         />
       )}
     </>

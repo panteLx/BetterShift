@@ -71,7 +71,8 @@ export interface CalendarDeletedMetadata {
 
 export interface CalendarUpdatedMetadata {
   calendarName: string;
-  changes: string[]; // e.g., ["name", "color", "guestPermission"]
+  changes: string[]; // e.g., ["name", "color", "guestPermission", "viewSettings"]
+  viewSettings?: "enabled" | "updated" | "disabled";
 }
 
 export interface CalendarSharedMetadata {

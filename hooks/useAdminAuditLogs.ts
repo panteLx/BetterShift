@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 
 /**
  * Audit Log Types
@@ -179,6 +179,8 @@ export function useAdminAuditLogs(
   filters: AuditLogFilters = {},
   sort: AuditLogSort = { field: "timestamp", direction: "desc" },
   pagination: AuditLogPagination = { limit: 25, offset: 0 },
+  /** Callers that only need the delete actions skip the polling list query */
+  { listEnabled = true }: { listEnabled?: boolean } = {},
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -192,8 +194,8 @@ export function useAdminAuditLogs(
   } = useQuery({
     queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination, t }),
     queryFn: () => fetchAuditLogsApi(filters, sort, pagination, t),
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true, // Continue polling in background
+    enabled: listEnabled,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   // Delete audit logs by IDs mutation
@@ -237,8 +239,8 @@ export function useAdminAuditLogs(
       toast.success(t("common.deletedCount", { count: data.deletedCount }));
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.auditLogsAll });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
     },
   });
 
@@ -256,8 +258,8 @@ export function useAdminAuditLogs(
       toast.success(t("common.deletedCount", { count: data.deletedCount }));
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.auditLogsAll });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats });
     },
   });
 
@@ -267,7 +269,7 @@ export function useAdminAuditLogs(
     total: logsData?.total || 0,
     limit: logsData?.limit || pagination.limit,
     offset: logsData?.offset || pagination.offset,
-    isLoading,
+    isLoading: isLoading || deleteByIdsMutation.isPending || deleteByDateMutation.isPending,
     error,
 
     // Functions

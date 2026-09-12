@@ -1,58 +1,28 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Search, UserPlus, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCalendarShares, type SearchUser } from "@/hooks/useCalendarShares";
-import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { getUserInitials } from "@/lib/utils";
 
 interface CalendarShareUserSearchProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   calendarId: string;
   onSuccess?: () => void;
 }
 
-export function CalendarShareUserSearch({
-  open,
-  onOpenChange,
-  calendarId,
-  onSuccess,
-}: CalendarShareUserSearchProps) {
+/** Invite row of the sharing panel: search a user and share with read access. */
+export function CalendarShareUserSearch({ calendarId, onSuccess }: CalendarShareUserSearchProps) {
   const t = useTranslations();
-  const { searchUsers, searchResults, searchLoading, addShare } =
-    useCalendarShares(calendarId);
-  const { isOwner } = useCalendarPermission(calendarId);
+  const { searchUsers, searchResults, searchLoading, addShare } = useCalendarShares(calendarId);
 
   const [query, setQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
-  const [permission, setPermission] = useState<"admin" | "write" | "read">(
-    "read"
-  );
-  const [loading, setLoading] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
-  // Debounced search. The timer lives in a ref because the previous version
-  // returned a cleanup function from an event handler, where nothing ever
-  // calls it -- every keystroke fired its own request.
+  // Debounce timer in a ref so each keystroke cancels the previous request.
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -78,225 +48,99 @@ export function CalendarShareUserSearch({
     setQuery(user.name || user.email);
   };
 
-  const handleAddShare = async () => {
-    if (!selectedUser) return;
-
-    setLoading(true);
-    const result = await addShare(selectedUser.id, permission);
-    setLoading(false);
-
-    if (result.success) {
-      setQuery("");
-      setSelectedUser(null);
-      setPermission("read");
-      onSuccess?.();
-      onOpenChange(false);
-    }
-  };
-
-  const handleClose = () => {
+  const clear = () => {
     setQuery("");
     setSelectedUser(null);
-    setPermission("read");
-    onOpenChange(false);
   };
 
-  const getUserInitials = (user: SearchUser) => {
-    if (user.name) {
-      return user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
+  const handleInvite = async () => {
+    if (!selectedUser) return;
+    setInviting(true);
+    const result = await addShare(selectedUser.id, "read");
+    setInviting(false);
+    if (result.success) {
+      clear();
+      onSuccess?.();
     }
-    return user.email.slice(0, 2).toUpperCase();
   };
 
-  const showResults = useMemo(
-    () => query.length >= 2 && !selectedUser && searchResults.length > 0,
-    [query, selectedUser, searchResults]
-  );
+  const searching = query.length >= 2 && !selectedUser;
+  const showResults = searching && searchResults.length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            {t("share.addUser")}
-          </DialogTitle>
-          <DialogDescription>{t("share.addUserDescription")}</DialogDescription>
-        </DialogHeader>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex h-10 items-center gap-2 rounded-[9px] border border-control bg-surface-card pl-3 pr-1.5 transition-[box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        <UserPlus className="size-4 shrink-0 text-fg-tertiary" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => handleSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            if (selectedUser) handleInvite();
+            else if (showResults) handleSelectUser(searchResults[0]);
+          }}
+          placeholder={t("share.searchUserPlaceholder")}
+          aria-label={t("share.searchUser")}
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-fg-strong outline-none placeholder:text-fg-tertiary"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={clear}
+            aria-label={t("common.cancel")}
+            className="flex size-6 shrink-0 items-center justify-center rounded-md text-fg-tertiary hover:bg-surface-sunken"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleInvite}
+          disabled={!selectedUser || inviting}
+          className="h-7 shrink-0 rounded-[7px] px-3 text-[12.5px] font-semibold"
+        >
+          {t("sharingSheet.invite")}
+        </Button>
+      </div>
 
-        <div className="space-y-4 py-4">
-          {/* User Search */}
-          <div className="space-y-2">
-            <Label htmlFor="user-search">{t("share.searchUser")}</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="user-search"
-                type="text"
-                value={query}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder={t("share.searchUserPlaceholder")}
-                className="pl-10 pr-10"
-                autoComplete="off"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setSelectedUser(null);
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Search Results Dropdown */}
-            {showResults && (
-              <div className="border rounded-lg overflow-hidden bg-background shadow-lg">
-                <div className="max-h-[200px] overflow-y-auto">
-                  {searchResults.map((user) => (
-                    <button
-                      key={user.id}
-                      type="button"
-                      onClick={() => handleSelectUser(user)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors text-left"
-                    >
-                      <Avatar className="h-8 w-8">
-                        {user.image && <AvatarImage src={user.image} />}
-                        <AvatarFallback className="text-xs">
-                          {getUserInitials(user)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {user.name || user.email}
-                        </p>
-                        {user.name && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {user.email}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Search Loading */}
-            {searchLoading && (
-              <p className="text-sm text-muted-foreground">
-                {t("common.loading")}
-              </p>
-            )}
-
-            {/* No Results */}
-            {query.length >= 2 &&
-              !selectedUser &&
-              searchResults.length === 0 &&
-              !searchLoading && (
-                <p className="text-sm text-muted-foreground">
-                  {t("common.empty.noUsersFound")}
-                </p>
-              )}
-          </div>
-
-          {/* Selected User */}
-          {selectedUser && (
-            <div className="border rounded-lg p-3 bg-muted/50">
-              <p className="text-xs font-medium text-muted-foreground mb-2">
-                {t("share.selectedUser")}
-              </p>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  {selectedUser.image && (
-                    <AvatarImage src={selectedUser.image} />
-                  )}
-                  <AvatarFallback>
-                    {getUserInitials(selectedUser)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">
-                    {selectedUser.name || selectedUser.email}
-                  </p>
-                  {selectedUser.name && (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedUser.email}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Permission Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="permission">{t("common.labels.permission")}</Label>
-            <Select
-              value={permission}
-              onValueChange={(value) =>
-                setPermission(value as "admin" | "write" | "read")
-              }
+      {showResults && (
+        <div className="max-h-[220px] overflow-y-auto rounded-[10px] border border-line bg-surface-card p-1">
+          {searchResults.map((user) => (
+            <button
+              key={user.id}
+              type="button"
+              onClick={() => handleSelectUser(user)}
+              className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-surface-panel"
             >
-              <SelectTrigger id="permission">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="read">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">
-                      {t("common.labels.permissions.read")}
-                    </span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="write">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">
-                      {t("common.labels.permissions.write")}
-                    </span>
-                  </div>
-                </SelectItem>
-                {isOwner && (
-                  <SelectItem value="admin">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">
-                        {t("common.labels.permissions.admin")}
-                      </span>
-                    </div>
-                  </SelectItem>
+              <Avatar className="size-7">
+                {user.image && <AvatarImage src={user.image} alt="" />}
+                <AvatarFallback className="bg-surface-sunken text-[11px] font-semibold text-fg-secondary">
+                  {getUserInitials(user)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13.5px] font-semibold text-fg-strong">
+                  {user.name || user.email}
+                </div>
+                {user.name && (
+                  <div className="truncate text-[12px] text-fg-tertiary">{user.email}</div>
                 )}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </button>
+          ))}
         </div>
+      )}
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleAddShare}
-            disabled={!selectedUser || loading}
-          >
-            {loading ? t("common.adding") : t("common.add")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {searching && searchLoading && (
+        <p className="px-1 text-[12px] text-fg-tertiary">{t("common.loading")}</p>
+      )}
+      {searching && !searchLoading && searchResults.length === 0 && (
+        <p className="px-1 text-[12px] text-fg-tertiary">{t("common.empty.noUsersFound")}</p>
+      )}
+    </div>
   );
 }

@@ -9,27 +9,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
-import { AuthHeader } from "@/components/auth-header";
-import { AppFooter } from "@/components/app-footer";
-import { useVersionInfo } from "@/hooks/useVersionInfo";
+import {
+  AuthShell,
+  PasswordInput,
+  authInputClass,
+} from "@/components/auth-shell";
+import { Field } from "@/components/form-kit";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   isRateLimitError,
   handleRateLimitError,
 } from "@/lib/rate-limit-client";
+import { useMounted } from "@/hooks/useMediaQuery";
 
-/**
- * Registration page for new users
- *
- * Features:
- * - Email/Password registration
- * - Name field
- * - Password confirmation
- * - Validation
- * - Redirect to dashboard after success
- */
+
 export default function RegisterPage() {
   const t = useTranslations();
   const router = useRouter();
@@ -40,13 +36,12 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const versionInfo = useVersionInfo();
+  // False during SSR and hydration, true afterwards
+  const mounted = useMounted();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!name) {
       toast.error(t("auth.nameRequired"));
       return;
@@ -82,9 +77,8 @@ export default function RegisterPage() {
       });
 
       if (result.error) {
-        // Check if the error indicates rate limiting
+        // Better Auth hides the 429 headers; a second request exposes them for the message
         if (result.error.status === 429) {
-          // Make a test request to get proper rate limit headers
           try {
             const testResponse = await fetch("/api/auth/sign-up/email", {
               method: "POST",
@@ -97,7 +91,6 @@ export default function RegisterPage() {
               return;
             }
           } catch {
-            // If test request fails, show generic rate limit message
             toast.error(t("rateLimit.title"), {
               description: t("rateLimit.fallback"),
             });
@@ -115,9 +108,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Better Auth automatically signs in the user after signup
+      // Better Auth signs the user in after sign-up; the session update navigates away
       toast.success(t("auth.registerSuccess"));
-      // Session update triggers automatic navigation via AuthProvider
     } catch (error) {
       console.error("Registration error:", error);
       toast.error(t("auth.registerError"));
@@ -126,19 +118,12 @@ export default function RegisterPage() {
     }
   };
 
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Redirect authenticated users to home
   useEffect(() => {
     if (mounted && isAuthenticated) {
       router.replace("/");
     }
   }, [mounted, isAuthenticated, router]);
 
-  // Redirect if auth disabled or registration not allowed
   useEffect(() => {
     if (!isAuthEnabled) {
       router.replace("/");
@@ -151,115 +136,101 @@ export default function RegisterPage() {
     return null;
   }
 
-  // Prevent hydration mismatch by showing loader until mounted
-  // Also show loader while redirecting authenticated users
+  // Also covers the moment between sign-up and the redirect
   if (!mounted || isAuthenticated) {
     return <FullscreenLoader />;
   }
 
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <AuthHeader />
+    <AuthShell
+      title={t("authPage.registerTitle")}
+      description={t("authPage.registerSubtitle")}
+    >
+      <form onSubmit={handleRegister} className="flex flex-col gap-3">
+        <Field label={t("common.labels.name")} htmlFor="name">
+          <Input
+            id="name"
+            type="text"
+            autoComplete="name"
+            placeholder={t("auth.namePlaceholder")}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isLoading}
+            required
+            className={authInputClass}
+          />
+        </Field>
 
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4 py-8">
-        <div className="w-full max-w-md space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              {t("auth.registerTitle")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("auth.registerDescription")}
-            </p>
+        <Field label={t("common.labels.email")} htmlFor="email">
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder={t("auth.emailPlaceholder")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+            required
+            className={authInputClass}
+          />
+        </Field>
+
+        <Field
+          label={t("common.labels.password")}
+          htmlFor="password"
+          hint={t("authPage.passwordHint")}
+        >
+          <PasswordInput
+            id="password"
+            autoComplete="new-password"
+            placeholder={t("auth.passwordPlaceholder")}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+            required
+            minLength={8}
+          />
+        </Field>
+
+        <Field label={t("authPage.repeatPassword")} htmlFor="confirmPassword">
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isLoading}
+              required
+              minLength={8}
+              className={cn(authInputClass, "pr-11")}
+            />
+            {passwordsMatch && (
+              <span className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-success">
+                <Check className="size-[17px]" aria-hidden="true" />
+                <span className="sr-only">{t("authPage.passwordsMatch")}</span>
+              </span>
+            )}
           </div>
+        </Field>
 
-          {/* Registration Form */}
-          <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card/95 via-card to-card/80 p-8 shadow-lg backdrop-blur-sm">
-            <form onSubmit={handleRegister} className="space-y-6">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">{t("common.labels.name")}</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder={t("auth.namePlaceholder")}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={isLoading}
-                  required
-                />
-              </div>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-[9px] text-[15px] font-semibold"
+          disabled={isLoading}
+        >
+          {isLoading ? t("common.loading") : t("authPage.registerTitle")}
+        </Button>
+      </form>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">{t("common.labels.email")}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t("auth.emailPlaceholder")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password">{t("common.labels.password")}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t("auth.passwordPlaceholder")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  minLength={8}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("validation.passwordTooShort")}
-                </p>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">
-                  {t("common.labels.confirmPassword")}
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder={t("common.labels.confirmPassword")}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  minLength={8}
-                />
-              </div>
-
-              {/* Submit Button */}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? t("common.loading") : t("auth.register")}
-              </Button>
-            </form>
-
-            {/* Login Link */}
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              {t("auth.alreadyHaveAccount")}{" "}
-              <Link
-                href="/login"
-                className="font-medium text-primary hover:underline"
-              >
-                {t("auth.login")}
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <AppFooter versionInfo={versionInfo} />
-    </div>
+      <p className="border-t border-line pt-4 text-center text-[13.5px] text-fg-secondary">
+        {t("authPage.haveAccount")}{" "}
+        <Link href="/login" className="font-semibold text-brand-ink hover:underline">
+          {t("auth.login")}
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

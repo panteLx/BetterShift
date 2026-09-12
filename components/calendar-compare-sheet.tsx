@@ -1,14 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Check } from "lucide-react";
 import { CalendarWithCount } from "@/lib/types";
-import { BaseSheet } from "@/components/ui/base-sheet";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Smartphone } from "lucide-react";
-import { motion } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { PanelDialog } from "@/components/panel-dialog";
+import { cn } from "@/lib/utils";
 
 interface CalendarCompareSheetProps {
+  open: boolean;
   calendars: CalendarWithCount[];
   selectedIds: string[];
   onToggleCalendar: (id: string) => void;
@@ -16,9 +16,10 @@ interface CalendarCompareSheetProps {
   onCancel: () => void;
 }
 
-const MAX_CALENDARS = 3;
+export const MAX_COMPARE_CALENDARS = 3;
 
 export function CalendarCompareSheet({
+  open,
   calendars,
   selectedIds,
   onToggleCalendar,
@@ -26,85 +27,73 @@ export function CalendarCompareSheet({
   onCancel,
 }: CalendarCompareSheetProps) {
   const t = useTranslations();
-  const canStartCompare =
-    selectedIds.length >= 2 && selectedIds.length <= MAX_CALENDARS;
-  const isMaxReached = selectedIds.length >= MAX_CALENDARS;
+  const canStart = selectedIds.length >= 2 && selectedIds.length <= MAX_COMPARE_CALENDARS;
+  const maxReached = selectedIds.length >= MAX_COMPARE_CALENDARS;
 
   return (
-    <BaseSheet
-      open={true}
-      onOpenChange={onCancel}
+    <PanelDialog
+      open={open}
+      onOpenChange={(next) => !next && onCancel()}
       title={t("calendar.selectToCompare")}
       description={t("calendar.selectToCompareDescription")}
-      showSaveButton
-      onSave={onStartCompare}
-      saveDisabled={!canStartCompare}
-      saveLabel={t("calendar.startComparing")}
-      maxWidth="md"
+      footer={
+        <>
+          <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+          <Button className="h-10 flex-1 font-semibold" disabled={!canStart} onClick={onStartCompare}>
+            {t("calendar.startComparing")}
+          </Button>
+        </>
+      }
     >
-      {/* Mobile Warning */}
-      <div className="lg:hidden mb-3">
-        <Alert className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
-          <Smartphone className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-          <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-            {t("calendar.mobileNotOptimized")}
-          </AlertDescription>
-        </Alert>
-      </div>
-
-      <div className="space-y-3">
+      <div className="flex flex-col gap-2">
         {calendars.map((calendar) => {
-          const isSelected = selectedIds.includes(calendar.id);
-          const isDisabled = !isSelected && isMaxReached;
-
+          const selected = selectedIds.includes(calendar.id);
+          const disabled = !selected && maxReached;
           return (
-            <motion.div
+            <button
               key={calendar.id}
-              className={`border rounded-lg p-4 transition-all ${
-                isDisabled
-                  ? "border-border opacity-50 cursor-not-allowed"
-                  : isSelected
-                  ? "border-primary bg-primary/5 cursor-pointer"
-                  : "border-border hover:border-primary/50 hover:bg-accent/50 cursor-pointer"
-              }`}
-              onClick={() => !isDisabled && onToggleCalendar(calendar.id)}
-              whileHover={!isDisabled ? { scale: 1.01 } : {}}
-              whileTap={!isDisabled ? { scale: 0.99 } : {}}
+              type="button"
+              role="checkbox"
+              aria-checked={selected}
+              disabled={disabled}
+              onClick={() => onToggleCalendar(calendar.id)}
+              className={cn(
+                "flex items-center gap-3 rounded-[10px] border-[1.5px] px-3 py-[11px] text-left transition-colors disabled:opacity-50",
+                selected
+                  ? "border-brand bg-surface-today"
+                  : "border-line bg-surface-card hover:bg-surface-panel"
+              )}
             >
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={isSelected}
-                  disabled={isDisabled}
-                  onCheckedChange={() =>
-                    !isDisabled && onToggleCalendar(calendar.id)
-                  }
-                  className="pointer-events-none"
-                />
-                <div
-                  className="w-4 h-4 rounded-full shrink-0"
-                  style={{ backgroundColor: calendar.color }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{calendar.name}</p>
-                </div>
-              </div>
-            </motion.div>
+              <span
+                className="size-3 shrink-0 rounded-[4px]"
+                style={{ backgroundColor: calendar.color }}
+              />
+              <span
+                className={cn(
+                  "flex-1 truncate text-[14px] font-semibold",
+                  selected ? "text-brand-ink" : "text-fg-strong"
+                )}
+              >
+                {calendar.name}
+              </span>
+              <span
+                className={cn(
+                  "flex size-5 items-center justify-center rounded-[6px] border",
+                  selected ? "border-brand bg-brand text-white" : "border-control"
+                )}
+              >
+                {selected && <Check className="size-3.5" />}
+              </span>
+            </button>
           );
         })}
+        <p className="pt-1 text-[12px] text-fg-tertiary">
+          {t("calendar.compareSelected", { count: selectedIds.length })} ·{" "}
+          {t("calendarCompare.maxHint", { max: MAX_COMPARE_CALENDARS })}
+        </p>
       </div>
-
-      {/* Info Footer */}
-      <div className="mt-4 text-sm text-muted-foreground text-center">
-        {selectedIds.length > 0 ? (
-          <span>
-            {t("calendar.compareSelected", {
-              count: selectedIds.length,
-            })}
-          </span>
-        ) : (
-          <span>{t("calendar.selectToCompareDescription")}</span>
-        )}
-      </div>
-    </BaseSheet>
+    </PanelDialog>
   );
 }

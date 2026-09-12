@@ -80,55 +80,7 @@ jobs:
 
           echo "Generating changelog from $PREVIOUS_TAG to $GITHUB_REF_NAME"
 
-          # Get all commits between tags, excluding the last commit (version bump)
-          ALL_COMMITS=$(git log $PREVIOUS_TAG..$GITHUB_REF_NAME --pretty=format:"%s|%h" --no-merges --skip=1)
-
-          # Build changelog with grouping
-          CHANGELOG=""
-
-          # Breaking changes: conventional commits mark these with a `!` before
-          # the colon (feat!:, chore(docker)!:). Listed first and also under their
-          # own type below, so an upgrade note is never buried in a long list.
-          BREAKING=$(echo "$ALL_COMMITS" | grep -E "^[a-z]+(\([^)]*\))?!:" | sed 's/|/ /' | sed 's/^/- /' || true)
-          if [ -n "$BREAKING" ]; then
-            CHANGELOG+="### ⚠️ Breaking Changes"$'\n\n'
-            CHANGELOG+="$BREAKING"$'\n\n'
-          fi
-
-          # Features
-          FEATURES=$(echo "$ALL_COMMITS" | grep -E "^feat(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
-          if [ -n "$FEATURES" ]; then
-            CHANGELOG+="### ✨ Features"$'\n\n'
-            CHANGELOG+="$FEATURES"$'\n\n'
-          fi
-
-          # Bug Fixes
-          FIXES=$(echo "$ALL_COMMITS" | grep -E "^fix(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
-          if [ -n "$FIXES" ]; then
-            CHANGELOG+="### 🐛 Bug Fixes"$'\n\n'
-            CHANGELOG+="$FIXES"$'\n\n'
-          fi
-
-          # Documentation
-          DOCS=$(echo "$ALL_COMMITS" | grep -E "^docs(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
-          if [ -n "$DOCS" ]; then
-            CHANGELOG+="### 📝 Documentation"$'\n\n'
-            CHANGELOG+="$DOCS"$'\n\n'
-          fi
-
-          # Chores
-          CHORES=$(echo "$ALL_COMMITS" | grep -E "^chore(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
-          if [ -n "$CHORES" ]; then
-            CHANGELOG+="### 🔧 Chores"$'\n\n'
-            CHANGELOG+="$CHORES"$'\n\n'
-          fi
-
-          # Other changes (not matching conventional commits)
-          OTHERS=$(echo "$ALL_COMMITS" | grep -vE "^(feat|fix|docs|chore)(\([^)]*\))?!?:" | sed 's/|/ /' | sed 's/^/- /' || true)
-          if [ -n "$OTHERS" ]; then
-            CHANGELOG+="### 🔀 Other Changes"$'\n\n'
-            CHANGELOG+="$OTHERS"$'\n\n'
-          fi
+          CHANGELOG=$(scripts/changelog.sh "$PREVIOUS_TAG" "$GITHUB_REF_NAME")
 
           # Use heredoc for multiline output
           {

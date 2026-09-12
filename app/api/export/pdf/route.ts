@@ -6,6 +6,7 @@ import { jsPDF } from "jspdf";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar } from "@/lib/auth/permissions";
 import { rateLimit } from "@/lib/rate-limiter";
+import { formatDateToLocal } from "@/lib/date-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -296,7 +297,7 @@ export async function POST(request: NextRequest) {
       .slice(0, 3); // Max 3 calendar names
 
     const filename = `${calendarNamesParts.join("_")}_${
-      new Date().toISOString().split("T")[0]
+      formatDateToLocal(new Date())
     }.pdf`;
 
     return new NextResponse(pdfBuffer, {

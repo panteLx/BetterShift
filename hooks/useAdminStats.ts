@@ -1,15 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import { AdminRequestError } from "@/lib/admin-list";
+import { useAdminErrorToast } from "@/hooks/useAdminList";
 
-/**
- * Admin Stats Type Definitions
- */
+export interface AdminActivityLog {
+  id: string;
+  action: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  userId: string | null;
+  metadata: unknown;
+  severity: string;
+  timestamp: Date;
+}
+
 export interface AdminStats {
   users: {
     superadmin: number;
@@ -18,6 +26,7 @@ export interface AdminStats {
     total: number;
   };
   calendars: {
+    /** Calendars with an owner; orphaned ones are counted separately */
     total: number;
     orphaned: number;
   };
@@ -30,109 +39,52 @@ export interface AdminStats {
     total: number;
   };
   activity: {
+    /** Audit entries of the last 7 days */
     recent: number;
-    logs: Array<{
-      id: string;
-      action: string;
-      resourceType: string | null;
-      resourceId: string | null;
-      userId: string | null;
-      severity: string;
-      timestamp: Date;
-    }>;
+    /** Admin actions and security events, the scope of `logs` */
+    total: number;
+    logs: AdminActivityLog[];
+  };
+  auditLogs: {
+    total: number;
   };
 }
 
-interface AuditLogResponse {
-  id: string;
-  action: string;
-  resourceType: string | null;
-  resourceId: string | null;
-  userId: string | null;
-  severity: string;
-  timestamp: string | Date;
-}
-
-/**
- * Fetch admin stats from API
- */
-async function fetchAdminStatsApi(
-  t: ReturnType<typeof useTranslations>,
-): Promise<AdminStats> {
-  const response = await fetch("/api/admin/stats", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 403) {
-      throw new Error(t("admin.accessDenied"));
-    }
-    throw new Error(t("admin.statsFetchError"));
-  }
+async function fetchAdminStats(): Promise<AdminStats> {
+  const response = await fetch("/api/admin/stats");
+  if (!response.ok) throw new AdminRequestError(response.status);
 
   const data = await response.json();
-
-  // Parse timestamp strings to Date objects
-  if (data.activity?.logs) {
-    data.activity.logs = data.activity.logs.map((log: AuditLogResponse) => ({
-      ...log,
-      timestamp: new Date(log.timestamp),
-    }));
-  }
-
-  return data;
+  return {
+    ...data,
+    activity: {
+      ...data.activity,
+      logs: data.activity.logs.map((log: AdminActivityLog & { timestamp: string }) => ({
+        ...log,
+        timestamp: new Date(log.timestamp),
+      })),
+    },
+  };
 }
 
 /**
- * Admin Statistics Hook
- *
- * Fetches and manages system-wide statistics for admin dashboard.
- * Uses React Query for automatic polling and cache management.
- *
- * Features:
- * - Automatic 5-second polling for live updates
- * - Error handling with toast notifications
- * - Smart caching and background refetching
- * - Loading state management
- *
- * @returns Object with stats data, loading state, error, and refetch function
+ * System-wide statistics for the dashboard and sidebar, polled. Several components
+ * observe the same query; a failure still shows a single toast.
  */
-export function useAdminStats(): {
-  stats: AdminStats | null;
-  isLoading: boolean;
-  error: Error | null;
-  refetch: () => void;
-} {
+export function useAdminStats() {
   const t = useTranslations();
-  const lastErrorMessage = useRef<string | null>(null);
-
-  const {
-    data: stats = null,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: queryKeys.admin.stats({ t }),
-    queryFn: () => fetchAdminStatsApi(t),
-    refetchInterval: REFETCH_INTERVAL,
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.admin.stats,
+    queryFn: fetchAdminStats,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
-  useEffect(() => {
-    if (error && error.message !== lastErrorMessage.current) {
-      toast.error(error.message);
-      lastErrorMessage.current = error.message;
-    } else if (!error) {
-      lastErrorMessage.current = null;
-    }
-  }, [error]);
+  useAdminErrorToast(error, "admin-stats-error", t("admin.statsFetchError"));
 
   return {
-    stats,
+    stats: data ?? null,
     isLoading,
-    error: error as Error | null,
+    error,
     refetch,
   };
 }

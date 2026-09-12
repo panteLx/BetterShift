@@ -1,65 +1,155 @@
 "use client";
 
-import { motion } from "motion/react";
+import { useId, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Link2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AuthHeader } from "@/components/auth-header";
-import { AppFooter } from "@/components/app-footer";
-import { useVersionInfo } from "@/hooks/useVersionInfo";
-import { Calendar as CalendarIcon, LogIn } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { PanelDialog } from "@/components/panel-dialog";
+import { Field, inputClass } from "@/components/form-kit";
+import { EmptyStateBlock, stateActionClass } from "@/components/empty-state-block";
+import { useAutoFocusRef } from "@/hooks/useAutoFocus";
+import { cn } from "@/lib/utils";
 
-/**
- * Empty state shown to guests when no public calendars are available
- * Displays a message prompting them to log in
- */
+const SHARE_PATH = "/share/token/";
+// Tokens are base64url (see generateAccessToken)
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,}$/;
+
+/** Accepts a full access link (any host) or the bare token. */
+function extractAccessToken(input: string): string | null {
+  const value = input.trim();
+  const index = value.indexOf(SHARE_PATH);
+  const candidate =
+    index >= 0 ? value.slice(index + SHARE_PATH.length).split(/[/?#]/)[0] : value;
+  return TOKEN_PATTERN.test(candidate) ? candidate : null;
+}
+
+/** Shown to guests when no calendar is open to them. */
 export function GuestEmptyState() {
   const t = useTranslations();
-  const router = useRouter();
-  const versionInfo = useVersionInfo();
+  const [linkOpen, setLinkOpen] = useState(false);
 
-  const handleLoginClick = () => {
-    router.push("/login");
+  return (
+    <div className="flex min-h-dvh flex-col bg-background">
+      <AuthHeader showUserMenu />
+      <main className="flex flex-1 items-center justify-center px-4 py-10 sm:p-10">
+        <EmptyStateBlock
+          icon={Lock}
+          title={t("emptyState.guestTitle")}
+          description={t("emptyState.guestDescription")}
+          actions={
+            <>
+              <Button asChild className={stateActionClass}>
+                <Link href="/login">{t("auth.login")}</Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLinkOpen(true)}
+                className={stateActionClass}
+              >
+                <Link2 className="size-[17px]" />
+                {t("emptyState.pasteAccessLink")}
+              </Button>
+            </>
+          }
+        />
+      </main>
+      <AccessLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
+    </div>
+  );
+}
+
+function AccessLinkDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const t = useTranslations();
+  const formId = useId();
+  const inputId = useId();
+  const linkRef = useAutoFocusRef<HTMLInputElement>();
+  const [value, setValue] = useState("");
+  const [invalid, setInvalid] = useState(false);
+  const [navigating, setNavigating] = useState(false);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setValue("");
+      setInvalid(false);
+    }
+    onOpenChange(next);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = extractAccessToken(value);
+    if (!token) {
+      setInvalid(true);
+      return;
+    }
+    setNavigating(true);
+    // Full page load on purpose: only the proxy handles this route (no page exists),
+    // validating the token and setting the grant cookie before redirecting.
+    window.location.assign(new URL(`${SHARE_PATH}${token}`, window.location.origin).href);
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <AuthHeader showUserMenu={false} />
-      <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
-        <motion.div
-          className="text-center space-y-6 max-w-md"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-            className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center"
+    <PanelDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={t("emptyState.pasteAccessLink")}
+      description={t("emptyState.accessLinkDescription")}
+      width="sm"
+      footer={
+        <>
+          <Button
+            variant="outline"
+            className="h-10 flex-1 font-semibold"
+            onClick={() => handleOpenChange(false)}
           >
-            <CalendarIcon className="h-10 w-10 text-muted-foreground" />
-          </motion.div>
-          <div className="space-y-3">
-            <h1 className="text-2xl sm:text-3xl font-bold">
-              {t("guestEmptyState.title")}
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-              {t("guestEmptyState.description")}
-            </p>
-          </div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              onClick={handleLoginClick}
-              size="lg"
-              className="h-12 px-8 text-base font-semibold shadow-lg shadow-primary/20"
-            >
-              <LogIn className="mr-2 h-5 w-5" />
-              {t("guestEmptyState.loginButton")}
-            </Button>
-          </motion.div>
-        </motion.div>
-      </div>
-      <AppFooter versionInfo={versionInfo} />
-    </div>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            className="h-10 flex-1 font-semibold"
+            disabled={!value.trim() || navigating}
+          >
+            {t("emptyState.openAccessLink")}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit}>
+        <Field
+          label={t("emptyState.accessLinkLabel")}
+          htmlFor={inputId}
+          hint={
+            invalid ? (
+              <span className="text-danger">{t("emptyState.accessLinkInvalid")}</span>
+            ) : undefined
+          }
+        >
+          <Input
+            id={inputId}
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setInvalid(false);
+            }}
+            placeholder="https://…/share/token/…"
+            autoComplete="off"
+            spellCheck={false}
+            ref={linkRef}
+            aria-invalid={invalid || undefined}
+            className={cn(inputClass, "font-mono text-[13px]")}
+          />
+        </Field>
+      </form>
+    </PanelDialog>
   );
 }

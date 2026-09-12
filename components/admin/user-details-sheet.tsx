@@ -1,32 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
-import { useLocale } from "next-intl";
-import { format, formatDistanceToNow } from "date-fns";
-import {
-  Edit,
-  Key,
-  Ban,
-  ShieldOff,
-  Trash2,
-  Calendar,
-  Share2,
-  Monitor,
-} from "lucide-react";
-import { BaseSheet } from "@/components/ui/base-sheet";
+import { useQuery } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
+import { format } from "date-fns";
+import { ChevronRight, KeyRound, Lock, LockOpen, Pencil, Trash2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useAdminUsers, type UserDetails } from "@/hooks/useAdminUsers";
-import {
-  useCanEditUser,
-  useCanBanUser,
-  useCanDeleteUser,
-  useCanResetPassword,
-} from "@/hooks/useAdminAccess";
+import { ListRow, Pill } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
+import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
+import { DetailSection, RolePill, StatTile, StatusPill, UserAvatar } from "@/components/admin/admin-kit";
+import { fetchAdminUserDetails } from "@/hooks/useAdminUsers";
+import { useUserPermissions } from "@/hooks/useAdminAccess";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getDateLocale } from "@/lib/locales";
+import { queryKeys } from "@/lib/query-keys";
+import { cn } from "@/lib/utils";
+import { shiftVars } from "@/lib/shift-display";
 
 interface UserDetailsSheetProps {
   open: boolean;
@@ -37,6 +26,51 @@ interface UserDetailsSheetProps {
   onBan: () => void;
   onUnban: () => void;
   onDelete: () => void;
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  danger,
+  className,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onClick}
+      className={cn(
+        "h-[38px] gap-2 rounded-[9px] px-2 text-[13.5px] font-semibold text-fg-body",
+        danger && "border-danger-line text-danger hover:bg-danger-surface hover:text-danger",
+        className
+      )}
+    >
+      <Icon className={cn("size-[15px]", !danger && "text-fg-secondary")} />
+      <span className="truncate">{label}</span>
+    </Button>
+  );
+}
+
+/** Phone variant of a secondary action: a full-width row with a chevron (13i). */
+function ActionRow({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-[46px] w-full items-center gap-2.5 rounded-[10px] border border-line bg-surface-card px-[13px] text-left transition-colors hover:bg-surface-panel"
+    >
+      <Icon className="size-[17px] text-fg-secondary" />
+      <span className="flex-1 truncate text-[14px] font-semibold text-fg-body">{label}</span>
+      <ChevronRight className="size-4 text-fg-faint" />
+    </button>
+  );
 }
 
 export function UserDetailsSheet({
@@ -50,304 +84,187 @@ export function UserDetailsSheet({
   onDelete,
 }: UserDetailsSheetProps) {
   const t = useTranslations();
-  const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
-  const { fetchUserDetails, isLoading } = useAdminUsers();
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+  const dateLocale = getDateLocale(useLocale());
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
+  const { data: userDetails = null, isError: loadFailed } = useQuery({
+    queryKey: queryKeys.admin.users.detail(userId),
+    queryFn: () => fetchAdminUserDetails(userId),
+    enabled: open,
+    retry: false,
+  });
 
-  const canEdit = useCanEditUser(userDetails);
-  const canBan = useCanBanUser(userDetails);
-  const canDelete = useCanDeleteUser(userDetails);
-  const canResetPassword = useCanResetPassword(userDetails);
+  const { canEdit, canBan, canDelete, canResetPassword } = useUserPermissions(userDetails);
 
-  useEffect(() => {
-    if (!open) return;
+  const user = userDetails;
+  const date = (value: Date, pattern = "PP") => format(value, pattern, { locale: dateLocale });
+  const hasActions = canEdit || canResetPassword || canBan || canDelete;
 
-    const loadDetails = async () => {
-      const details = await fetchUserDetails(userId);
-      if (details) {
-        setUserDetails(details);
-      }
-    };
+  const banAction =
+    user && canBan
+      ? user.banned
+        ? { icon: LockOpen, label: t("admin.unbanUser"), onClick: onUnban }
+        : { icon: Lock, label: t("adminUsers.ban"), onClick: onBan }
+      : null;
 
-    loadDetails();
-  }, [open, userId, fetchUserDetails]);
+  const phoneFooter = user && hasActions && (
+    <div className="flex w-full flex-col gap-2">
+      {banAction && <ActionRow {...banAction} />}
+      {canResetPassword && (
+        <ActionRow icon={KeyRound} label={t("admin.resetPassword")} onClick={onResetPassword} />
+      )}
+      {(canEdit || canDelete) && (
+        <div className="flex gap-2">
+          {canEdit && (
+            <ActionButton
+              icon={Pencil}
+              label={t("adminUsers.edit")}
+              onClick={onEdit}
+              className="h-[46px] flex-1 text-[14px]"
+            />
+          )}
+          {canDelete && (
+            <ActionButton
+              icon={Trash2}
+              label={t("common.delete")}
+              onClick={onDelete}
+              danger
+              className="h-[46px] flex-1 text-[14px]"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
 
-  const getUserInitials = () => {
-    if (!userDetails) return "?";
-    if (userDetails.name) {
-      return userDetails.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    if (userDetails.email) {
-      return userDetails.email.slice(0, 2).toUpperCase();
-    }
-    return "?";
-  };
-
-  const getRoleBadgeClass = (role: string) => {
-    switch (role) {
-      case "superadmin":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      case "admin":
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-      default:
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    }
-  };
+  const desktopFooter = (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => onOpenChange(false)}
+      className="h-10 flex-1 font-semibold"
+    >
+      {t("common.close")}
+    </Button>
+  );
 
   return (
-    <BaseSheet
+    <AdminDetailPanel
       open={open}
       onOpenChange={onOpenChange}
       title={t("admin.userDetails")}
-      description={t("admin.userDetailsDescription")}
-      maxWidth="lg"
+      subtitle={user?.name || user?.email}
+      footer={desktop ? desktopFooter : phoneFooter || undefined}
     >
-      {isLoading && !userDetails ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {t("common.loading")}
-        </div>
-      ) : userDetails ? (
-        <div className="space-y-6">
-          {/* User Info Card */}
-          <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/30">
-            <Avatar className="h-16 w-16">
-              {userDetails.image && <AvatarImage src={userDetails.image} />}
-              <AvatarFallback className="text-lg">
-                {getUserInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-lg font-semibold truncate">
-                  {userDetails.name}
-                </h3>
-                <span
-                  className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getRoleBadgeClass(
-                    userDetails.role || "user"
-                  )}`}
-                >
-                  {t(`common.roles.${userDetails.role}`)}
-                </span>
-                {userDetails.banned && (
-                  <Badge variant="destructive">{t("admin.banned")}</Badge>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {userDetails.email}
-              </p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                <span>
-                  {t("admin.joined")}{" "}
-                  {format(userDetails.createdAt, "PP", {
-                    locale: dateLocale,
-                  })}
-                </span>
-                {userDetails.lastActivity && (
-                  <span>
-                    {t("common.time.lastActive")}{" "}
-                    {formatDistanceToNow(userDetails.lastActivity, {
-                      addSuffix: true,
-                      locale: dateLocale,
-                    })}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Ban Information */}
-          {userDetails.banned && (
-            <div className="p-4 rounded-lg border bg-destructive/5 border-destructive/20">
-              <h4 className="text-sm font-semibold text-destructive mb-2">
-                {t("admin.banned")}
-              </h4>
-              {userDetails.banReason && (
-                <p className="text-sm mb-2">{userDetails.banReason}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {userDetails.banExpires
-                  ? t("admin.bannedUntil", {
-                      date: format(userDetails.banExpires, "PPP", {
-                        locale: dateLocale,
-                      }),
-                    })
-                  : t("admin.bannedPermanently")}
-              </p>
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="flex flex-wrap gap-2">
-            {canEdit && (
-              <Button size="sm" variant="outline" onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                {t("admin.editUser")}
-              </Button>
-            )}
-            {canResetPassword && (
-              <Button size="sm" variant="outline" onClick={onResetPassword}>
-                <Key className="h-4 w-4 mr-2" />
-                {t("admin.resetPassword")}
-              </Button>
-            )}
-            {canBan && !userDetails.banned && (
-              <Button size="sm" variant="outline" onClick={onBan}>
-                <Ban className="h-4 w-4 mr-2" />
-                {t("admin.banUser")}
-              </Button>
-            )}
-            {canBan && userDetails.banned && (
-              <Button size="sm" variant="outline" onClick={onUnban}>
-                <ShieldOff className="h-4 w-4 mr-2" />
-                {t("admin.unbanUser")}
-              </Button>
-            )}
-            {canDelete && (
-              <Button size="sm" variant="destructive" onClick={onDelete}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                {t("admin.deleteUser")}
-              </Button>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Statistics */}
-          <div>
-            <h4 className="text-sm font-medium mb-3">
-              {t("common.stats.statistics")}
-            </h4>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                <Calendar className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">
-                    {userDetails.ownedCalendars.length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("admin.ownedCalendars")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                <Share2 className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">
-                    {userDetails.sharedCalendars.length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("common.labels.sharedCalendars")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                <Monitor className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">
-                    {userDetails.sessionsCount}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("common.auth.activeSessions")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Owned Calendars */}
-          {userDetails.ownedCalendars.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-medium mb-3">
-                  {t("admin.ownedCalendars")} (
-                  {userDetails.ownedCalendars.length})
-                </h4>
-                <div className="space-y-2">
-                  {userDetails.ownedCalendars.map((calendar) => (
-                    <div
-                      key={calendar.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border bg-muted/20"
-                    >
-                      <div
-                        className="h-4 w-4 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: calendar.color }}
-                      />
-                      <span className="text-sm truncate">{calendar.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Shared Calendars */}
-          {userDetails.sharedCalendars.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-medium mb-3">
-                  {t("common.labels.sharedCalendars")} (
-                  {userDetails.sharedCalendars.length})
-                </h4>
-                <div className="space-y-2">
-                  {userDetails.sharedCalendars.map((share) => (
-                    <div
-                      key={share.id}
-                      className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20"
-                    >
-                      <span className="text-sm truncate">{share.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {t(`common.labels.permissions.${share.permission}`)}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Connected Accounts */}
-          {userDetails.accounts.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-medium mb-3">
-                  {t("common.auth.connectedAccounts")} (
-                  {userDetails.accounts.length})
-                </h4>
-                <div className="space-y-2">
-                  {userDetails.accounts.map((account) => (
-                    <div
-                      key={account.id}
-                      className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20"
-                    >
-                      <span className="text-sm font-medium capitalize">
-                        {account.providerId}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(account.createdAt, "PP", {
-                          locale: dateLocale,
-                        })}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+      {!user ? (
+        <p className="py-12 text-center text-[13px] text-fg-tertiary">
+          {loadFailed ? t("admin.userNotFound") : t("common.loading")}
+        </p>
       ) : (
-        <div className="text-center py-8 text-muted-foreground">
-          {t("admin.userNotFound")}
-        </div>
+        <>
+          <div className="flex items-center gap-[13px]">
+            <UserAvatar name={user.name || user.email} image={user.image} size={44} />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="truncate text-[17px] font-semibold tracking-[-0.01em] text-fg-strong">
+                  {user.name}
+                </span>
+                <RolePill role={user.role} />
+                <StatusPill banned={user.banned} />
+              </div>
+              <div className="mt-0.5 truncate text-[13px] text-fg-secondary">{user.email}</div>
+              <div className="mt-0.5 text-[12px] text-fg-faint">
+                {t("adminUsers.joinedOn", { date: date(user.createdAt, "PPP") })}
+              </div>
+            </div>
+          </div>
+
+          {user.banned && (
+            <StatusBanner
+              tone="danger"
+              icon={Lock}
+              title={
+                user.banExpires
+                  ? t("admin.bannedUntil", { date: date(user.banExpires, "PPP") })
+                  : t("admin.bannedPermanently")
+              }
+            >
+              {user.banReason && t("adminUsers.banReasonQuoted", { reason: user.banReason })}
+            </StatusBanner>
+          )}
+
+          <DetailSection label={t("adminUsers.numbers")}>
+            <div className="grid grid-cols-3 gap-2.5">
+              <StatTile label={t("admin.ownedCalendars")} value={user.ownedCalendars.length} />
+              <StatTile label={t("common.labels.sharedCalendars")} value={user.sharedCalendars.length} />
+              <StatTile label={t("common.auth.activeSessions")} value={user.sessionsCount} />
+            </div>
+          </DetailSection>
+
+          {user.ownedCalendars.length > 0 && (
+            <DetailSection label={t("admin.ownedCalendars")}>
+              {user.ownedCalendars.map((calendar) => (
+                <ListRow key={calendar.id} className="py-2.5">
+                  <span
+                    className="shift-rail size-2.5 shrink-0 rounded-full"
+                    style={shiftVars(calendar.color)}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-fg-strong">
+                    {calendar.name}
+                  </span>
+                </ListRow>
+              ))}
+            </DetailSection>
+          )}
+
+          {user.sharedCalendars.length > 0 && (
+            <DetailSection label={t("common.labels.sharedCalendars")}>
+              {user.sharedCalendars.map((share) => (
+                <ListRow key={share.id} className="py-2.5">
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-fg-strong">
+                    {share.name}
+                  </span>
+                  <Pill>
+                    {share.permission === "admin"
+                      ? t("common.labels.permissions.admin")
+                      : share.permission === "write"
+                        ? t("common.labels.permissions.write")
+                        : t("common.labels.permissions.read")}
+                  </Pill>
+                </ListRow>
+              ))}
+            </DetailSection>
+          )}
+
+          {user.accounts.length > 0 && (
+            <DetailSection label={t("common.auth.connectedAccounts")}>
+              {user.accounts.map((account) => (
+                <ListRow key={account.id} className="py-[11px]">
+                  <KeyRound className="size-4 shrink-0 text-fg-secondary" />
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold capitalize text-fg-strong">
+                    {account.providerId}
+                  </span>
+                  <span className="font-mono text-[12px] text-fg-tertiary">{date(account.createdAt)}</span>
+                </ListRow>
+              ))}
+            </DetailSection>
+          )}
+
+          {desktop && hasActions && (
+            <DetailSection label={t("adminUsers.actions")}>
+              <div className="grid grid-cols-2 gap-2">
+                {canEdit && <ActionButton icon={Pencil} label={t("adminUsers.edit")} onClick={onEdit} />}
+                {canResetPassword && (
+                  <ActionButton icon={KeyRound} label={t("admin.resetPassword")} onClick={onResetPassword} />
+                )}
+                {banAction && <ActionButton {...banAction} />}
+                {canDelete && (
+                  <ActionButton icon={Trash2} label={t("common.delete")} onClick={onDelete} danger />
+                )}
+              </div>
+            </DetailSection>
+          )}
+        </>
       )}
-    </BaseSheet>
+    </AdminDetailPanel>
   );
 }

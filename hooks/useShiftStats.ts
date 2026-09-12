@@ -2,8 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 import { formatDateToLocal } from "@/lib/date-utils";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 export interface ShiftStatsData {
   period: string;
@@ -44,7 +46,7 @@ async function fetchShiftStatsApi(
   const response = await fetch(`/api/shifts/stats?${params}`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch shift statistics");
+    throw new ApiError("Failed to fetch shift statistics", response.status);
   }
 
   return await response.json();
@@ -71,6 +73,8 @@ export function useShiftStats({
   currentDate,
   period,
 }: UseShiftStatsOptions) {
+  const accessible = useIsCalendarAccessible(calendarId);
+
   const {
     data: stats = null,
     isLoading: loading,
@@ -82,8 +86,8 @@ export function useShiftStats({
       formatDateToLocal(currentDate)
     ),
     queryFn: () => fetchShiftStatsApi(calendarId!, period, currentDate),
-    enabled: !!calendarId,
-    refetchInterval: REFETCH_INTERVAL,
+    enabled: accessible,
+    refetchInterval: LIVE_REFETCH_INTERVAL,
   });
 
   return {

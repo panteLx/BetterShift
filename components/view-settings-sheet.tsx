@@ -1,463 +1,461 @@
 "use client";
 
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Info, Loader2, Lock, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+  ChoiceChips,
+  ColorSwatches,
+  Field,
+  InfoNote,
+  SectionLabel,
+  ToggleRow,
+} from "@/components/form-kit";
+import { useViewSettings } from "@/hooks/useViewSettings";
+import { useCalendars } from "@/hooks/useCalendars";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Maximize2,
-  FileText,
-  Infinity,
-  ArrowUpDown,
-  Highlighter,
-} from "lucide-react";
-import { PRESET_COLORS } from "@/lib/constants";
+  CalendarViewSettings,
+  PersonalViewSettings,
+  calendarViewSettingsEqual,
+  sanitizeCalendarViewSettings,
+} from "@/lib/view-settings";
+import { cn } from "@/lib/utils";
+import { useReportDirty } from "@/hooks/useDirtyState";
 
-interface ViewSettingsSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  shiftsPerDay: number | null;
-  externalShiftsPerDay: number | null;
-  showShiftNotes: boolean;
-  showFullTitles: boolean;
-  shiftSortType: "startTime" | "createdAt" | "title";
-  shiftSortOrder: "asc" | "desc";
-  combinedSortMode: boolean;
-  highlightWeekends: boolean;
-  highlightedWeekdays: number[];
-  highlightColor: string;
-  onShiftsPerDayChange: (count: number | null) => void;
-  onExternalShiftsPerDayChange: (count: number | null) => void;
-  onShowShiftNotesChange: (show: boolean) => void;
-  onShowFullTitlesChange: (show: boolean) => void;
-  onShiftSortTypeChange: (type: "startTime" | "createdAt" | "title") => void;
-  onShiftSortOrderChange: (order: "asc" | "desc") => void;
-  onCombinedSortModeChange: (combined: boolean) => void;
-  onHighlightWeekendsChange: (highlight: boolean) => void;
-  onHighlightedWeekdaysChange: (days: number[]) => void;
-  onHighlightColorChange: (color: string) => void;
+export type ViewSettingsState = ReturnType<typeof useViewSettings>;
+
+type LimitValue = "1" | "2" | "3" | "auto";
+const LIMITS: LimitValue[] = ["1", "2", "3", "auto"];
+
+// Handoff rule: locked controls keep their contrast and only lose the fill
+const LOCKED_FIELDS =
+  "[&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-100 [&_[role=radio][aria-checked=true]:disabled]:bg-transparent [&_[role=switch]:disabled]:border-control [&_[role=switch]:disabled]:bg-surface-sunken";
+
+function toLimit(value: number | null): LimitValue {
+  if (value === null) return "auto";
+  return (LIMITS.includes(String(value) as LimitValue) ? String(value) : "auto") as LimitValue;
 }
 
+function LimitControl({
+  value,
+  onChange,
+  label,
+  disabled,
+}: {
+  value: number | null;
+  onChange: (value: number | null) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  const t = useTranslations();
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn(
+        "flex rounded-[9px] p-[3px]",
+        disabled ? "ring-1 ring-inset ring-line" : "bg-surface-sunken"
+      )}
+    >
+      {LIMITS.map((limit) => {
+        const active = toLimit(value) === limit;
+        return (
+          <button
+            key={limit}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => onChange(limit === "auto" ? null : Number(limit))}
+            className={cn(
+              "h-7 min-w-8 rounded-md px-2 font-mono text-[12.5px] font-medium",
+              active
+                ? disabled
+                  ? "font-semibold text-fg-strong ring-1 ring-inset ring-control"
+                  : "bg-surface-card font-semibold text-fg-strong shadow-segment dark:bg-control"
+                : "text-fg-secondary"
+            )}
+          >
+            {limit === "auto" ? t("view.limitAuto") : limit}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Field UI shared by the personal view and a calendar's own view. */
+function ViewFields({
+  value,
+  onChange,
+  disabled = false,
+  stampBar,
+}: {
+  value: CalendarViewSettings;
+  onChange: (patch: Partial<CalendarViewSettings>) => void;
+  disabled?: boolean;
+  /** Only the personal view carries the stamp-bar toggle */
+  stampBar?: { checked: boolean; onChange: (checked: boolean) => void };
+}) {
+  const t = useTranslations();
+  const id = useId();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
+  const weekdays = [
+    { day: 1, label: t("view.monday") },
+    { day: 2, label: t("view.tuesday") },
+    { day: 3, label: t("view.wednesday") },
+    { day: 4, label: t("view.thursday") },
+    { day: 5, label: t("view.friday") },
+    { day: 6, label: t("view.saturday") },
+    { day: 0, label: t("view.sunday") },
+  ];
+  const days = value.highlightedWeekdays;
+
+  return (
+    <div className={cn("flex flex-col gap-6", disabled && LOCKED_FIELDS)}>
+      <section className="flex flex-col gap-3">
+        <SectionLabel className="mb-0">{t("view.density")}</SectionLabel>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[14px] font-semibold text-fg-strong">{t("view.shiftsPerDay")}</div>
+            <div className="text-[12.5px] text-fg-secondary">{t("view.shiftsPerDayHint")}</div>
+          </div>
+          <LimitControl
+            label={t("view.shiftsPerDay")}
+            value={value.shiftsPerDay}
+            onChange={(shiftsPerDay) => onChange({ shiftsPerDay })}
+            disabled={disabled}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[14px] font-semibold text-fg-strong">
+              {t("view.externalShiftsPerDay")}
+            </div>
+            <div className="text-[12.5px] text-fg-secondary">
+              {t("view.externalShiftsPerDayHint")}
+            </div>
+          </div>
+          <LimitControl
+            label={t("view.externalShiftsPerDay")}
+            value={value.externalShiftsPerDay}
+            onChange={(externalShiftsPerDay) => onChange({ externalShiftsPerDay })}
+            disabled={disabled}
+          />
+        </div>
+        {/* Phone cells have no room for a second line, so the toggle would do nothing there */}
+        {desktop && (
+          <ToggleRow
+            id={`${id}-notes`}
+            title={t("view.showNotes")}
+            description={t("view.showNotesHint")}
+            checked={value.showShiftNotes}
+            onCheckedChange={(showShiftNotes) => onChange({ showShiftNotes })}
+            disabled={disabled}
+          />
+        )}
+        {stampBar && (
+          <ToggleRow
+            id={`${id}-dock`}
+            title={t("view.showPresetBar")}
+            description={t("view.showPresetBarHint")}
+            checked={stampBar.checked}
+            onCheckedChange={stampBar.onChange}
+            disabled={disabled}
+          />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3 border-t border-line pt-5">
+        <SectionLabel className="mb-0">{t("view.sortOptions")}</SectionLabel>
+        <Field label={t("view.sortBy")}>
+          <ChoiceChips
+            value={value.sortType}
+            onChange={(sortType) => onChange({ sortType })}
+            disabled={disabled}
+            options={[
+              { value: "startTime", label: t("view.sortByStartTime") },
+              { value: "createdAt", label: t("view.sortByCreatedAt") },
+              { value: "title", label: t("view.sortByTitle") },
+            ]}
+          />
+        </Field>
+        <Field label={t("view.sortOrder")}>
+          <ChoiceChips
+            value={value.sortOrder}
+            onChange={(sortOrder) => onChange({ sortOrder })}
+            disabled={disabled}
+            options={[
+              { value: "asc", label: t("view.sortOrderAsc") },
+              { value: "desc", label: t("view.sortOrderDesc") },
+            ]}
+          />
+        </Field>
+        <ToggleRow
+          id={`${id}-combined`}
+          title={t("view.combinedSort")}
+          description={t("view.combinedSortHint")}
+          checked={value.combinedSort}
+          onCheckedChange={(combinedSort) => onChange({ combinedSort })}
+          disabled={disabled}
+        />
+      </section>
+
+      <section className="flex flex-col gap-3 border-t border-line pt-5">
+        <SectionLabel className="mb-0">{t("view.dayHighlighting")}</SectionLabel>
+        <ToggleRow
+          id={`${id}-weekends`}
+          title={t("view.highlightWeekends")}
+          description={t("view.highlightWeekendsHint")}
+          checked={days.includes(0) && days.includes(6)}
+          onCheckedChange={(checked) =>
+            onChange({
+              highlightedWeekdays: checked
+                ? Array.from(new Set([...days, 0, 6]))
+                : days.filter((d) => d !== 0 && d !== 6),
+            })
+          }
+          disabled={disabled}
+        />
+        <Field label={t("view.customWeekdays")} hint={t("view.customWeekdaysHint")}>
+          <div className="grid grid-cols-7 gap-1.5">
+            {weekdays.map(({ day, label }) => {
+              const selected = days.includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  aria-pressed={selected}
+                  title={label}
+                  disabled={disabled}
+                  onClick={() =>
+                    onChange({
+                      highlightedWeekdays: selected
+                        ? days.filter((d) => d !== day)
+                        : [...days, day],
+                    })
+                  }
+                  className={cn(
+                    "h-9 rounded-lg border text-[12.5px] font-semibold",
+                    selected ? "border-brand text-brand-ink" : "border-line text-fg-secondary",
+                    !disabled && (selected ? "bg-brand-soft" : "bg-surface-card")
+                  )}
+                >
+                  {label.slice(0, 2)}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+        <Field label={t("view.highlightColor")}>
+          <ColorSwatches
+            size="sm"
+            value={value.highlightColor}
+            onChange={(highlightColor) => onChange({ highlightColor })}
+            disabled={disabled}
+          />
+        </Field>
+      </section>
+    </div>
+  );
+}
+
+interface CalendarViewPanelProps {
+  calendarId: string;
+  personal: PersonalViewSettings;
+  onClose: () => void;
+  onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}
+
+/**
+ * Settings section for a calendar's own view. Off by default; while off,
+ * everyone with access sees their personal view instead.
+ */
+export function CalendarViewPanel(props: CalendarViewPanelProps) {
+  const { loading } = useCalendars();
+
+  // The body snapshots the saved view once, so it must not mount before the
+  // calendar is cached: it would read "off" and let a Save clear the pinned
+  // view for everyone with access.
+  if (loading) {
+    return (
+      <PanelBody>
+        <div className="flex justify-center py-6 text-fg-tertiary">
+          <Loader2 className="size-5 animate-spin" />
+        </div>
+      </PanelBody>
+    );
+  }
+
+  return <CalendarViewPanelBody {...props} />;
+}
+
+function CalendarViewPanelBody({
+  calendarId,
+  personal,
+  onClose,
+  onCancel,
+  onDirtyChange,
+}: CalendarViewPanelProps) {
+  const t = useTranslations();
+  const id = useId();
+  const { calendars, updateCalendar } = useCalendars();
+  const { canManage } = useCalendarPermission(calendarId);
+  const calendar = calendars.find((c) => c.id === calendarId);
+  const saved = calendar?.viewSettings ? sanitizeCalendarViewSettings(calendar.viewSettings) : null;
+  const personalFields = sanitizeCalendarViewSettings(personal);
+
+  const [enabled, setEnabled] = useState(!!saved);
+  const [draft, setDraft] = useState<CalendarViewSettings>(() => saved ?? personalFields);
+  const [saving, setSaving] = useState(false);
+
+  const dirty =
+    !!calendar &&
+    canManage &&
+    (enabled !== !!saved || (!!saved && enabled && !calendarViewSettingsEqual(draft, saved)));
+
+  useReportDirty(dirty, onDirtyChange);
+
+  const toggle = (on: boolean) => {
+    // Turning it on starts from the saved view, or from the personal one the first time
+    if (on) setDraft(saved ?? personalFields);
+    setEnabled(on);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await updateCalendar(calendarId, { viewSettings: enabled ? draft : null });
+      onClose();
+    } catch {
+      // updateCalendar already reported the error
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const editable = canManage && enabled;
+  const shown = canManage ? (enabled ? draft : personalFields) : (saved ?? personalFields);
+  const ownView = canManage ? enabled : !!saved;
+
+  return (
+    <>
+      <PanelBody>
+        <div className="flex flex-col gap-5">
+          <div className={cn("flex flex-col gap-3", !canManage && LOCKED_FIELDS)}>
+            <ToggleRow
+              id={`${id}-own`}
+              title={t("view.calendarOwn")}
+              description={t("view.calendarOwnHint")}
+              checked={ownView}
+              onCheckedChange={toggle}
+              disabled={!canManage}
+            />
+            {ownView && !canManage && (
+              <InfoNote icon={Lock}>{t("view.calendarLocked")}</InfoNote>
+            )}
+            {!ownView && <InfoNote icon={UserRound}>{t("view.calendarOffNote")}</InfoNote>}
+          </div>
+          <div className="border-t border-line pt-5">
+            <ViewFields
+              value={shown}
+              onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
+              disabled={!editable}
+            />
+          </div>
+        </div>
+      </PanelBody>
+      {canManage && (
+        <PanelFooter>
+          <p className="hidden min-w-0 flex-1 text-[13px] text-fg-secondary lg:block">
+            {t("settings.appliesToAll")}
+          </p>
+          <Button
+            variant="outline"
+            className="h-10 flex-1 font-semibold lg:flex-none lg:px-4"
+            onClick={onCancel}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            className="h-10 flex-1 font-semibold lg:flex-none lg:px-4"
+            disabled={!dirty || saving}
+            onClick={save}
+          >
+            {saving ? t("common.saving") : t("common.save")}
+          </Button>
+        </PanelFooter>
+      )}
+    </>
+  );
+}
+
+/** Body of "Meine Ansicht"; changes apply immediately. */
+export function PersonalViewPanel({
+  settings,
+  calendarId,
+}: {
+  settings: ViewSettingsState;
+  /** Selected calendar, to point out when its own view takes precedence */
+  calendarId?: string | null;
+}) {
+  const t = useTranslations();
+  const { calendars } = useCalendars();
+  const calendar = calendarId ? calendars.find((c) => c.id === calendarId) : undefined;
+  const { personal, updatePersonal } = settings;
+
+  return (
+    <PanelBody>
+      <div className="flex flex-col gap-5">
+        {calendar?.viewSettings && (
+          <InfoNote icon={Info}>
+            {t("view.overriddenByCalendar", { calendar: calendar.name })}
+          </InfoNote>
+        )}
+        <ViewFields
+          value={personal}
+          onChange={updatePersonal}
+          stampBar={{
+            checked: personal.showStampBar,
+            onChange: (showStampBar) => updatePersonal({ showStampBar }),
+          }}
+        />
+      </div>
+    </PanelBody>
+  );
+}
+
+/** "Meine Ansicht": the personal view, applied to every calendar without its own view. */
 export function ViewSettingsSheet({
   open,
   onOpenChange,
-  shiftsPerDay,
-  externalShiftsPerDay,
-  showShiftNotes,
-  showFullTitles,
-  shiftSortType,
-  shiftSortOrder,
-  combinedSortMode,
-  highlightWeekends,
-  highlightedWeekdays,
-  highlightColor,
-  onShiftsPerDayChange,
-  onExternalShiftsPerDayChange,
-  onShowShiftNotesChange,
-  onShowFullTitlesChange,
-  onShiftSortTypeChange,
-  onShiftSortOrderChange,
-  onCombinedSortModeChange,
-  onHighlightWeekendsChange,
-  onHighlightedWeekdaysChange,
-  onHighlightColorChange,
-}: ViewSettingsSheetProps) {
+  settings,
+  calendarId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  settings: ViewSettingsState;
+  calendarId?: string | null;
+}) {
   const t = useTranslations();
-
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-[600px] p-0 flex flex-col gap-0 border-l border-border/50 overflow-hidden"
-      >
-        <SheetHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-5 space-y-1.5">
-          <SheetTitle className="text-xl font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("view.settingsTitle")}
-          </SheetTitle>
-          <SheetDescription className="text-sm text-muted-foreground">
-            {t("view.settingsDescription")}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-          {/* Regular Shifts per Day */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Maximize2 className="h-4 w-4 text-primary" />
-                <Label className="text-sm font-semibold">
-                  {t("view.shiftsPerDay")}
-                </Label>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
-                {shiftsPerDay === null ? (
-                  <>
-                    <Infinity className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-primary">
-                      {t("view.showAll")}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-semibold text-primary">
-                    {shiftsPerDay}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Slider
-                value={[shiftsPerDay === null ? 11 : shiftsPerDay]}
-                onValueChange={(value: number[]) =>
-                  onShiftsPerDayChange(value[0] === 11 ? null : value[0])
-                }
-                min={1}
-                max={11}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground px-1">
-                <span>1</span>
-                <span>{t("view.showAll")}</span>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("view.shiftsPerDayHint")}
-            </p>
-          </div>
-
-          {/* External Shifts per Day */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Maximize2 className="h-4 w-4 text-primary" />
-                <Label className="text-sm font-semibold">
-                  {t("view.externalShiftsPerDay")}
-                </Label>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
-                {externalShiftsPerDay === null ? (
-                  <>
-                    <Infinity className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-primary">
-                      {t("view.showAll")}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-semibold text-primary">
-                    {externalShiftsPerDay}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Slider
-                value={[
-                  externalShiftsPerDay === null ? 11 : externalShiftsPerDay,
-                ]}
-                onValueChange={(value: number[]) =>
-                  onExternalShiftsPerDayChange(
-                    value[0] === 11 ? null : value[0]
-                  )
-                }
-                min={1}
-                max={11}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground px-1">
-                <span>1</span>
-                <span>{t("view.showAll")}</span>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("view.externalShiftsPerDayHint")}
-            </p>
-          </div>
-
-          {/* Shift Sorting */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold">
-                {t("view.sortOptions")}
-              </Label>
-            </div>
-            <div className="space-y-3 pl-6 border-l-2 border-border/50">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  {t("view.sortBy")}
-                </Label>
-                <Select
-                  value={shiftSortType}
-                  onValueChange={onShiftSortTypeChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="startTime">
-                      {t("view.sortByStartTime")}
-                    </SelectItem>
-                    <SelectItem value="createdAt">
-                      {t("view.sortByCreatedAt")}
-                    </SelectItem>
-                    <SelectItem value="title">
-                      {t("view.sortByTitle")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  {t("view.sortOrder")}
-                </Label>
-                <Select
-                  value={shiftSortOrder}
-                  onValueChange={onShiftSortOrderChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="asc">
-                      {t("view.sortOrderAsc")}
-                    </SelectItem>
-                    <SelectItem value="desc">
-                      {t("view.sortOrderDesc")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-start gap-3 pt-2">
-                <Checkbox
-                  id="combined-sort"
-                  checked={combinedSortMode}
-                  onCheckedChange={(checked: boolean) =>
-                    onCombinedSortModeChange(checked)
-                  }
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label
-                    htmlFor="combined-sort"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {t("view.combinedSort")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t("view.combinedSortHint")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Show Shift Notes */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold">
-                {t("view.displayOptions")}
-              </Label>
-            </div>
-            <div className="space-y-3 pl-6 border-l-2 border-border/50">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="show-notes"
-                  checked={showShiftNotes}
-                  onCheckedChange={(checked: boolean) =>
-                    onShowShiftNotesChange(checked)
-                  }
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label
-                    htmlFor="show-notes"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {t("view.showNotes")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t("view.showNotesHint")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Show Full Titles */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="show-full-titles"
-                  checked={showFullTitles}
-                  onCheckedChange={(checked: boolean) =>
-                    onShowFullTitlesChange(checked)
-                  }
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label
-                    htmlFor="show-full-titles"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {t("view.showFullTitles")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t("view.showFullTitlesHint")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Day Highlighting */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Highlighter className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold">
-                {t("view.dayHighlighting")}
-              </Label>
-            </div>
-            <div className="space-y-4 pl-6 border-l-2 border-border/50">
-              {/* Quick Toggle: Weekends */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="highlight-weekends"
-                  checked={highlightWeekends}
-                  onCheckedChange={(checked: boolean) => {
-                    onHighlightWeekendsChange(checked);
-                    if (checked) {
-                      // Add Saturday (6) and Sunday (0) to existing weekdays
-                      const newDays = Array.from(
-                        new Set([...highlightedWeekdays, 0, 6])
-                      ).sort((a, b) => a - b);
-                      onHighlightedWeekdaysChange(newDays);
-                    } else {
-                      // Remove Saturday and Sunday, keep other weekdays
-                      const filtered = highlightedWeekdays.filter(
-                        (d) => d !== 0 && d !== 6
-                      );
-                      onHighlightedWeekdaysChange(filtered);
-                    }
-                  }}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label
-                    htmlFor="highlight-weekends"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {t("view.highlightWeekends")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t("view.highlightWeekendsHint")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Custom Weekdays */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  {t("view.customWeekdays")}
-                </Label>
-                <div className="grid grid-cols-7 gap-1">
-                  {[
-                    { day: 1, label: t("view.monday") },
-                    { day: 2, label: t("view.tuesday") },
-                    { day: 3, label: t("view.wednesday") },
-                    { day: 4, label: t("view.thursday") },
-                    { day: 5, label: t("view.friday") },
-                    { day: 6, label: t("view.saturday") },
-                    { day: 0, label: t("view.sunday") },
-                  ].map(({ day, label }) => {
-                    const isSelected = highlightedWeekdays.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => {
-                          const newDays = isSelected
-                            ? highlightedWeekdays.filter((d) => d !== day)
-                            : [...highlightedWeekdays, day];
-                          onHighlightedWeekdaysChange(newDays);
-
-                          // Update weekends toggle state
-                          const hasWeekends =
-                            newDays.includes(0) && newDays.includes(6);
-                          if (hasWeekends !== highlightWeekends) {
-                            onHighlightWeekendsChange(hasWeekends);
-                          }
-                        }}
-                        className={`
-                          px-1 py-2 text-xs font-medium rounded-md transition-all border-2
-                          ${
-                            isSelected
-                              ? "bg-primary/20 border-primary text-primary"
-                              : "bg-muted/30 border-border/30 text-muted-foreground hover:bg-muted/50"
-                          }
-                        `}
-                        title={label}
-                      >
-                        {label.substring(0, 2)}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("view.customWeekdaysHint")}
-                </p>
-              </div>
-
-              {/* Highlight Color */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  {t("view.highlightColor")}
-                </Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {PRESET_COLORS.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={() => onHighlightColorChange(color.value)}
-                      className={`
-                        h-10 rounded-lg border-2 transition-all
-                        ${
-                          highlightColor === color.value
-                            ? "border-foreground ring-2 ring-foreground/20 scale-105"
-                            : "border-border/30 hover:border-border"
-                        }
-                      `}
-                      style={{
-                        backgroundColor: `${color.value}20`,
-                      }}
-                      title={color.name}
-                    >
-                      <div
-                        className="h-4 w-4 rounded-full mx-auto"
-                        style={{ backgroundColor: color.value }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+    <PanelDialog
+      bare
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("view.settingsTitle")}
+      description={
+        settings.storedInAccount
+          ? t("view.settingsDescription")
+          : t("view.settingsDescriptionLocal")
+      }
+    >
+      <PersonalViewPanel settings={settings} calendarId={calendarId} />
+    </PanelDialog>
   );
 }

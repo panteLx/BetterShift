@@ -1,286 +1,169 @@
-import React from "react";
-import { motion } from "motion/react";
+"use client";
+
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import {
-  Check,
-  Plus,
-  Settings,
-  Settings2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
-import { CalendarWithCount } from "@/lib/types";
-import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { getShiftCode, presetTime, shiftVars } from "@/lib/shift-display";
+import { ListRow, Pill, RowIconButton, SectionLabel } from "@/components/form-kit";
+import { cn } from "@/lib/utils";
 
-interface PresetListProps {
-  calendars: CalendarWithCount[];
-  calendarId: string;
-  presets: ShiftPreset[];
-  selectedPresetId?: string;
-  onSelectPreset: (presetId: string | undefined) => void;
-  onCreateNew?: () => void;
-  onManageClick?: () => void;
-  onViewSettingsClick?: () => void;
-  hidePresetHeader?: boolean;
-  onHidePresetHeaderChange?: (hide: boolean) => void;
-  hideManageButton?: boolean;
+interface PresetRowActions {
+  readOnly: boolean;
+  editingId: string | null;
+  deletingId: string | null;
+  onEdit: (preset: ShiftPreset) => void;
+  onDelete: (preset: ShiftPreset) => void;
 }
 
-export function PresetList({
-  calendarId,
-  presets,
-  selectedPresetId,
-  onSelectPreset,
-  onManageClick,
-  onViewSettingsClick,
-  hidePresetHeader = false,
-  onHidePresetHeaderChange,
-  hideManageButton = false,
-}: PresetListProps) {
+interface SortablePresetRowProps extends PresetRowActions {
+  preset: ShiftPreset;
+  draggable: boolean;
+}
+
+function SortablePresetRow({
+  preset,
+  draggable,
+  readOnly,
+  editingId,
+  deletingId,
+  onEdit,
+  onDelete,
+}: SortablePresetRowProps) {
   const t = useTranslations();
-  const permission = useCalendarPermission(calendarId);
-  const [showSecondary, setShowSecondary] = React.useState(false);
-
-  const primaryPresets = presets.filter((p) => !p.isSecondary);
-  const secondaryPresets = presets.filter((p) => p.isSecondary);
-
-  // Check if current calendar is read-only
-  const isReadOnly = !permission.canEdit;
-
-  // Presets are now loaded at page level - no skeleton needed here
-  // If loading is true, parent should show FullscreenLoader
-
-  if (presets.length === 0) {
-    return (
-      <div className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center space-y-2 sm:space-y-3">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <Plus className="h-4 sm:h-5 w-4 sm:w-5" />
-          <p className="text-xs sm:text-sm font-medium">
-            {t("preset.noPresets")}
-          </p>
-        </div>
-        <p className="text-[10px] sm:text-xs text-muted-foreground max-w-md mx-auto">
-          {t("preset.createFirstDescription")}
-        </p>
-        {!hideManageButton && (
-          <Button
-            onClick={onManageClick}
-            size="sm"
-            className="gap-2"
-            disabled={!onManageClick}
-          >
-            <Plus className="h-4 w-4" />
-            <span className="text-xs sm:text-sm">
-              {t("preset.createYourFirst")}
-            </span>
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: preset.id, disabled: !draggable });
+  const busy = deletingId === preset.id;
 
   return (
-    <div className="space-y-2">
-      {/* Preset Buttons Row */}
-      {!hidePresetHeader && (
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {primaryPresets.map((preset) => (
-            <PresetButton
-              key={preset.id}
-              preset={preset}
-              isSelected={selectedPresetId === preset.id}
-              onSelect={() =>
-                onSelectPreset(
-                  selectedPresetId === preset.id ? undefined : preset.id
-                )
-              }
-              isReadOnly={isReadOnly}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Secondary Presets - Collapsible */}
-      {!hidePresetHeader && secondaryPresets.length > 0 && (
-        <div className="space-y-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSecondary(!showSecondary)}
-            className="gap-1 text-xs text-muted-foreground h-6 px-2"
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+      }}
+      className={cn("relative", isDragging && "z-10 opacity-60")}
+    >
+      <ListRow
+        highlighted={editingId === preset.id}
+        className={cn("gap-2.5 py-2.5 pr-1.5", draggable ? "pl-1.5" : "pl-3.5")}
+      >
+        {draggable && (
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            aria-label={t("presetSheet.dragHandle")}
+            className="-my-1 flex h-8 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
           >
-            {showSecondary ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
-            <span>
-              {t("preset.secondaryPresets")} ({secondaryPresets.length})
+            <GripVertical className="size-4" />
+          </button>
+        )}
+        <span
+          className="shift-solid flex size-[22px] shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold"
+          style={shiftVars(preset.color)}
+        >
+          {getShiftCode(preset.title)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14px] font-semibold text-fg-strong">
+            {preset.title}
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-[12px] text-fg-tertiary">
+              {presetTime(preset, t("presetSheet.allDayShort"))}
             </span>
-          </Button>
-          {showSecondary && (
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              {secondaryPresets.map((preset) => (
-                <PresetButton
-                  key={preset.id}
-                  preset={preset}
-                  isSelected={selectedPresetId === preset.id}
-                  onSelect={() =>
-                    onSelectPreset(
-                      selectedPresetId === preset.id ? undefined : preset.id
-                    )
-                  }
-                  compact
-                  isReadOnly={isReadOnly}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Control Buttons Row */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {!hidePresetHeader && !hideManageButton && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onManageClick}
-            disabled={!onManageClick}
-            className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
-            title={t("preset.manage")}
-          >
-            <Settings className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-          </Button>
-        )}
-        <div className="flex-1" />
-        {onViewSettingsClick && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onViewSettingsClick}
-            className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 sm:h-9 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
-            title={t("view.settingsTitle")}
-          >
-            <Settings2 className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-          </Button>
-        )}
-        {onHidePresetHeaderChange && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onHidePresetHeaderChange(!hidePresetHeader)}
-            className="h-8 sm:h-9 w-8 sm:w-9 p-0 text-muted-foreground hover:text-foreground"
-            title={
-              hidePresetHeader
-                ? t("preset.showPresets")
-                : t("preset.hidePresets")
-            }
-          >
-            {hidePresetHeader ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronUp className="h-4 w-4" />
+            {preset.isSecondary && <Pill>{t("preset.secondary")}</Pill>}
+            {preset.hideFromStats && (
+              <Pill tone="warning">{t("presetSheet.notInStats")}</Pill>
             )}
-          </Button>
+          </div>
+        </div>
+        {!readOnly && (
+          <>
+            <RowIconButton
+              icon={Pencil}
+              label={t("preset.edit")}
+              onClick={() => onEdit(preset)}
+              disabled={busy}
+            />
+            <RowIconButton
+              icon={Trash2}
+              tone="danger"
+              label={t("presetSheet.delete")}
+              onClick={() => onDelete(preset)}
+              disabled={busy}
+            />
+          </>
         )}
-      </div>
+      </ListRow>
     </div>
   );
 }
 
-interface PresetButtonProps {
-  preset: ShiftPreset;
-  isSelected: boolean;
-  onSelect: () => void;
-  compact?: boolean;
-  isReadOnly?: boolean;
+interface PresetSectionProps extends PresetRowActions {
+  label: string;
+  presets: ShiftPreset[];
+  onReorder: (next: ShiftPreset[]) => void;
 }
 
-function PresetButton({
-  preset,
-  isSelected,
-  onSelect,
-  compact,
-  isReadOnly = false,
-}: PresetButtonProps) {
-  const t = useTranslations();
+/** One sortable group; primary and secondary presets are reordered separately. */
+export function PresetSection({ label, presets, onReorder, ...actions }: PresetSectionProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const draggable = !actions.readOnly && presets.length > 1;
 
-  if (compact) {
-    return (
-      <Button
-        variant={isSelected ? "default" : "outline"}
-        size="sm"
-        onClick={isReadOnly ? undefined : onSelect}
-        disabled={isReadOnly}
-        className="relative text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
-        style={{
-          backgroundColor: isSelected ? preset.color : undefined,
-          borderColor: preset.color,
-        }}
-      >
-        {isSelected && <Check className="mr-1 h-3 w-3" />}
-        <span className="font-medium truncate max-w-[80px] sm:max-w-none">
-          {preset.title}
-        </span>
-        <span className="ml-1 text-[10px] sm:text-xs opacity-70">
-          {preset.isAllDay ? (
-            <span>{t("shift.allDay")}</span>
-          ) : (
-            <>
-              <span className="sm:hidden">{preset.startTime}</span>
-              <span className="hidden sm:inline">
-                {preset.startTime} - {preset.endTime}
-              </span>
-            </>
-          )}
-        </span>
-      </Button>
-    );
-  }
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const oldIndex = presets.findIndex((p) => p.id === active.id);
+    const newIndex = presets.findIndex((p) => p.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    onReorder(arrayMove(presets, oldIndex, newIndex));
+  };
 
   return (
-    <motion.div
-      whileTap={{ scale: 0.95 }}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-    >
-      <Button
-        variant={isSelected ? "default" : "outline"}
-        size="sm"
-        onClick={isReadOnly ? undefined : onSelect}
-        disabled={isReadOnly}
-        className="relative text-[11px] sm:text-sm px-2 sm:px-4 h-8 sm:h-10 rounded-full font-semibold transition-all"
-        style={{
-          backgroundColor: isSelected ? preset.color : undefined,
-          borderColor: preset.color,
-          borderWidth: "2px",
-        }}
-      >
-        {isSelected && (
-          <Check className="mr-1 sm:mr-1.5 h-3 sm:h-3.5 w-3 sm:w-3.5" />
-        )}
-        <span className="truncate max-w-[80px] sm:max-w-none">
-          {preset.title}
-        </span>
-        <span className="ml-1 sm:ml-1.5 text-[9px] sm:text-xs opacity-80">
-          {preset.isAllDay ? (
-            <span>{t("shift.allDay")}</span>
-          ) : (
-            <>
-              <span className="sm:hidden">
-                {preset.startTime.substring(0, 5)}
-              </span>
-              <span className="hidden sm:inline">
-                {preset.startTime} - {preset.endTime}
-              </span>
-            </>
-          )}
-        </span>
-      </Button>
-    </motion.div>
+    <section>
+      <SectionLabel>{label}</SectionLabel>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={presets.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-2">
+            {presets.map((preset) => (
+              <SortablePresetRow
+                key={preset.id}
+                preset={preset}
+                draggable={draggable}
+                {...actions}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </section>
   );
 }

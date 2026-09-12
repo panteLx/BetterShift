@@ -1,36 +1,39 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { formatLongDate } from "@/lib/date-utils";
+import { Info, Trash2, TriangleAlert } from "lucide-react";
 import { BaseSheet } from "@/components/ui/base-sheet";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  ChoiceChips,
+  ColorSwatches,
+  Field,
+  InfoNote,
+  textareaClass,
+  zoomSafeText,
+} from "@/components/form-kit";
+import { SegmentedControl } from "@/components/segmented-control";
+import { StatusBanner } from "@/components/status-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { CalendarNote } from "@/lib/db/schema";
-import { format } from "date-fns";
-import { getDateLocale } from "@/lib/locales";
-import { PRESET_COLORS } from "@/lib/constants";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DEFAULT_COLOR } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+type NoteType = "note" | "event";
+/** UI view of the stored patterns; "years" is stored as custom-months × 12. */
+type Repeat = "none" | "weeks" | "months" | "years";
 
 interface NoteSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (
     note: string,
-    type: "note" | "event",
+    type: NoteType,
     color?: string,
     recurringPattern?: string,
     recurringInterval?: number
@@ -40,6 +43,47 @@ interface NoteSheetProps {
   note?: CalendarNote;
   calendarId?: string;
   readOnly?: boolean;
+}
+
+interface NoteFormState {
+  text: string;
+  type: NoteType;
+  color: string;
+  repeat: Repeat;
+  interval: number;
+}
+
+const MAX_INTERVAL = 52;
+
+const EMPTY_STATE: NoteFormState = {
+  text: "",
+  type: "note",
+  color: DEFAULT_COLOR,
+  repeat: "none",
+  interval: 1,
+};
+
+export function parseRecurrence(
+  pattern: string | null | undefined,
+  interval: number | null | undefined
+): { repeat: Repeat; interval: number } {
+  const count = interval && interval > 0 ? interval : 1;
+  if (pattern === "custom-weeks") return { repeat: "weeks", interval: count };
+  if (pattern === "custom-months") {
+    return count % 12 === 0
+      ? { repeat: "years", interval: count / 12 }
+      : { repeat: "months", interval: count };
+  }
+  return { repeat: "none", interval: 1 };
+}
+
+function stateFromNote(note: CalendarNote): NoteFormState {
+  return {
+    text: note.note || "",
+    type: (note.type as NoteType) || "note",
+    color: note.color || DEFAULT_COLOR,
+    ...parseRecurrence(note.recurringPattern, note.recurringInterval),
+  };
 }
 
 export function NoteSheet({
@@ -54,125 +98,68 @@ export function NoteSheet({
 }: NoteSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
   const permission = useCalendarPermission(calendarId);
-  const [noteText, setNoteText] = useState("");
-  const [type, setType] = useState<"note" | "event">("note");
-  const [color, setColor] = useState<string>("#3b82f6");
-  const [recurringPattern, setRecurringPattern] = useState<string>("none");
-  const [recurringInterval, setRecurringInterval] = useState<number>(1);
-  const [recurringUnit, setRecurringUnit] = useState<string>("months");
+  const initial = useMemo(
+    () => (open && note ? stateFromNote(note) : EMPTY_STATE),
+    [open, note]
+  );
+  const [form, setForm] = useState<NoteFormState>(initial);
+  const [source, setSource] = useState({ open, note });
   const [isSaving, setIsSaving] = useState(false);
+  // Raw field text, so the interval can be cleared before a new number is typed
+  const [intervalDraft, setIntervalDraft] = useState<string | null>(null);
 
-  // Determine if sheet should be in read-only mode
+  // Reset whenever the sheet opens, closes or switches notes
+  if (source.open !== open || source.note !== note) {
+    setSource({ open, note });
+    setForm(initial);
+    setIntervalDraft(null);
+  }
+
   const isReadOnly = readOnly || !permission.canEdit;
-  const initialStateRef = useRef<{
-    text: string;
-    type: "note" | "event";
-    color: string;
-    recurringPattern: string;
-    recurringInterval: number;
-    recurringUnit: string;
-  }>({
-    text: "",
-    type: "note",
-    color: "#3b82f6",
-    recurringPattern: "none",
-    recurringInterval: 1,
-    recurringUnit: "months",
-  });
+  const isEvent = form.type === "event";
+  const update = (patch: Partial<NoteFormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
-  // Reset state when dialog opens/closes or note changes
-  useEffect(() => {
-    if (open) {
-      const initialText = note?.note || "";
-      const initialType = (note?.type as "note" | "event") || "note";
-      const initialColor = note?.color || "#3b82f6";
+  const clampInterval = (value: number) => Math.min(MAX_INTERVAL, Math.max(1, value));
 
-      // Set recurring pattern from note
-      const initialPattern = note?.recurringPattern || "none";
-      const initialInterval = note?.recurringInterval || 1;
-
-      // Extract unit from pattern: "custom-weeks" or "custom-months"
-      let displayPattern = initialPattern;
-      let initialUnit = "months";
-
-      if (initialPattern?.startsWith("custom-")) {
-        displayPattern = "custom";
-        initialUnit = initialPattern.split("-")[1] || "months";
-      }
-
-      setNoteText(initialText);
-      setType(initialType);
-      setColor(initialColor);
-      setRecurringPattern(displayPattern);
-      setRecurringInterval(initialInterval);
-      setRecurringUnit(initialUnit);
-
-      if (note) {
-        initialStateRef.current = {
-          text: initialText,
-          type: initialType,
-          color: initialColor,
-          recurringPattern: displayPattern,
-          recurringInterval: initialInterval,
-          recurringUnit: initialUnit,
-        };
-      }
-    } else {
-      // Reset to defaults when closing
-      setType("note");
-      setColor("#3b82f6");
-      setRecurringPattern("none");
-      setRecurringInterval(1);
-      setRecurringUnit("months");
-      initialStateRef.current = {
-        text: "",
-        type: "note",
-        color: "#3b82f6",
-        recurringPattern: "none",
-        recurringInterval: 1,
-        recurringUnit: "months",
-      };
-    }
-  }, [open, note]);
+  const commitInterval = () => {
+    const parsed = parseInt(intervalDraft ?? "", 10);
+    if (!Number.isNaN(parsed)) update({ interval: clampInterval(parsed) });
+    setIntervalDraft(null);
+  };
 
   const hasChanges = () => {
     if (note) {
-      // Edit mode: check if anything changed from initial
       return (
-        noteText !== initialStateRef.current.text ||
-        type !== initialStateRef.current.type ||
-        color !== initialStateRef.current.color ||
-        recurringPattern !== initialStateRef.current.recurringPattern ||
-        recurringInterval !== initialStateRef.current.recurringInterval ||
-        recurringUnit !== initialStateRef.current.recurringUnit
+        form.text !== initial.text ||
+        form.type !== initial.type ||
+        form.color !== initial.color ||
+        form.repeat !== initial.repeat ||
+        form.interval !== initial.interval
       );
-    } else {
-      // Create mode: check if any text was entered
-      return noteText.trim() !== "";
     }
+    return form.text.trim() !== "";
   };
 
   const handleSave = async () => {
-    if (!noteText.trim() || isSaving) return;
+    if (!form.text.trim() || isSaving) return;
 
     setIsSaving(true);
     try {
-      // Build pattern with unit: "custom-weeks" or "custom-months"
-      const finalPattern =
-        recurringPattern === "custom"
-          ? `custom-${recurringUnit}`
-          : recurringPattern;
+      const pattern =
+        form.repeat === "weeks"
+          ? "custom-weeks"
+          : form.repeat === "none"
+            ? "none"
+            : "custom-months";
+      const interval = form.repeat === "years" ? form.interval * 12 : form.interval;
 
       onSubmit(
-        noteText,
-        type,
-        type === "event" ? color : undefined,
-        type === "event" ? finalPattern : undefined,
-        type === "event" && recurringPattern === "custom"
-          ? recurringInterval
-          : undefined
+        form.text,
+        form.type,
+        isEvent ? form.color : undefined,
+        isEvent ? pattern : undefined,
+        isEvent && form.repeat !== "none" ? interval : undefined
       );
       onOpenChange(false);
     } finally {
@@ -188,234 +175,152 @@ export function NoteSheet({
   };
 
   const formattedDate = selectedDate
-    ? format(selectedDate, "PPP", { locale: dateLocale })
+    ? formatLongDate(selectedDate, locale, { year: true })
     : "";
 
-  const customFooter = note ? (
-    // Edit mode: Delete button on left, Cancel/Save on right
-    <div className="flex gap-2.5 w-full">
-      {onDelete && !isReadOnly && (
+  const unitLabel = {
+    none: t("noteSheet.intervalInactive"),
+    weeks: t("noteSheet.unitWeeks", { count: form.interval }),
+    months: t("noteSheet.unitMonths", { count: form.interval }),
+    years: t("noteSheet.unitYears", { count: form.interval }),
+  }[form.repeat];
+
+  const footer = (
+    <>
+      {note && onDelete && !isReadOnly && (
         <Button
           type="button"
-          variant="destructive"
+          variant="outline"
           onClick={handleDelete}
           disabled={isSaving}
-          className="h-11 shadow-lg shadow-destructive/25"
+          className="h-10 border-danger-line font-semibold text-danger hover:bg-danger-soft hover:text-danger"
         >
+          <Trash2 className="size-4" />
           {t("common.delete")}
         </Button>
       )}
-      <div className="flex-1" />
       <Button
         type="button"
         variant="outline"
         onClick={() => onOpenChange(false)}
         disabled={isSaving}
-        className="h-11 border-border/50 hover:bg-muted/50"
+        className="h-10 flex-1 font-semibold"
       >
-        {t("common.cancel")}
+        {isReadOnly ? t("common.close") : t("common.cancel")}
       </Button>
       {!isReadOnly && (
         <Button
           type="button"
           onClick={handleSave}
-          disabled={isSaving || !noteText.trim() || !hasChanges()}
-          className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
+          disabled={isSaving || !form.text.trim() || (!!note && !hasChanges())}
+          className="h-10 flex-1 font-semibold"
         >
-          {isSaving ? t("common.saving") : t("common.save")}
+          {isSaving
+            ? t("common.saving")
+            : note
+              ? t("common.save")
+              : t("noteSheet.createAction")}
         </Button>
       )}
-    </div>
-  ) : (
-    // Create mode: Full-width buttons
-    <div className="flex gap-2.5 w-full">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => onOpenChange(false)}
-        disabled={isSaving}
-        className="flex-1 h-11 border-border/50 hover:bg-muted/50"
-      >
-        {t("common.cancel")}
-      </Button>
-      {!isReadOnly && (
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving || !noteText.trim()}
-          className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-        >
-          {isSaving ? t("common.saving") : t("common.save")}
-        </Button>
-      )}
-    </div>
+    </>
   );
-
-  const getSheetTitle = () => {
-    const itemType =
-      type === "event" ? t("note.typeEvent") : t("note.typeNote");
-    if (note) {
-      return t("note.edit", { item: itemType });
-    }
-    return t("note.create", { item: itemType });
-  };
 
   return (
     <BaseSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={getSheetTitle()}
+      title={note ? t("noteSheet.editTitle") : t("noteSheet.createTitle")}
       description={formattedDate}
-      footer={customFooter}
+      footer={footer}
       hasUnsavedChanges={hasChanges()}
-      maxWidth="md"
     >
-      <div className="space-y-6">
-        {/* Read-Only Banner */}
+      <div className="flex flex-col gap-4">
         {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
-        {/* Recurring Event Warning */}
-        {note &&
-          type === "event" &&
-          note.recurringPattern &&
-          note.recurringPattern !== "none" && (
-            <Alert className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-              <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-                {t("note.recurringEditWarning")}
-              </AlertDescription>
-            </Alert>
-          )}
-
-        {/* Type Selection */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">{t("note.type")}</Label>
-          <RadioGroup
-            value={type}
-            onValueChange={(value) => setType(value as "note" | "event")}
-            className="flex gap-4"
-            disabled={isReadOnly}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem
-                value="note"
-                id="type-note"
-                disabled={isReadOnly}
-              />
-              <Label htmlFor="type-note" className="cursor-pointer font-normal">
-                {t("note.typeNote")}
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem
-                value="event"
-                id="type-event"
-                disabled={isReadOnly}
-              />
-              <Label
-                htmlFor="type-event"
-                className="cursor-pointer font-normal"
-              >
-                {t("note.typeEvent")}
-              </Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        {/* Event Options */}
-        {type === "event" && (
-          <div className="space-y-4 pl-6 border-l-2 border-border/50">
-            {/* Color Selection */}
-            <ColorPicker
-              color={color}
-              onChange={setColor}
-              label={t("note.eventColor")}
-              presetColors={PRESET_COLORS}
-              disabled={isReadOnly}
-            />
-
-            {/* Recurring Pattern */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                {t("note.recurring")}
-              </Label>
-              <Select
-                value={recurringPattern}
-                onValueChange={setRecurringPattern}
-                disabled={isReadOnly}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    {t("note.recurringNone")}
-                  </SelectItem>
-                  <SelectItem value="custom">
-                    {t("note.recurringCustom")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Interval */}
-            {recurringPattern === "custom" && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  {t("note.customInterval")}
-                </Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {t("note.every")}
-                  </span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={52}
-                    value={recurringInterval}
-                    onChange={(e) =>
-                      setRecurringInterval(parseInt(e.target.value) || 1)
-                    }
-                    className="w-20"
-                    disabled={isReadOnly}
-                  />
-                  <Select
-                    value={recurringUnit}
-                    onValueChange={setRecurringUnit}
-                    disabled={isReadOnly}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weeks">{t("note.weeks")}</SelectItem>
-                      <SelectItem value="months">{t("note.months")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-          </div>
+        {note && isEvent && note.recurringPattern && note.recurringPattern !== "none" && (
+          <StatusBanner tone="warning" icon={TriangleAlert}>
+            {t("note.recurringEditWarning")}
+          </StatusBanner>
         )}
 
-        {/* Note Text */}
-        <div className="space-y-3">
-          <Label htmlFor="note-text" className="text-sm font-medium">
-            {type === "event" ? t("note.eventTitle") : t("note.note")}
-          </Label>
+        <SegmentedControl<NoteType>
+          label={t("note.type")}
+          size="lg"
+          value={form.type}
+          onChange={(type) => !isReadOnly && update({ type })}
+          options={[
+            { value: "event", label: t("noteSheet.typeEvent") },
+            { value: "note", label: t("noteSheet.typeNote") },
+          ]}
+        />
+
+        <InfoNote icon={Info}>{t("noteSheet.typeHint")}</InfoNote>
+
+        <Field label={t("noteSheet.text")} htmlFor="note-text">
           <Textarea
             id="note-text"
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder={
-              type === "event"
-                ? t("note.eventPlaceholder")
-                : t("note.placeholder")
-            }
-            className="min-h-[200px] resize-none focus-visible:ring-primary/30 border-border/50"
+            value={form.text}
+            onChange={(e) => update({ text: e.target.value })}
+            placeholder={isEvent ? t("note.eventPlaceholder") : t("note.placeholder")}
+            rows={3}
+            className={cn(textareaClass, "min-h-[74px]")}
             disabled={isReadOnly}
           />
-        </div>
+        </Field>
+
+        {isEvent && (
+          <>
+            <Field label={t("note.eventColor")}>
+              <ColorSwatches
+                value={form.color}
+                onChange={(color) => update({ color })}
+                allowCustom
+                disabled={isReadOnly}
+              />
+            </Field>
+
+            <Field label={t("noteSheet.repeat")}>
+              <ChoiceChips<Repeat>
+                label={t("noteSheet.repeat")}
+                value={form.repeat}
+                onChange={(repeat) => update({ repeat })}
+                disabled={isReadOnly}
+                options={[
+                  { value: "none", label: t("noteSheet.repeatNone") },
+                  { value: "weeks", label: t("noteSheet.repeatWeekly") },
+                  { value: "months", label: t("noteSheet.repeatMonthly") },
+                  { value: "years", label: t("noteSheet.repeatYearly") },
+                ]}
+              />
+              <div
+                className={cn(
+                  "flex items-center gap-2.5 text-[13px] text-fg-body",
+                  form.repeat === "none" && "opacity-45"
+                )}
+              >
+                <span>{t("note.every")}</span>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_INTERVAL}
+                  aria-label={t("note.customInterval")}
+                  value={intervalDraft ?? String(form.interval)}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setIntervalDraft(raw);
+                    const parsed = parseInt(raw, 10);
+                    if (parsed >= 1 && parsed <= MAX_INTERVAL) update({ interval: parsed });
+                  }}
+                  onBlur={commitInterval}
+                  disabled={isReadOnly || form.repeat === "none"}
+                  className={cn(zoomSafeText, "h-[34px] w-[58px] rounded-lg px-2 text-center font-mono")}
+                />
+                <span>{unitLabel}</span>
+              </div>
+            </Field>
+          </>
+        )}
       </div>
     </BaseSheet>
   );

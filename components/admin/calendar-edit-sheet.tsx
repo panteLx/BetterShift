@@ -1,23 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { BaseSheet } from "@/components/ui/base-sheet";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { PRESET_COLORS } from "@/lib/constants";
-import {
-  useAdminCalendars,
-  type AdminCalendar,
-} from "@/hooks/useAdminCalendars";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
+import { AdminFormPanel } from "@/components/admin/admin-form-panel";
+import { useAdminCalendarActions, type AdminCalendar } from "@/hooks/useAdminCalendars";
 import { useCanEditCalendar } from "@/hooks/useAdminAccess";
 
 interface CalendarEditSheetProps {
@@ -27,30 +16,16 @@ interface CalendarEditSheetProps {
   onSuccess: () => void;
 }
 
-export function CalendarEditSheet({
-  open,
-  onOpenChange,
-  calendar,
-  onSuccess,
-}: CalendarEditSheetProps) {
+export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: CalendarEditSheetProps) {
   const t = useTranslations();
-  const { updateCalendar, isLoading } = useAdminCalendars();
+  const { updateCalendar, isUpdating } = useAdminCalendarActions();
   const canEdit = useCanEditCalendar();
 
+  // Resets when the parent remounts this component via its key
   const [name, setName] = useState(calendar.name);
   const [color, setColor] = useState(calendar.color);
-  const [guestPermission, setGuestPermission] = useState(
-    calendar.guestPermission
-  );
+  const [guestPermission, setGuestPermission] = useState(calendar.guestPermission);
 
-  // Reset state when calendar changes
-  useEffect(() => {
-    setName(calendar.name);
-    setColor(calendar.color);
-    setGuestPermission(calendar.guestPermission);
-  }, [calendar]);
-
-  // Track if form has changes
   const hasChanges =
     name !== calendar.name ||
     color !== calendar.color ||
@@ -60,115 +35,82 @@ export function CalendarEditSheet({
     return null;
   }
 
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange(newOpen);
-  };
-
   const handleSave = async () => {
-    const updates: {
-      name?: string;
-      color?: string;
-      guestPermission?: string;
-    } = {};
+    const updates: Parameters<typeof updateCalendar>[1] = {};
 
     if (name !== calendar.name) updates.name = name;
     if (color !== calendar.color) updates.color = color;
-    if (guestPermission !== calendar.guestPermission)
-      updates.guestPermission = guestPermission;
+    if (guestPermission !== calendar.guestPermission) updates.guestPermission = guestPermission;
 
     const success = await updateCalendar(calendar.id, updates);
     if (success) {
       onSuccess();
-      handleOpenChange(false);
+      onOpenChange(false);
     }
   };
 
   return (
-    <BaseSheet
+    <AdminFormPanel
       open={open}
-      onOpenChange={handleOpenChange}
+      onOpenChange={onOpenChange}
       title={t("admin.calendars.editCalendar")}
-      description={t("admin.calendars.editCalendarDescription")}
-      showSaveButton
+      subtitle={calendar.name}
       onSave={handleSave}
-      isSaving={isLoading}
+      isSaving={isUpdating}
       saveDisabled={!hasChanges || !name.trim()}
       hasUnsavedChanges={hasChanges}
-      maxWidth="md"
     >
-      <div className="space-y-6">
-        {/* Calendar Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name">
-            {t("common.labels.name")}{" "}
-            <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("admin.calendars.namePlaceholder")}
-          />
-        </div>
-
-        {/* Calendar Color */}
-        <ColorPicker
-          color={color}
-          onChange={setColor}
-          label={t("form.colorLabel")}
-          presetColors={PRESET_COLORS}
+      <Field label={t("common.labels.name")} htmlFor="admin-calendar-name">
+        <Input
+          id="admin-calendar-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("admin.calendars.namePlaceholder")}
+          className={inputClass}
         />
+      </Field>
 
-        {/* Guest Permission */}
-        <div className="space-y-2">
-          <Label htmlFor="guestPermission">
-            {t("admin.calendars.guestPermission")}
-          </Label>
-          <Select
-            value={guestPermission}
-            onValueChange={(value) =>
-              setGuestPermission(value as "none" | "read" | "write")
-            }
+      <Field label={t("form.colorLabel")}>
+        <ColorSwatches value={color} onChange={setColor} allowCustom />
+      </Field>
+
+      <Field
+        label={t("admin.calendars.guestPermission")}
+        htmlFor="admin-calendar-guest"
+        hint={t("admin.calendars.guestPermissionHint")}
+      >
+        <Select
+          value={guestPermission}
+          onValueChange={(value) => setGuestPermission(value as AdminCalendar["guestPermission"])}
+        >
+          <SelectTrigger
+            id="admin-calendar-guest"
+            className="h-10 w-full rounded-[9px] px-3 text-[14px] data-[size=default]:h-10"
           >
-            <SelectTrigger id="guestPermission">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">
-                {t("common.labels.permissions.none")}
-              </SelectItem>
-              <SelectItem value="read">
-                {t("common.labels.permissions.read")}
-              </SelectItem>
-              <SelectItem value="write">
-                {t("common.labels.permissions.write")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {t("admin.calendars.guestPermissionHint")}
-          </p>
-        </div>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t("common.labels.permissions.none")}</SelectItem>
+            <SelectItem value="read">{t("common.labels.permissions.read")}</SelectItem>
+            <SelectItem value="write">{t("common.labels.permissions.write")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
 
-        {/* Current Owner */}
-        <div className="space-y-2">
-          <Label>{t("admin.calendars.currentOwner")}</Label>
-          <div className="p-3 rounded-lg border bg-muted/20">
-            {calendar.ownerId ? (
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">{calendar.owner!.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {calendar.owner!.email}
-                </p>
+      <Field label={t("admin.calendars.currentOwner")}>
+        <div className="rounded-[9px] border border-line bg-surface-panel px-[13px] py-[11px]">
+          {calendar.ownerId && calendar.owner ? (
+            <>
+              <div className="truncate text-[13.5px] font-semibold text-fg-strong">
+                {calendar.owner.name}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("admin.calendars.noOwner")}
-              </p>
-            )}
-          </div>
+              <div className="mt-0.5 truncate text-[12px] text-fg-tertiary">{calendar.owner.email}</div>
+            </>
+          ) : (
+            <div className="text-[13px] text-fg-tertiary">{t("admin.calendars.noOwner")}</div>
+          )}
         </div>
-      </div>
-    </BaseSheet>
+      </Field>
+    </AdminFormPanel>
   );
 }

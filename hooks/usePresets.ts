@@ -3,6 +3,8 @@ import { useTranslations } from "next-intl";
 import { ShiftPreset } from "@/lib/db/schema";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 // Form data interface
 export interface PresetFormData {
@@ -22,7 +24,7 @@ async function fetchPresetsApi(calendarId: string): Promise<ShiftPreset[]> {
   const response = await fetch(`/api/presets?${params}`);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch presets: ${response.statusText}`);
+    throw new ApiError(`Failed to fetch presets: ${response.statusText}`, response.status);
   }
 
   return await response.json();
@@ -120,6 +122,8 @@ export function usePresets(calendarId: string | undefined) {
   const queryClient = useQueryClient();
   const t = useTranslations();
 
+  const accessible = useIsCalendarAccessible(calendarId);
+
   // Query for fetching presets
   const {
     data: presets = [],
@@ -128,7 +132,7 @@ export function usePresets(calendarId: string | undefined) {
   } = useQuery({
     queryKey: queryKeys.presets.byCalendar(calendarId!),
     queryFn: () => fetchPresetsApi(calendarId!),
-    enabled: !!calendarId,
+    enabled: accessible,
   });
 
   // Create preset mutation

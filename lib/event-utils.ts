@@ -1,5 +1,6 @@
+import { differenceInCalendarDays } from "date-fns";
 import { CalendarNote } from "./db/schema";
-import { parseLocalDate } from "./date-utils";
+import { toLocalDate } from "./date-utils";
 
 export function matchesRecurringEvent(
   eventDate: Date,
@@ -27,16 +28,8 @@ export function matchesRecurringEvent(
       if (eventDayOfWeek !== targetDayOfWeek) return false;
       if (targetDate < eventDate) return false;
 
-      // Normalize dates to midnight to avoid time component issues
-      const eventMidnight = new Date(eventDate);
-      eventMidnight.setHours(0, 0, 0, 0);
-      const targetMidnight = new Date(targetDate);
-      targetMidnight.setHours(0, 0, 0, 0);
-
-      const daysDiff = Math.floor(
-        (targetMidnight.getTime() - eventMidnight.getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
+      // Calendar days, not elapsed ms: a DST switch makes one day 23 or 25 hours long
+      const daysDiff = differenceInCalendarDays(targetDate, eventDate);
       return daysDiff % (7 * recurringInterval) === 0;
     }
 
@@ -70,40 +63,6 @@ export function matchesRecurringEvent(
   }
 }
 
-// Find all events for a specific date (including recurring)
-export function findEventsForDate(
-  notes: CalendarNote[],
-  date: Date
-): CalendarNote[] {
-  return notes.filter((note) => {
-    if (note.type !== "event" || !note.date) return false;
-    const dateValue = note.date;
-    const noteDate =
-      dateValue instanceof Date
-        ? dateValue
-        : typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-        ? parseLocalDate(dateValue)
-        : new Date(dateValue);
-
-    // Exact date match
-    if (
-      noteDate.getFullYear() === date.getFullYear() &&
-      noteDate.getMonth() === date.getMonth() &&
-      noteDate.getDate() === date.getDate()
-    ) {
-      return true;
-    }
-
-    // Recurring match
-    return matchesRecurringEvent(
-      noteDate,
-      date,
-      note.recurringPattern,
-      note.recurringInterval
-    );
-  });
-}
-
 // Find all notes for a specific date (both notes and events, including recurring)
 export function findNotesForDate(
   notes: CalendarNote[],
@@ -111,13 +70,7 @@ export function findNotesForDate(
 ): CalendarNote[] {
   return notes.filter((note) => {
     if (!note.date) return false;
-    const dateValue = note.date;
-    const noteDate =
-      dateValue instanceof Date
-        ? dateValue
-        : typeof dateValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-        ? parseLocalDate(dateValue)
-        : new Date(dateValue);
+    const noteDate = toLocalDate(note.date);
 
     // Exact date match
     if (

@@ -13,7 +13,7 @@ const DISCONNECT_TOAST_ID = "connection-status-disconnected";
  * Shows toast notifications on status changes.
  * Returns true if the browser is online and React Query can poll.
  */
-export function useConnectionStatus() {
+export function useConnectionStatus({ toasts = true }: { toasts?: boolean } = {}) {
   const t = useTranslations();
   const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
   const hasInitialized = useRef(false);
@@ -32,6 +32,8 @@ export function useConnectionStatus() {
 
   // Show toast notifications on status changes
   useEffect(() => {
+    if (!toasts) return;
+
     // Skip initial render - don't show toast on page load
     if (!hasInitialized.current) {
       hasInitialized.current = true;
@@ -60,7 +62,7 @@ export function useConnectionStatus() {
         duration: Infinity,
       });
     }
-  }, [isOnline, t]);
+  }, [isOnline, t, toasts]);
 
   return {
     isOnline,

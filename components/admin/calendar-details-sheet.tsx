@@ -1,35 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
-import { useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
-import {
-  Edit,
-  Send,
-  Trash2,
-  Calendar,
-  StickyNote,
-  Bookmark,
-  Share2,
-  CloudDownload,
-  Link,
-} from "lucide-react";
-import { BaseSheet } from "@/components/ui/base-sheet";
+import { CloudDownload, Eye, EyeOff, Link2, Pencil, Send, SquarePen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  useAdminCalendars,
-  type CalendarDetails,
-} from "@/hooks/useAdminCalendars";
+import { ListRow, Pill } from "@/components/form-kit";
+import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
+import { DetailSection, StatTile, UserAvatar } from "@/components/admin/admin-kit";
+import { isOrphaned, ownerColor } from "@/components/admin/calendar-table";
+import { fetchAdminCalendarDetails } from "@/hooks/useAdminCalendars";
 import {
   useCanEditCalendar,
   useCanDeleteCalendar,
   useCanTransferCalendar,
 } from "@/hooks/useAdminAccess";
 import { getDateLocale } from "@/lib/locales";
+import { queryKeys } from "@/lib/query-keys";
+import { shiftVars } from "@/lib/shift-display";
 
 interface CalendarDetailsSheetProps {
   open: boolean;
@@ -38,6 +26,13 @@ interface CalendarDetailsSheetProps {
   onEdit: () => void;
   onTransfer: () => void;
   onDelete: () => void;
+}
+
+function PermissionPill({ permission }: { permission: string }) {
+  const t = useTranslations();
+  if (permission === "admin") return <Pill tone="violet">{t("common.labels.permissions.admin")}</Pill>;
+  if (permission === "write") return <Pill tone="brand">{t("common.labels.permissions.write")}</Pill>;
+  return <Pill>{t("common.labels.permissions.read")}</Pill>;
 }
 
 export function CalendarDetailsSheet({
@@ -49,391 +44,201 @@ export function CalendarDetailsSheet({
   onDelete,
 }: CalendarDetailsSheetProps) {
   const t = useTranslations();
-  const locale = useLocale();
-  const dateLocale = getDateLocale(locale);
-  const { fetchCalendarDetails, isLoading } = useAdminCalendars();
-  const [calendarDetails, setCalendarDetails] =
-    useState<CalendarDetails | null>(null);
+  const dateLocale = getDateLocale(useLocale());
+  const { data: calendar = null, isError: loadFailed } = useQuery({
+    queryKey: queryKeys.admin.calendars.detail(calendarId),
+    queryFn: () => fetchAdminCalendarDetails(calendarId),
+    enabled: open,
+    retry: false,
+  });
 
   const canEdit = useCanEditCalendar();
   const canDelete = useCanDeleteCalendar();
   const canTransfer = useCanTransferCalendar();
 
-  useEffect(() => {
-    if (!open) return;
+  const date = (value: Date) => format(value, "PP", { locale: dateLocale });
+  const orphaned = calendar ? isOrphaned(calendar) : false;
 
-    const loadDetails = async () => {
-      const details = await fetchCalendarDetails(calendarId);
-      if (details) {
-        setCalendarDetails(details);
-      }
-    };
+  const guest = calendar?.guestPermission;
+  const GuestIcon = guest === "write" ? SquarePen : guest === "read" ? Eye : EyeOff;
+  const guestLabel =
+    guest === "write"
+      ? t("common.labels.permissions.write")
+      : guest === "read"
+        ? t("common.labels.permissions.read")
+        : t("common.labels.permissions.none");
+  const guestHint =
+    guest === "write"
+      ? t("adminCalendars.guestWriteHint")
+      : guest === "read"
+        ? t("adminCalendars.guestReadHint")
+        : t("adminCalendars.guestNoneHint");
 
-    loadDetails();
-  }, [open, calendarId, fetchCalendarDetails]);
-
-  const isOrphaned = !calendarDetails?.ownerId || !calendarDetails?.owner;
-
-  const getOwnerInitials = () => {
-    if (!calendarDetails?.owner) return "?";
-    const name = calendarDetails.owner.name;
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const getUserInitials = (name: string, email: string) => {
-    if (name) {
-      return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return email.slice(0, 2).toUpperCase();
-  };
-
-  const getGuestPermissionBadge = () => {
-    if (!calendarDetails) return null;
-
-    const permission = calendarDetails.guestPermission;
-    if (permission === "none") {
-      return (
-        <Badge variant="secondary" className="text-xs">
-          {t("common.labels.permissions.none")}
-        </Badge>
-      );
-    } else if (permission === "read") {
-      return (
-        <Badge variant="outline" className="text-xs">
-          {t("common.labels.permissions.read")}
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="default" className="text-xs">
-          {t("common.labels.permissions.write")}
-        </Badge>
-      );
-    }
-  };
+  const footer = (canEdit || canTransfer || canDelete) && calendar && (
+    <>
+      {canEdit && (
+        <Button variant="outline" onClick={onEdit} className="h-10 min-w-0 flex-1 font-semibold">
+          <Pencil className="size-[15px] text-fg-secondary" />
+          <span className="truncate">{t("adminUsers.edit")}</span>
+        </Button>
+      )}
+      {canTransfer && (
+        <Button variant="outline" onClick={onTransfer} className="h-10 min-w-0 flex-1 font-semibold">
+          <Send className="size-[15px] text-fg-secondary" />
+          <span className="truncate">{t("admin.calendars.transferOwnership")}</span>
+        </Button>
+      )}
+      {canDelete && (
+        <Button
+          variant="outline"
+          onClick={onDelete}
+          aria-label={t("admin.calendars.deleteCalendar")}
+          title={t("admin.calendars.deleteCalendar")}
+          className="h-10 w-11 shrink-0 border-danger-line p-0 text-danger hover:bg-danger-surface hover:text-danger"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      )}
+    </>
+  );
 
   return (
-    <BaseSheet
+    <AdminDetailPanel
       open={open}
       onOpenChange={onOpenChange}
       title={t("admin.calendars.calendarDetails")}
-      description={t("admin.calendars.calendarDetailsDescription")}
-      maxWidth="lg"
+      subtitle={calendar?.name}
+      footer={footer || undefined}
     >
-      {isLoading && !calendarDetails ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {t("common.loading")}
-        </div>
-      ) : calendarDetails ? (
-        <div className="space-y-6">
-          {/* Calendar Info & Owner Cards */}
-          <div className="flex items-stretch gap-4">
-            {/* Calendar Name Card */}
-            <div className="flex-1 p-4 rounded-lg border bg-muted/30">
-              <h3 className="text-lg font-semibold mb-2 truncate">
-                {calendarDetails.name}
-              </h3>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {isOrphaned && (
-                  <Badge
-                    variant="outline"
-                    className="bg-red-500/10 text-red-500 border-red-500/20"
-                  >
-                    {t("admin.calendars.orphaned")}
-                  </Badge>
-                )}
-                {getGuestPermissionBadge()}
+      {!calendar ? (
+        <p className="py-12 text-center text-[13px] text-fg-tertiary">
+          {loadFailed ? t("admin.calendars.noCalendarsFound") : t("common.loading")}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0 rounded-[11px] border border-line bg-surface-card px-3.5 py-[13px]">
+              <div className="flex min-w-0 items-center gap-[9px]">
+                <span
+                  className="shift-rail size-2.5 shrink-0 rounded-full"
+                  style={shiftVars(calendar.color)}
+                />
+                <span className="truncate text-[15px] font-semibold text-fg-strong">{calendar.name}</span>
               </div>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <p>
-                  {t("common.stats.created")}{" "}
-                  {format(calendarDetails.createdAt, "PP", {
-                    locale: dateLocale,
-                  })}
-                </p>
-                <p>
-                  {t("admin.calendars.updated")}{" "}
-                  {format(calendarDetails.updatedAt, "PP", {
-                    locale: dateLocale,
-                  })}
-                </p>
+              <div className="mt-[9px] text-[11.5px] leading-relaxed text-fg-tertiary">
+                <div>
+                  {t("common.stats.created")} {date(calendar.createdAt)}
+                </div>
+                <div>
+                  {t("admin.calendars.updated")} {date(calendar.updatedAt)}
+                </div>
               </div>
             </div>
 
-            {/* Separator */}
-            <div className="w-px bg-border self-stretch" />
-
-            {/* Owner Info Card */}
-            <div className="flex-1 p-4 rounded-lg border bg-muted/30">
-              <h4 className="text-sm font-medium mb-3">
-                {t("admin.calendars.owner")}
-              </h4>
-              {isOrphaned ? (
-                <div className="flex items-center justify-center h-20">
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {t("admin.calendars.noOwner")}
-                  </p>
+            <div className="min-w-0 rounded-[11px] border border-line bg-surface-card px-3.5 py-[13px]">
+              <div className="eyebrow">{t("admin.calendars.owner")}</div>
+              {orphaned ? (
+                <div className="mt-[9px] flex flex-col items-start gap-1.5">
+                  <Pill tone="warning">{t("admin.calendars.orphaned")}</Pill>
+                  <span className="text-[12px] text-fg-tertiary">{t("admin.calendars.noOwner")}</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    {calendarDetails.owner?.image && (
-                      <AvatarImage src={calendarDetails.owner.image} />
-                    )}
-                    <AvatarFallback className="text-sm">
-                      {getOwnerInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {calendarDetails.owner?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {calendarDetails.owner?.email}
-                    </p>
+                <div className="mt-[9px] flex min-w-0 items-center gap-2.5">
+                  <UserAvatar
+                    name={calendar.owner?.name || calendar.owner?.email}
+                    image={calendar.owner?.image}
+                    size={30}
+                    color={ownerColor(calendar.ownerId)}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-semibold text-fg-strong">
+                      {calendar.owner?.name}
+                    </div>
+                    <div className="truncate text-[11.5px] text-fg-tertiary">{calendar.owner?.email}</div>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          <Separator />
-
-          {/* Statistics */}
-          <div>
-            <h4 className="text-sm font-medium mb-3">
-              {t("common.stats.statistics")}
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg border bg-muted/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.labels.shifts")}
-                  </span>
-                </div>
-                <p className="text-xl font-semibold">
-                  {calendarDetails.shiftsCount}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <StickyNote className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.labels.notes")}
-                  </span>
-                </div>
-                <p className="text-xl font-semibold">
-                  {calendarDetails.notesCount}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <Bookmark className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.labels.presets")}
-                  </span>
-                </div>
-                <p className="text-xl font-semibold">
-                  {calendarDetails.presetsCount}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <Share2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.labels.shares")}
-                  </span>
-                </div>
-                <p className="text-xl font-semibold">
-                  {calendarDetails.sharesCount}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {calendarDetails.shares.length}{" "}
-                  {t("admin.calendars.userShares")},{" "}
-                  {calendarDetails.shareTokens?.length || 0}{" "}
-                  {t("admin.calendars.tokenShares")}
-                </p>
-              </div>
+          <DetailSection label={t("adminCalendars.content")}>
+            <div className="grid grid-cols-2 gap-2.5">
+              <StatTile label={t("common.labels.shifts")} value={calendar.shiftsCount} />
+              <StatTile label={t("common.labels.presets")} value={calendar.presetsCount} />
+              <StatTile label={t("common.labels.notes")} value={calendar.notesCount} />
+              <StatTile
+                label={t("adminCalendars.sharesAndLinks", {
+                  links: calendar.shareTokens?.length || 0,
+                })}
+                value={calendar.shares.length}
+              />
             </div>
-          </div>
+          </DetailSection>
 
-          {/* User Shares List */}
-          {calendarDetails.shares.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                  <Share2 className="h-4 w-4" />
-                  {t("admin.calendars.userSharesList")} (
-                  {calendarDetails.shares.length})
-                </h4>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {calendarDetails.shares.map((share) => (
-                    <div
-                      key={share.userId}
-                      className="flex items-center gap-3 p-2 rounded-lg border bg-muted/20"
-                    >
-                      <Avatar className="h-8 w-8">
-                        {share.userImage && (
-                          <AvatarImage src={share.userImage} />
-                        )}
-                        <AvatarFallback className="text-xs">
-                          {getUserInitials(share.userName, share.userEmail)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {share.userName}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {share.userEmail}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {t(`common.labels.permissions.${share.permission}`)}
-                      </Badge>
+          <DetailSection label={t("adminCalendars.publicAccess")}>
+            <ListRow className="py-[11px]">
+              <GuestIcon className="size-4 shrink-0 text-fg-secondary" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[13.5px] font-semibold text-fg-strong">
+                  {t("adminCalendars.guestPermissionValue", { permission: guestLabel })}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-fg-tertiary">{guestHint}</div>
+              </div>
+            </ListRow>
+          </DetailSection>
+
+          {calendar.shares.length > 0 && (
+            <DetailSection label={t("admin.calendars.userSharesList")}>
+              {calendar.shares.map((share) => (
+                <ListRow key={share.userId} className="py-2.5">
+                  <UserAvatar name={share.userName || share.userEmail} image={share.userImage} size={30} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13.5px] font-semibold text-fg-strong">{share.userName}</div>
+                    <div className="truncate text-[12px] text-fg-tertiary">{share.userEmail}</div>
+                  </div>
+                  <PermissionPill permission={share.permission} />
+                </ListRow>
+              ))}
+            </DetailSection>
+          )}
+
+          {calendar.shareTokens?.length > 0 && (
+            <DetailSection label={t("admin.calendars.tokenSharesList")}>
+              {calendar.shareTokens.map((token) => (
+                <ListRow key={token.id} className="py-2.5">
+                  <Link2 className="size-4 shrink-0 text-fg-secondary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13.5px] font-semibold text-fg-strong">{token.name}</div>
+                    <div className="text-[12px] text-fg-tertiary">
+                      {t("common.stats.created")} {date(new Date(token.createdAt))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </>
+                  </div>
+                  <PermissionPill permission={token.permission} />
+                </ListRow>
+              ))}
+            </DetailSection>
           )}
 
-          {/* Share Tokens */}
-          {calendarDetails.shareTokens &&
-            calendarDetails.shareTokens.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                    <Link className="h-4 w-4" />
-                    {t("admin.calendars.tokenSharesList")} (
-                    {calendarDetails.shareTokens.length})
-                  </h4>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {calendarDetails.shareTokens.map((token) => (
-                      <div
-                        key={token.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border bg-muted/20"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {token.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {t("common.stats.created")}{" "}
-                            {format(token.createdAt, "PP", {
-                              locale: dateLocale,
-                            })}
-                          </p>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {t(`common.labels.permissions.${token.permission}`)}
-                        </Badge>
+          {calendar.externalSyncs?.length > 0 && (
+            <DetailSection label={t("admin.calendars.externalSyncs")}>
+              {calendar.externalSyncs.map((sync) => (
+                <ListRow key={sync.id} className="items-start py-2.5">
+                  <CloudDownload className="mt-0.5 size-4 shrink-0 text-fg-secondary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13.5px] font-semibold text-fg-strong">{sync.name}</div>
+                    <div className="truncate font-mono text-[11.5px] text-fg-tertiary">{sync.url}</div>
+                    {sync.lastSyncedAt && (
+                      <div className="mt-0.5 text-[12px] text-fg-tertiary">
+                        {t("admin.calendars.lastSynced")} {date(sync.lastSyncedAt)}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              </>
-            )}
-
-          {/* External Syncs */}
-          {calendarDetails.externalSyncs &&
-            calendarDetails.externalSyncs.length > 0 && (
-              <>
-                {(calendarDetails.shares.length > 0 ||
-                  (calendarDetails.shareTokens &&
-                    calendarDetails.shareTokens.length > 0)) && <Separator />}
-                <div>
-                  <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                    <CloudDownload className="h-4 w-4" />
-                    {t("admin.calendars.externalSyncs")} (
-                    {calendarDetails.externalSyncs.length})
-                  </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {calendarDetails.externalSyncs.map((sync) => (
-                      <div
-                        key={sync.id}
-                        className="p-2 rounded-lg border bg-muted/20"
-                      >
-                        <p className="text-sm font-medium truncate">
-                          {sync.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {sync.url}
-                        </p>
-                        {sync.lastSyncedAt && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {t("admin.calendars.lastSynced")}{" "}
-                            {format(sync.lastSyncedAt, "PP", {
-                              locale: dateLocale,
-                            })}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-          {/* Quick Actions */}
-          {(canEdit || canTransfer || canDelete) && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-medium mb-3">
-                  {t("admin.calendars.quickActions")}
-                </h4>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  {canEdit && (
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={onEdit}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      {t("admin.calendars.editCalendar")}
-                    </Button>
-                  )}
-                  {canTransfer && (
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={onTransfer}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {t("admin.calendars.transferOwnership")}
-                    </Button>
-                  )}
-                  {canDelete && (
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-destructive hover:text-destructive"
-                      onClick={onDelete}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      {t("admin.calendars.deleteCalendar")}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </>
+                </ListRow>
+              ))}
+            </DetailSection>
           )}
-        </div>
-      ) : null}
-    </BaseSheet>
+        </>
+      )}
+    </AdminDetailPanel>
   );
 }
