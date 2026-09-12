@@ -9,7 +9,7 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import {
   AdminRequestError,
   toSearchParams,
@@ -221,7 +221,7 @@ export function useAdminCalendars(params: CalendarListParams) {
     queryKey: queryKeys.admin.calendars.list(params),
     queryFn: () => fetchAdminCalendars(params),
     placeholderData: keepPreviousData,
-    refetchInterval: REFETCH_INTERVAL,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   useAdminErrorToast(

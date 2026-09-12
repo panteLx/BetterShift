@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ListRow, Pill } from "@/components/form-kit";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { SyncLog } from "@/lib/db/schema";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,7 @@ export function SyncNotificationsPanel({
   const { data: logs = [], isLoading } = useQuery({
     queryKey: queryKeys.externalSyncs.logs(calendarId),
     queryFn: () => fetchSyncLogsApi(calendarId),
-    refetchInterval: REFETCH_INTERVAL,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
     refetchIntervalInBackground: false,
   });
 

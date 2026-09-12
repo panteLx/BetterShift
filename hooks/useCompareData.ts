@@ -10,6 +10,8 @@ import { normalizeNote } from "@/hooks/useNotes";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useCalendarAccessFilter } from "@/hooks/useCalendars";
+import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 
 // API functions
 async function fetchShiftsApi(
@@ -87,13 +89,15 @@ export function useCompareData({
 }: UseCompareDataOptions) {
   const t = useTranslations();
   const queryClient = useQueryClient();
+  const isAccessible = useCalendarAccessFilter();
 
   // Fetch shifts for all calendars
   const shiftsQueries = useQueries({
     queries: calendarIds.map((id) => ({
       queryKey: queryKeys.shifts.byCalendar(id),
       queryFn: () => fetchShiftsApi(id),
-      enabled: enabled && !!id,
+      enabled: enabled && isAccessible(id),
+      refetchInterval: LIVE_REFETCH_INTERVAL,
     })),
   });
 
@@ -102,7 +106,8 @@ export function useCompareData({
     queries: calendarIds.map((id) => ({
       queryKey: queryKeys.notes.byCalendar(id),
       queryFn: () => fetchNotesApi(id),
-      enabled: enabled && !!id,
+      enabled: enabled && isAccessible(id),
+      refetchInterval: LIVE_REFETCH_INTERVAL,
     })),
   });
 
@@ -111,7 +116,7 @@ export function useCompareData({
     queries: calendarIds.map((id) => ({
       queryKey: queryKeys.externalSyncs.byCalendar(id),
       queryFn: () => fetchExternalSyncsApi(id),
-      enabled: enabled && !!id,
+      enabled: enabled && isAccessible(id),
     })),
   });
 
@@ -120,7 +125,7 @@ export function useCompareData({
     queries: calendarIds.map((id) => ({
       queryKey: queryKeys.presets.byCalendar(id),
       queryFn: () => fetchPresetsApi(id),
-      enabled: enabled && !!id,
+      enabled: enabled && isAccessible(id),
     })),
   });
 

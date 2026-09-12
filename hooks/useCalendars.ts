@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useIsMutating,
+} from "@tanstack/react-query";
 import { CalendarWithCount } from "@/lib/types";
 import type { CalendarViewSettings } from "@/lib/view-settings";
 import { toast } from "sonner";
@@ -9,14 +14,15 @@ import {
   handleRateLimitError,
 } from "@/lib/rate-limit-client";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import { ApiError } from "@/lib/api-error";
 
 // API functions
 async function fetchCalendarsApi(): Promise<CalendarWithCount[]> {
   const response = await fetch("/api/calendars");
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch calendars: ${response.statusText}`);
+    throw new ApiError(`Failed to fetch calendars: ${response.statusText}`, response.status);
   }
 
   const data = await response.json();
@@ -128,6 +134,8 @@ export function useCalendars(initialCalendarId?: string | null) {
     string | undefined
   >();
 
+  const mutating = useIsMutating();
+
   // Capture initialCalendarId on mount to prevent dependency changes
   const initialCalendarIdRef = useRef(initialCalendarId);
 
@@ -136,10 +144,11 @@ export function useCalendars(initialCalendarId?: string | null) {
     data: calendars = [],
     isLoading,
     isFetched,
+    isFetching,
   } = useQuery({
     queryKey: queryKeys.calendars.all,
     queryFn: fetchCalendarsApi,
-    refetchInterval: REFETCH_INTERVAL,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   // Auto-select calendar when data loads
@@ -151,6 +160,32 @@ export function useCalendars(initialCalendarId?: string | null) {
       queueMicrotask(() => setSelectedCalendar(initialId));
     }
   }, [calendars, selectedCalendar]);
+
+  // A calendar we just created is known to exist, so no list may rule it out —
+  // a list can always have been read before the insert was visible, whatever the
+  // timestamps say. Held until a list actually carries it, or the user moves on.
+  const createdCalendarId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (createdCalendarId.current !== selectedCalendar) {
+      createdCalendarId.current = undefined;
+    }
+  }, [selectedCalendar]);
+
+  // Access can disappear while the app is open: a dismissed subscription, a
+  // withdrawn share, guestPermission set to none, an expired token. The id would
+  // otherwise stick and every per-calendar query would keep asking for it.
+  useEffect(() => {
+    if (!isFetched || isFetching || !selectedCalendar || mutating > 0) return;
+
+    const present = calendars.some((c) => c.id === selectedCalendar);
+    if (createdCalendarId.current === selectedCalendar) {
+      if (!present) return;
+      createdCalendarId.current = undefined;
+    }
+    if (present) return;
+
+    queueMicrotask(() => setSelectedCalendar(calendars[0]?.id));
+  }, [isFetched, isFetching, mutating, calendars, selectedCalendar]);
 
   // Create mutation with optimistic update
   const createMutation = useMutation<
@@ -201,6 +236,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     },
     onSuccess: (newCalendar) => {
       // Update selection with real ID
+      createdCalendarId.current = newCalendar.id;
       setSelectedCalendar(newCalendar.id);
       toast.success(t("common.created", { item: t("calendar.title") }));
     },
@@ -382,4 +418,27 @@ export function useCalendars(initialCalendarId?: string | null) {
     refetchCalendars: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all }),
   };
+}
+
+/**
+ * Predicate for whether per-calendar data may be requested for an id. Unknown
+ * counts as allowed: while the list is still loading an id cannot be ruled out,
+ * and blocking would serialise the first paint behind the calendar request.
+ * Once the list has arrived, an id missing from it means access is gone — the
+ * server would answer 403 for shifts, notes, presets and sync state alike.
+ */
+export function useCalendarAccessFilter(): (calendarId?: string | null) => boolean {
+  const { data: calendars = [], isFetched } = useQuery({
+    queryKey: queryKeys.calendars.all,
+    queryFn: fetchCalendarsApi,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+  });
+
+  return (calendarId?: string | null) =>
+    !!calendarId && (!isFetched || calendars.some((c) => c.id === calendarId));
+}
+
+/** Single-id form of {@link useCalendarAccessFilter}. */
+export function useIsCalendarAccessible(calendarId?: string | null): boolean {
+  return useCalendarAccessFilter()(calendarId);
 }

@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 
 /**
  * Activity Log Types
@@ -135,8 +135,7 @@ export function useActivityLogs(
   } = useQuery({
     queryKey: queryKeys.activityLogs({ filters, pagination, t }),
     queryFn: () => fetchActivityLogsApi(filters, pagination, t),
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true, // Continue polling in background
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
     // Keeps the current page visible while the next page or filter loads
     placeholderData: keepPreviousData,
   });

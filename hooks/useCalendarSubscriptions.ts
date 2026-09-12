@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import { ApiError } from "@/lib/api-error";
 
 type CalendarSource = "guest" | "shared";
 
@@ -46,7 +47,7 @@ async function fetchSubscriptionsApi(): Promise<SubscriptionResponse> {
   const response = await fetch("/api/calendars/subscriptions");
 
   if (!response.ok) {
-    throw new Error("Failed to fetch calendars");
+    throw new ApiError("Failed to fetch calendars", response.status);
   }
 
   return await response.json();
@@ -100,7 +101,11 @@ async function dismissApi(calendarId: string): Promise<void> {
  *
  * @returns Object with calendar subscription data and management functions
  */
-export function useCalendarSubscriptions() {
+/**
+ * @param enabled - the discovery sheet stays mounted behind every menu, so the
+ *   list is only worth fetching while it is actually open.
+ */
+export function useCalendarSubscriptions(enabled = true) {
   const t = useTranslations();
   const queryClient = useQueryClient();
 
@@ -112,7 +117,8 @@ export function useCalendarSubscriptions() {
   } = useQuery({
     queryKey: queryKeys.subscriptions.all,
     queryFn: fetchSubscriptionsApi,
-    refetchInterval: REFETCH_INTERVAL,
+    enabled,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   const availableCalendars = data?.available ?? [];

@@ -9,6 +9,8 @@ import {
   handleRateLimitError,
   isRateLimitError,
 } from "@/lib/rate-limit-client";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 export interface CalendarShare {
   id: string;
@@ -44,7 +46,7 @@ async function fetchSharesApi(calendarId: string): Promise<CalendarShare[]> {
   const response = await fetch(`/api/calendars/${calendarId}/shares`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch shares");
+    throw new ApiError("Failed to fetch shares", response.status);
   }
 
   const data = await response.json();
@@ -155,11 +157,13 @@ export function useCalendarShares(calendarId: string) {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  const accessible = useIsCalendarAccessible(calendarId);
+
   // Fetch shares
   const { data: shares = [], isLoading: loading } = useQuery({
     queryKey: queryKeys.shares.byCalendar(calendarId),
     queryFn: () => fetchSharesApi(calendarId),
-    enabled: !!calendarId,
+    enabled: accessible,
   });
 
   // Add share mutation

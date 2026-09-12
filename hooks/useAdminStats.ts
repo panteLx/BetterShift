@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { AdminRequestError } from "@/lib/admin-list";
 import { useAdminErrorToast } from "@/hooks/useAdminList";
 
@@ -76,7 +76,7 @@ export function useAdminStats() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.admin.stats,
     queryFn: fetchAdminStats,
-    refetchInterval: REFETCH_INTERVAL,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   useAdminErrorToast(error, "admin-stats-error", t("admin.statsFetchError"));

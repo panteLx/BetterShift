@@ -5,7 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
+import { ApiError } from "@/lib/api-error";
+import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 export interface CalendarAccessToken {
   id: string;
@@ -60,7 +62,7 @@ async function fetchTokensApi(
   const response = await fetch(`/api/calendars/${calendarId}/tokens`);
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    throw new ApiError(`HTTP ${response.status}`, response.status);
   }
 
   return await response.json();
@@ -157,6 +159,8 @@ export function useCalendarTokens(calendarId: string | null) {
   const queryClient = useQueryClient();
 
   // Fetch tokens
+  const accessible = useIsCalendarAccessible(calendarId);
+
   const {
     data: tokens = [],
     isLoading,
@@ -164,8 +168,8 @@ export function useCalendarTokens(calendarId: string | null) {
   } = useQuery({
     queryKey: queryKeys.tokens.byCalendar(calendarId!),
     queryFn: () => fetchTokensApi(calendarId!),
-    enabled: !!calendarId,
-    refetchInterval: REFETCH_INTERVAL,
+    enabled: accessible,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   // Create token mutation (NO optimistic update - need real token!)

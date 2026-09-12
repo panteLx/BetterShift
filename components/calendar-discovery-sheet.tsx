@@ -36,7 +36,7 @@ export function CalendarDiscoverySheet({
     loading,
     subscribe,
     dismiss,
-  } = useCalendarSubscriptions();
+  } = useCalendarSubscriptions(open);
 
   const sharedCalendars = availableCalendars.filter((cal) => cal.source === "shared");
   const publicCalendars = availableCalendars.filter((cal) => cal.source === "guest");

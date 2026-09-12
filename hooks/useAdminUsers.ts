@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import type { User } from "@/lib/auth";
-import { REFETCH_INTERVAL } from "@/lib/query-client";
+import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import {
   AdminRequestError,
   toSearchParams,
@@ -256,7 +256,7 @@ export function useAdminUsers(params: UserListParams) {
     queryKey: queryKeys.admin.users.list(params),
     queryFn: () => fetchAdminUsers(params),
     placeholderData: keepPreviousData,
-    refetchInterval: REFETCH_INTERVAL,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
 
   useAdminErrorToast(

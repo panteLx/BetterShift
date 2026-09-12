@@ -214,6 +214,25 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, calendars]);
 
+  // The effect above only filters while entering compare mode. Access to one of
+  // the columns can be lost afterwards, and compare needs at least two.
+  useEffect(() => {
+    if (!isCompareMode || !hasLoadedOnce) return;
+    const stillAccessible = selectedCompareIds.filter((id) =>
+      calendars.some((cal) => cal.id === id)
+    );
+    if (stillAccessible.length === selectedCompareIds.length) return;
+    queueMicrotask(() => {
+      if (stillAccessible.length >= 2) {
+        setSelectedCompareIds(stillAccessible);
+      } else {
+        setIsCompareMode(false);
+        setSelectedCompareIds([]);
+        setCompareTogglingDates(new Map());
+      }
+    });
+  }, [isCompareMode, hasLoadedOnce, calendars, selectedCompareIds]);
+
   useEffect(() => {
     if (isCompareMode && selectedCompareIds.length >= 2) {
       router.replace(`/?compare=${selectedCompareIds.join(",")}`, { scroll: false });
