@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Languages, ScrollText, SlidersHorizontal, SunMoon } from "lucide-react";
+import { Info, Languages, SlidersHorizontal, SunMoon } from "lucide-react";
 import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
@@ -20,13 +20,13 @@ export function setLocaleCookie(locale: string) {
 }
 
 interface AppPreferencesMenuItemsProps {
-  onOpenChangelog: () => void;
+  onOpenInfo: () => void;
   onOpenViewSettings?: () => void;
 }
 
-/** Appearance, language and changelog entries shared by the user and guest menus. */
+/** Appearance, language and info entries shared by the user and guest menus. */
 export function AppPreferencesMenuItems({
-  onOpenChangelog,
+  onOpenInfo,
   onOpenViewSettings,
 }: AppPreferencesMenuItemsProps) {
   const t = useTranslations();
@@ -72,9 +72,9 @@ export function AppPreferencesMenuItems({
           </DropdownMenuRadioGroup>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
-      <DropdownMenuItem onClick={onOpenChangelog}>
-        <ScrollText className="mr-2 h-4 w-4" />
-        {t("changelog.title")}
+      <DropdownMenuItem onClick={onOpenInfo}>
+        <Info className="mr-2 h-4 w-4" />
+        {t("info.title")}
       </DropdownMenuItem>
     </>
   );

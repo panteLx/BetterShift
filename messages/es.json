@@ -318,9 +318,18 @@
   },
   "changelog": {
     "title": "Registro de cambios",
-    "description": "Notas de lanzamiento y cambios de BetterShift",
     "noReleases": "No hay lanzamientos disponibles",
     "viewOnGitHub": "Ver en GitHub"
+  },
+  "info": {
+    "title": "Info",
+    "description": "Versión, registro de cambios y formas de apoyar el proyecto",
+    "tabInfo": "Info",
+    "devBuild": "Versión de desarrollo",
+    "supportTitle": "Apoyar el proyecto",
+    "supportDescription": "BetterShift es de código abierto y se desarrolla en el tiempo libre. Si te resulta útil, agradezco tu apoyo.",
+    "buyMeACoffee": "Buy Me a Coffee",
+    "githubSponsors": "GitHub Sponsors"
   },
   "export": {
     "formatLabel": "Formato de exportación",

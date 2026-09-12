@@ -4,7 +4,6 @@ import { useEffect, useState, Fragment, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { PanelDialog } from "@/components/panel-dialog";
 import { getDateLocale } from "@/lib/locales";
 
 interface GitHubRelease {
@@ -19,13 +18,7 @@ interface GitHubRelease {
   prerelease: boolean;
 }
 
-interface ChangelogDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  locale: string;
-}
-
-/** Resolves to an empty list on any failure so the dialog shows its empty state. */
+/** Resolves to an empty list on any failure so the panel shows its empty state. */
 async function fetchReleases(): Promise<GitHubRelease[]> {
   try {
     const response = await fetch("/api/releases");
@@ -286,13 +279,13 @@ function parseMarkdown(text: string): ReactNode[] {
   return elements;
 }
 
-export function ChangelogDialog({ open, onOpenChange, locale }: ChangelogDialogProps) {
+/** Release notes list, shown inside the Info dialog's changelog tab. */
+export function ChangelogPanel({ locale }: { locale: string }) {
   const t = useTranslations();
   // null until the first response arrives
   const [releases, setReleases] = useState<GitHubRelease[] | null>(null);
 
   useEffect(() => {
-    if (!open) return;
     let cancelled = false;
     fetchReleases().then((data) => {
       if (!cancelled) setReleases(data);
@@ -300,63 +293,58 @@ export function ChangelogDialog({ open, onOpenChange, locale }: ChangelogDialogP
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, []);
 
   const formatDate = (dateString: string) =>
     format(new Date(dateString), "PPP", { locale: getDateLocale(locale) });
 
+  if (releases === null) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="size-6 animate-spin text-fg-tertiary" />
+      </div>
+    );
+  }
+
+  if (releases.length === 0) {
+    return (
+      <p className="py-12 text-center text-[13px] text-fg-tertiary">
+        {t("changelog.noReleases")}
+      </p>
+    );
+  }
+
   return (
-    <PanelDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("changelog.title")}
-      description={t("changelog.description")}
-      width="lg"
-      bodyClassName="py-0"
-    >
-      {releases === null ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-fg-tertiary" />
-        </div>
-      ) : releases.length === 0 ? (
-        <p className="py-12 text-center text-[13px] text-fg-tertiary">
-          {t("changelog.noReleases")}
-        </p>
-      ) : (
-        <div className="divide-y divide-line-subtle">
-          {releases.map((release) => {
-            const title = release.name && release.name !== release.tag_name ? release.name : null;
-            const releaseUrl = sanitizeUrl(release.html_url);
-            return (
-              <section key={release.id} className="py-[18px]">
-                <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                  <h3 className="font-mono text-[14px] font-semibold text-fg-strong">
-                    {release.tag_name}
-                  </h3>
-                  <span className="text-[12px] text-fg-tertiary">
-                    {formatDate(release.published_at)}
-                  </span>
-                  {releaseUrl && (
-                    <a
-                      href={releaseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto inline-flex items-center gap-1 text-[12.5px] font-medium text-brand-ink hover:underline"
-                    >
-                      {t("changelog.viewOnGitHub")}
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  )}
-                </div>
-                {title && (
-                  <div className="mt-1 text-[13.5px] font-semibold text-fg-body">{title}</div>
-                )}
-                {release.body && <div className="mt-2">{parseMarkdown(release.body)}</div>}
-              </section>
-            );
-          })}
-        </div>
-      )}
-    </PanelDialog>
+    <div className="divide-y divide-line-subtle">
+      {releases.map((release) => {
+        const title = release.name && release.name !== release.tag_name ? release.name : null;
+        const releaseUrl = sanitizeUrl(release.html_url);
+        return (
+          <section key={release.id} className="py-[18px]">
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <h3 className="font-mono text-[14px] font-semibold text-fg-strong">
+                {release.tag_name}
+              </h3>
+              <span className="text-[12px] text-fg-tertiary">
+                {formatDate(release.published_at)}
+              </span>
+              {releaseUrl && (
+                <a
+                  href={releaseUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto inline-flex items-center gap-1 text-[12.5px] font-medium text-brand-ink hover:underline"
+                >
+                  {t("changelog.viewOnGitHub")}
+                  <ExternalLink className="size-3.5" />
+                </a>
+              )}
+            </div>
+            {title && <div className="mt-1 text-[13.5px] font-semibold text-fg-body">{title}</div>}
+            {release.body && <div className="mt-2">{parseMarkdown(release.body)}</div>}
+          </section>
+        );
+      })}
+    </div>
   );
 }

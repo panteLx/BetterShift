@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarDays } from "lucide-react";
 import { GuestMenu, UserMenu } from "@/components/user-menu";
-import { ChangelogDialog } from "@/components/changelog-dialog";
+import { InfoDialog } from "@/components/info-dialog";
 import { Pill } from "@/components/form-kit";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
@@ -66,7 +66,12 @@ function HeaderSessionControls() {
         </button>
       )}
       {signedIn ? <UserMenu /> : <GuestMenu showLogin={isAuthEnabled} />}
-      <ChangelogDialog open={showChangelog} onOpenChange={setShowChangelog} locale={locale} />
+      <InfoDialog
+        open={showChangelog}
+        onOpenChange={setShowChangelog}
+        locale={locale}
+        defaultTab="changelog"
+      />
     </>
   );
 }

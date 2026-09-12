@@ -26,7 +26,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
-import { ChangelogDialog } from "@/components/changelog-dialog";
+import { InfoDialog } from "@/components/info-dialog";
 import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items";
 import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
@@ -124,7 +124,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
           )}
           <DropdownMenuSeparator />
           <AppPreferencesMenuItems
-            onOpenChangelog={() => setChangelogOpen(true)}
+            onOpenInfo={() => setChangelogOpen(true)}
             onOpenViewSettings={onOpenViewSettings}
           />
           <DropdownMenuSeparator />
@@ -139,11 +139,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
       </DropdownMenu>
 
       <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />
-      <ChangelogDialog
-        open={changelogOpen}
-        onOpenChange={setChangelogOpen}
-        locale={locale}
-      />
+      <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
     </>
   );
 }
@@ -200,17 +196,13 @@ export function GuestMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <AppPreferencesMenuItems
-            onOpenChangelog={() => setChangelogOpen(true)}
+            onOpenInfo={() => setChangelogOpen(true)}
             onOpenViewSettings={onOpenViewSettings}
           />
         </DropdownMenuContent>
       </DropdownMenu>
       {loginButton}
-      <ChangelogDialog
-        open={changelogOpen}
-        onOpenChange={setChangelogOpen}
-        locale={locale}
-      />
+      <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
     </>
   );
 }

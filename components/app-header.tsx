@@ -15,7 +15,7 @@ import {
 import { CalendarWithCount } from "@/lib/types";
 import { CalendarSwitcher } from "@/components/calendar-switcher";
 import { GuestMenu, UserMenu } from "@/components/user-menu";
-import { ChangelogDialog } from "@/components/changelog-dialog";
+import { InfoDialog } from "@/components/info-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
@@ -283,10 +283,11 @@ export function AppHeader({
         )}
       </header>
 
-      <ChangelogDialog
+      <InfoDialog
         open={showChangelog}
         onOpenChange={setShowChangelog}
         locale={locale}
+        defaultTab="changelog"
       />
     </>
   );

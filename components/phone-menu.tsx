@@ -9,11 +9,11 @@ import {
   ChevronRight,
   Compass,
   FileText,
+  Info,
   Languages,
   Loader2,
   LogIn,
   LogOut,
-  ScrollText,
   Shield,
   SlidersHorizontal,
   SunMoon,
@@ -30,13 +30,12 @@ import {
   SettingsSection,
   useCalendarSettings,
 } from "@/components/settings-dialog";
-import { ChangelogDialog } from "@/components/changelog-dialog";
+import { InfoDialog } from "@/components/info-dialog";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
 import { setLocaleCookie } from "@/components/app-preferences-menu-items";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
-import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { useViewSettings } from "@/hooks/useViewSettings";
 import { useSignOut } from "@/hooks/useSignOut";
 import { locales } from "@/lib/locales";
@@ -204,10 +203,6 @@ function MenuRow({
   );
 }
 
-function AppVersion() {
-  return useVersionInfo()?.version ?? null;
-}
-
 function PhoneMenuSheet({
   open,
   onOpenChange,
@@ -302,14 +297,8 @@ function PhoneMenuSheet({
   const inSection = panel !== null;
 
   const themeTitle = (themeOptions.find((o) => o.value === theme) ?? themeOptions[0]).title;
-  const changelogRow = (
-    <MenuRow
-      icon={ScrollText}
-      title={t("changelog.title")}
-      meta={<AppVersion />}
-      mono
-      onClick={() => setChangelogOpen(true)}
-    />
+  const infoRow = (
+    <MenuRow icon={Info} title={t("info.title")} onClick={() => setChangelogOpen(true)} />
   );
 
   return (
@@ -411,12 +400,12 @@ function PhoneMenuSheet({
                   {isAdmin && (
                     <MenuRow icon={Shield} title={t("admin.adminPanel")} onClick={() => navigate("/admin")} />
                   )}
-                  {changelogRow}
+                  {infoRow}
                   <MenuRow icon={LogOut} title={t("auth.logout")} danger onClick={handleSignOut} />
                 </MenuGroup>
               ) : (
                 <MenuGroup label={t("settings.groupApp")}>
-                  {changelogRow}
+                  {infoRow}
                   {isAuthEnabled && (
                     <MenuRow icon={LogIn} title={t("auth.login")} onClick={() => navigate("/login")} />
                   )}
@@ -426,7 +415,7 @@ function PhoneMenuSheet({
           </PanelBody>
         )}
       </PanelDialog>
-      <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
+      <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
       {signedIn && <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />}
       <ConfirmationDialog {...confirmProps} />
     </>

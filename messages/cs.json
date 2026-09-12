@@ -318,9 +318,18 @@
   },
   "changelog": {
     "title": "Seznam změn",
-    "description": "Všechny poznámky k vydání a změny BetterShift",
     "noReleases": "Nejsou k dispozici žádná vydání",
     "viewOnGitHub": "Zobrazit na GitHubu"
+  },
+  "info": {
+    "title": "Info",
+    "description": "Verze, seznam změn a možnosti podpory projektu",
+    "tabInfo": "Info",
+    "devBuild": "Vývojová verze",
+    "supportTitle": "Podpořit projekt",
+    "supportDescription": "BetterShift je open source a vzniká ve volném čase. Pokud ti pomáhá, budu rád za tvou podporu.",
+    "buyMeACoffee": "Buy Me a Coffee",
+    "githubSponsors": "GitHub Sponsors"
   },
   "export": {
     "formatLabel": "Formát exportu",
