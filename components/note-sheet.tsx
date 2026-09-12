@@ -288,7 +288,7 @@ export function NoteSheet({
                   value={form.interval}
                   onChange={(e) => update({ interval: Math.max(1, parseInt(e.target.value) || 1) })}
                   disabled={isReadOnly || form.repeat === "none"}
-                  className="h-[34px] w-[58px] rounded-lg px-2 text-center font-mono text-[14px] md:text-[14px]"
+                  className="h-[34px] w-[58px] rounded-lg px-2 text-center font-mono text-base md:text-[14px]"
                 />
                 <span>{unitLabel}</span>
               </div>

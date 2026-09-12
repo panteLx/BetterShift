@@ -129,7 +129,7 @@ export function ShiftFormFields({
           onChange={(e) => onFormDataChange({ ...formData, notes: e.target.value })}
           disabled={readOnly}
           rows={3}
-          className="min-h-16 resize-none rounded-[9px] px-3 py-2.5 text-[14px] md:text-[14px]"
+          className="min-h-16 resize-none rounded-[9px] px-3 py-2.5 text-base md:text-[14px]"
         />
       </Field>
 

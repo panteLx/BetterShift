@@ -51,7 +51,8 @@ export function SectionLabel({ children, className }: { children: ReactNode; cla
   return <div className={cn("eyebrow mb-2", className)}>{children}</div>;
 }
 
-export const inputClass = "h-10 rounded-[9px] px-3 text-[14px]";
+// text-base (16px) below md prevents iOS Safari's auto-zoom on focus
+export const inputClass = "h-10 rounded-[9px] px-3 text-base md:text-[14px]";
 
 export function ColorSwatches({
   value,
