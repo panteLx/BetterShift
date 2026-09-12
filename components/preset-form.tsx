@@ -92,7 +92,7 @@ export function PresetFormCard({
 
       {!value.isAllDay && (
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label={t("presetSheet.start")} htmlFor={`${id}-start`} className="min-w-0">
+          <Field label={t("presetSheet.start")} htmlFor={`${id}-start`}>
             <Input
               id={`${id}-start`}
               type="time"
@@ -102,7 +102,7 @@ export function PresetFormCard({
               disabled={disabled}
             />
           </Field>
-          <Field label={t("presetSheet.end")} htmlFor={`${id}-end`} className="min-w-0">
+          <Field label={t("presetSheet.end")} htmlFor={`${id}-end`}>
             <Input
               id={`${id}-end`}
               type="time"

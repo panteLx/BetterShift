@@ -1,7 +1,13 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckRow, ColorSwatches, Field, inputClass } from "@/components/form-kit";
+import {
+  CheckRow,
+  ColorSwatches,
+  Field,
+  inputClass,
+  textareaClass,
+} from "@/components/form-kit";
 import { ShiftFormData } from "@/components/shift-sheet";
 import { useAutoFocusRef } from "@/hooks/useAutoFocus";
 import { DEFAULT_COLOR } from "@/lib/constants";
@@ -63,7 +69,7 @@ export function ShiftFormFields({
 
       <div className="flex flex-col gap-2.5 lg:gap-3">
         <div className="flex gap-2.5">
-          <Field label={t("shiftSheet.start")} htmlFor="startTime" className="min-w-0 flex-1">
+          <Field label={t("shiftSheet.start")} htmlFor="startTime" className="flex-1">
             <Input
               id="startTime"
               type="time"
@@ -73,7 +79,7 @@ export function ShiftFormFields({
               className={cn(inputClass, "font-mono")}
             />
           </Field>
-          <Field label={t("shiftSheet.end")} htmlFor="endTime" className="min-w-0 flex-1">
+          <Field label={t("shiftSheet.end")} htmlFor="endTime" className="flex-1">
             <Input
               id="endTime"
               type="time"
@@ -131,7 +137,7 @@ export function ShiftFormFields({
           onChange={(e) => onFormDataChange({ ...formData, notes: e.target.value })}
           disabled={readOnly}
           rows={3}
-          className="min-h-16 resize-none rounded-[9px] px-3 py-2.5 text-base md:text-[14px]"
+          className={cn(textareaClass, "min-h-16")}
         />
       </Field>
 

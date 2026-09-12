@@ -33,7 +33,8 @@ export function Field({
 }) {
   const t = useTranslations();
   return (
-    <div className={cn("flex flex-col gap-1.5 lg:gap-2", className)}>
+    // min-w-0 lets native date/time inputs shrink instead of overflowing their column
+    <div className={cn("flex min-w-0 flex-col gap-1.5 lg:gap-2", className)}>
       <Label htmlFor={htmlFor} className="text-[13px] font-semibold text-fg-body">
         {label}
         {optional && (
@@ -52,7 +53,9 @@ export function SectionLabel({ children, className }: { children: ReactNode; cla
 }
 
 // text-base (16px) below md prevents iOS Safari's auto-zoom on focus
-export const inputClass = "h-10 rounded-[9px] px-3 text-base md:text-[14px]";
+export const zoomSafeText = "text-base md:text-[14px]";
+export const inputClass = `h-10 rounded-[9px] px-3 ${zoomSafeText}`;
+export const textareaClass = `resize-none rounded-[9px] px-3 py-2.5 ${zoomSafeText}`;
 
 export function ColorSwatches({
   value,

@@ -8,7 +8,14 @@ import { BaseSheet } from "@/components/ui/base-sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ChoiceChips, ColorSwatches, Field, InfoNote } from "@/components/form-kit";
+import {
+  ChoiceChips,
+  ColorSwatches,
+  Field,
+  InfoNote,
+  textareaClass,
+  zoomSafeText,
+} from "@/components/form-kit";
 import { SegmentedControl } from "@/components/segmented-control";
 import { StatusBanner } from "@/components/status-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
@@ -256,7 +263,7 @@ export function NoteSheet({
             onChange={(e) => update({ text: e.target.value })}
             placeholder={isEvent ? t("note.eventPlaceholder") : t("note.placeholder")}
             rows={3}
-            className="min-h-[74px] resize-none rounded-[9px] px-3 py-2.5 text-base md:text-[14px]"
+            className={cn(textareaClass, "min-h-[74px]")}
             disabled={isReadOnly}
           />
         </Field>
@@ -307,7 +314,7 @@ export function NoteSheet({
                   }}
                   onBlur={commitInterval}
                   disabled={isReadOnly || form.repeat === "none"}
-                  className="h-[34px] w-[58px] rounded-lg px-2 text-center font-mono text-base md:text-[14px]"
+                  className={cn(zoomSafeText, "h-[34px] w-[58px] rounded-lg px-2 text-center font-mono")}
                 />
                 <span>{unitLabel}</span>
               </div>
