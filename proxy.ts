@@ -86,6 +86,9 @@ function redirectToLogin(request: NextRequest) {
   return NextResponse.redirect(loginUrl);
 }
 
+const IS_DEV = process.env.NODE_ENV === "development";
+const BYPASS_STRICT_DYNAMIC = process.env.CSP_STRICT_DYNAMIC_BYPASS === "true";
+
 /**
  * Every route is already dynamically rendered (next-intl's request config reads
  * cookies()/headers()), so a fresh nonce per request costs nothing extra here.
@@ -102,15 +105,13 @@ function redirectToLogin(request: NextRequest) {
  * the app fails to hydrate. CSP_STRICT_DYNAMIC_BYPASS=true therefore drops
  * the nonce entirely and falls back to 'unsafe-inline', same as our other apps.
  */
-function buildCsp(nonce: string) {
-  const isDev = process.env.NODE_ENV === "development";
-  const bypassStrictDynamic = process.env.CSP_STRICT_DYNAMIC_BYPASS === "true";
-  const scriptSrc = bypassStrictDynamic
-    ? "'self' 'unsafe-inline'"
-    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+function buildCsp(nonce: string | null) {
+  const scriptSrc = nonce
+    ? `'self' 'nonce-${nonce}' 'strict-dynamic'`
+    : "'self' 'unsafe-inline'";
   return [
     "default-src 'self'",
-    `script-src ${scriptSrc}${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src ${scriptSrc}${IS_DEV ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
@@ -122,12 +123,20 @@ function buildCsp(nonce: string) {
   ].join("; ");
 }
 
-/** NextResponse.next() carrying the request-side x-nonce header and the CSP response header. */
-function nextWithNonce(request: NextRequest, nonce: string, csp: string) {
+/**
+ * NextResponse.next() carrying the request-side x-nonce header and the CSP
+ * response header. Only the paths that actually render pay for this; the
+ * redirect branches above return before it.
+ */
+function nextWithNonce(request: NextRequest) {
+  const nonce = BYPASS_STRICT_DYNAMIC
+    ? null
+    : Buffer.from(crypto.randomUUID()).toString("base64");
+
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
+  if (nonce) requestHeaders.set("x-nonce", nonce);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
   return response;
 }
 
@@ -145,8 +154,6 @@ function nextWithNonce(request: NextRequest, nonce: string, csp: string) {
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = buildCsp(nonce);
 
   // =====================================================
   // Health Check - Block all routes if system unhealthy
@@ -174,7 +181,7 @@ export async function proxy(request: NextRequest) {
       }
 
       // System is unhealthy - allow access to error page
-      return nextWithNonce(request, nonce, csp);
+      return nextWithNonce(request);
     } catch (error) {
       // Log the error instead of silently swallowing it
       console.error(
@@ -182,7 +189,7 @@ export async function proxy(request: NextRequest) {
         error instanceof Error ? error.message : String(error)
       );
       // Always treat fetch failures/timeouts as "unhealthy" to allow access to error page
-      return nextWithNonce(request, nonce, csp);
+      return nextWithNonce(request);
     }
   }
 
@@ -280,7 +287,7 @@ export async function proxy(request: NextRequest) {
 
   // If auth is disabled, allow all routes
   if (!isAuthEnabled()) {
-    return nextWithNonce(request, nonce, csp);
+    return nextWithNonce(request);
   }
 
   // Public routes that don't require authentication
@@ -301,7 +308,7 @@ export async function proxy(request: NextRequest) {
 
   // Allow public routes
   if (isPublicRoute) {
-    return nextWithNonce(request, nonce, csp);
+    return nextWithNonce(request);
   }
 
   // =====================================================
@@ -368,7 +375,7 @@ export async function proxy(request: NextRequest) {
   if (!sessionToken) {
     // If guest access is enabled, allow viewing without login
     if (allowGuestAccess()) {
-      return nextWithNonce(request, nonce, csp);
+      return nextWithNonce(request);
     }
 
     // Otherwise, redirect to login with return URL
@@ -381,7 +388,7 @@ export async function proxy(request: NextRequest) {
   // The remaining security headers (X-Content-Type-Options, X-Frame-Options,
   // Referrer-Policy, X-XSS-Protection) are set globally in next.config.ts;
   // only the nonce-based Content-Security-Policy has to be per-request.
-  return nextWithNonce(request, nonce, csp);
+  return nextWithNonce(request);
 }
 
 // Configure which routes to run proxy on
