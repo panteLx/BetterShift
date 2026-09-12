@@ -605,7 +605,7 @@ export function MonthGrid({
           const selected = isSameDay(day, selectedDay);
           const weekend = day.getDay() === 0 || day.getDay() === 6;
           const highlighted =
-            !phone && !!highlightColor && !today && highlightedWeekdays.includes(day.getDay());
+            !phone && !!highlightColor && highlightedWeekdays.includes(day.getDay());
           const toggling = togglingDates.has(key);
 
           const content = dayContents.get(key)!;
@@ -647,13 +647,9 @@ export function MonthGrid({
                 phone
                   ? "gap-[3px] rounded-[6px] px-[2px] pt-[5px] [contain:size]"
                   : cn(
-                      today
-                        ? "bg-surface-today"
-                        : weekend
-                          ? "bg-surface-weekend"
-                          : "bg-surface-cell",
-                      !today && "hover:bg-surface-panel",
-                      selected && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]"
+                      weekend ? "bg-surface-weekend" : "bg-surface-cell",
+                      "hover:bg-surface-panel",
+                      (selected || today) && "shadow-[inset_0_0_0_1.5px_var(--brand-dot)]"
                     ),
                 desktop && "gap-[3px] px-2 py-[7px]",
                 variant === "compare" && "px-[9px] py-2",
