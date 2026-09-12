@@ -101,7 +101,7 @@ The first registered user automatically becomes **superadmin** with full adminis
 After logging in as superadmin:
 
 1. Go to `/admin/calendars`
-2. Orphaned calendars appear at the top with a red "Orphaned" badge
+2. Orphaned calendars appear at the top with an "Orphaned" badge
 3. For each orphaned calendar:
    - Click the action menu
    - Select "Transfer Ownership"

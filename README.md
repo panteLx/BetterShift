@@ -13,6 +13,8 @@ _BetterShift is a self-hosted shift management application for teams and individ
 
 [Demo](https://bettershift.pantelx.com) · [Documentation](#documentation) · [Quick Start](#quick-start) · [Discord](https://discord.gg/Ma4SnagqwE)
 
+> **Upgrading?** Check the [Upgrade Guide](docs/UPGRADING.md) for breaking changes between versions before updating.
+
 <details>
 <summary>Show Screenshots</summary>
 <img width="1920" height="1080" alt="calendar_page" src="https://github.com/user-attachments/assets/9b8b01b5-0a5d-4359-8024-5764866cf92a" />
@@ -79,12 +81,13 @@ npm run dev
 
 ## Documentation
 
-| Document                                         | Description                               |
-| ------------------------------------------------ | ----------------------------------------- |
-| [Authentication Setup](docs/AUTH_SETUP.md)       | Email/password, OAuth, OIDC configuration |
-| [Admin Panel](docs/ADMIN_PANEL.md)               | User management, calendar administration  |
-| [Permissions](docs/PERMISSIONS.md)               | Sharing, access tokens, guest access      |
-| [Migration Guide](docs/MIGRATION_AUTH_TOGGLE.md) | Enable auth on existing instances         |
+| Document                                                       | Description                                                         |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Authentication Setup](docs/AUTH_SETUP.md)                     | Email/password, OAuth, OIDC configuration                           |
+| [Admin Panel](docs/ADMIN_PANEL.md)                             | User management, calendar administration                            |
+| [Permissions](docs/PERMISSIONS.md)                             | Sharing, access tokens, guest access                                |
+| [Enabling Auth on an Existing Instance](docs/ENABLING_AUTH.md) | Turn on accounts for an instance that ran with `AUTH_ENABLED=false` |
+| [Upgrade Guide](docs/UPGRADING.md)                             | Breaking changes between versions and the steps to get through them |
 
 ## Configuration
 
