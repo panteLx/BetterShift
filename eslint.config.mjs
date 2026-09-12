@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Gitignored scratch space (design handoffs, local scripts). CI never sees
+    // it, so linting it only ever breaks `npm test` on a working copy.
+    ".LOCAL/**",
   ]),
   {
     // eslint-plugin-react-hooks v7 added three compiler-based rules that flag
