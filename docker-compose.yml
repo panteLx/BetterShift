@@ -11,5 +11,6 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
+      - ./uploads:/app/public/uploads
     env_file:
       - .env
