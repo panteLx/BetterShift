@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  TriangleAlert,
 } from "lucide-react";
 import { CalendarWithCount } from "@/lib/types";
 import { CalendarSwitcher } from "@/components/calendar-switcher";
@@ -179,10 +180,21 @@ export function AppHeader({
               : t("syncNotifications.title")
           }
           onClick={onSyncNotifications}
+          className={
+            hasSyncErrors
+              ? "border-danger-line bg-danger-soft text-danger hover:bg-danger-soft"
+              : undefined
+          }
         >
-          <Bell className="size-4" />
+          {hasSyncErrors ? (
+            <TriangleAlert className="size-[17px]" />
+          ) : (
+            <Bell className="size-4" />
+          )}
           {hasSyncErrors && (
-            <span className="absolute -right-[3px] -top-[3px] size-2 rounded-full border-[1.5px] border-background bg-destructive" />
+            <span className="absolute -right-1 -top-1 flex size-[15px] items-center justify-center rounded-full border-2 border-background bg-danger text-[10px] font-bold leading-none text-background">
+              !
+            </span>
           )}
         </HeaderIconButton>
       )}
