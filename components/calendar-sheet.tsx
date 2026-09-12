@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { BaseSheet } from "@/components/ui/base-sheet";
 import { Input } from "@/components/ui/input";
 import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
+import { useAutoFocusRef } from "@/hooks/useAutoFocus";
 import { DEFAULT_COLOR } from "@/lib/constants";
 
 interface CalendarSheetProps {
@@ -19,6 +20,7 @@ export function CalendarSheet({
   onSubmit,
 }: CalendarSheetProps) {
   const t = useTranslations();
+  const nameRef = useAutoFocusRef<HTMLInputElement>();
   const initialColor = DEFAULT_COLOR;
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(initialColor);
@@ -70,7 +72,7 @@ export function CalendarSheet({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
-            autoFocus
+            ref={nameRef}
           />
         </Field>
 

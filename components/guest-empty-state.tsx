@@ -10,6 +10,7 @@ import { AuthHeader } from "@/components/auth-header";
 import { PanelDialog } from "@/components/panel-dialog";
 import { Field, inputClass } from "@/components/form-kit";
 import { EmptyStateBlock, stateActionClass } from "@/components/empty-state-block";
+import { useAutoFocusRef } from "@/hooks/useAutoFocus";
 import { cn } from "@/lib/utils";
 
 const SHARE_PATH = "/share/token/";
@@ -70,6 +71,7 @@ function AccessLinkDialog({
   const t = useTranslations();
   const formId = useId();
   const inputId = useId();
+  const linkRef = useAutoFocusRef<HTMLInputElement>();
   const [value, setValue] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [navigating, setNavigating] = useState(false);
@@ -142,7 +144,7 @@ function AccessLinkDialog({
             placeholder="https://…/share/token/…"
             autoComplete="off"
             spellCheck={false}
-            autoFocus
+            ref={linkRef}
             aria-invalid={invalid || undefined}
             className={cn(inputClass, "font-mono text-[13px]")}
           />

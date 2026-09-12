@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckRow, ColorSwatches, Field, inputClass } from "@/components/form-kit";
 import { ShiftFormData } from "@/components/shift-sheet";
+import { useAutoFocusRef } from "@/hooks/useAutoFocus";
 import { DEFAULT_COLOR } from "@/lib/constants";
 import { calculateShiftDuration } from "@/lib/date-utils";
 import { formatHours } from "@/lib/shift-display";
@@ -33,6 +34,7 @@ export function ShiftFormFields({
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
   const locale = useLocale();
+  const titleRef = useAutoFocusRef<HTMLInputElement>(!readOnly);
 
   const validTimes =
     !formData.isAllDay &&
@@ -44,7 +46,7 @@ export function ShiftFormFields({
   const timesDisabled = readOnly || formData.isAllDay;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 lg:gap-4">
       {/* Creating uses the day shown in the header; editing may move the shift */}
       {isEditing && (
         <Field label={t("shift.date")} htmlFor="date">
@@ -59,7 +61,7 @@ export function ShiftFormFields({
         </Field>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5 lg:gap-3">
         <div className="flex gap-2.5">
           <Field label={t("shiftSheet.start")} htmlFor="startTime" className="min-w-0 flex-1">
             <Input
@@ -108,7 +110,7 @@ export function ShiftFormFields({
           onChange={(e) => onFormDataChange({ ...formData, title: e.target.value })}
           disabled={readOnly}
           className={inputClass}
-          autoFocus={!readOnly}
+          ref={titleRef}
         />
       </Field>
 
@@ -134,7 +136,7 @@ export function ShiftFormFields({
       </Field>
 
       {!isEditing && !readOnly && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5 lg:gap-3">
           <CheckRow
             id="savePreset"
             label={t("preset.saveAsPreset")}

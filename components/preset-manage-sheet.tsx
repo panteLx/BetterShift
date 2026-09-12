@@ -18,6 +18,7 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { usePresets, type PresetFormData } from "@/hooks/usePresets";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useReportDirty } from "@/hooks/useDirtyState";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface PresetsPanelProps {
   calendarId: string;
@@ -38,6 +39,7 @@ export function PresetsPanel({
 }: PresetsPanelProps) {
   const t = useTranslations();
   const permission = useCalendarPermission(calendarId);
+  const desktop = useMediaQuery(DESKTOP_QUERY, false);
   const isReadOnly = readOnly || !permission.canEdit;
   const { presets, loading, createPreset, updatePreset, deletePreset, reorderPresets } =
     usePresets(calendarId);
@@ -131,7 +133,8 @@ export function PresetsPanel({
       setBaseline(data);
       requestAnimationFrame(() => {
         formRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        titleRef.current?.focus({ preventScroll: true });
+        // Focusing on a phone would pop the keyboard over the form
+        if (desktop) titleRef.current?.focus({ preventScroll: true });
       });
     });
   };
