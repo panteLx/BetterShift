@@ -68,6 +68,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@formatjs/icu-messageformat-parser": "^3.5.17",
     "@tailwindcss/postcss": "^4",
     "@tanstack/eslint-plugin-query": "^5.91.2",
     "@types/better-sqlite3": "^7.6.13",
