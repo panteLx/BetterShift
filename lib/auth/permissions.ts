@@ -327,6 +327,24 @@ export async function getShiftSignupPermission(
 }
 
 /**
+ * Resolves which of the given bundle ids still exist. guestBundleId has no
+ * DB-level FK (see lib/db/schema.ts), so a bundle deletion (Stufe 2) can
+ * leave it pointing at nothing — callers must treat that the same as "no
+ * guest access" rather than resolving it anyway (4.2/4.3 of the design doc).
+ */
+async function existingBundleIds(
+  ids: Iterable<string>
+): Promise<Set<string>> {
+  const idList = Array.from(new Set(ids));
+  if (idList.length === 0) return new Set();
+  const rows = await db.query.calendarPermissionBundles.findMany({
+    where: (b, { inArray }) => inArray(b.id, idList),
+    columns: { id: true },
+  });
+  return new Set(rows.map((row) => row.id));
+}
+
+/**
  * Get all calendar IDs accessible to a user (or guest), with an isOwner flag.
  *
  * For guest users (userId = null), returns:
@@ -359,13 +377,16 @@ export async function getUserAccessibleCalendars(
     if (allowGuestAccess()) {
       const guestAccessibleCalendars = await db.query.calendars.findMany({
         where: (calendars, { isNotNull }) => isNotNull(calendars.guestBundleId),
-        columns: { id: true },
+        columns: { id: true, guestBundleId: true },
       });
+      const liveBundleIds = await existingBundleIds(
+        guestAccessibleCalendars.map((cal) => cal.guestBundleId!)
+      );
       for (const cal of guestAccessibleCalendars) {
-        if (!existingIds.has(cal.id)) {
-          results.push({ id: cal.id, isOwner: false });
-          existingIds.add(cal.id);
-        }
+        if (existingIds.has(cal.id)) continue;
+        if (!liveBundleIds.has(cal.guestBundleId!)) continue;
+        results.push({ id: cal.id, isOwner: false });
+        existingIds.add(cal.id);
       }
     }
 
@@ -402,9 +423,15 @@ export async function getUserAccessibleCalendars(
     }
   }
 
+  const subscriptionGuestBundleIds = await existingBundleIds(
+    subscriptions
+      .map((sub) => sub.calendar.guestBundleId)
+      .filter((id): id is string => id !== null)
+  );
   for (const sub of subscriptions) {
     if (existingIds.has(sub.calendarId)) continue;
     if (!sub.calendar.guestBundleId) continue;
+    if (!subscriptionGuestBundleIds.has(sub.calendar.guestBundleId)) continue;
     if (sub.source !== "guest") continue;
     if (sub.status === "dismissed") continue;
     results.push({ id: sub.calendarId, isOwner: false });
@@ -525,7 +552,11 @@ export async function undismissCalendar(
     ),
   });
 
-  if (!share && !calendar.guestBundleId) {
+  const hasLiveGuestBundle =
+    !!calendar.guestBundleId &&
+    (await existingBundleIds([calendar.guestBundleId])).size > 0;
+
+  if (!share && !hasLiveGuestBundle) {
     throw new Error("Calendar is not public");
   }
 
