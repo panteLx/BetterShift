@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
+import { canViewCalendar, hasOwnedCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // GET single shift
@@ -80,7 +80,13 @@ export async function DELETE(
     }
 
     // Check write permission (works for both authenticated users and guests)
-    const hasAccess = await hasCapability(user?.id, shift.calendarId, "deleteShift");
+    const hasAccess = await hasOwnedCapability(
+      user?.id,
+      shift.calendarId,
+      "deleteOwnShift",
+      "deleteAnyShift",
+      shift.createdBy
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
@@ -126,7 +132,13 @@ export async function PUT(
     }
 
     // Check write permission (works for both authenticated users and guests)
-    const hasAccess = await hasCapability(user?.id, existingShift.calendarId, "editShift");
+    const hasAccess = await hasOwnedCapability(
+      user?.id,
+      existingShift.calendarId,
+      "editOwnShift",
+      "editAnyShift",
+      existingShift.createdBy
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },

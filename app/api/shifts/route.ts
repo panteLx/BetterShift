@@ -235,6 +235,7 @@ export async function POST(request: Request) {
         isSecondary: isSecondary || false,
         signupCapacity:
           typeof signupCapacity === "number" ? signupCapacity : null,
+        createdBy: user?.id ?? null,
         createdAt: new Date(),
         updatedAt: new Date(),
       })

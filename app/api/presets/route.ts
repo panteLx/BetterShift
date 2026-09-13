@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
             ? defaultSignupCapacity
             : null,
         order: maxOrder + 1,
+        createdBy: user?.id ?? null,
       })
       .returning();
 

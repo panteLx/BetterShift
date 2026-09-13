@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
+import { canViewCalendar, getCalendarAccess } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
@@ -129,14 +129,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check permissions (works for both authenticated users and guests)
+    // Check permissions (works for both authenticated users and guests).
+    // Creating needs either capability — own vs. any only matters once the
+    // note exists, for editing/deleting it.
     const user = await getSessionUser(request.headers);
-    const hasAccess = await hasCapability(
-      user?.id,
-      calendar.id,
-      "manageNotesEvents"
-    );
-    if (!hasAccess) {
+    const access = await getCalendarAccess(user?.id, calendar.id);
+    if (
+      !access ||
+      !(access.can("manageOwnNotesEvents") || access.can("manageAnyNotesEvents"))
+    ) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -163,6 +164,7 @@ export async function POST(request: Request) {
         color: color || null,
         recurringPattern: recurringPattern || "none",
         recurringInterval: recurringInterval || null,
+        createdBy: user?.id ?? null,
       })
       .returning();
 

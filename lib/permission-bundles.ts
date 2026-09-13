@@ -16,16 +16,20 @@ export const CAPABILITIES = [
   // Shifts
   "stampPreset",
   "createShift",
-  "editShift",
-  "deleteShift",
+  "editOwnShift",
+  "editAnyShift",
+  "deleteOwnShift",
+  "deleteAnyShift",
   // Notes & events
-  "manageNotesEvents",
+  "manageOwnNotesEvents",
+  "manageAnyNotesEvents",
   // Signups
   "signUpSelf",
   "signUpOthers",
   // Presets
   "createPreset",
-  "managePresets",
+  "manageOwnPresets",
+  "manageAnyPresets",
   // External sync
   "manageExternalSync",
   "deleteSyncLogs",
@@ -43,19 +47,25 @@ const CAPABILITY_SET: ReadonlySet<string> = new Set(CAPABILITIES);
  * Capabilities a bundle may never hold if it's reachable by a guest/link
  * source (access token, or calendars.guestBundleId) — enforced both when
  * offering bundles for assignment and again in hasCapability() itself.
+ * manageExternalSync/deleteSyncLogs joined this set alongside the three
+ * original administrative capabilities: external sync touches credentials
+ * and URLs, which is a deliberate behavior change for pre-existing
+ * guest/link access at the "write" level (see the Stufe-1b data migration).
  */
-const ADMIN_ONLY_CAPABILITIES: ReadonlySet<Capability> = new Set([
+const GUEST_INELIGIBLE: ReadonlySet<Capability> = new Set([
   "manageShares",
   "manageGuestAccess",
   "manageCalendarSettings",
+  "manageExternalSync",
+  "deleteSyncLogs",
 ]);
 
 export function isGuestEligible(capabilities: readonly Capability[]): boolean {
-  return capabilities.every((c) => !ADMIN_ONLY_CAPABILITIES.has(c));
+  return capabilities.every((c) => !GUEST_INELIGIBLE.has(c));
 }
 
 export function isAdminOnlyCapability(capability: Capability): boolean {
-  return ADMIN_ONLY_CAPABILITIES.has(capability);
+  return GUEST_INELIGIBLE.has(capability);
 }
 
 /** Whitelists a JSON value down to known capability keys, deduped. Unknown/malformed input yields []. */
@@ -70,27 +80,87 @@ export function sanitizeCapabilities(input: unknown): Capability[] {
   return Array.from(result);
 }
 
+/**
+ * Capability dependencies (S3 — enforced server-side, the UI just reflects
+ * them by ticking the dependency visibly). Applied to a fixed point by
+ * normalizeCapabilities() below, so listing a capability once here is
+ * enough even if the dependency chain is more than one hop.
+ */
+const CAPABILITY_DEPENDENCIES: Partial<Record<Capability, Capability[]>> = {
+  stampPreset: ["viewShifts"],
+  createShift: ["viewShifts"],
+  editOwnShift: ["viewShifts"],
+  editAnyShift: ["editOwnShift"],
+  deleteOwnShift: ["viewShifts"],
+  deleteAnyShift: ["deleteOwnShift"],
+  manageOwnNotesEvents: ["viewNotesEvents"],
+  manageAnyNotesEvents: ["manageOwnNotesEvents"],
+  signUpSelf: ["viewShifts"],
+  signUpOthers: ["viewMembers", "viewShifts"],
+  createPreset: ["viewShifts"],
+  manageOwnPresets: ["viewShifts"],
+  manageAnyPresets: ["manageOwnPresets"],
+  manageExternalSync: ["viewShifts"],
+};
+
+/**
+ * Sanitizes a raw capability list and expands it to satisfy every
+ * dependency in CAPABILITY_DEPENDENCIES (S3). Use this instead of
+ * sanitizeCapabilities() whenever a bundle's capabilities are being saved;
+ * use plain sanitizeCapabilities() for read-only display where dependencies
+ * are already guaranteed to hold.
+ */
+export function normalizeCapabilities(input: unknown): Capability[] {
+  const result = new Set<Capability>(sanitizeCapabilities(input));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const capability of result) {
+      for (const dependency of CAPABILITY_DEPENDENCIES[capability] ?? []) {
+        if (!result.has(dependency)) {
+          result.add(dependency);
+          changed = true;
+        }
+      }
+    }
+  }
+  return CAPABILITIES.filter((c) => result.has(c));
+}
+
+export type BundleSeedKey = "read" | "contribute" | "manage" | "admin";
+
 export interface BundleDefinition {
   name: string;
+  seedKey: BundleSeedKey;
   capabilities: Capability[];
 }
 
-const READ_BASE: Capability[] = ["viewShifts", "viewNotesEvents", "viewStats"];
+const READ_BASE: Capability[] = [
+  "viewShifts",
+  "viewNotesEvents",
+  "viewStats",
+  // E5: new calendars' Read bundle grants self-signup out of the box,
+  // matching the old default of allowSelfSignup = true.
+  "signUpSelf",
+];
 const CONTRIBUTE_BASE: Capability[] = [
   ...READ_BASE,
   "stampPreset",
   "createShift",
-  "deleteShift",
   "createPreset",
-  "manageNotesEvents",
-  "signUpSelf",
+  "editOwnShift",
+  "deleteOwnShift",
+  "manageOwnPresets",
+  "manageOwnNotesEvents",
 ];
 const MANAGE_BASE: Capability[] = [
   ...CONTRIBUTE_BASE,
-  "editShift",
+  "editAnyShift",
+  "deleteAnyShift",
+  "manageAnyPresets",
+  "manageAnyNotesEvents",
   "signUpOthers",
   "viewMembers",
-  "managePresets",
 ];
 const ADMIN_BASE: Capability[] = [
   ...MANAGE_BASE,
@@ -102,22 +172,28 @@ const ADMIN_BASE: Capability[] = [
 ];
 
 /**
- * Recommended defaults for a newly created calendar. Reflects the audit
- * findings from the design doc: shift editing and preset editing require
- * Manage; creating shifts and presets stays available at Contribute; external
- * sync config and sync-log deletion require Admin (touches external
- * credentials/URLs, more sensitive than day-to-day calendar management).
+ * Recommended defaults for a newly created calendar (5.4): creating shifts
+ * and presets stays available at Contribute, editing/deleting someone
+ * else's entry requires Manage, and external sync config/sync-log deletion
+ * require Admin (touches external credentials/URLs).
  */
 export function defaultBundleDefinitionsForNewCalendar(): BundleDefinition[] {
   return [
-    { name: "Read", capabilities: [...READ_BASE] },
-    { name: "Contribute", capabilities: [...CONTRIBUTE_BASE] },
-    { name: "Manage", capabilities: [...MANAGE_BASE] },
-    { name: "Admin", capabilities: [...ADMIN_BASE] },
+    { name: "Read", seedKey: "read", capabilities: [...READ_BASE] },
+    {
+      name: "Contribute",
+      seedKey: "contribute",
+      capabilities: [...CONTRIBUTE_BASE],
+    },
+    { name: "Manage", seedKey: "manage", capabilities: [...MANAGE_BASE] },
+    { name: "Admin", seedKey: "admin", capabilities: [...ADMIN_BASE] },
   ];
 }
 
 // Existing-calendar migration bundles are hand-written directly into
 // drizzle/0020_backfill_permission_bundles.sql (a frozen, one-time SQL
-// snapshot of this same shape) rather than generated from this file at
-// migration time — see that file's header comment for why.
+// snapshot of an earlier version of this same shape) rather than generated
+// from this file at migration time — see that file's header comment for
+// why. The Own/Any rename and guest lockout for pre-existing bundles is a
+// second, equally frozen snapshot in
+// drizzle/0023_permission_bundles_own_any.sql.

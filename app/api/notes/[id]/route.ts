@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
+import { canViewCalendar, hasOwnedCapability } from "@/lib/auth/permissions";
 
 // GET single calendar note
 export async function GET(
@@ -100,10 +100,12 @@ export async function PUT(
 
     // Check permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    const hasAccess = await hasCapability(
+    const hasAccess = await hasOwnedCapability(
       user?.id,
       calendar.id,
-      "manageNotesEvents"
+      "manageOwnNotesEvents",
+      "manageAnyNotesEvents",
+      existingNote.createdBy
     );
     if (!hasAccess) {
       return NextResponse.json(
@@ -197,10 +199,12 @@ export async function DELETE(
 
     // Check permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    const hasAccess = await hasCapability(
+    const hasAccess = await hasOwnedCapability(
       user?.id,
       calendar.id,
-      "manageNotesEvents"
+      "manageOwnNotesEvents",
+      "manageAnyNotesEvents",
+      existingNote.createdBy
     );
     if (!hasAccess) {
       return NextResponse.json(

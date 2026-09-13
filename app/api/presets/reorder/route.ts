@@ -49,8 +49,14 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Check edit permission (works for both authenticated users and guests)
-    const hasAccess = await hasCapability(user?.id, calendarId, "managePresets");
+    // Check edit permission (works for both authenticated users and guests).
+    // Reordering changes the shared order for everyone, so it always needs
+    // manageAnyPresets — manageOwnPresets alone isn't enough (5.1).
+    const hasAccess = await hasCapability(
+      user?.id,
+      calendarId,
+      "manageAnyPresets"
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

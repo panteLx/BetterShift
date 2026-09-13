@@ -18,7 +18,11 @@
 import { db } from "@/lib/db";
 import { calendarPermissionBundles } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { sanitizeCapabilities, type Capability } from "@/lib/permission-bundles";
+import {
+  sanitizeCapabilities,
+  type BundleSeedKey,
+  type Capability,
+} from "@/lib/permission-bundles";
 
 export type LegacyShareLevel = "read" | "write" | "admin";
 export type LegacyGuestLevel = "none" | "read" | "write";
@@ -26,11 +30,15 @@ export type LegacyGuestLevel = "none" | "read" | "write";
 const WRITE_CAPABILITIES: readonly Capability[] = [
   "stampPreset",
   "createShift",
-  "editShift",
-  "deleteShift",
+  "editOwnShift",
+  "editAnyShift",
+  "deleteOwnShift",
+  "deleteAnyShift",
   "createPreset",
-  "manageNotesEvents",
-  "managePresets",
+  "manageOwnNotesEvents",
+  "manageAnyNotesEvents",
+  "manageOwnPresets",
+  "manageAnyPresets",
   "manageExternalSync",
   "deleteSyncLogs",
 ];
@@ -50,13 +58,17 @@ export function coarseLevelFromCapabilities(
   return "read";
 }
 
-const SEED_NAME_FOR_LEVEL: Record<LegacyShareLevel, string> = {
-  read: "Read",
-  write: "Contribute",
-  admin: "Admin",
+const SEED_KEY_FOR_LEVEL: Record<LegacyShareLevel, BundleSeedKey> = {
+  read: "read",
+  write: "contribute",
+  admin: "admin",
 };
 
-/** Finds this calendar's seeded bundle matching an old enum value. */
+/**
+ * Finds this calendar's seeded bundle matching an old enum value, by
+ * seedKey rather than name — survives a bundle being renamed (name-based
+ * lookup would silently break as soon as an owner renames "Contribute").
+ */
 export async function findSeededBundleId(
   calendarId: string,
   level: LegacyShareLevel
@@ -64,7 +76,7 @@ export async function findSeededBundleId(
   const bundle = await db.query.calendarPermissionBundles.findFirst({
     where: and(
       eq(calendarPermissionBundles.calendarId, calendarId),
-      eq(calendarPermissionBundles.name, SEED_NAME_FOR_LEVEL[level])
+      eq(calendarPermissionBundles.seedKey, SEED_KEY_FOR_LEVEL[level])
     ),
     columns: { id: true },
   });

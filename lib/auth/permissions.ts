@@ -167,28 +167,89 @@ async function resolveCalendarAccess(
   return null;
 }
 
+export interface CalendarAccess {
+  isOwner: boolean;
+  /** Whether the caller may perform a specific capability on the calendar. */
+  can(capability: Capability): boolean;
+  /**
+   * Whether the caller may act on a specific resource (a shift, preset or
+   * note) given the two capabilities that gate it and who created it (E1).
+   * `any` covers every resource regardless of creator; `own` only covers
+   * resources with no known creator or created by the caller (E8) — for an
+   * anonymous guest (no userId) that means only creator-less resources
+   * count as "own" (E9's authenticated-guest exception doesn't apply here,
+   * this is ownership, not signup eligibility).
+   */
+  canOwned(own: Capability, any: Capability, createdBy: string | null): boolean;
+}
+
 /**
- * Whether the caller may perform a specific capability on a calendar. This
- * is the primary enforcement API — route handlers should check exactly the
- * capability their action needs, not a coarse level.
+ * Resolves a caller's access to a calendar once and returns an object with
+ * `can()`/`canOwned()` so routes that need several checks don't re-resolve
+ * calendar/share/token/guest-bundle lookups per check. `hasCapability()` and
+ * `hasOwnedCapability()` below are thin single-check convenience wrappers.
  *
  * Administrative capabilities (manageShares, manageGuestAccess,
- * manageCalendarSettings) are refused for any non-"share" source even if a
- * bundle was somehow misconfigured to include them — the hard ceiling that
- * keeps guest/link access from ever reaching them.
+ * manageCalendarSettings, manageExternalSync, deleteSyncLogs) are refused
+ * for any non-"share" source even if a bundle was somehow misconfigured to
+ * include them — the hard ceiling that keeps guest/link access from ever
+ * reaching them (GUEST_INELIGIBLE in lib/permission-bundles.ts).
+ */
+export async function getCalendarAccess(
+  userId: string | null | undefined,
+  calendarId: string
+): Promise<CalendarAccess | null> {
+  const access = await resolveCalendarAccess(userId, calendarId);
+  if (!access) return null;
+
+  const can = (capability: Capability): boolean => {
+    if (access.isOwner) return true;
+    if (isAdminOnlyCapability(capability) && access.source !== "share") {
+      return false;
+    }
+    return access.capabilities.includes(capability);
+  };
+
+  const canOwned = (
+    own: Capability,
+    any: Capability,
+    createdBy: string | null
+  ): boolean => {
+    if (access.isOwner) return true;
+    if (can(any)) return true;
+    if (!can(own)) return false;
+    return createdBy === null || createdBy === (userId ?? null);
+  };
+
+  return { isOwner: access.isOwner, can, canOwned };
+}
+
+/**
+ * Whether the caller may perform a specific capability on a calendar. This
+ * is the primary enforcement API for calendar-wide capabilities — route
+ * handlers should check exactly the capability their action needs, not a
+ * coarse level. For own/any-gated resources use hasOwnedCapability(), and
+ * for several checks on the same request prefer getCalendarAccess() once.
  */
 export async function hasCapability(
   userId: string | null | undefined,
   calendarId: string,
   capability: Capability
 ): Promise<boolean> {
-  const access = await resolveCalendarAccess(userId, calendarId);
-  if (!access) return false;
-  if (access.isOwner) return true;
-  if (isAdminOnlyCapability(capability) && access.source !== "share") {
-    return false;
-  }
-  return access.capabilities.includes(capability);
+  const access = await getCalendarAccess(userId, calendarId);
+  return access ? access.can(capability) : false;
+}
+
+/** Single-check convenience wrapper around CalendarAccess.canOwned() — see there. */
+export async function hasOwnedCapability(
+  userId: string | null | undefined,
+  calendarId: string,
+  own: Capability,
+  any: Capability,
+  createdBy: string | null
+): Promise<boolean> {
+  const access = await getCalendarAccess(userId, calendarId);
+  return access ? access.canOwned(own, any, createdBy) : false;
 }
 
 /**
@@ -584,6 +645,7 @@ export async function seedPermissionBundles(
       definitions.map((def) => ({
         calendarId,
         name: def.name,
+        seedKey: def.seedKey,
         capabilities: def.capabilities,
       }))
     )

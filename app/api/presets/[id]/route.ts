@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
+import { canViewCalendar, hasOwnedCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 
 // GET single preset
@@ -114,10 +114,12 @@ export async function PATCH(
     }
 
     // Check edit permission (works for both authenticated users and guests)
-    const hasAccess = await hasCapability(
+    const hasAccess = await hasOwnedCapability(
       user?.id,
       existingPreset.calendarId,
-      "managePresets"
+      "manageOwnPresets",
+      "manageAnyPresets",
+      existingPreset.createdBy
     );
     if (!hasAccess) {
       return NextResponse.json(
@@ -204,10 +206,12 @@ export async function DELETE(
     }
 
     // Check edit permission (works for both authenticated users and guests)
-    const hasAccess = await hasCapability(
+    const hasAccess = await hasOwnedCapability(
       user?.id,
       preset.calendarId,
-      "managePresets"
+      "manageOwnPresets",
+      "manageAnyPresets",
+      preset.createdBy
     );
     if (!hasAccess) {
       return NextResponse.json(
