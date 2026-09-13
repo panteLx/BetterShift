@@ -19,6 +19,7 @@ import {
   isAdminOnlyCapability,
   sanitizeCapabilities,
   type BundleDefinition,
+  type BundleSeedKey,
   type Capability,
 } from "@/lib/permission-bundles";
 
@@ -40,11 +41,19 @@ async function getBundleById(
   return { ...bundle, capabilities: sanitizeCapabilities(bundle.capabilities) };
 }
 
+interface ResolvedBundleRef {
+  id: string;
+  name: string;
+  seedKey: BundleSeedKey | null;
+}
+
 interface ResolvedCalendarAccess {
   isOwner: boolean;
   source: "share" | "token" | "guestBundle";
   capabilities: Capability[];
   calendar: typeof calendars.$inferSelect;
+  /** null for the owner/auth-disabled branches, which never go through a bundle. */
+  bundle: ResolvedBundleRef | null;
 }
 
 /**
@@ -69,6 +78,7 @@ async function resolveCalendarAccess(
       source: "share",
       capabilities: [...CAPABILITIES],
       calendar,
+      bundle: null,
     };
   }
 
@@ -86,6 +96,7 @@ async function resolveCalendarAccess(
           source: "token",
           capabilities: bundle.capabilities,
           calendar,
+          bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
         };
       }
     }
@@ -97,6 +108,7 @@ async function resolveCalendarAccess(
           source: "guestBundle",
           capabilities: bundle.capabilities,
           calendar,
+          bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
         };
       }
     }
@@ -109,6 +121,7 @@ async function resolveCalendarAccess(
       source: "share",
       capabilities: [...CAPABILITIES],
       calendar,
+      bundle: null,
     };
   }
 
@@ -126,6 +139,7 @@ async function resolveCalendarAccess(
         source: "share",
         capabilities: bundle.capabilities,
         calendar,
+        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
       };
     }
   }
@@ -139,6 +153,7 @@ async function resolveCalendarAccess(
         source: "token",
         capabilities: bundle.capabilities,
         calendar,
+        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
       };
     }
   }
@@ -160,6 +175,7 @@ async function resolveCalendarAccess(
         source: "guestBundle",
         capabilities: bundle.capabilities,
         calendar,
+        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
       };
     }
   }
@@ -184,16 +200,25 @@ export interface CalendarAccess {
 }
 
 /**
+ * Applies the hard ceiling that keeps guest/link access from ever reaching
+ * administrative capabilities (manageShares, manageGuestAccess,
+ * manageCalendarSettings, manageExternalSync, deleteSyncLogs), even if a
+ * bundle was somehow misconfigured to include them — the actual security
+ * boundary behind GUEST_INELIGIBLE in lib/permission-bundles.ts. Owners get
+ * every capability; a "share" source is never ceilinged (invited users may
+ * legitimately hold admin-only capabilities).
+ */
+function ceilingFilteredCapabilities(access: ResolvedCalendarAccess): Capability[] {
+  if (access.isOwner) return [...CAPABILITIES];
+  if (access.source === "share") return access.capabilities;
+  return access.capabilities.filter((c) => !isAdminOnlyCapability(c));
+}
+
+/**
  * Resolves a caller's access to a calendar once and returns an object with
  * `can()`/`canOwned()` so routes that need several checks don't re-resolve
  * calendar/share/token/guest-bundle lookups per check. `hasCapability()` and
  * `hasOwnedCapability()` below are thin single-check convenience wrappers.
- *
- * Administrative capabilities (manageShares, manageGuestAccess,
- * manageCalendarSettings, manageExternalSync, deleteSyncLogs) are refused
- * for any non-"share" source even if a bundle was somehow misconfigured to
- * include them — the hard ceiling that keeps guest/link access from ever
- * reaching them (GUEST_INELIGIBLE in lib/permission-bundles.ts).
  */
 export async function getCalendarAccess(
   userId: string | null | undefined,
@@ -202,13 +227,8 @@ export async function getCalendarAccess(
   const access = await resolveCalendarAccess(userId, calendarId);
   if (!access) return null;
 
-  const can = (capability: Capability): boolean => {
-    if (access.isOwner) return true;
-    if (isAdminOnlyCapability(capability) && access.source !== "share") {
-      return false;
-    }
-    return access.capabilities.includes(capability);
-  };
+  const effective = ceilingFilteredCapabilities(access);
+  const can = (capability: Capability): boolean => effective.includes(capability);
 
   const canOwned = (
     own: Capability,
@@ -222,6 +242,33 @@ export async function getCalendarAccess(
   };
 
   return { isOwner: access.isOwner, can, canOwned };
+}
+
+export interface EffectiveAccessSummary {
+  isOwner: boolean;
+  capabilities: Capability[];
+  /** null for the owner and for auth-disabled — every other source resolves through a bundle. */
+  bundle: ResolvedBundleRef | null;
+}
+
+/**
+ * Ceiling-filtered capabilities plus the bundle they came from, for API
+ * responses that hand the client its own effective access (calendar list,
+ * subscriptions) instead of the old sharePermission/tokenPermission/
+ * guestPermission enum fields. Client-side gating should check these
+ * capabilities directly rather than re-deriving a coarse level.
+ */
+export async function getEffectiveAccessSummary(
+  userId: string | null | undefined,
+  calendarId: string
+): Promise<EffectiveAccessSummary | null> {
+  const access = await resolveCalendarAccess(userId, calendarId);
+  if (!access) return null;
+  return {
+    isOwner: access.isOwner,
+    capabilities: ceilingFilteredCapabilities(access),
+    bundle: access.isOwner ? null : access.bundle,
+  };
 }
 
 /**
