@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check edit permission (works for both authenticated users and guests)
-    const hasAccess = await hasCapability(user?.id, calendarId, "managePresets");
+    // Check create permission (works for both authenticated users and guests)
+    const hasAccess = await hasCapability(user?.id, calendarId, "createPreset");
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

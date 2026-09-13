@@ -24,6 +24,7 @@ export const CAPABILITIES = [
   "signUpSelf",
   "signUpOthers",
   // Presets
+  "createPreset",
   "managePresets",
   // External sync
   "manageExternalSync",
@@ -80,6 +81,7 @@ const CONTRIBUTE_BASE: Capability[] = [
   "stampPreset",
   "createShift",
   "deleteShift",
+  "createPreset",
   "manageNotesEvents",
   "signUpSelf",
 ];
@@ -101,8 +103,9 @@ const ADMIN_BASE: Capability[] = [
 
 /**
  * Recommended defaults for a newly created calendar. Reflects the audit
- * findings from the design doc: presets, shift editing, external sync config
- * and sync-log deletion require Manage, not just Contribute.
+ * findings from the design doc: shift editing, preset editing, external sync
+ * config and sync-log deletion require Manage; creating shifts and presets
+ * stays available at Contribute.
  */
 export function defaultBundleDefinitionsForNewCalendar(): BundleDefinition[] {
   return [

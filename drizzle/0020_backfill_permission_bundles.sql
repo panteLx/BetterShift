@@ -30,7 +30,7 @@ SELECT
   lower(hex(randomblob(16))),
   id,
   'Contribute',
-  json_array('viewShifts','viewNotesEvents','viewStats','stampPreset','createShift','deleteShift','editShift','manageNotesEvents','managePresets','manageExternalSync','deleteSyncLogs','viewMembers','signUpSelf','signUpOthers'),
+  json_array('viewShifts','viewNotesEvents','viewStats','stampPreset','createShift','deleteShift','createPreset','editShift','manageNotesEvents','managePresets','manageExternalSync','deleteSyncLogs','viewMembers','signUpSelf','signUpOthers'),
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 FROM calendars;
@@ -44,7 +44,7 @@ SELECT
   lower(hex(randomblob(16))),
   id,
   'Manage',
-  json_array('viewShifts','viewNotesEvents','viewStats','stampPreset','createShift','deleteShift','editShift','manageNotesEvents','managePresets','manageExternalSync','deleteSyncLogs','viewMembers','signUpSelf','signUpOthers'),
+  json_array('viewShifts','viewNotesEvents','viewStats','stampPreset','createShift','deleteShift','createPreset','editShift','manageNotesEvents','managePresets','manageExternalSync','deleteSyncLogs','viewMembers','signUpSelf','signUpOthers'),
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 FROM calendars;
@@ -56,7 +56,7 @@ SELECT
   lower(hex(randomblob(16))),
   id,
   'Admin',
-  json_array('viewShifts','viewNotesEvents','viewStats','stampPreset','createShift','deleteShift','editShift','manageNotesEvents','managePresets','manageExternalSync','deleteSyncLogs','viewMembers','signUpSelf','signUpOthers','manageShares','manageGuestAccess','manageCalendarSettings'),
+  json_array('viewShifts','viewNotesEvents','viewStats','stampPreset','createShift','deleteShift','createPreset','editShift','manageNotesEvents','managePresets','manageExternalSync','deleteSyncLogs','viewMembers','signUpSelf','signUpOthers','manageShares','manageGuestAccess','manageCalendarSettings'),
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 FROM calendars;

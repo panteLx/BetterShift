@@ -28,6 +28,7 @@ const WRITE_CAPABILITIES: readonly Capability[] = [
   "createShift",
   "editShift",
   "deleteShift",
+  "createPreset",
   "manageNotesEvents",
   "managePresets",
   "manageExternalSync",
