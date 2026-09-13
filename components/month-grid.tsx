@@ -17,6 +17,7 @@ import {
 } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 import { useCalendars } from "@/hooks/useCalendars";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 
 const WEEKDAY_KEYS = [
   "monday",
@@ -161,9 +162,10 @@ export function MonthGrid({
   const t = useTranslations();
   const locale = useLocale();
   const { calendars } = useCalendars();
+  const { isAuthEnabled } = useAuthFeatures();
   const signupsEnabledById = useMemo(
-    () => new Map(calendars.map((c) => [c.id, c.signupsEnabled ?? true])),
-    [calendars]
+    () => new Map(calendars.map((c) => [c.id, isAuthEnabled && (c.signupsEnabled ?? true)])),
+    [calendars, isAuthEnabled]
   );
   const phone = variant === "phone";
   const desktop = variant === "desktop";

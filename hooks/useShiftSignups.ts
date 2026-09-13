@@ -5,6 +5,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
 import { ShiftSignupUser, CalendarMember } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 
@@ -66,10 +67,12 @@ function addErrorMessage(
  */
 export function useShiftSignupPermission(calendarId: string | undefined) {
   const { user } = useAuth();
+  const { isAuthEnabled } = useAuthFeatures();
   const { calendars } = useCalendars();
   const calendarPermission = useCalendarPermission(calendarId);
   const calendar = calendars.find((c) => c.id === calendarId);
-  const signupsEnabled = calendar?.signupsEnabled ?? true;
+  // Signups tie a shift to a real account, so without auth there is no one to sign up.
+  const signupsEnabled = isAuthEnabled && (calendar?.signupsEnabled ?? true);
   const allowSelfSignup = calendar?.allowSelfSignup ?? true;
 
   if (!user || !signupsEnabled) {

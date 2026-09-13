@@ -2,18 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Globe, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { SegmentedControl } from "@/components/segmented-control";
-import { StatusBanner } from "@/components/status-banner";
 import { CalendarShareList } from "@/components/calendar-share-list";
 import { AccessLinksPanel } from "@/components/calendar-token-list";
 import { ToggleRow } from "@/components/form-kit";
-import {
-  GuestPermissionSelector,
-  usePublicAccessNote,
-} from "@/components/guest-permission-selector";
+import { GuestPermissionSelector } from "@/components/guest-permission-selector";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
@@ -34,8 +29,7 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
   const t = useTranslations();
   const { calendars, updateCalendar } = useCalendars();
   const { canShare } = useCalendarPermission(calendarId);
-  const { isAuthEnabled, allowGuest } = useAuthFeatures();
-  const publicAccessNote = usePublicAccessNote();
+  const { allowGuest } = useAuthFeatures();
   const [tab, setTab] = useState<SharingTab>("people");
   const linkForm = useAccessLinkForm(calendarId);
 
@@ -55,9 +49,6 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
     optimisticAllowSelfSignup ?? calendar?.allowSelfSignup ?? true;
   const signupsEnabled =
     optimisticSignupsEnabled ?? calendar?.signupsEnabled ?? true;
-
-  // guestPermission also governs signed-in users without a share, so it is offered whenever auth is on.
-  const showPublicTab = isAuthEnabled;
 
   const handleGuestPermissionChange = async (value: GuestPermission) => {
     if (!canShare || value === guestPermission) return;
@@ -103,8 +94,11 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
 
   const tabs: { value: SharingTab; label: string }[] = [
     { value: "people", label: t("sharingSheet.tabPeople") },
-    ...(showPublicTab ? [{ value: "public" as const, label: t("share.public") }] : []),
-    { value: "links", label: t("share.links") },
+    { value: "public", label: t("share.public") },
+    // Access links are a pure guest-access mechanism, so they disappear once
+    // ALLOW_GUEST_ACCESS is off — unlike public access, which remains useful
+    // for signed-in users' calendar discovery regardless of that flag.
+    ...(allowGuest ? [{ value: "links" as const, label: t("share.links") }] : []),
   ];
   const activeTab = tabs.some((option) => option.value === tab) ? tab : "people";
 
@@ -157,18 +151,6 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
                 disabled={saving}
               />
             )}
-            {showPublicTab &&
-              (guestPermission === "none" ? (
-                <StatusBanner tone="info" icon={Shield} title={t("sharingSheet.publicOffTitle")}>
-                  {allowGuest
-                    ? t("sharingSheet.publicOffBodyGuestsOn")
-                    : t("sharingSheet.publicOffBodyGuestsOff")}
-                </StatusBanner>
-              ) : (
-                <StatusBanner tone="info" icon={Globe} title={t("sharingSheet.publicOnTitle")}>
-                  {publicAccessNote(guestPermission, allowGuest)}
-                </StatusBanner>
-              ))}
           </>
         ) : (
           <>
