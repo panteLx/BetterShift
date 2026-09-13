@@ -3,10 +3,14 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ColorSwatches, Field, inputClass } from "@/components/form-kit";
 import { AdminFormPanel } from "@/components/admin/admin-form-panel";
-import { useAdminCalendarActions, type AdminCalendar } from "@/hooks/useAdminCalendars";
+import { BundlePicker } from "@/components/permission-bundle-picker";
+import {
+  useAdminCalendarActions,
+  useAdminCalendarBundles,
+  type AdminCalendar,
+} from "@/hooks/useAdminCalendars";
 import { useCanEditCalendar } from "@/hooks/useAdminAccess";
 
 interface CalendarEditSheetProps {
@@ -20,16 +24,21 @@ export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: C
   const t = useTranslations();
   const { updateCalendar, isUpdating } = useAdminCalendarActions();
   const canEdit = useCanEditCalendar();
+  const { data: bundles = [], isLoading: bundlesLoading } = useAdminCalendarBundles(
+    calendar.id,
+    open,
+  );
 
   // Resets when the parent remounts this component via its key
   const [name, setName] = useState(calendar.name);
   const [color, setColor] = useState(calendar.color);
-  const [guestPermission, setGuestPermission] = useState(calendar.guestPermission);
+  const [guestBundleId, setGuestBundleId] = useState(calendar.guestBundle?.id ?? null);
 
+  const currentGuestBundleId = calendar.guestBundle?.id ?? null;
   const hasChanges =
     name !== calendar.name ||
     color !== calendar.color ||
-    guestPermission !== calendar.guestPermission;
+    guestBundleId !== currentGuestBundleId;
 
   if (!canEdit) {
     return null;
@@ -40,7 +49,7 @@ export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: C
 
     if (name !== calendar.name) updates.name = name;
     if (color !== calendar.color) updates.color = color;
-    if (guestPermission !== calendar.guestPermission) updates.guestPermission = guestPermission;
+    if (guestBundleId !== currentGuestBundleId) updates.guestBundleId = guestBundleId;
 
     const success = await updateCalendar(calendar.id, updates);
     if (success) {
@@ -76,25 +85,19 @@ export function CalendarEditSheet({ open, onOpenChange, calendar, onSuccess }: C
 
       <Field
         label={t("admin.calendars.guestPermission")}
-        htmlFor="admin-calendar-guest"
         hint={t("admin.calendars.guestPermissionHint")}
       >
-        <Select
-          value={guestPermission}
-          onValueChange={(value) => setGuestPermission(value as AdminCalendar["guestPermission"])}
-        >
-          <SelectTrigger
-            id="admin-calendar-guest"
-            className="h-10 w-full rounded-[9px] px-3 text-[14px] data-[size=default]:h-10"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">{t("common.labels.permissions.none")}</SelectItem>
-            <SelectItem value="read">{t("common.labels.permissions.read")}</SelectItem>
-            <SelectItem value="write">{t("common.labels.permissions.write")}</SelectItem>
-          </SelectContent>
-        </Select>
+        <BundlePicker
+          bundles={bundles}
+          value={guestBundleId}
+          onChange={setGuestBundleId}
+          guestEligibleOnly
+          allowNone
+          noneLabel={t("common.labels.permissions.none")}
+          disabled={bundlesLoading}
+          triggerAriaLabel={t("admin.calendars.guestPermission")}
+          className="h-10 w-full justify-between px-3 text-[14px]"
+        />
       </Field>
 
       <Field label={t("admin.calendars.currentOwner")}>

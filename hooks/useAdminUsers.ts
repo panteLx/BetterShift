@@ -24,6 +24,7 @@ import {
   run,
   useAdminErrorToast,
 } from "@/hooks/useAdminList";
+import type { BundleRef } from "@/hooks/useAdminCalendars";
 
 /**
  * Extended User Type with Admin-specific fields
@@ -56,7 +57,7 @@ export interface UserDetails extends AdminUser {
   sharedCalendars: Array<{
     id: string;
     name: string;
-    permission: string;
+    bundle: BundleRef;
   }>;
 }
 

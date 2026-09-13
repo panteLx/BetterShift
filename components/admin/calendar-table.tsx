@@ -20,6 +20,7 @@ import {
   Count,
   UserAvatar,
 } from "@/components/admin/admin-kit";
+import { useBundleDisplayName } from "@/components/permission-bundle-picker";
 import {
   RowActionButton,
   SortHeader,
@@ -82,11 +83,11 @@ export function isOrphaned(calendar: Pick<AdminCalendar, "ownerId" | "owner">) {
   return !calendar.ownerId || !calendar.owner;
 }
 
-function GuestPermissionPill({ permission }: { permission: AdminCalendar["guestPermission"] }) {
+function GuestBundlePill({ bundle }: { bundle: AdminCalendar["guestBundle"] }) {
   const t = useTranslations();
-  if (permission === "write") return <Pill tone="brand">{t("common.labels.permissions.write")}</Pill>;
-  if (permission === "read") return <Pill>{t("common.labels.permissions.read")}</Pill>;
-  return <Pill className="text-fg-tertiary">{t("common.labels.permissions.none")}</Pill>;
+  const displayName = useBundleDisplayName();
+  if (!bundle) return <Pill className="text-fg-tertiary">{t("common.labels.permissions.none")}</Pill>;
+  return <Pill tone="brand">{displayName(bundle)}</Pill>;
 }
 
 function CalendarDot({ color, className }: { color: string; className?: string }) {
@@ -180,7 +181,7 @@ function CalendarRow({
       <Count value={calendar.sharesCount} />
       <Count value={calendar.externalSyncsCount || 0} />
       <div>
-        <GuestPermissionPill permission={calendar.guestPermission} />
+        <GuestBundlePill bundle={calendar.guestBundle} />
       </div>
       <div
         className="flex items-center justify-end gap-1.5"
@@ -277,7 +278,7 @@ function CalendarCard({
           <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg-strong">
             {calendar.name}
           </span>
-          <GuestPermissionPill permission={calendar.guestPermission} />
+          <GuestBundlePill bundle={calendar.guestBundle} />
           <ChevronRight className="size-[17px] shrink-0 text-fg-faint" />
         </div>
         <OwnerCell calendar={calendar} compact />
@@ -420,7 +421,7 @@ export function CalendarTable({
             header("shiftsCount", t("common.labels.shifts")),
             header("sharesCount", t("common.labels.shares")),
             header("externalSyncsCount", t("admin.calendars.externalSyncsShort")),
-            header("guestPermission", t("adminCalendars.guestColumn")),
+            header("guestBundle", t("adminCalendars.guestColumn")),
             <span key="actions" className="block text-right">
               {t("adminUsers.actions")}
             </span>,

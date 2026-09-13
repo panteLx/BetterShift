@@ -23,6 +23,8 @@ import {
   run,
   useAdminErrorToast,
 } from "@/hooks/useAdminList";
+import type { BundleOption } from "@/components/permission-bundle-picker";
+import type { BundleSeedKey } from "@/lib/permission-bundles";
 
 /**
  * Calendar Owner Info
@@ -33,6 +35,13 @@ export interface CalendarOwner {
   image: string | null;
 }
 
+/** A bundle as displayed in the admin panel — content editing stays owner-only (Paket 6). */
+export interface BundleRef {
+  id: string;
+  name: string;
+  seedKey: BundleSeedKey | null;
+}
+
 /**
  * Extended Calendar Type with Admin-specific fields
  */
@@ -40,7 +49,7 @@ export interface AdminCalendar {
   id: string;
   name: string;
   color: string;
-  guestPermission: "none" | "read" | "write";
+  guestBundle: BundleRef | null;
   createdAt: Date;
   updatedAt: Date;
   owner: CalendarOwner | null;
@@ -61,12 +70,12 @@ export interface CalendarDetails extends AdminCalendar {
     userName: string;
     userEmail: string;
     userImage: string | null;
-    permission: string;
+    bundle: BundleRef;
   }>;
   shareTokens: Array<{
     id: string;
     name: string;
-    permission: string;
+    bundle: BundleRef;
     createdAt: Date;
   }>;
   externalSyncs: Array<{
@@ -119,11 +128,39 @@ export async function fetchAdminCalendarDetails(
 }
 
 /**
+ * Lists a calendar's permission bundles for the admin panel's guest-access
+ * picker (read-only — bundle content editing stays owner-only, Paket 6).
+ */
+async function fetchAdminCalendarBundles(
+  calendarId: string,
+): Promise<BundleOption[]> {
+  const response = await fetch(`/api/admin/calendars/${calendarId}/bundles`);
+  if (!response.ok) throw new AdminRequestError(response.status);
+
+  const data: BundleOption[] = await response.json();
+  return data.map((bundle) => ({
+    id: bundle.id,
+    name: bundle.name,
+    seedKey: bundle.seedKey,
+    capabilities: bundle.capabilities,
+  }));
+}
+
+/** Fetches only while `enabled` (typically the owning sheet's `open` state). */
+export function useAdminCalendarBundles(calendarId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.admin.calendars.bundles(calendarId),
+    queryFn: () => fetchAdminCalendarBundles(calendarId),
+    enabled: enabled && !!calendarId,
+  });
+}
+
+/**
  * Update calendar via API
  */
 async function updateCalendarApi(
   calendarId: string,
-  updates: { name?: string; color?: string; guestPermission?: AdminCalendar["guestPermission"] },
+  updates: { name?: string; color?: string; guestBundleId?: string | null },
 ): Promise<void> {
   const response = await fetch(`/api/admin/calendars/${calendarId}`, {
     method: "PATCH",
@@ -263,11 +300,22 @@ export function useAdminCalendarActions() {
       updates,
     }: {
       calendarId: string;
-      updates: { name?: string; color?: string; guestPermission?: AdminCalendar["guestPermission"] };
+      updates: { name?: string; color?: string; guestBundleId?: string | null };
     }) => updateCalendarApi(calendarId, updates),
+    // guestBundleId isn't optimistically reflected: the list shows the guest
+    // bundle's {id, name, seedKey}, not the raw id the PATCH body carries, so
+    // it just waits for onSettled's invalidation like the rest of the app.
     onMutate: async ({ calendarId, updates }) => ({
       snapshot: await patchCalendars((calendars) =>
-        calendars.map((cal) => (cal.id === calendarId ? { ...cal, ...updates } : cal)),
+        calendars.map((cal) =>
+          cal.id === calendarId
+            ? {
+                ...cal,
+                ...(updates.name !== undefined ? { name: updates.name } : {}),
+                ...(updates.color !== undefined ? { color: updates.color } : {}),
+              }
+            : cal,
+        ),
       ),
     }),
     onError: (err, variables, context) => {
@@ -355,7 +403,7 @@ export function useAdminCalendarActions() {
     isTransferring: transferMutation.isPending || bulkTransferMutation.isPending,
     updateCalendar: (
       calendarId: string,
-      updates: { name?: string; color?: string; guestPermission?: AdminCalendar["guestPermission"] },
+      updates: { name?: string; color?: string; guestBundleId?: string | null },
     ) => run(updateMutation.mutateAsync, { calendarId, updates }),
     deleteCalendar: (calendarId: string) => run(deleteMutation.mutateAsync, calendarId),
     transferCalendar: (calendarId: string, newOwnerId: string) =>

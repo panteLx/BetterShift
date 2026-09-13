@@ -3,12 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { CloudDownload, Eye, EyeOff, Link2, Pencil, Send, SquarePen, Trash2 } from "lucide-react";
+import { CloudDownload, Eye, EyeOff, Link2, Pencil, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListRow, Pill } from "@/components/form-kit";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
 import { DetailSection, StatTile, UserAvatar } from "@/components/admin/admin-kit";
 import { isOrphaned, ownerColor } from "@/components/admin/calendar-table";
+import { useBundleDisplayName } from "@/components/permission-bundle-picker";
 import { fetchAdminCalendarDetails } from "@/hooks/useAdminCalendars";
 import {
   useCanEditCalendar,
@@ -26,13 +27,6 @@ interface CalendarDetailsSheetProps {
   onEdit: () => void;
   onTransfer: () => void;
   onDelete: () => void;
-}
-
-function PermissionPill({ permission }: { permission: string }) {
-  const t = useTranslations();
-  if (permission === "admin") return <Pill tone="violet">{t("common.labels.permissions.admin")}</Pill>;
-  if (permission === "write") return <Pill tone="brand">{t("common.labels.permissions.write")}</Pill>;
-  return <Pill>{t("common.labels.permissions.read")}</Pill>;
 }
 
 export function CalendarDetailsSheet({
@@ -55,24 +49,19 @@ export function CalendarDetailsSheet({
   const canEdit = useCanEditCalendar();
   const canDelete = useCanDeleteCalendar();
   const canTransfer = useCanTransferCalendar();
+  const displayName = useBundleDisplayName();
 
   const date = (value: Date) => format(value, "PP", { locale: dateLocale });
   const orphaned = calendar ? isOrphaned(calendar) : false;
 
-  const guest = calendar?.guestPermission;
-  const GuestIcon = guest === "write" ? SquarePen : guest === "read" ? Eye : EyeOff;
-  const guestLabel =
-    guest === "write"
-      ? t("common.labels.permissions.write")
-      : guest === "read"
-        ? t("common.labels.permissions.read")
-        : t("common.labels.permissions.none");
-  const guestHint =
-    guest === "write"
-      ? t("adminCalendars.guestWriteHint")
-      : guest === "read"
-        ? t("adminCalendars.guestReadHint")
-        : t("adminCalendars.guestNoneHint");
+  const guestBundle = calendar?.guestBundle ?? null;
+  const GuestIcon = guestBundle ? Eye : EyeOff;
+  const guestLabel = guestBundle
+    ? (displayName(guestBundle) ?? "")
+    : t("common.labels.permissions.none");
+  const guestHint = guestBundle
+    ? t("adminCalendars.guestBundleHint")
+    : t("adminCalendars.guestNoneHint");
 
   const footer = (canEdit || canTransfer || canDelete) && calendar && (
     <>
@@ -196,7 +185,7 @@ export function CalendarDetailsSheet({
                     <div className="truncate text-[13.5px] font-semibold text-fg-strong">{share.userName}</div>
                     <div className="truncate text-[12px] text-fg-tertiary">{share.userEmail}</div>
                   </div>
-                  <PermissionPill permission={share.permission} />
+                  <Pill tone="brand">{displayName(share.bundle)}</Pill>
                 </ListRow>
               ))}
             </DetailSection>
@@ -213,7 +202,7 @@ export function CalendarDetailsSheet({
                       {t("common.stats.created")} {date(new Date(token.createdAt))}
                     </div>
                   </div>
-                  <PermissionPill permission={token.permission} />
+                  <Pill tone="brand">{displayName(token.bundle)}</Pill>
                 </ListRow>
               ))}
             </DetailSection>

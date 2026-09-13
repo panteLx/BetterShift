@@ -9,6 +9,7 @@ import { ListRow, Pill } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
 import { DetailSection, RolePill, StatTile, StatusPill, UserAvatar } from "@/components/admin/admin-kit";
+import { useBundleDisplayName } from "@/components/permission-bundle-picker";
 import { fetchAdminUserDetails } from "@/hooks/useAdminUsers";
 import { useUserPermissions } from "@/hooks/useAdminAccess";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
@@ -94,6 +95,7 @@ export function UserDetailsSheet({
   });
 
   const { canEdit, canBan, canDelete, canResetPassword } = useUserPermissions(userDetails);
+  const displayName = useBundleDisplayName();
 
   const user = userDetails;
   const date = (value: Date, pattern = "PP") => format(value, pattern, { locale: dateLocale });
@@ -223,13 +225,7 @@ export function UserDetailsSheet({
                   <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-fg-strong">
                     {share.name}
                   </span>
-                  <Pill>
-                    {share.permission === "admin"
-                      ? t("common.labels.permissions.admin")
-                      : share.permission === "write"
-                        ? t("common.labels.permissions.write")
-                        : t("common.labels.permissions.read")}
-                  </Pill>
+                  <Pill>{displayName(share.bundle)}</Pill>
                 </ListRow>
               ))}
             </DetailSection>
