@@ -130,7 +130,7 @@
   "form": {
     "namePlaceholder": "es., {example}",
     "colorLabel": "Colore",
-    "notesLabel": "Note (opzionale)",
+    "notesLabel": "Note",
     "notesPlaceholder": "Informazioni aggiuntive...",
     "urlPlaceholder": "https://..."
   },
@@ -208,7 +208,7 @@
     "deleteConfirm": "Eliminare questo preset? Verranno eliminati anche tutti i turni creati da questo preset.",
     "secondary": "Altri",
     "hideFromStats": "Nascondi dalle statistiche",
-    "group": "Gruppo (opzionale)",
+    "group": "Gruppo",
     "groupPlaceholder": "es. Giorno feriale, Fine settimana...",
     "selectGroupHint": "Seleziona tutti i preset di questo gruppo",
     "copiedSuffix": "copiato"
@@ -800,7 +800,9 @@
     "delete": "Elimina preset",
     "dragHandle": "Trascina per riordinare",
     "secondarySection": "Sotto «Altri»",
-    "markAsSecondaryHint": "Compare nella barra dei modelli solo dopo aver cliccato «Altri»"
+    "markAsSecondaryHint": "Compare nella barra dei modelli solo dopo aver cliccato «Altri»",
+    "defaultSignupCapacityLabel": "Numero massimo di persone",
+    "defaultSignupCapacityHint": "Stabilisce quante persone possono iscriversi ai turni creati da questo modello. Lascia vuoto per un numero illimitato. Viene copiato alla creazione e può essere modificato per ogni turno."
   },
   "syncSheet": {
     "intervalPill": "Ogni {interval}",
@@ -867,7 +869,11 @@
     "publicOffBodyGuestsOn": "Hanno accesso solo le persone invitate e chi possiede un link di accesso; i link funzionano anche senza account. Dalla scheda «Pubblico» puoi aprire il calendario a tutti, anche ai visitatori senza account.",
     "publicOffBodyGuestsOff": "Hanno accesso solo le persone invitate e chi possiede un link di accesso; chi riceve un link deve accedere, perché l’accesso ospite è disattivato su questa istanza. Dalla scheda «Pubblico» puoi aprire il calendario agli utenti autenticati di questa istanza.",
     "linkInfoGuestsOn": "Il link apre direttamente il calendario, senza accesso. Puoi revocarlo dalla lista in qualsiasi momento: smette subito di funzionare.",
-    "linkInfoGuestsOff": "Il link apre direttamente il calendario. L’accesso ospite è disattivato su questa istanza, quindi i destinatari devono accedere. Puoi revocarlo dalla lista in qualsiasi momento: smette subito di funzionare."
+    "linkInfoGuestsOff": "Il link apre direttamente il calendario. L’accesso ospite è disattivato su questa istanza, quindi i destinatari devono accedere. Puoi revocarlo dalla lista in qualsiasi momento: smette subito di funzionare.",
+    "allowSelfSignupLabel": "Iscrizione autonoma ai turni",
+    "allowSelfSignupDesc": "I membri in sola lettura possono iscriversi e ritirarsi dai turni",
+    "signupsEnabledLabel": "Attiva le iscrizioni ai turni",
+    "signupsEnabledDesc": "Permette alle persone di iscriversi ai turni. Disattivandolo, elenchi di iscrizione, avatar e numero massimo di persone scompaiono ovunque."
   },
   "shiftSheet": {
     "start": "Inizio",
@@ -875,7 +881,9 @@
     "duration": "Durata",
     "allDay": "Tutto il giorno",
     "noPreset": "Libero",
-    "createAction": "Crea turno"
+    "createAction": "Crea turno",
+    "signupCapacityLabel": "Numero massimo di persone",
+    "signupCapacityHint": "Stabilisce quante persone possono iscriversi a questo turno. Lascia vuoto per un numero illimitato."
   },
   "noteSheet": {
     "createTitle": "Nuova voce",
@@ -1074,5 +1082,25 @@
   "adminPagination": {
     "range": "{from}–{to} di {total}",
     "label": "Pagine"
+  },
+  "shiftSignup": {
+    "title": "Chi fa questo turno?",
+    "addSelf": "Iscrivimi",
+    "addOther": "Aggiungi persona",
+    "addOtherPlaceholder": "Seleziona una persona",
+    "remove": "Rimuovi",
+    "empty": "Nessuno si e ancora iscritto",
+    "capacityProgress": "{count} di {capacity}",
+    "full": "Al completo",
+    "selfSignupDisabled": "Il proprietario del calendario ha disattivato l'iscrizione autonoma",
+    "andMore": "+{count} in piu",
+    "errors": {
+      "full": "Questo turno e gia al completo",
+      "alreadySignedUp": "Questa persona e gia iscritta",
+      "noAccess": "Questa persona non ha accesso al calendario",
+      "addFailed": "L'iscrizione non e riuscita",
+      "removeFailed": "Il ritiro non e riuscito"
+    },
+    "addOtherHint": "Non trovi qualcuno? Condividi prima il calendario con questa persona, poi potrai selezionarla qui."
   }
 }

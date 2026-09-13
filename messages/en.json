@@ -130,7 +130,7 @@
   "form": {
     "namePlaceholder": "e.g., {example}",
     "colorLabel": "Color",
-    "notesLabel": "Notes (optional)",
+    "notesLabel": "Notes",
     "notesPlaceholder": "Additional information...",
     "urlPlaceholder": "https://..."
   },
@@ -208,7 +208,7 @@
     "deleteConfirm": "Delete this preset? This will also delete all shifts created from this preset.",
     "secondary": "More",
     "hideFromStats": "Hide from statistics",
-    "group": "Group (optional)",
+    "group": "Group",
     "groupPlaceholder": "e.g. Weekday, Weekend...",
     "selectGroupHint": "Select all presets in this group",
     "copiedSuffix": "copied"
@@ -800,7 +800,9 @@
     "delete": "Delete preset",
     "dragHandle": "Drag to reorder",
     "secondarySection": "Under “More”",
-    "markAsSecondaryHint": "Shows in the preset bar only after clicking “More”"
+    "markAsSecondaryHint": "Shows in the preset bar only after clicking “More”",
+    "defaultSignupCapacityLabel": "Maximum number of people",
+    "defaultSignupCapacityHint": "Sets how many people can sign up for shifts created from this preset. Leave empty for unlimited signups. Copied when a shift is created and can be adjusted per shift."
   },
   "syncSheet": {
     "intervalPill": "Every {interval}",
@@ -867,7 +869,11 @@
     "publicOffBodyGuestsOn": "Only invited people and holders of an access link have access; links work without an account too. Use the “Public” tab to open the calendar to everyone, including visitors without an account.",
     "publicOffBodyGuestsOff": "Only invited people and holders of an access link have access; link recipients need to sign in, because guest access is off on this instance. Use the “Public” tab to open the calendar to signed-in users of this instance.",
     "linkInfoGuestsOn": "The link opens the calendar directly, without signing in. You can revoke it from the list at any time — it stops working immediately.",
-    "linkInfoGuestsOff": "The link opens the calendar directly. Guest access is off on this instance, so recipients need to sign in. You can revoke it from the list at any time — it stops working immediately."
+    "linkInfoGuestsOff": "The link opens the calendar directly. Guest access is off on this instance, so recipients need to sign in. You can revoke it from the list at any time — it stops working immediately.",
+    "allowSelfSignupLabel": "Self-signup for shifts",
+    "allowSelfSignupDesc": "Read-only members may sign themselves up for and withdraw from shifts",
+    "signupsEnabledLabel": "Enable shift signups",
+    "signupsEnabledDesc": "Lets people sign up for shifts. Turning this off hides signup lists, avatars, and the maximum headcount everywhere."
   },
   "shiftSheet": {
     "start": "Start",
@@ -875,7 +881,9 @@
     "duration": "Duration",
     "allDay": "All day",
     "noPreset": "Custom",
-    "createAction": "Create shift"
+    "createAction": "Create shift",
+    "signupCapacityLabel": "Maximum number of people",
+    "signupCapacityHint": "Sets how many people can sign up for this shift. Leave empty for unlimited signups."
   },
   "noteSheet": {
     "createTitle": "New entry",
@@ -1074,5 +1082,25 @@
   "adminPagination": {
     "range": "{from}–{to} of {total}",
     "label": "Pages"
+  },
+  "shiftSignup": {
+    "title": "Who's doing this shift?",
+    "addSelf": "Sign me up",
+    "addOther": "Add person",
+    "addOtherPlaceholder": "Select a person",
+    "remove": "Remove",
+    "empty": "No one signed up yet",
+    "capacityProgress": "{count} of {capacity}",
+    "full": "Full",
+    "selfSignupDisabled": "The calendar owner has turned off self-signup",
+    "andMore": "+{count} more",
+    "errors": {
+      "full": "This shift is already fully booked",
+      "alreadySignedUp": "This person is already signed up",
+      "noAccess": "This person doesn't have access to the calendar",
+      "addFailed": "Signing up failed",
+      "removeFailed": "Withdrawing failed"
+    },
+    "addOtherHint": "Can't find someone? Share the calendar with them first, then you can pick them here."
   }
 }

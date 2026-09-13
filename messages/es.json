@@ -130,7 +130,7 @@
   "form": {
     "namePlaceholder": "ej., {example}",
     "colorLabel": "Color",
-    "notesLabel": "Notas (opcional)",
+    "notesLabel": "Notas",
     "notesPlaceholder": "Información adicional...",
     "urlPlaceholder": "https://..."
   },
@@ -208,7 +208,7 @@
     "deleteConfirm": "¿Eliminar este preajuste? Esto también eliminará todos los turnos creados a partir de él.",
     "secondary": "Más",
     "hideFromStats": "Ocultar de las estadísticas",
-    "group": "Grupo (opcional)",
+    "group": "Grupo",
     "groupPlaceholder": "p. ej. Día laboral, Fin de semana...",
     "selectGroupHint": "Seleccionar todos los preajustes de este grupo",
     "copiedSuffix": "copiado"
@@ -800,7 +800,9 @@
     "delete": "Eliminar preajuste",
     "dragHandle": "Arrastrar para ordenar",
     "secondarySection": "En «Más»",
-    "markAsSecondaryHint": "Aparece en la barra de plantillas solo al pulsar «Más»"
+    "markAsSecondaryHint": "Aparece en la barra de plantillas solo al pulsar «Más»",
+    "defaultSignupCapacityLabel": "Numero maximo de personas",
+    "defaultSignupCapacityHint": "Define cuántas personas pueden inscribirse en turnos creados a partir de esta plantilla. Déjalo vacío para inscripciones ilimitadas. Se copia al crear el turno y puede ajustarse por turno."
   },
   "syncSheet": {
     "intervalPill": "Cada {interval}",
@@ -867,7 +869,11 @@
     "publicOffBodyGuestsOn": "Solo tienen acceso las personas invitadas y quienes tengan un enlace de acceso; los enlaces también funcionan sin cuenta. En la pestaña «Público» puedes abrir el calendario a todos, incluso a visitantes sin cuenta.",
     "publicOffBodyGuestsOff": "Solo tienen acceso las personas invitadas y quienes tengan un enlace de acceso; quienes reciban un enlace deben iniciar sesión, porque el acceso de invitados está desactivado en esta instancia. En la pestaña «Público» puedes abrir el calendario a los usuarios autenticados de esta instancia.",
     "linkInfoGuestsOn": "El enlace abre el calendario directamente, sin iniciar sesión. Puedes revocarlo en la lista en cualquier momento; deja de funcionar al instante.",
-    "linkInfoGuestsOff": "El enlace abre el calendario directamente. El acceso de invitados está desactivado en esta instancia, así que los destinatarios deben iniciar sesión. Puedes revocarlo en la lista en cualquier momento; deja de funcionar al instante."
+    "linkInfoGuestsOff": "El enlace abre el calendario directamente. El acceso de invitados está desactivado en esta instancia, así que los destinatarios deben iniciar sesión. Puedes revocarlo en la lista en cualquier momento; deja de funcionar al instante.",
+    "allowSelfSignupLabel": "Autoinscripcion a turnos",
+    "allowSelfSignupDesc": "Los miembros de solo lectura pueden inscribirse y darse de baja de turnos",
+    "signupsEnabledLabel": "Activar inscripciones a turnos",
+    "signupsEnabledDesc": "Permite que las personas se inscriban en turnos. Al desactivarlo desaparecen las listas de inscripción, los avatares y el número máximo de personas."
   },
   "shiftSheet": {
     "start": "Inicio",
@@ -875,7 +881,9 @@
     "duration": "Duración",
     "allDay": "Todo el día",
     "noPreset": "Libre",
-    "createAction": "Crear turno"
+    "createAction": "Crear turno",
+    "signupCapacityLabel": "Numero maximo de personas",
+    "signupCapacityHint": "Define cuántas personas pueden inscribirse en este turno. Déjalo vacío para inscripciones ilimitadas."
   },
   "noteSheet": {
     "createTitle": "Nueva entrada",
@@ -1074,5 +1082,25 @@
   "adminPagination": {
     "range": "{from}–{to} de {total}",
     "label": "Páginas"
+  },
+  "shiftSignup": {
+    "title": "¿Quien hace este turno?",
+    "addSelf": "Inscribirme",
+    "addOther": "Anadir persona",
+    "addOtherPlaceholder": "Selecciona una persona",
+    "remove": "Quitar",
+    "empty": "Todavia nadie se ha inscrito",
+    "capacityProgress": "{count} de {capacity}",
+    "full": "Completo",
+    "selfSignupDisabled": "El propietario del calendario ha desactivado la autoinscripcion",
+    "andMore": "+{count} mas",
+    "errors": {
+      "full": "Este turno ya esta completo",
+      "alreadySignedUp": "Esta persona ya esta inscrita",
+      "noAccess": "Esta persona no tiene acceso al calendario",
+      "addFailed": "La inscripcion ha fallado",
+      "removeFailed": "La baja ha fallado"
+    },
+    "addOtherHint": "¿No encuentras a alguien? Comparte primero el calendario con esa persona; luego podrás seleccionarla aquí."
   }
 }

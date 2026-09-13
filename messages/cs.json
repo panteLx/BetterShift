@@ -130,7 +130,7 @@
   "form": {
     "namePlaceholder": "např. {example}",
     "colorLabel": "Barva",
-    "notesLabel": "Poznámky (volitelné)",
+    "notesLabel": "Poznámky",
     "notesPlaceholder": "Další informace...",
     "urlPlaceholder": "https://..."
   },
@@ -208,7 +208,7 @@
     "deleteConfirm": "Smazat tuto předvolbu? Tím se smažou i všechny směny vytvořené z této předvolby.",
     "secondary": "Další",
     "hideFromStats": "Skrýt ze statistik",
-    "group": "Skupina (volitelné)",
+    "group": "Skupina",
     "groupPlaceholder": "např. Pracovní den, Víkend...",
     "selectGroupHint": "Vybrat všechny předvolby v této skupině",
     "copiedSuffix": "kopie"
@@ -800,7 +800,9 @@
     "delete": "Smazat předvolbu",
     "dragHandle": "Přetažením změníte pořadí",
     "secondarySection": "Pod „Další“",
-    "markAsSecondaryHint": "V liště šablon se zobrazí až po kliknutí na „Další“"
+    "markAsSecondaryHint": "V liště šablon se zobrazí až po kliknutí na „Další“",
+    "defaultSignupCapacityLabel": "Maximalni pocet osob",
+    "defaultSignupCapacityHint": "Určuje, kolik lidí se může přihlásit na směny vytvořené z této šablony. Nechte prázdné pro neomezený počet. Při vytvoření směny se zkopíruje a lze ho u každé směny upravit."
   },
   "syncSheet": {
     "intervalPill": "Každých {interval}",
@@ -867,7 +869,11 @@
     "publicOffBodyGuestsOn": "Přístup mají jen pozvaní lidé a držitelé přístupového odkazu; odkazy fungují i bez účtu. Na kartě „Veřejné“ můžete kalendář zpřístupnit všem, i návštěvníkům bez účtu.",
     "publicOffBodyGuestsOff": "Přístup mají jen pozvaní lidé a držitelé přístupového odkazu; příjemci odkazu se musí přihlásit, protože přístup pro hosty je na této instanci vypnutý. Na kartě „Veřejné“ můžete kalendář zpřístupnit přihlášeným uživatelům této instance.",
     "linkInfoGuestsOn": "Odkaz otevře kalendář přímo, bez přihlášení. V seznamu ho můžete kdykoli zrušit — pak okamžitě přestane platit.",
-    "linkInfoGuestsOff": "Odkaz otevře kalendář přímo. Přístup pro hosty je na této instanci vypnutý, takže se příjemci musí přihlásit. V seznamu ho můžete kdykoli zrušit — pak okamžitě přestane platit."
+    "linkInfoGuestsOff": "Odkaz otevře kalendář přímo. Přístup pro hosty je na této instanci vypnutý, takže se příjemci musí přihlásit. V seznamu ho můžete kdykoli zrušit — pak okamžitě přestane platit.",
+    "allowSelfSignupLabel": "Samostatné přihlašování na směny",
+    "allowSelfSignupDesc": "Členové jen se čtením se mohou sami přihlásit i odhlásit ze směny",
+    "signupsEnabledLabel": "Povolit přihlašování na směny",
+    "signupsEnabledDesc": "Umožní lidem přihlásit se na směny. Po vypnutí zmizí seznamy přihlášených, avatary i maximální počet osob."
   },
   "shiftSheet": {
     "start": "Začátek",
@@ -875,7 +881,9 @@
     "duration": "Délka",
     "allDay": "Celý den",
     "noPreset": "Vlastní",
-    "createAction": "Vytvořit směnu"
+    "createAction": "Vytvořit směnu",
+    "signupCapacityLabel": "Maximalni pocet osob",
+    "signupCapacityHint": "Určuje, kolik lidí se může přihlásit na tuto směnu. Nechte prázdné pro neomezený počet."
   },
   "noteSheet": {
     "createTitle": "Nový záznam",
@@ -1074,5 +1082,25 @@
   "adminPagination": {
     "range": "{from}–{to} z {total}",
     "label": "Stránky"
+  },
+  "shiftSignup": {
+    "title": "Kdo dělá tuto směnu?",
+    "addSelf": "Přihlásit se",
+    "addOther": "Přidat osobu",
+    "addOtherPlaceholder": "Vybrat osobu",
+    "remove": "Odebrat",
+    "empty": "Zatím se nikdo nepřihlásil",
+    "capacityProgress": "{count} z {capacity}",
+    "full": "Obsazeno",
+    "selfSignupDisabled": "Vlastník kalendáře vypnul samostatné přihlašování",
+    "andMore": "+{count} další",
+    "errors": {
+      "full": "Tato směna je již plně obsazena",
+      "alreadySignedUp": "Tato osoba je již přihlášena",
+      "noAccess": "Tato osoba nemá přístup ke kalendáři",
+      "addFailed": "Přihlášení se nezdařilo",
+      "removeFailed": "Odhlášení se nezdařilo"
+    },
+    "addOtherHint": "Nemůžete někoho najít? Nejdřív s ním sdílejte kalendář, pak ho tu budete moct vybrat."
   }
 }

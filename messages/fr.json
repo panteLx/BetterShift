@@ -130,7 +130,7 @@
   "form": {
     "namePlaceholder": "ex. : {example}",
     "colorLabel": "Couleur",
-    "notesLabel": "Notes (facultatif)",
+    "notesLabel": "Notes",
     "notesPlaceholder": "Informations complémentaires...",
     "urlPlaceholder": "https://..."
   },
@@ -208,7 +208,7 @@
     "deleteConfirm": "Supprimer ce modèle ? Tous les créneaux créés à partir de ce modèle seront également supprimés.",
     "secondary": "Plus",
     "hideFromStats": "Exclure des statistiques",
-    "group": "Groupe (facultatif)",
+    "group": "Groupe",
     "groupPlaceholder": "p. ex. Semaine, Week-end...",
     "selectGroupHint": "Sélectionner tous les modèles de ce groupe",
     "copiedSuffix": "copié"
@@ -800,7 +800,9 @@
     "delete": "Supprimer le modèle",
     "dragHandle": "Glisser pour réordonner",
     "secondarySection": "Sous « Plus »",
-    "markAsSecondaryHint": "N’apparaît dans la barre de modèles qu’après un clic sur « Plus »"
+    "markAsSecondaryHint": "N’apparaît dans la barre de modèles qu’après un clic sur « Plus »",
+    "defaultSignupCapacityLabel": "Nombre maximum de personnes",
+    "defaultSignupCapacityHint": "Définit combien de personnes peuvent s'inscrire aux gardes créées à partir de ce modèle. Laissez vide pour un nombre illimité. Copié à la création et modifiable pour chaque garde."
   },
   "syncSheet": {
     "intervalPill": "Toutes les {interval}",
@@ -867,7 +869,11 @@
     "publicOffBodyGuestsOn": "Seules les personnes invitées et les détenteurs d’un lien d’accès y ont accès ; les liens fonctionnent aussi sans compte. L’onglet « Public » permet d’ouvrir le calendrier à tous, y compris aux visiteurs sans compte.",
     "publicOffBodyGuestsOff": "Seules les personnes invitées et les détenteurs d’un lien d’accès y ont accès ; les destinataires d’un lien doivent se connecter, car l’accès invité est désactivé sur cette instance. L’onglet « Public » permet d’ouvrir le calendrier aux utilisateurs connectés de cette instance.",
     "linkInfoGuestsOn": "Le lien ouvre directement le calendrier, sans connexion. Vous pouvez le révoquer à tout moment dans la liste ; il cesse alors immédiatement de fonctionner.",
-    "linkInfoGuestsOff": "Le lien ouvre directement le calendrier. L’accès invité est désactivé sur cette instance : les destinataires doivent se connecter. Vous pouvez le révoquer à tout moment dans la liste ; il cesse alors immédiatement de fonctionner."
+    "linkInfoGuestsOff": "Le lien ouvre directement le calendrier. L’accès invité est désactivé sur cette instance : les destinataires doivent se connecter. Vous pouvez le révoquer à tout moment dans la liste ; il cesse alors immédiatement de fonctionner.",
+    "allowSelfSignupLabel": "Inscription autonome aux gardes",
+    "allowSelfSignupDesc": "Les membres en lecture seule peuvent s'inscrire et se desinscrire des gardes",
+    "signupsEnabledLabel": "Activer les inscriptions aux gardes",
+    "signupsEnabledDesc": "Permet aux personnes de s'inscrire aux gardes. La désactivation masque les listes d'inscription, les avatars et l'effectif maximal partout."
   },
   "shiftSheet": {
     "start": "Début",
@@ -875,7 +881,9 @@
     "duration": "Durée",
     "allDay": "Toute la journée",
     "noPreset": "Libre",
-    "createAction": "Créer le créneau"
+    "createAction": "Créer le créneau",
+    "signupCapacityLabel": "Nombre maximum de personnes",
+    "signupCapacityHint": "Définit combien de personnes peuvent s'inscrire à cette garde. Laissez vide pour un nombre illimité."
   },
   "noteSheet": {
     "createTitle": "Nouvelle entrée",
@@ -1074,5 +1082,25 @@
   "adminPagination": {
     "range": "{from}–{to} sur {total}",
     "label": "Pages"
+  },
+  "shiftSignup": {
+    "title": "Qui fait cette garde ?",
+    "addSelf": "M'inscrire",
+    "addOther": "Ajouter une personne",
+    "addOtherPlaceholder": "Selectionner une personne",
+    "remove": "Retirer",
+    "empty": "Personne ne s'est encore inscrit",
+    "capacityProgress": "{count} sur {capacity}",
+    "full": "Complet",
+    "selfSignupDisabled": "Le proprietaire du calendrier a desactive l'inscription autonome",
+    "andMore": "+{count} de plus",
+    "errors": {
+      "full": "Cette garde est deja complete",
+      "alreadySignedUp": "Cette personne est deja inscrite",
+      "noAccess": "Cette personne n'a pas acces au calendrier",
+      "addFailed": "L'inscription a echoue",
+      "removeFailed": "La desinscription a echoue"
+    },
+    "addOtherHint": "Vous ne trouvez pas quelqu'un ? Partagez d'abord le calendrier avec cette personne, vous pourrez ensuite la sélectionner ici."
   }
 }

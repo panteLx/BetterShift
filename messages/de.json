@@ -130,7 +130,7 @@
   "form": {
     "namePlaceholder": "z.B. {example}",
     "colorLabel": "Farbe",
-    "notesLabel": "Notizen (optional)",
+    "notesLabel": "Notizen",
     "notesPlaceholder": "Zusätzliche Informationen...",
     "urlPlaceholder": "https://..."
   },
@@ -208,7 +208,7 @@
     "deleteConfirm": "Diese Vorlage löschen? Alle aus dieser Vorlage erstellten Schichten werden ebenfalls gelöscht.",
     "secondary": "Weitere",
     "hideFromStats": "Aus Statistik ausblenden",
-    "group": "Gruppe (optional)",
+    "group": "Gruppe",
     "groupPlaceholder": "z.B. Wochentag, Wochenende...",
     "selectGroupHint": "Alle Vorlagen dieser Gruppe auswählen",
     "copiedSuffix": "kopiert"
@@ -800,7 +800,9 @@
     "delete": "Vorlage löschen",
     "dragHandle": "Zum Sortieren ziehen",
     "secondarySection": "Unter „Weitere“",
-    "markAsSecondaryHint": "Erscheint in der Vorlagenleiste erst nach Klick auf „Weitere“"
+    "markAsSecondaryHint": "Erscheint in der Vorlagenleiste erst nach Klick auf „Weitere“",
+    "defaultSignupCapacityLabel": "Maximale Anzahl Personen",
+    "defaultSignupCapacityHint": "Legt fest, wie viele Personen sich für Schichten aus dieser Vorlage eintragen können. Leer lassen für unbegrenzt viele Anmeldungen. Wird beim Anlegen übernommen und kann pro Schicht angepasst werden."
   },
   "syncSheet": {
     "intervalPill": "Alle {interval}",
@@ -867,7 +869,11 @@
     "publicOffBodyGuestsOn": "Zugriff haben nur eingeladene Personen und Inhaber eines Zugangslinks – Links funktionieren auch ohne Konto. Über den Reiter „Öffentlich“ kannst du den Kalender für alle freigeben, auch für Besucher ohne Konto.",
     "publicOffBodyGuestsOff": "Zugriff haben nur eingeladene Personen und Inhaber eines Zugangslinks; Link-Empfänger müssen sich anmelden, weil der Gastzugang auf dieser Instanz aus ist. Über den Reiter „Öffentlich“ kannst du den Kalender für angemeldete Nutzer dieser Instanz freigeben.",
     "linkInfoGuestsOn": "Der Link öffnet den Kalender direkt, ohne Anmeldung. Er lässt sich jederzeit in der Liste widerrufen — dann ist er sofort ungültig.",
-    "linkInfoGuestsOff": "Der Link öffnet den Kalender direkt. Weil der Gastzugang auf dieser Instanz aus ist, müssen sich Empfänger anmelden. Er lässt sich jederzeit in der Liste widerrufen — dann ist er sofort ungültig."
+    "linkInfoGuestsOff": "Der Link öffnet den Kalender direkt. Weil der Gastzugang auf dieser Instanz aus ist, müssen sich Empfänger anmelden. Er lässt sich jederzeit in der Liste widerrufen — dann ist er sofort ungültig.",
+    "allowSelfSignupLabel": "Selbstanmeldung für Schichten",
+    "allowSelfSignupDesc": "Nutzer mit Nur-Lese-Zugriff dürfen sich selbst für Schichten ein- und austragen",
+    "signupsEnabledLabel": "Schicht-Anmeldungen aktivieren",
+    "signupsEnabledDesc": "Erlaubt, dass sich Personen für Schichten eintragen. Ausgeschaltet verschwinden Anmeldelisten, Avatare und die maximale Personenanzahl aus der Ansicht."
   },
   "shiftSheet": {
     "start": "Beginn",
@@ -875,7 +881,9 @@
     "duration": "Dauer",
     "allDay": "Ganztägig",
     "noPreset": "Frei",
-    "createAction": "Schicht anlegen"
+    "createAction": "Schicht anlegen",
+    "signupCapacityLabel": "Maximale Anzahl Personen",
+    "signupCapacityHint": "Legt fest, wie viele Personen sich für diese Schicht eintragen können. Leer lassen für unbegrenzt viele Anmeldungen."
   },
   "noteSheet": {
     "createTitle": "Neuer Eintrag",
@@ -1074,5 +1082,25 @@
   "adminPagination": {
     "range": "{from}–{to} von {total}",
     "label": "Seiten"
+  },
+  "shiftSignup": {
+    "title": "Wer macht diese Schicht?",
+    "addSelf": "Mich eintragen",
+    "addOther": "Person hinzufügen",
+    "addOtherPlaceholder": "Person auswählen",
+    "remove": "Entfernen",
+    "empty": "Noch niemand eingetragen",
+    "capacityProgress": "{count} von {capacity}",
+    "full": "Voll",
+    "selfSignupDisabled": "Der Kalender-Owner hat die Selbstanmeldung deaktiviert",
+    "andMore": "+{count} weitere",
+    "errors": {
+      "full": "Für diese Schicht sind bereits alle Plätze belegt",
+      "alreadySignedUp": "Diese Person ist bereits eingetragen",
+      "noAccess": "Diese Person hat keinen Zugriff auf den Kalender",
+      "addFailed": "Eintragen ist fehlgeschlagen",
+      "removeFailed": "Austragen ist fehlgeschlagen"
+    },
+    "addOtherHint": "Person nicht in der Liste? Teile den Kalender zuerst mit ihr, dann kannst du sie hier auswählen."
   }
 }
