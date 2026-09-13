@@ -8,10 +8,15 @@ import {
   shiftPresets,
   calendarShares,
   calendarAccessTokens,
+  calendarPermissionBundles,
   externalSyncs,
 } from "@/lib/db/schema";
 import { and, asc, count, desc, eq, or, sql, type SQL } from "drizzle-orm";
-import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import {
+  alias,
+  type SQLiteColumn,
+  type SQLiteTable,
+} from "drizzle-orm/sqlite-core";
 import { isAdmin } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
@@ -35,6 +40,13 @@ const hasUserShares = sql`exists (select 1 from ${calendarShares} where ${calend
 const hasTokens = sql`exists (select 1 from ${calendarAccessTokens} where ${calendarAccessTokens.calendarId} = ${calendars.id})`;
 const hasSyncs = sql`exists (select 1 from ${externalSyncs} where ${externalSyncs.calendarId} = ${calendars.id})`;
 const isShared = sql`(${hasUserShares} or ${hasTokens})`;
+
+// guestBundleId only ever points at this calendar's seeded "Read" or
+// "Contribute" bundle (the guest/link ceiling forbids anything higher) — see
+// lib/auth/legacy-permission-compat.ts. Sorting/filtering by bundle NAME is
+// therefore a safe stand-in for the old guestPermission enum, without having
+// to inspect the bundle's capabilities JSON in raw SQL.
+const guestBundleTable = alias(calendarPermissionBundles, "guest_bundle");
 
 /** Timestamps defaulted by SQLite are "YYYY-MM-DD HH:MM:SS" text in UTC; app-written ones are unix seconds. */
 function toDate(value: unknown): Date {
@@ -118,7 +130,7 @@ export async function GET(request: NextRequest) {
       shiftsCount: sql`(select count(*) from ${shifts} where ${shifts.calendarId} = ${calendars.id})`,
       sharesCount: sql`((select count(*) from ${calendarShares} where ${calendarShares.calendarId} = ${calendars.id}) + (select count(*) from ${calendarAccessTokens} where ${calendarAccessTokens.calendarId} = ${calendars.id}))`,
       externalSyncsCount: sql`(select count(*) from ${externalSyncs} where ${externalSyncs.calendarId} = ${calendars.id})`,
-      guestPermission: sql`case ${calendars.guestPermission} when 'write' then 2 when 'read' then 1 else 0 end`,
+      guestPermission: sql`case ${guestBundleTable.name} when 'Contribute' then 2 when 'Read' then 1 else 0 end`,
     };
     const direction = order === "asc" ? asc : desc;
 
@@ -148,7 +160,7 @@ export async function GET(request: NextRequest) {
         name: calendars.name,
         color: calendars.color,
         ownerId: calendars.ownerId,
-        guestPermission: calendars.guestPermission,
+        guestBundleName: guestBundleTable.name,
         // Raw values: rows created with the SQL default hold text, not unix seconds
         createdAt: sql<unknown>`${calendars.createdAt}`,
         updatedAt: sql<unknown>`${calendars.updatedAt}`,
@@ -165,6 +177,7 @@ export async function GET(request: NextRequest) {
       })
       .from(calendars)
       .leftJoin(user, eq(calendars.ownerId, user.id))
+      .leftJoin(guestBundleTable, eq(calendars.guestBundleId, guestBundleTable.id))
       .where(where)
       .orderBy(
         asc(sql`case when ${orphaned} then 0 else 1 end`),
@@ -182,7 +195,12 @@ export async function GET(request: NextRequest) {
       owner: row.ownerUserId
         ? { name: row.ownerName, email: row.ownerEmail, image: row.ownerImage }
         : null,
-      guestPermission: row.guestPermission,
+      guestPermission:
+        row.guestBundleName === "Contribute"
+          ? "write"
+          : row.guestBundleName === "Read"
+            ? "read"
+            : "none",
       createdAt: toDate(row.createdAt),
       updatedAt: toDate(row.updatedAt),
       shiftsCount: Number(row.shiftsCount),

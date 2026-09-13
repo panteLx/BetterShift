@@ -6,8 +6,10 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { eq, and, or, ne, isNull } from "drizzle-orm";
+import { eq, and, or, ne, isNotNull, isNull } from "drizzle-orm";
 import { undismissCalendar } from "@/lib/auth/permissions";
+import { coarseLevelFromCapabilities } from "@/lib/auth/legacy-permission-compat";
+import { sanitizeCapabilities } from "@/lib/permission-bundles";
 
 /**
  * GET /api/calendars/subscriptions
@@ -24,10 +26,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Get all public calendars (guestPermission != "none", not owned by user)
+    // Get all public calendars (guestBundleId set, not owned by user)
     const allPublicCalendars = await db.query.calendars.findMany({
       where: and(
-        ne(calendars.guestPermission, "none"),
+        isNotNull(calendars.guestBundleId),
         or(isNull(calendars.ownerId), ne(calendars.ownerId, user.id))
       ),
       with: {
@@ -37,6 +39,9 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
           },
+        },
+        guestBundle: {
+          columns: { capabilities: true },
         },
       },
     });
@@ -62,6 +67,7 @@ export async function GET(request: NextRequest) {
     const userShares = await db.query.calendarShares.findMany({
       where: eq(calendarShares.userId, user.id),
       with: {
+        bundle: { columns: { capabilities: true } },
         calendar: {
           with: {
             owner: {
@@ -70,6 +76,7 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
+            guestBundle: { columns: { capabilities: true } },
           },
         },
       },
@@ -94,7 +101,11 @@ export async function GET(request: NextRequest) {
         id: cal.id,
         name: cal.name,
         color: cal.color,
-        guestPermission: cal.guestPermission,
+        guestPermission: cal.guestBundle
+          ? coarseLevelFromCapabilities(
+              sanitizeCapabilities(cal.guestBundle.capabilities)
+            )
+          : "none",
         owner: cal.owner
           ? {
               id: cal.owner.id,
@@ -110,8 +121,14 @@ export async function GET(request: NextRequest) {
       id: share.calendar.id,
       name: share.calendar.name,
       color: share.calendar.color,
-      permission: share.permission, // User's share permission level
-      guestPermission: share.calendar.guestPermission, // Calendar's guest permission (for reference)
+      permission: coarseLevelFromCapabilities(
+        sanitizeCapabilities(share.bundle.capabilities)
+      ), // User's share permission level
+      guestPermission: share.calendar.guestBundle
+        ? coarseLevelFromCapabilities(
+            sanitizeCapabilities(share.calendar.guestBundle.capabilities)
+          )
+        : "none", // Calendar's guest permission (for reference)
       owner: share.calendar.owner
         ? {
             id: share.calendar.owner.id,
@@ -136,6 +153,7 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
+            guestBundle: { columns: { capabilities: true } },
           },
         });
 
@@ -144,11 +162,19 @@ export async function GET(request: NextRequest) {
         // Check if it's also a shared calendar
         const share = userShares.find((s) => s.calendarId === sub.calendarId);
 
+        const permission = share
+          ? coarseLevelFromCapabilities(sanitizeCapabilities(share.bundle.capabilities))
+          : calendar.guestBundle
+            ? coarseLevelFromCapabilities(
+                sanitizeCapabilities(calendar.guestBundle.capabilities)
+              )
+            : "none";
+
         return {
           id: calendar.id,
           name: calendar.name,
           color: calendar.color,
-          permission: share ? share.permission : calendar.guestPermission,
+          permission,
           owner: calendar.owner
             ? {
                 id: calendar.owner.id,

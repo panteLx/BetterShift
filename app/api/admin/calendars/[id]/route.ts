@@ -16,8 +16,8 @@ import { eq, sql } from "drizzle-orm";
 import {
   requireAdmin,
   requireSuperAdmin,
-  canEditCalendar,
-  canDeleteCalendar,
+  siteAdminCanEditCalendar,
+  siteAdminCanDeleteCalendar,
 } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
@@ -25,6 +25,12 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
+import {
+  coarseLevelFromCapabilities,
+  findSeededGuestBundleId,
+  getCoarseGuestLevel,
+} from "@/lib/auth/legacy-permission-compat";
+import { sanitizeCapabilities } from "@/lib/permission-bundles";
 
 /**
  * Admin Calendar Detail API
@@ -68,7 +74,7 @@ export async function GET(
         name: calendarsTable.name,
         color: calendarsTable.color,
         ownerId: calendarsTable.ownerId,
-        guestPermission: calendarsTable.guestPermission,
+        guestBundleId: calendarsTable.guestBundleId,
         createdAt: sql<string>`${calendarsTable.createdAt}`,
         updatedAt: sql<string>`${calendarsTable.updatedAt}`,
         ownerName: userTable.name,
@@ -112,7 +118,7 @@ export async function GET(
       .select({
         id: calendarSharesTable.id,
         userId: calendarSharesTable.userId,
-        permission: calendarSharesTable.permission,
+        bundleId: calendarSharesTable.bundleId,
         createdAt: calendarSharesTable.createdAt,
         userName: userTable.name,
         userEmail: userTable.email,
@@ -127,7 +133,7 @@ export async function GET(
       .select({
         id: tokensTable.id,
         name: tokensTable.name,
-        permission: tokensTable.permission,
+        bundleId: tokensTable.bundleId,
         createdAt: sql<string>`${tokensTable.createdAt}`,
       })
       .from(tokensTable)
@@ -174,6 +180,30 @@ export async function GET(
       .from(externalSyncsTable)
       .where(eq(externalSyncsTable.calendarId, calendarId));
 
+    // Batch-resolve every bundle involved (guest, shares, tokens) to a
+    // coarse read/write/admin level for the response — see
+    // lib/auth/legacy-permission-compat.ts.
+    const bundleIds = new Set<string>();
+    if (calendar.guestBundleId) bundleIds.add(calendar.guestBundleId);
+    for (const s of shares) bundleIds.add(s.bundleId);
+    for (const t of shareTokens) bundleIds.add(t.bundleId);
+    const bundleRows =
+      bundleIds.size > 0
+        ? await db.query.calendarPermissionBundles.findMany({
+            where: (b, { inArray }) => inArray(b.id, Array.from(bundleIds)),
+            columns: { id: true, capabilities: true },
+          })
+        : [];
+    const levelByBundleId = new Map(
+      bundleRows.map((b) => [
+        b.id,
+        coarseLevelFromCapabilities(sanitizeCapabilities(b.capabilities)),
+      ])
+    );
+    const guestPermission = calendar.guestBundleId
+      ? (levelByBundleId.get(calendar.guestBundleId) ?? "none")
+      : "none";
+
     return NextResponse.json({
       id: calendar.id,
       name: calendar.name,
@@ -186,7 +216,7 @@ export async function GET(
             image: calendar.ownerImage,
           }
         : null,
-      guestPermission: calendar.guestPermission,
+      guestPermission,
       createdAt: calendar.createdAt ? new Date(calendar.createdAt) : new Date(),
       updatedAt: calendar.updatedAt ? new Date(calendar.updatedAt) : new Date(),
       shiftsCount: Number(shiftCount?.count || 0),
@@ -200,12 +230,12 @@ export async function GET(
         userName: s.userName || "",
         userEmail: s.userEmail || "",
         userImage: s.userImage,
-        permission: s.permission,
+        permission: levelByBundleId.get(s.bundleId) ?? "read",
       })),
       shareTokens: shareTokens.map((t) => ({
         id: t.id,
         name: t.name,
-        permission: t.permission,
+        permission: levelByBundleId.get(t.bundleId) ?? "read",
         createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
       })),
       externalSyncs: externalSyncsWithLastSync,
@@ -246,7 +276,7 @@ export async function PATCH(
     );
     if (rateLimitResponse) return rateLimitResponse;
 
-    if (!canEditCalendar(currentUser)) {
+    if (!siteAdminCanEditCalendar(currentUser)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -270,8 +300,9 @@ export async function PATCH(
     const updates: {
       name?: string;
       color?: string;
-      guestPermission?: "none" | "read" | "write";
+      guestBundleId?: string | null;
     } = {};
+    const changes: string[] = [];
 
     // Validate and collect allowed updates
     if (body.name !== undefined) {
@@ -282,6 +313,7 @@ export async function PATCH(
         );
       }
       updates.name = body.name.trim();
+      changes.push("name");
     }
 
     if (body.color !== undefined) {
@@ -292,6 +324,7 @@ export async function PATCH(
         );
       }
       updates.color = body.color;
+      changes.push("color");
     }
 
     if (body.guestPermission !== undefined) {
@@ -301,7 +334,11 @@ export async function PATCH(
           { status: 400 }
         );
       }
-      updates.guestPermission = body.guestPermission;
+      updates.guestBundleId = await findSeededGuestBundleId(
+        calendarId,
+        body.guestPermission
+      );
+      changes.push("guestPermission");
     }
 
     // Don't allow ownerId changes via PATCH (use transfer endpoint)
@@ -327,7 +364,6 @@ export async function PATCH(
       .returning();
 
     // Audit log
-    const changes = Object.keys(updates);
     await logAuditEvent({
       request,
       action: "admin.calendar.update",
@@ -340,14 +376,18 @@ export async function PATCH(
         oldValues: {
           name: calendar.name,
           color: calendar.color,
-          guestPermission: calendar.guestPermission,
+          guestPermission: await getCoarseGuestLevel(calendar.guestBundleId),
         },
         newValues: updates,
         updatedBy: currentUser.email,
       },
     });
 
-    return NextResponse.json(updatedCalendar);
+    return NextResponse.json({
+      ...updatedCalendar,
+      guestPermission: await getCoarseGuestLevel(updatedCalendar.guestBundleId),
+      guestBundleId: undefined,
+    });
   } catch (error) {
     console.error("[Admin Calendar Update API] Error:", error);
 
@@ -392,7 +432,7 @@ export async function DELETE(
     );
     if (rateLimitResponse) return rateLimitResponse;
 
-    if (!canDeleteCalendar(currentUser)) {
+    if (!siteAdminCanDeleteCalendar(currentUser)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

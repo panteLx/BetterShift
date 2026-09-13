@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canEditCalendar, getCalendarMembers } from "@/lib/auth/permissions";
+import { hasCapability, getCalendarMembers } from "@/lib/auth/permissions";
 
 // GET minimal member list (owner + shares) for a calendar.
 // Used to pick who to add to a shift's signup list — deliberately narrower
@@ -13,7 +13,7 @@ export async function GET(
     const { id: calendarId } = await params;
     const user = await getSessionUser(request.headers);
 
-    const hasAccess = await canEditCalendar(user?.id, calendarId);
+    const hasAccess = await hasCapability(user?.id, calendarId, "viewMembers");
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },

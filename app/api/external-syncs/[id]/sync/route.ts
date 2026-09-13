@@ -4,7 +4,7 @@ import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canEditCalendar } from "@/lib/auth/permissions";
+import { hasCapability } from "@/lib/auth/permissions";
 import {
   expandRecurringEvents,
   splitMultiDayEvent,
@@ -490,7 +490,11 @@ export async function POST(
     }
 
     // Check edit permissions (works for both authenticated users and guests)
-    const hasAccess = await canEditCalendar(user?.id, externalSync.calendarId);
+    const hasAccess = await hasCapability(
+      user?.id,
+      externalSync.calendarId,
+      "manageExternalSync"
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },

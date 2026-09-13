@@ -10,9 +10,15 @@ import { eq, sql } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import {
   canViewCalendar,
-  canManageCalendar,
   canDeleteCalendar,
+  hasCapability,
 } from "@/lib/auth/permissions";
+import {
+  getCoarseGuestLevel,
+  findSeededGuestBundleId,
+  setBundleCapability,
+  findSeededBundleId,
+} from "@/lib/auth/legacy-permission-compat";
 import {
   calendarViewSettingsEqual,
   sanitizeCalendarViewSettings,
@@ -112,9 +118,30 @@ export async function PATCH(
       );
     }
 
-    // Check admin permission (works for both authenticated users and guests)
-    const hasAccess = await canManageCalendar(user?.id, id);
-    if (!hasAccess) {
+    // guestPermission is gated separately from the rest of the calendar's
+    // settings — a bundle can hold manageCalendarSettings without
+    // manageGuestAccess, or vice versa.
+    const wantsGuestChange = guestPermission !== undefined;
+    const wantsGeneralChange =
+      name !== undefined ||
+      color !== undefined ||
+      viewSettings !== undefined ||
+      typeof allowSelfSignup === "boolean" ||
+      typeof signupsEnabled === "boolean";
+
+    if (
+      (wantsGeneralChange || !wantsGuestChange) &&
+      !(await hasCapability(user?.id, id, "manageCalendarSettings"))
+    ) {
+      return NextResponse.json(
+        { error: "Insufficient permissions. Admin access required." },
+        { status: 403 }
+      );
+    }
+    if (
+      wantsGuestChange &&
+      !(await hasCapability(user?.id, id, "manageGuestAccess"))
+    ) {
       return NextResponse.json(
         { error: "Insufficient permissions. Admin access required." },
         { status: 403 }
@@ -136,23 +163,30 @@ export async function PATCH(
       changes.push("color");
     }
     if (
-      guestPermission !== undefined &&
-      guestPermission !== existingCalendar.guestPermission
+      wantsGuestChange &&
+      ["none", "read", "write"].includes(guestPermission)
     ) {
-      // Validate guest permission value
-      if (["none", "read", "write"].includes(guestPermission)) {
-        updateData.guestPermission = guestPermission;
+      const currentLevel = await getCoarseGuestLevel(
+        existingCalendar.guestBundleId
+      );
+      if (guestPermission !== currentLevel) {
+        updateData.guestBundleId = await findSeededGuestBundleId(
+          id,
+          guestPermission
+        );
         changes.push("guestPermission");
         guestPermissionChanged = true;
-        oldGuestPermission = existingCalendar.guestPermission;
+        oldGuestPermission = currentLevel;
       }
     }
-    if (
-      typeof allowSelfSignup === "boolean" &&
-      allowSelfSignup !== existingCalendar.allowSelfSignup
-    ) {
-      updateData.allowSelfSignup = allowSelfSignup;
-      changes.push("allowSelfSignup");
+    if (typeof allowSelfSignup === "boolean") {
+      const readBundleId = await findSeededBundleId(id, "read");
+      if (
+        readBundleId &&
+        (await setBundleCapability(readBundleId, "signUpSelf", allowSelfSignup))
+      ) {
+        changes.push("allowSelfSignup");
+      }
     }
     if (
       typeof signupsEnabled === "boolean" &&
@@ -220,10 +254,7 @@ export async function PATCH(
               | "none"
               | "read"
               | "write",
-            newPermission: calendar.guestPermission as
-              | "none"
-              | "read"
-              | "write",
+            newPermission: guestPermission as "none" | "read" | "write",
           },
           request,
         });

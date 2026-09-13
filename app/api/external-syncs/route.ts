@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { externalSyncs, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -104,7 +104,11 @@ export async function POST(request: NextRequest) {
 
     // Check edit permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    const hasAccess = await canEditCalendar(user?.id, calendarId);
+    const hasAccess = await hasCapability(
+      user?.id,
+      calendarId,
+      "manageExternalSync"
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },

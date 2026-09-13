@@ -6,7 +6,12 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { checkPermission } from "@/lib/auth/permissions";
+import { hasCapability, isCalendarOwner } from "@/lib/auth/permissions";
+import {
+  coarseLevelFromCapabilities,
+  findSeededBundleId,
+} from "@/lib/auth/legacy-permission-compat";
+import { sanitizeCapabilities } from "@/lib/permission-bundles";
 import { eq, and } from "drizzle-orm";
 import { logAuditEvent } from "@/lib/audit-log";
 
@@ -19,7 +24,11 @@ export async function GET(
     const user = await getSessionUser(request.headers);
 
     // Check if user has admin/owner permission
-    const hasPermission = await checkPermission(user?.id, calendarId, "admin");
+    const hasPermission = await hasCapability(
+      user?.id,
+      calendarId,
+      "manageShares"
+    );
     if (!hasPermission) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
@@ -46,11 +55,23 @@ export async function GET(
             email: true,
           },
         },
+        bundle: {
+          columns: {
+            capabilities: true,
+          },
+        },
       },
       orderBy: (shares, { desc }) => [desc(shares.createdAt)],
     });
 
-    return NextResponse.json(shares);
+    const sharesWithPermission = shares.map(({ bundle, ...share }) => ({
+      ...share,
+      permission: coarseLevelFromCapabilities(
+        sanitizeCapabilities(bundle.capabilities)
+      ),
+    }));
+
+    return NextResponse.json(sharesWithPermission);
   } catch (error) {
     console.error("Failed to fetch calendar shares:", error);
     return NextResponse.json(
@@ -73,7 +94,11 @@ export async function POST(
     }
 
     // Check if user has admin/owner permission
-    const hasPermission = await checkPermission(user.id, calendarId, "admin");
+    const hasPermission = await hasCapability(
+      user.id,
+      calendarId,
+      "manageShares"
+    );
     if (!hasPermission) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
@@ -104,7 +129,7 @@ export async function POST(
 
     // Only owner can grant admin permissions
     if (permission === "admin") {
-      const isOwner = await checkPermission(user.id, calendarId, "owner");
+      const isOwner = await isCalendarOwner(user.id, calendarId);
       if (!isOwner) {
         return NextResponse.json(
           { error: "Only the owner can grant admin permissions" },
@@ -181,6 +206,15 @@ export async function POST(
       });
     }
 
+    // Resolve the legacy enum value to this calendar's matching seeded bundle
+    const bundleId = await findSeededBundleId(calendarId, permission);
+    if (!bundleId) {
+      return NextResponse.json(
+        { error: "Calendar is missing its seeded permission bundles" },
+        { status: 500 }
+      );
+    }
+
     // Create share
     const [newShare] = await db
       .insert(calendarShares)
@@ -188,7 +222,7 @@ export async function POST(
         id: crypto.randomUUID(),
         calendarId,
         userId: targetUserId,
-        permission,
+        bundleId,
         sharedBy: user.id,
         createdAt: new Date(),
       })
@@ -230,7 +264,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(shareWithUser, { status: 201 });
+    return NextResponse.json(
+      { ...shareWithUser, permission },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Failed to create calendar share:", error);
     return NextResponse.json(

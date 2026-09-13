@@ -18,6 +18,8 @@ import {
 } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
+import { coarseLevelFromCapabilities } from "@/lib/auth/legacy-permission-compat";
+import { sanitizeCapabilities } from "@/lib/permission-bundles";
 import { auth } from "@/lib/auth";
 import {
   getValidatedAdminUser,
@@ -76,12 +78,12 @@ export async function GET(
       .where(eq(calendarsTable.ownerId, targetUserId));
 
     // Get shared calendars (with calendar name and permission)
-    const sharedCalendars = await db
+    const sharedCalendarRows = await db
       .select({
         id: calendarSharesTable.id,
         calendarId: calendarSharesTable.calendarId,
         name: calendarsTable.name,
-        permission: calendarSharesTable.permission,
+        bundleId: calendarSharesTable.bundleId,
         createdAt: calendarSharesTable.createdAt,
       })
       .from(calendarSharesTable)
@@ -90,6 +92,27 @@ export async function GET(
         eq(calendarSharesTable.calendarId, calendarsTable.id)
       )
       .where(eq(calendarSharesTable.userId, targetUserId));
+
+    const shareBundleIds = Array.from(
+      new Set(sharedCalendarRows.map((s) => s.bundleId))
+    );
+    const shareBundleRows =
+      shareBundleIds.length > 0
+        ? await db.query.calendarPermissionBundles.findMany({
+            where: (b, { inArray }) => inArray(b.id, shareBundleIds),
+            columns: { id: true, capabilities: true },
+          })
+        : [];
+    const shareLevelByBundleId = new Map(
+      shareBundleRows.map((b) => [
+        b.id,
+        coarseLevelFromCapabilities(sanitizeCapabilities(b.capabilities)),
+      ])
+    );
+    const sharedCalendars = sharedCalendarRows.map((share) => ({
+      ...share,
+      permission: shareLevelByBundleId.get(share.bundleId) ?? "read",
+    }));
 
     const sharesCount = sharedCalendars.length;
 

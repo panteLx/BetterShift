@@ -7,8 +7,12 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 import { sql, eq, or, and } from "drizzle-orm";
+import {
+  getUserAccessibleCalendars,
+  getShiftSignupPermission,
+  seedPermissionBundles,
+} from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
@@ -16,6 +20,14 @@ import {
   getTokensFromCookie,
   validateAccessToken,
 } from "@/lib/auth/token-auth";
+import {
+  coarseLevelFromCapabilities,
+  findSeededGuestBundleId,
+} from "@/lib/auth/legacy-permission-compat";
+import {
+  defaultBundleDefinitionsForNewCalendar,
+  sanitizeCapabilities,
+} from "@/lib/permission-bundles";
 
 // GET all calendars (only those accessible to the user)
 export async function GET(request: Request) {
@@ -37,8 +49,7 @@ export async function GET(request: Request) {
         name: calendars.name,
         color: calendars.color,
         ownerId: calendars.ownerId,
-        guestPermission: calendars.guestPermission,
-        allowSelfSignup: calendars.allowSelfSignup,
+        guestBundleId: calendars.guestBundleId,
         signupsEnabled: calendars.signupsEnabled,
         viewSettings: calendars.viewSettings,
         createdAt: calendars.createdAt,
@@ -55,16 +66,17 @@ export async function GET(request: Request) {
     // If user is authenticated, fetch additional metadata
     let subscriptions: Map<string, { status: string; source: string }> =
       new Map();
-    let shares: Map<string, string> = new Map();
-    const tokens: Map<string, "read" | "write"> = new Map();
+    let shares: Map<string, string> = new Map(); // calendarId -> bundleId
 
-    // Get token permissions (works for both guests and authenticated users)
+    // Get token bundles (works for both guests and authenticated users)
+    const tokens: Map<string, string> = new Map(); // calendarId -> bundleId
     const userTokens = await getTokensFromCookie();
     for (const tokenData of userTokens) {
-      // Validate token is still valid
+      // Validate token is still valid — use the freshly validated bundle,
+      // not the cookie's own (possibly stale) copy
       const validation = await validateAccessToken(tokenData.token);
       if (validation && validation.calendarId === tokenData.calendarId) {
-        tokens.set(tokenData.calendarId, tokenData.permission);
+        tokens.set(tokenData.calendarId, validation.bundleId);
       }
     }
 
@@ -87,30 +99,72 @@ export async function GET(request: Request) {
       const userShares = await db.query.calendarShares.findMany({
         where: eq(sql`${calendarShares.userId}`, user.id),
       });
-      shares = new Map(userShares.map((s) => [s.calendarId, s.permission]));
+      shares = new Map(userShares.map((s) => [s.calendarId, s.bundleId]));
     }
 
+    // Batch-resolve every bundle involved (guest, share, token) to its
+    // capabilities so the legacy read/write/admin fields below stay a plain
+    // in-memory lookup — see lib/auth/legacy-permission-compat.ts.
+    const bundleIds = new Set<string>();
+    for (const cal of userCalendars) {
+      if (cal.guestBundleId) bundleIds.add(cal.guestBundleId);
+    }
+    for (const bundleId of shares.values()) bundleIds.add(bundleId);
+    for (const bundleId of tokens.values()) bundleIds.add(bundleId);
+    const bundleRows =
+      bundleIds.size > 0
+        ? await db.query.calendarPermissionBundles.findMany({
+            where: (b, { inArray }) => inArray(b.id, Array.from(bundleIds)),
+            columns: { id: true, capabilities: true },
+          })
+        : [];
+    const capabilitiesByBundleId = new Map(
+      bundleRows.map((row) => [row.id, sanitizeCapabilities(row.capabilities)])
+    );
+
     // Enrich calendars with permission metadata
-    const enrichedCalendars = userCalendars.map((cal) => {
-      const share = shares.get(cal.id);
-      const subscription = subscriptions.get(cal.id);
-      const token = tokens.get(cal.id);
+    const enrichedCalendars = await Promise.all(
+      userCalendars.map(async (cal) => {
+        const shareBundleId = shares.get(cal.id);
+        const subscription = subscriptions.get(cal.id);
+        const tokenBundleId = tokens.get(cal.id);
 
-      // Determine subscription source
-      let subscriptionSource: "guest" | "shared" | "token" | undefined =
-        subscription?.source as "guest" | "shared" | undefined;
-      if (token && !share && !subscription) {
-        subscriptionSource = "token";
-      }
+        // Determine subscription source
+        let subscriptionSource: "guest" | "shared" | "token" | undefined =
+          subscription?.source as "guest" | "shared" | undefined;
+        if (tokenBundleId && !shareBundleId && !subscription) {
+          subscriptionSource = "token";
+        }
 
-      return {
-        ...cal,
-        sharePermission: share || undefined,
-        tokenPermission: token || undefined,
-        isSubscribed: !!subscription || !!token,
-        subscriptionSource,
-      };
-    });
+        const signupPermission = await getShiftSignupPermission(
+          user?.id,
+          cal.id
+        );
+
+        return {
+          ...cal,
+          guestPermission: cal.guestBundleId
+            ? coarseLevelFromCapabilities(
+                capabilitiesByBundleId.get(cal.guestBundleId) ?? []
+              )
+            : "none",
+          sharePermission: shareBundleId
+            ? coarseLevelFromCapabilities(
+                capabilitiesByBundleId.get(shareBundleId) ?? []
+              )
+            : undefined,
+          tokenPermission: tokenBundleId
+            ? coarseLevelFromCapabilities(
+                capabilitiesByBundleId.get(tokenBundleId) ?? []
+              )
+            : undefined,
+          canSignUpSelf: signupPermission.canManageOwn,
+          canSignUpOthers: signupPermission.canManageOthers,
+          isSubscribed: !!subscription || !!tokenBundleId,
+          subscriptionSource,
+        };
+      })
+    );
 
     return NextResponse.json(enrichedCalendars);
   } catch (error) {
@@ -155,9 +209,29 @@ export async function POST(request: NextRequest) {
         name,
         color: color || "#3b82f6",
         ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
-        guestPermission: guestPermission || "none",
       })
       .returning();
+
+    // Every calendar always ships with the four recommended bundles, so it's
+    // never "configured from nothing" — see lib/permission-bundles.ts.
+    await seedPermissionBundles(
+      calendar.id,
+      defaultBundleDefinitionsForNewCalendar()
+    );
+
+    if (guestPermission && guestPermission !== "none") {
+      const guestBundleId = await findSeededGuestBundleId(
+        calendar.id,
+        guestPermission
+      );
+      if (guestBundleId) {
+        await db
+          .update(calendars)
+          .set({ guestBundleId })
+          .where(eq(calendars.id, calendar.id));
+        calendar.guestBundleId = guestBundleId;
+      }
+    }
 
     // Log calendar creation event
     if (user) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { checkPermission } from "@/lib/auth/permissions";
+import { hasCapability } from "@/lib/auth/permissions";
 import { or, and, ne, sql } from "drizzle-orm";
 import { user as userTable } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limiter";
@@ -46,10 +46,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Only calendar admins/owners may search for users to share the calendar with
-    const hasPermission = await checkPermission(
+    const hasPermission = await hasCapability(
       currentUser.id,
       calendarId,
-      "admin"
+      "manageShares"
     );
     if (!hasPermission) {
       return NextResponse.json(

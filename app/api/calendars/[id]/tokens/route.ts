@@ -3,7 +3,13 @@ import { db } from "@/lib/db";
 import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { checkPermission } from "@/lib/auth/permissions";
+import { hasCapability } from "@/lib/auth/permissions";
+import {
+  findSeededBundleId,
+  coarseLevelFromCapabilities,
+  type LegacyShareLevel,
+} from "@/lib/auth/legacy-permission-compat";
+import { sanitizeCapabilities } from "@/lib/permission-bundles";
 import { generateAccessToken } from "@/lib/auth/token-auth";
 import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
@@ -21,10 +27,12 @@ export async function GET(
     const { id: calendarId } = await params;
     const user = await getSessionUser(request.headers);
 
-    // Check permissions (admin or owner only)
-    const canManage =
-      (await checkPermission(user?.id, calendarId, "admin")) ||
-      (await checkPermission(user?.id, calendarId, "owner"));
+    // Check permissions
+    const canManage = await hasCapability(
+      user?.id,
+      calendarId,
+      "manageGuestAccess"
+    );
 
     if (!canManage) {
       return NextResponse.json(
@@ -39,7 +47,7 @@ export async function GET(
         id: calendarAccessTokens.id,
         token: calendarAccessTokens.token,
         name: calendarAccessTokens.name,
-        permission: calendarAccessTokens.permission,
+        bundleId: calendarAccessTokens.bundleId,
         expiresAt: calendarAccessTokens.expiresAt,
         createdBy: calendarAccessTokens.createdBy,
         createdAt: calendarAccessTokens.createdAt,
@@ -51,9 +59,28 @@ export async function GET(
       .where(eq(calendarAccessTokens.calendarId, calendarId))
       .orderBy(desc(calendarAccessTokens.createdAt));
 
+    // Resolve each token's bundleId back to the coarse read/write level for the response
+    const distinctBundleIds = Array.from(
+      new Set(tokens.map((token) => token.bundleId))
+    );
+    const bundles = distinctBundleIds.length
+      ? await db.query.calendarPermissionBundles.findMany({
+          where: (b, { inArray }) => inArray(b.id, distinctBundleIds),
+          columns: { id: true, capabilities: true },
+        })
+      : [];
+    const levelByBundleId = new Map<string, LegacyShareLevel>(
+      bundles.map((bundle) => [
+        bundle.id,
+        coarseLevelFromCapabilities(sanitizeCapabilities(bundle.capabilities)),
+      ])
+    );
+
     // Return partial tokens (first 6 chars) for security
     const sanitizedTokens = tokens.map((token) => ({
       ...token,
+      permission: levelByBundleId.get(token.bundleId) ?? "read",
+      bundleId: undefined,
       tokenPreview: `${token.token.slice(0, 6)}...`,
       token: undefined, // Remove full token from response
     }));
@@ -97,10 +124,12 @@ export async function POST(
     );
     if (rateLimitResponse) return rateLimitResponse;
 
-    // Check permissions (admin or owner only)
-    const canManage =
-      (await checkPermission(user.id, calendarId, "admin")) ||
-      (await checkPermission(user.id, calendarId, "owner"));
+    // Check permissions
+    const canManage = await hasCapability(
+      user.id,
+      calendarId,
+      "manageGuestAccess"
+    );
 
     if (!canManage) {
       return NextResponse.json(
@@ -146,6 +175,15 @@ export async function POST(
       }
     }
 
+    // Resolve the legacy permission to this calendar's matching seeded bundle
+    const bundleId = await findSeededBundleId(calendarId, permission);
+    if (!bundleId) {
+      return NextResponse.json(
+        { error: "Calendar is missing its seeded permission bundles" },
+        { status: 500 }
+      );
+    }
+
     // Generate secure token
     const token = generateAccessToken();
 
@@ -163,7 +201,7 @@ export async function POST(
         calendarId,
         token,
         name: name || null,
-        permission,
+        bundleId,
         expiresAt: expiresAtDate,
         createdBy: user.id,
       })
@@ -191,6 +229,8 @@ export async function POST(
     return NextResponse.json(
       {
         ...newToken,
+        bundleId: undefined,
+        permission,
         token, // Full token returned ONLY on creation
         tokenPreview: `${token.slice(0, 6)}...`,
       },

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { shiftPresets, calendars } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 
 // GET all presets for a calendar
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check edit permission (works for both authenticated users and guests)
-    const hasAccess = await canEditCalendar(user?.id, calendarId);
+    const hasAccess = await hasCapability(user?.id, calendarId, "managePresets");
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

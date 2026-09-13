@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { canViewCalendar, hasCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
@@ -131,7 +131,11 @@ export async function POST(request: Request) {
 
     // Check permissions (works for both authenticated users and guests)
     const user = await getSessionUser(request.headers);
-    const hasAccess = await canEditCalendar(user?.id, calendar.id);
+    const hasAccess = await hasCapability(
+      user?.id,
+      calendar.id,
+      "manageNotesEvents"
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auditLogs, syncLogs } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import {
-  getUserAccessibleCalendars,
-  type CalendarPermission,
-} from "@/lib/auth/permissions";
+import { getUserAccessibleCalendars, hasCapability } from "@/lib/auth/permissions";
 import { eq, and, desc, gte, lte, inArray, sql } from "drizzle-orm";
 import { parseLocalDate } from "@/lib/date-utils";
 
@@ -266,15 +263,17 @@ export async function DELETE(request: NextRequest) {
     // history. That matches what write access already allows (editing and
     // deleting the shifts those logs describe), but it is a deliberate
     // boundary rather than a per-user delete.
-    const editablePermissions: CalendarPermission[] = [
-      "owner",
-      "admin",
-      "write",
-    ];
     const accessibleCalendars = await getUserAccessibleCalendars(user.id);
-    const calendarIds = accessibleCalendars
-      .filter((cal) => editablePermissions.includes(cal.permission))
-      .map((cal) => cal.id);
+    const calendarIds = (
+      await Promise.all(
+        accessibleCalendars.map(async (cal) => {
+          if (cal.isOwner || (await hasCapability(user.id, cal.id, "deleteSyncLogs"))) {
+            return cal.id;
+          }
+          return null;
+        })
+      )
+    ).filter((id): id is string => id !== null);
 
     if (calendarIds.length > 0) {
       await db

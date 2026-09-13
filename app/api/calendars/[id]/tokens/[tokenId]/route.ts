@@ -3,7 +3,12 @@ import { db } from "@/lib/db";
 import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { checkPermission } from "@/lib/auth/permissions";
+import { hasCapability } from "@/lib/auth/permissions";
+import {
+  findSeededBundleId,
+  coarseLevelFromCapabilities,
+} from "@/lib/auth/legacy-permission-compat";
+import { sanitizeCapabilities } from "@/lib/permission-bundles";
 import { logAuditEvent } from "@/lib/audit-log";
 
 /**
@@ -27,10 +32,12 @@ export async function PATCH(
       );
     }
 
-    // Check permissions (admin or owner only)
-    const canManage =
-      (await checkPermission(user.id, calendarId, "admin")) ||
-      (await checkPermission(user.id, calendarId, "owner"));
+    // Check permissions
+    const canManage = await hasCapability(
+      user.id,
+      calendarId,
+      "manageGuestAccess"
+    );
 
     if (!canManage) {
       return NextResponse.json(
@@ -101,7 +108,16 @@ export async function PATCH(
     // Build update object
     const updates: Partial<typeof calendarAccessTokens.$inferInsert> = {};
     if (name !== undefined) updates.name = name;
-    if (permission !== undefined) updates.permission = permission;
+    if (permission !== undefined) {
+      const bundleId = await findSeededBundleId(calendarId, permission);
+      if (!bundleId) {
+        return NextResponse.json(
+          { error: "Calendar is missing its seeded permission bundles" },
+          { status: 500 }
+        );
+      }
+      updates.bundleId = bundleId;
+    }
     if (expiresAtDate !== undefined) updates.expiresAt = expiresAtDate;
     if (isActive !== undefined) updates.isActive = isActive;
 
@@ -136,9 +152,20 @@ export async function PATCH(
       isUserVisible: true,
     });
 
+    // Resolve the token's bundle back to the coarse read/write level for the response
+    const updatedBundle = await db.query.calendarPermissionBundles.findFirst({
+      where: (b, { eq: eqOp }) => eqOp(b.id, updatedToken.bundleId),
+      columns: { capabilities: true },
+    });
+    const resolvedPermission = coarseLevelFromCapabilities(
+      sanitizeCapabilities(updatedBundle?.capabilities)
+    );
+
     // Return sanitized token (no full token)
     return NextResponse.json({
       ...updatedToken,
+      bundleId: undefined,
+      permission: resolvedPermission,
       tokenPreview: `${updatedToken.token.slice(0, 6)}...`,
       token: undefined,
     });
@@ -174,10 +201,12 @@ export async function DELETE(
       );
     }
 
-    // Check permissions (admin or owner only)
-    const canManage =
-      (await checkPermission(user.id, calendarId, "admin")) ||
-      (await checkPermission(user.id, calendarId, "owner"));
+    // Check permissions
+    const canManage = await hasCapability(
+      user.id,
+      calendarId,
+      "manageGuestAccess"
+    );
 
     if (!canManage) {
       return NextResponse.json(
@@ -224,7 +253,7 @@ export async function DELETE(
         tokenId,
         tokenName: token.name || "Unnamed",
         calendarName: calendar?.name || "Unknown",
-        permission: token.permission,
+        bundleId: token.bundleId,
         usageCount: token.usageCount,
       },
       request,
