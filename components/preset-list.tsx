@@ -26,7 +26,12 @@ import { ListRow, Pill, RowIconButton, SectionLabel } from "@/components/form-ki
 import { cn } from "@/lib/utils";
 
 interface PresetRowActions {
-  readOnly: boolean;
+  /** Per-preset Own/Any check — edit/delete depend on who created that preset. */
+  canEdit: (preset: ShiftPreset) => boolean;
+  /** Cloning creates a new preset, so it's gated calendar-wide, not per-row. */
+  canClone: boolean;
+  /** Reordering changes the shared order for everyone, so it needs manageAnyPresets. */
+  canReorder: boolean;
   editingId: string | null;
   deletingId: string | null;
   cloningId: string | null;
@@ -43,7 +48,8 @@ interface SortablePresetRowProps extends PresetRowActions {
 function SortablePresetRow({
   preset,
   draggable,
-  readOnly,
+  canEdit,
+  canClone,
   editingId,
   deletingId,
   cloningId,
@@ -62,6 +68,7 @@ function SortablePresetRow({
     isDragging,
   } = useSortable({ id: preset.id, disabled: !draggable });
   const busy = deletingId === preset.id || cloningId === preset.id;
+  const editable = canEdit(preset);
 
   return (
     <div
@@ -108,27 +115,33 @@ function SortablePresetRow({
             )}
           </div>
         </div>
-        {!readOnly && (
+        {(canClone || editable) && (
           <>
-            <RowIconButton
-              icon={Copy}
-              label={t("common.copy")}
-              onClick={() => onClone(preset)}
-              disabled={busy}
-            />
-            <RowIconButton
-              icon={Pencil}
-              label={t("preset.edit")}
-              onClick={() => onEdit(preset)}
-              disabled={busy}
-            />
-            <RowIconButton
-              icon={Trash2}
-              tone="danger"
-              label={t("presetSheet.delete")}
-              onClick={() => onDelete(preset)}
-              disabled={busy}
-            />
+            {canClone && (
+              <RowIconButton
+                icon={Copy}
+                label={t("common.copy")}
+                onClick={() => onClone(preset)}
+                disabled={busy}
+              />
+            )}
+            {editable && (
+              <RowIconButton
+                icon={Pencil}
+                label={t("preset.edit")}
+                onClick={() => onEdit(preset)}
+                disabled={busy}
+              />
+            )}
+            {editable && (
+              <RowIconButton
+                icon={Trash2}
+                tone="danger"
+                label={t("presetSheet.delete")}
+                onClick={() => onDelete(preset)}
+                disabled={busy}
+              />
+            )}
           </>
         )}
       </ListRow>
@@ -159,7 +172,7 @@ function PresetSubgroup({
   ...actions
 }: PresetSubgroupProps) {
   const ids = subgroupPresets.map((p) => p.id);
-  const draggable = !actions.readOnly && subgroupPresets.length > 1;
+  const draggable = actions.canReorder && subgroupPresets.length > 1;
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;

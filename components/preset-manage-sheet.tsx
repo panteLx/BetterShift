@@ -41,7 +41,15 @@ export function PresetsPanel({
   const t = useTranslations();
   const permission = useCalendarPermission(calendarId);
   const desktop = useMediaQuery(DESKTOP_QUERY, false);
-  const isReadOnly = readOnly || !permission.canEdit;
+  // Creating a new preset and reordering the shared list are calendar-wide;
+  // editing/deleting an existing one depends on who created it (Own/Any).
+  const canCreate = !readOnly && permission.can("createPreset");
+  const canReorder = !readOnly && permission.can("manageAnyPresets");
+  const canEditPreset = (preset: ShiftPreset) =>
+    !readOnly && permission.canOwned("manageOwnPresets", "manageAnyPresets", preset.createdBy);
+  // Banner-level "no preset capability at all" — individual actions still gate themselves.
+  const isReadOnly =
+    readOnly || (!permission.can("createPreset") && !permission.can("manageOwnPresets"));
   const { presets, loading, createPreset, updatePreset, deletePreset, reorderPresets } =
     usePresets(calendarId);
 
@@ -60,7 +68,10 @@ export function PresetsPanel({
   // Holds the dropped order until the reorder request settles, so rows don't snap back.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
 
-  const isDirty = !isReadOnly && !samePresetForm(formData, baseline);
+  // The create-form is shown for a new preset; the same form area is reused
+  // for editing, reachable only via an already-gated Edit button.
+  const formVisible = editingPreset ? canEditPreset(editingPreset) : canCreate;
+  const isDirty = formVisible && !samePresetForm(formData, baseline);
   const canSave = !isSaving && formData.title.trim() !== "" && (!editingPreset || isDirty);
 
   useReportDirty(isDirty, onDirtyChange);
@@ -91,6 +102,7 @@ export function PresetsPanel({
   };
 
   const saveOrder = async (next: ShiftPreset[]) => {
+    if (!canReorder) return;
     const ids = next.map((p) => p.id);
     setPendingOrder(ids);
     const success = await reorderPresets(ids.map((id, order) => ({ id, order })));
@@ -115,7 +127,7 @@ export function PresetsPanel({
   };
 
   const clonePreset = async (preset: ShiftPreset) => {
-    if (isReadOnly || isSaving || cloningId) return;
+    if (!canCreate || isSaving || cloningId) return;
     setCloningId(preset.id);
     try {
       const success = await createPreset({
@@ -165,7 +177,9 @@ export function PresetsPanel({
   };
 
   const rowActions = {
-    readOnly: isReadOnly,
+    canEdit: canEditPreset,
+    canClone: canCreate,
+    canReorder,
     editingId: editingPreset?.id ?? null,
     deletingId,
     cloningId,
@@ -207,7 +221,7 @@ export function PresetsPanel({
           />
         )}
 
-        {!isReadOnly && (
+        {formVisible && (
           <PresetFormCard
             formId={formId}
             editing={!!editingPreset}
@@ -222,7 +236,7 @@ export function PresetsPanel({
         )}
       </PanelBody>
 
-      {!isReadOnly && (
+      {formVisible && (
         <PanelFooter>
           <Button
             type="button"
