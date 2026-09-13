@@ -91,11 +91,11 @@ const MANAGE_BASE: Capability[] = [
   "signUpOthers",
   "viewMembers",
   "managePresets",
-  "manageExternalSync",
-  "deleteSyncLogs",
 ];
 const ADMIN_BASE: Capability[] = [
   ...MANAGE_BASE,
+  "manageExternalSync",
+  "deleteSyncLogs",
   "manageShares",
   "manageGuestAccess",
   "manageCalendarSettings",
@@ -103,9 +103,10 @@ const ADMIN_BASE: Capability[] = [
 
 /**
  * Recommended defaults for a newly created calendar. Reflects the audit
- * findings from the design doc: shift editing, preset editing, external sync
- * config and sync-log deletion require Manage; creating shifts and presets
- * stays available at Contribute.
+ * findings from the design doc: shift editing and preset editing require
+ * Manage; creating shifts and presets stays available at Contribute; external
+ * sync config and sync-log deletion require Admin (touches external
+ * credentials/URLs, more sensitive than day-to-day calendar management).
  */
 export function defaultBundleDefinitionsForNewCalendar(): BundleDefinition[] {
   return [
