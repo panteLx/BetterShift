@@ -27,6 +27,7 @@ export async function GET(
         notes: shifts.notes,
         isAllDay: shifts.isAllDay,
         isSecondary: shifts.isSecondary,
+        signupCapacity: shifts.signupCapacity,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,
         calendar: {
@@ -165,6 +166,12 @@ export async function PUT(
         notes: body.notes ?? existingShift.notes,
         isAllDay: body.isAllDay ?? existingShift.isAllDay,
         presetId: body.presetId ?? existingShift.presetId,
+        signupCapacity:
+          typeof body.signupCapacity === "number"
+            ? body.signupCapacity
+            : body.signupCapacity === null
+              ? null
+              : existingShift.signupCapacity,
         updatedAt: new Date(),
       })
       .where(eq(shifts.id, id))

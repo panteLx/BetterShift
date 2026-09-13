@@ -11,6 +11,7 @@ import {
   getTokensFromCookie,
   validateAccessToken,
 } from "@/lib/auth/token-auth";
+import type { CalendarMember } from "@/lib/types";
 
 /**
  * Calendar permission levels
@@ -47,12 +48,28 @@ export async function getUserCalendarPermission(
   userId: string | null | undefined,
   calendarId: string
 ): Promise<CalendarPermission | null> {
+  return (await getUserCalendarPermissionWithCalendar(userId, calendarId))
+    .permission;
+}
+
+/**
+ * Same resolution as getUserCalendarPermission, but also returns the calendar
+ * row it already fetched — lets callers that need calendar columns (e.g.
+ * getShiftSignupPermission) avoid a second round trip for the same row.
+ */
+async function getUserCalendarPermissionWithCalendar(
+  userId: string | null | undefined,
+  calendarId: string
+): Promise<{
+  permission: CalendarPermission | null;
+  calendar: typeof calendars.$inferSelect | null;
+}> {
   // If auth is disabled, grant full owner access (backwards compatibility)
   if (!isAuthEnabled()) {
     const calendar = await db.query.calendars.findFirst({
       where: eq(calendars.id, calendarId),
     });
-    return calendar ? "owner" : null;
+    return { permission: calendar ? "owner" : null, calendar: calendar ?? null };
   }
 
   // Fetch calendar first (needed for all checks)
@@ -61,13 +78,13 @@ export async function getUserCalendarPermission(
   });
 
   if (!calendar) {
-    return null;
+    return { permission: null, calendar: null };
   }
 
   // CRITICAL: Orphaned calendars (ownerId=null) are invisible to ALL users
   // They can only be accessed via dedicated admin panel API routes
   if (calendar.ownerId === null) {
-    return null;
+    return { permission: null, calendar };
   }
 
   // If no user ID, check token and guest permissions
@@ -75,19 +92,22 @@ export async function getUserCalendarPermission(
     // Check for access token first (higher priority than guest)
     const tokenPermission = await getTokenPermission(calendarId);
     if (tokenPermission) {
-      return tokenPermission;
+      return { permission: tokenPermission, calendar };
     }
 
     // Guest access only works when explicitly enabled
     if (allowGuestAccess() && calendar.guestPermission !== "none") {
-      return calendar.guestPermission as CalendarPermission;
+      return {
+        permission: calendar.guestPermission as CalendarPermission,
+        calendar,
+      };
     }
-    return null;
+    return { permission: null, calendar };
   }
 
   // Owner has full control
   if (calendar.ownerId === userId) {
-    return "owner";
+    return { permission: "owner", calendar };
   }
 
   // Check shared permissions (higher priority than tokens)
@@ -99,13 +119,16 @@ export async function getUserCalendarPermission(
   });
 
   if (share) {
-    return share.permission as CalendarPermission;
+    return {
+      permission: share.permission as CalendarPermission,
+      calendar,
+    };
   }
 
   // Check for access token (authenticated users can also use tokens)
   const tokenPermission = await getTokenPermission(calendarId);
   if (tokenPermission) {
-    return tokenPermission;
+    return { permission: tokenPermission, calendar };
   }
 
   // Check if user is subscribed to this public calendar
@@ -120,10 +143,13 @@ export async function getUserCalendarPermission(
   // If subscribed and calendar has public access (guestPermission != "none"), return that permission
   // Authenticated users can always access public calendars, regardless of allowGuestAccess setting
   if (subscription && calendar.guestPermission !== "none") {
-    return calendar.guestPermission as CalendarPermission;
+    return {
+      permission: calendar.guestPermission as CalendarPermission,
+      calendar,
+    };
   }
 
-  return null;
+  return { permission: null, calendar };
 }
 
 /**
@@ -186,6 +212,48 @@ export async function canDeleteCalendar(
   calendarId: string
 ): Promise<boolean> {
   return checkPermission(userId, calendarId, "owner");
+}
+
+/**
+ * Shift signup permission for a given user on a given calendar.
+ * - canManageOwn: may add/remove themselves
+ * - canManageOthers: may add/remove any other member
+ *
+ * Only logged-in users (userId set) can hold signups at all — guests never do,
+ * even when a share/access-token grants them "write" on the calendar itself.
+ * The calendar-wide signupsEnabled switch (owner/admin only) overrides
+ * everything else. A "read"-level member can only self-manage, and only while
+ * allowSelfSignup is on; write/admin/owner can always manage anyone.
+ */
+export async function getShiftSignupPermission(
+  userId: string | null | undefined,
+  calendarId: string
+): Promise<{ canManageOwn: boolean; canManageOthers: boolean }> {
+  if (!userId) {
+    return { canManageOwn: false, canManageOthers: false };
+  }
+
+  const { permission, calendar } = await getUserCalendarPermissionWithCalendar(
+    userId,
+    calendarId
+  );
+  if (!permission) {
+    return { canManageOwn: false, canManageOthers: false };
+  }
+
+  if (!calendar?.signupsEnabled) {
+    return { canManageOwn: false, canManageOthers: false };
+  }
+
+  if (permission !== "read") {
+    // owner / admin / write
+    return { canManageOwn: true, canManageOthers: true };
+  }
+
+  return {
+    canManageOwn: !!calendar.allowSelfSignup,
+    canManageOthers: false,
+  };
 }
 
 /**
@@ -470,6 +538,44 @@ export async function undismissCalendar(
       source: share ? "shared" : "guest",
     });
   }
+}
+
+/**
+ * Minimal member list (owner + shares) for a calendar, deduped by user id.
+ * Returns null if the calendar doesn't exist.
+ */
+export async function getCalendarMembers(
+  calendarId: string
+): Promise<CalendarMember[] | null> {
+  const calendar = await db.query.calendars.findFirst({
+    where: eq(calendars.id, calendarId),
+    columns: { id: true },
+    with: {
+      owner: { columns: { id: true, name: true, image: true } },
+    },
+  });
+
+  if (!calendar) {
+    return null;
+  }
+
+  const shares = await db.query.calendarShares.findMany({
+    where: eq(calendarShares.calendarId, calendarId),
+    with: {
+      user: { columns: { id: true, name: true, image: true } },
+    },
+  });
+
+  const members = new Map<string, CalendarMember>();
+
+  if (calendar.owner) {
+    members.set(calendar.owner.id, calendar.owner);
+  }
+  for (const share of shares) {
+    members.set(share.user.id, share.user);
+  }
+
+  return Array.from(members.values());
 }
 
 /**

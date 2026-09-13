@@ -9,6 +9,8 @@ export interface CalendarWithCount {
   color: string;
   ownerId?: string | null;
   guestPermission?: "none" | "read" | "write";
+  allowSelfSignup?: boolean;
+  signupsEnabled?: boolean;
   /** The calendar's own view; null means everyone sees their personal view */
   viewSettings?: CalendarViewSettings | null;
   createdAt: Date | null;
@@ -39,6 +41,21 @@ export interface ShiftWithCalendar {
   isAllDay?: boolean;
   syncedFromExternal?: boolean;
   externalSyncId?: string | null;
+  signupCapacity?: number | null;
+  signups?: ShiftSignupUser[];
   createdAt: Date | null;
   updatedAt: Date | null;
+}
+
+export interface ShiftSignupUser {
+  id: string;
+  name: string | null;
+  email: string;
+  image?: string | null;
+}
+
+export interface CalendarMember {
+  id: string;
+  name: string | null;
+  image?: string | null;
 }

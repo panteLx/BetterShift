@@ -74,6 +74,7 @@ export async function PATCH(
       isSecondary,
       isAllDay,
       hideFromStats,
+      defaultSignupCapacity,
     } = body;
 
     // groupName: undefined leaves it unchanged, null explicitly clears it,
@@ -136,6 +137,10 @@ export async function PATCH(
         isSecondary: isSecondary !== undefined ? isSecondary : undefined,
         isAllDay: isAllDay !== undefined ? isAllDay : undefined,
         hideFromStats: hideFromStats !== undefined ? hideFromStats : undefined,
+        defaultSignupCapacity:
+          defaultSignupCapacity !== undefined
+            ? defaultSignupCapacity
+            : undefined,
         updatedAt: new Date(),
       })
       .where(eq(shiftPresets.id, id))

@@ -17,6 +17,12 @@ export const queryKeys = {
     all: ["shifts"] as const,
     byCalendar: (calendarId: string) => ["shifts", calendarId] as const,
   },
+  shiftSignups: {
+    byShift: (shiftId: string) => ["shift-signups", shiftId] as const,
+  },
+  calendarMembers: {
+    byCalendar: (calendarId: string) => ["calendar-members", calendarId] as const,
+  },
   presets: {
     all: ["presets"] as const,
     byCalendar: (calendarId: string) => ["presets", calendarId] as const,

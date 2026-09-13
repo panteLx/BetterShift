@@ -38,6 +38,8 @@ export async function GET(request: Request) {
         color: calendars.color,
         ownerId: calendars.ownerId,
         guestPermission: calendars.guestPermission,
+        allowSelfSignup: calendars.allowSelfSignup,
+        signupsEnabled: calendars.signupsEnabled,
         viewSettings: calendars.viewSettings,
         createdAt: calendars.createdAt,
         updatedAt: calendars.updatedAt,

@@ -4,7 +4,9 @@ import { calendars, shifts, externalSyncs } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { canViewCalendar, canEditCalendar } from "@/lib/auth/permissions";
+import { addShiftSignup, withSignups } from "@/lib/shift-signups";
 import { parseLocalDate } from "@/lib/date-utils";
+import type { CalendarMember } from "@/lib/types";
 
 // GET shifts for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -56,6 +58,7 @@ export async function GET(request: Request) {
         notes: shifts.notes,
         isAllDay: shifts.isAllDay,
         isSecondary: shifts.isSecondary,
+        signupCapacity: shifts.signupCapacity,
         syncedFromExternal: shifts.syncedFromExternal,
         externalSyncId: shifts.externalSyncId,
         createdAt: shifts.createdAt,
@@ -94,7 +97,7 @@ export async function GET(request: Request) {
           or(isNull(shifts.externalSyncId), eq(externalSyncs.isHidden, false))
         )
       );
-      return NextResponse.json(result);
+      return NextResponse.json(await withSignups(result));
     }
 
     const result = await query.where(
@@ -104,7 +107,7 @@ export async function GET(request: Request) {
         or(isNull(shifts.externalSyncId), eq(externalSyncs.isHidden, false))
       )
     );
-    return NextResponse.json(result);
+    return NextResponse.json(await withSignups(result));
   } catch (error) {
     console.error("Failed to fetch shifts:", error);
     return NextResponse.json(
@@ -129,6 +132,8 @@ export async function POST(request: Request) {
       presetId,
       isAllDay,
       isSecondary,
+      signupCapacity,
+      signupUserIds,
     } = body;
 
     if (!calendarId || !date || !title) {
@@ -185,12 +190,39 @@ export async function POST(request: Request) {
         notes: notes || null,
         isAllDay: isAllDay || false,
         isSecondary: isSecondary || false,
+        signupCapacity:
+          typeof signupCapacity === "number" ? signupCapacity : null,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
       .returning();
 
-    return NextResponse.json({ ...shift, calendar }, { status: 201 });
+    // Best-effort: a shift the caller picked people for still gets created
+    // even if one of those signups is no longer valid by the time we get here.
+    let signups: CalendarMember[] = [];
+    if (user && Array.isArray(signupUserIds) && signupUserIds.length > 0) {
+      const existingIds = new Set<string>();
+      const capacity = typeof signupCapacity === "number" ? signupCapacity : null;
+      for (const targetUserId of signupUserIds) {
+        if (typeof targetUserId !== "string") continue;
+        await addShiftSignup(
+          shift.id,
+          calendarId,
+          user.id,
+          targetUserId,
+          existingIds,
+          capacity
+        );
+      }
+      if (existingIds.size > 0) {
+        [{ signups }] = await withSignups([shift]);
+      }
+    }
+
+    return NextResponse.json(
+      { ...shift, calendar, signups },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Failed to create shift:", error);
     return NextResponse.json(

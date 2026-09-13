@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       isSecondary,
       isAllDay,
       hideFromStats,
+      defaultSignupCapacity,
     } = body;
 
     if (!calendarId || !title) {
@@ -130,6 +131,10 @@ export async function POST(request: NextRequest) {
         isSecondary: isSecondary || false,
         isAllDay: isAllDay || false,
         hideFromStats: hideFromStats || false,
+        defaultSignupCapacity:
+          typeof defaultSignupCapacity === "number"
+            ? defaultSignupCapacity
+            : null,
         order: maxOrder + 1,
       })
       .returning();

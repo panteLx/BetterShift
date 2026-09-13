@@ -79,7 +79,14 @@ export async function PATCH(
     const { id } = await params;
     const user = await getSessionUser(request.headers);
     const body = await request.json();
-    const { name, color, guestPermission, viewSettings } = body;
+    const {
+      name,
+      color,
+      guestPermission,
+      viewSettings,
+      allowSelfSignup,
+      signupsEnabled,
+    } = body;
 
     if (
       viewSettings !== undefined &&
@@ -139,6 +146,20 @@ export async function PATCH(
         guestPermissionChanged = true;
         oldGuestPermission = existingCalendar.guestPermission;
       }
+    }
+    if (
+      typeof allowSelfSignup === "boolean" &&
+      allowSelfSignup !== existingCalendar.allowSelfSignup
+    ) {
+      updateData.allowSelfSignup = allowSelfSignup;
+      changes.push("allowSelfSignup");
+    }
+    if (
+      typeof signupsEnabled === "boolean" &&
+      signupsEnabled !== existingCalendar.signupsEnabled
+    ) {
+      updateData.signupsEnabled = signupsEnabled;
+      changes.push("signupsEnabled");
     }
     if (viewSettings === null && existingCalendar.viewSettings !== null) {
       updateData.viewSettings = null;
