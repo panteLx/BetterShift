@@ -71,14 +71,15 @@ export interface CalendarDeletedMetadata {
 
 export interface CalendarUpdatedMetadata {
   calendarName: string;
-  changes: string[]; // e.g., ["name", "color", "guestPermission", "viewSettings"]
+  changes: string[]; // e.g., ["name", "color", "guestBundleId", "viewSettings"]
   viewSettings?: "enabled" | "updated" | "disabled";
 }
 
 export interface CalendarSharedMetadata {
   calendarName: string;
   sharedWith: string; // user email
-  permission: "read" | "write" | "admin";
+  bundleId: string;
+  bundleName: string;
 }
 
 export interface CalendarShareRemovedMetadata {
@@ -90,14 +91,27 @@ export interface CalendarShareRemovedMetadata {
 export interface CalendarPermissionChangedMetadata {
   calendarName: string;
   user: string;
-  oldPermission: string;
-  newPermission: string;
+  oldBundleId: string;
+  oldBundleName: string;
+  newBundleId: string;
+  newBundleName: string;
 }
 
-export interface CalendarGuestPermissionChangedMetadata {
+export interface CalendarGuestBundleChangedMetadata {
   calendarName: string;
-  oldPermission: "none" | "read" | "write";
-  newPermission: "none" | "read" | "write";
+  oldBundleId: string | null;
+  oldBundleName: string | null;
+  newBundleId: string | null;
+  newBundleName: string | null;
+}
+
+export interface CalendarTokenCreatedMetadata {
+  tokenId: string;
+  tokenName: string;
+  calendarName: string;
+  bundleId: string;
+  bundleName: string;
+  expiresAt: string | null;
 }
 
 export interface SyncCreatedMetadata {
@@ -186,6 +200,8 @@ export type AuditLogMetadata =
   | CalendarSharedMetadata
   | CalendarShareRemovedMetadata
   | CalendarPermissionChangedMetadata
+  | CalendarGuestBundleChangedMetadata
+  | CalendarTokenCreatedMetadata
   | SyncCreatedMetadata
   | SyncDeletedMetadata
   | SyncExecutedMetadata

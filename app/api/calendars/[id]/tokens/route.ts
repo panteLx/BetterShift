@@ -4,14 +4,10 @@ import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
-import {
-  findSeededBundleId,
-  coarseLevelFromCapabilities,
-  type LegacyShareLevel,
-} from "@/lib/auth/legacy-permission-compat";
-import { sanitizeCapabilities } from "@/lib/permission-bundles";
+import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
+import { isGuestEligible } from "@/lib/permission-bundles";
 import { generateAccessToken } from "@/lib/auth/token-auth";
-import { logAuditEvent } from "@/lib/audit-log";
+import { logAuditEvent, type CalendarTokenCreatedMetadata } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
 
 /**
@@ -59,28 +55,22 @@ export async function GET(
       .where(eq(calendarAccessTokens.calendarId, calendarId))
       .orderBy(desc(calendarAccessTokens.createdAt));
 
-    // Resolve each token's bundleId back to the coarse read/write level for the response
+    // Resolve each token's bundleId to its identity for the response
     const distinctBundleIds = Array.from(
       new Set(tokens.map((token) => token.bundleId))
     );
     const bundles = distinctBundleIds.length
       ? await db.query.calendarPermissionBundles.findMany({
           where: (b, { inArray }) => inArray(b.id, distinctBundleIds),
-          columns: { id: true, capabilities: true },
+          columns: { id: true, name: true, seedKey: true },
         })
       : [];
-    const levelByBundleId = new Map<string, LegacyShareLevel>(
-      bundles.map((bundle) => [
-        bundle.id,
-        coarseLevelFromCapabilities(sanitizeCapabilities(bundle.capabilities)),
-      ])
-    );
+    const bundleById = new Map(bundles.map((bundle) => [bundle.id, bundle]));
 
     // Return partial tokens (first 6 chars) for security
     const sanitizedTokens = tokens.map((token) => ({
       ...token,
-      permission: levelByBundleId.get(token.bundleId) ?? "read",
-      bundleId: undefined,
+      bundle: bundleById.get(token.bundleId) ?? null,
       tokenPreview: `${token.token.slice(0, 6)}...`,
       token: undefined, // Remove full token from response
     }));
@@ -141,18 +131,32 @@ export async function POST(
     const body = await request.json();
     const {
       name,
-      permission = "read",
+      bundleId,
       expiresAt,
     }: {
       name?: string;
-      permission?: "read" | "write";
+      bundleId?: string;
       expiresAt?: string | null;
     } = body;
 
-    // Validate permission
-    if (permission !== "read" && permission !== "write") {
+    // Validate the bundle: must exist, belong to this calendar, and be
+    // guest-eligible (E7) — a link is always a guest/link source.
+    if (!bundleId || typeof bundleId !== "string") {
+      return NextResponse.json({ error: "Invalid bundle id" }, { status: 400 });
+    }
+    const bundle = await getBundleForCalendar(calendarId, bundleId);
+    if (!bundle) {
+      return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
+    }
+    if (!isGuestEligible(bundle.capabilities)) {
       return NextResponse.json(
-        { error: "Permission must be 'read' or 'write'" },
+        {
+          error:
+            "Bundle contains capabilities that cannot be granted via a link",
+          forbiddenCapabilities: bundle.capabilities.filter(
+            (c) => !isGuestEligible([c])
+          ),
+        },
         { status: 400 }
       );
     }
@@ -175,15 +179,6 @@ export async function POST(
       }
     }
 
-    // Resolve the legacy permission to this calendar's matching seeded bundle
-    const bundleId = await findSeededBundleId(calendarId, permission);
-    if (!bundleId) {
-      return NextResponse.json(
-        { error: "Calendar is missing its seeded permission bundles" },
-        { status: 500 }
-      );
-    }
-
     // Generate secure token
     const token = generateAccessToken();
 
@@ -201,14 +196,14 @@ export async function POST(
         calendarId,
         token,
         name: name || null,
-        bundleId,
+        bundleId: bundle.id,
         expiresAt: expiresAtDate,
         createdBy: user.id,
       })
       .returning();
 
     // Audit log
-    void logAuditEvent({
+    void logAuditEvent<CalendarTokenCreatedMetadata>({
       userId: user.id,
       action: "calendar_token_created",
       resourceType: "calendar",
@@ -217,7 +212,8 @@ export async function POST(
         tokenId: newToken.id,
         tokenName: name || "Unnamed",
         calendarName: calendar?.name || "Unknown",
-        permission,
+        bundleId: bundle.id,
+        bundleName: bundle.name,
         expiresAt: expiresAt || null,
       },
       request,
@@ -229,8 +225,7 @@ export async function POST(
     return NextResponse.json(
       {
         ...newToken,
-        bundleId: undefined,
-        permission,
+        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
         token, // Full token returned ONLY on creation
         tokenPreview: `${token.slice(0, 6)}...`,
       },

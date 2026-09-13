@@ -4,11 +4,8 @@ import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
-import {
-  findSeededBundleId,
-  coarseLevelFromCapabilities,
-} from "@/lib/auth/legacy-permission-compat";
-import { sanitizeCapabilities } from "@/lib/permission-bundles";
+import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
+import { isGuestEligible } from "@/lib/permission-bundles";
 import { logAuditEvent } from "@/lib/audit-log";
 
 /**
@@ -65,22 +62,42 @@ export async function PATCH(
     const body = await request.json();
     const {
       name,
-      permission,
+      bundleId,
       expiresAt,
       isActive,
     }: {
       name?: string;
-      permission?: "read" | "write";
+      bundleId?: string;
       expiresAt?: string | null;
       isActive?: boolean;
     } = body;
 
-    // Validate permission if provided
-    if (permission && permission !== "read" && permission !== "write") {
-      return NextResponse.json(
-        { error: "Permission must be 'read' or 'write'" },
-        { status: 400 }
-      );
+    // Validate the new bundle if provided: must exist, belong to this
+    // calendar, and be guest-eligible (E7) — a link is always a guest/link source.
+    let newBundle: Awaited<ReturnType<typeof getBundleForCalendar>> = null;
+    if (bundleId !== undefined) {
+      if (typeof bundleId !== "string") {
+        return NextResponse.json(
+          { error: "Invalid bundle id" },
+          { status: 400 }
+        );
+      }
+      newBundle = await getBundleForCalendar(calendarId, bundleId);
+      if (!newBundle) {
+        return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
+      }
+      if (!isGuestEligible(newBundle.capabilities)) {
+        return NextResponse.json(
+          {
+            error:
+              "Bundle contains capabilities that cannot be granted via a link",
+            forbiddenCapabilities: newBundle.capabilities.filter(
+              (c) => !isGuestEligible([c])
+            ),
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate expiration date if provided
@@ -108,16 +125,7 @@ export async function PATCH(
     // Build update object
     const updates: Partial<typeof calendarAccessTokens.$inferInsert> = {};
     if (name !== undefined) updates.name = name;
-    if (permission !== undefined) {
-      const bundleId = await findSeededBundleId(calendarId, permission);
-      if (!bundleId) {
-        return NextResponse.json(
-          { error: "Calendar is missing its seeded permission bundles" },
-          { status: 500 }
-        );
-      }
-      updates.bundleId = bundleId;
-    }
+    if (newBundle) updates.bundleId = newBundle.id;
     if (expiresAtDate !== undefined) updates.expiresAt = expiresAtDate;
     if (isActive !== undefined) updates.isActive = isActive;
 
@@ -152,20 +160,16 @@ export async function PATCH(
       isUserVisible: true,
     });
 
-    // Resolve the token's bundle back to the coarse read/write level for the response
+    // Resolve the token's bundle identity for the response
     const updatedBundle = await db.query.calendarPermissionBundles.findFirst({
       where: (b, { eq: eqOp }) => eqOp(b.id, updatedToken.bundleId),
-      columns: { capabilities: true },
+      columns: { id: true, name: true, seedKey: true },
     });
-    const resolvedPermission = coarseLevelFromCapabilities(
-      sanitizeCapabilities(updatedBundle?.capabilities)
-    );
 
     // Return sanitized token (no full token)
     return NextResponse.json({
       ...updatedToken,
-      bundleId: undefined,
-      permission: resolvedPermission,
+      bundle: updatedBundle ?? null,
       tokenPreview: `${updatedToken.token.slice(0, 6)}...`,
       token: undefined,
     });
