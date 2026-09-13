@@ -10,6 +10,7 @@ import {
   isRateLimitError,
 } from "@/lib/rate-limit-client";
 import { ApiError } from "@/lib/api-error";
+import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 export interface CalendarShare {
@@ -185,7 +186,7 @@ export function useCalendarShares(calendarId: string) {
 
       // Optimistic update
       const optimisticShare: CalendarShare = {
-        id: `temp-${crypto.randomUUID()}`,
+        id: `temp-${generateTempId()}`,
         calendarId,
         userId,
         permission,

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { CalendarWithCount } from "@/lib/types";
 import type { CalendarViewSettings } from "@/lib/view-settings";
+import { generateTempId } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -203,7 +204,7 @@ export function useCalendars(initialCalendarId?: string | null) {
       );
 
       const optimisticCalendar: CalendarWithCount = {
-        id: `temp-${crypto.randomUUID()}`,
+        id: `temp-${generateTempId()}`,
         name,
         color,
         guestPermission: "none",

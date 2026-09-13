@@ -5,6 +5,7 @@ import { formatDateToLocal, parseLocalDate, toLocalDate } from "@/lib/date-utils
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
+import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 
@@ -152,7 +153,7 @@ export function useNotes(calendarId: string | undefined) {
 
       // Create optimistic note
       const optimisticNote: CalendarNote = {
-        id: `temp-${crypto.randomUUID()}`,
+        id: `temp-${generateTempId()}`,
         date: parseLocalDate(formData.date),
         note: formData.note,
         type: formData.type || "note",

@@ -4,6 +4,7 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
+import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 
 // Form data interface
@@ -102,7 +103,7 @@ function createOptimisticPreset(
   formData: PresetFormData
 ): ShiftPreset {
   return {
-    id: `temp-${crypto.randomUUID()}`,
+    id: `temp-${generateTempId()}`,
     calendarId,
     title: formData.title,
     startTime: formData.startTime,

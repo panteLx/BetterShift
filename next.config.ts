@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
 
+  // Extra hosts allowed to hit dev-only endpoints (e.g. HMR) besides localhost.
+  // Needed for remote dev setups (VS Code Remote, port forwarding, LAN devices).
+  ...(process.env.NODE_ENV !== "production" && process.env.DEV_ALLOWED_ORIGINS
+    ? {
+        allowedDevOrigins: process.env.DEV_ALLOWED_ORIGINS.split(",")
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      }
+    : {}),
+
   // No <Image> anywhere: avatars are plain <img>. Declaring that lets the
   // trace exclude below drop sharp (~46 MB) without breaking a reachable path.
   images: { unoptimized: true },

@@ -46,6 +46,19 @@ export function removeStorage(key: string): void {
   }
 }
 
+/**
+ * A short unique id for optimistic-UI placeholders (discarded once the real
+ * server id comes back). Prefers crypto.randomUUID(), but that API is only
+ * defined in secure contexts -- https, or http on localhost -- so a plain
+ * http dev server reached via LAN IP or hostname needs a fallback.
+ */
+export function generateTempId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /** Up to two initials from a name, falling back to the e-mail. */
 export function getUserInitials(user: { name?: string | null; email?: string }): string {
   const source = user.name?.trim();

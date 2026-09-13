@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { parseLocalDate, toLocalDate } from "@/lib/date-utils";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
+import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
 
@@ -145,7 +146,7 @@ export function useShifts(calendarId: string | undefined) {
 
       // Create optimistic shift
       const optimisticShift: ShiftWithCalendar = {
-        id: `temp-${crypto.randomUUID()}`,
+        id: `temp-${generateTempId()}`,
         date: parseLocalDate(formData.date),
         startTime: formData.startTime,
         endTime: formData.endTime,
