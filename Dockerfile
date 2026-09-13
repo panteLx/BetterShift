@@ -81,8 +81,11 @@ RUN chmod +x /app/docker-entrypoint.sh
 
 # Must stay after the COPY of ./public, which would otherwise restore a
 # root-owned uploads directory. Lets `docker run --user node` work unrepaired.
-RUN mkdir -p /app/data /app/public/uploads \
-    && chown -R node:node /app/data /app/public/uploads
+# .next/cache is included because ISR/full-route-cache revalidation writes there
+# at runtime as "node"; it isn't in the standalone/static COPY above, so without
+# this it gets created root-owned on first write and every later write EACCESs.
+RUN mkdir -p /app/data /app/public/uploads /app/.next/cache \
+    && chown -R node:node /app/data /app/public/uploads /app/.next/cache
 
 # Write build metadata
 RUN node -e "const fs=require('fs');fs.writeFileSync('/app/.build-info.json',JSON.stringify({version:process.env.VERSION||'',buildDate:process.env.BUILD_DATE||'',commitSha:process.env.COMMIT_SHA||'',commitRef:process.env.COMMIT_REF||''}));"
