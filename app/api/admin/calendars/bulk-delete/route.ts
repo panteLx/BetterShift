@@ -12,7 +12,10 @@ import {
   calendarAccessTokens as tokensTable,
 } from "@/lib/db/schema";
 import { inArray, sql } from "drizzle-orm";
-import { requireSuperAdmin, canDeleteCalendar } from "@/lib/auth/admin";
+import {
+  requireSuperAdmin,
+  siteAdminCanDeleteCalendar,
+} from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
 import {
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
     if (rateLimitResponse) return rateLimitResponse;
 
-    if (!canDeleteCalendar(currentUser)) {
+    if (!siteAdminCanDeleteCalendar(currentUser)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

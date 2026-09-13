@@ -222,7 +222,7 @@ export function canResetPassword(
  * @param operation - The operation being performed ('view' or 'delete')
  * @returns boolean - true if admin can perform the operation
  */
-export function canManageCalendar(
+export function siteAdminCanManageCalendar(
   adminUser: User | null | undefined,
   operation: "view" | "delete"
 ): boolean {
@@ -245,7 +245,7 @@ export function canManageCalendar(
  * @param adminUser - The admin performing the action
  * @returns boolean - true if admin can edit calendars
  */
-export function canEditCalendar(adminUser: User | null | undefined): boolean {
+export function siteAdminCanEditCalendar(adminUser: User | null | undefined): boolean {
   return isAdmin(adminUser);
 }
 
@@ -258,7 +258,7 @@ export function canEditCalendar(adminUser: User | null | undefined): boolean {
  * @param adminUser - The admin performing the action
  * @returns boolean - true if admin can delete calendars
  */
-export function canDeleteCalendar(adminUser: User | null | undefined): boolean {
+export function siteAdminCanDeleteCalendar(adminUser: User | null | undefined): boolean {
   return isSuperAdmin(adminUser);
 }
 

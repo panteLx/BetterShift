@@ -11,7 +11,7 @@ import {
   canDeleteUser,
   canBanUser,
   canChangeUserRole,
-  canManageCalendar,
+  siteAdminCanManageCalendar,
   canAssignOrphanedCalendar,
   canViewAuditLogs,
   canDeleteAuditLogs,
@@ -129,7 +129,10 @@ export function useCanChangeUserRole(
  */
 export function useCanManageCalendar(operation: "view" | "delete"): boolean {
   const { user } = useAuth();
-  return useMemo(() => canManageCalendar(user, operation), [user, operation]);
+  return useMemo(
+    () => siteAdminCanManageCalendar(user, operation),
+    [user, operation]
+  );
 }
 
 /**
