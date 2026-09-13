@@ -211,7 +211,6 @@ export function useCalendars(initialCalendarId?: string | null) {
         id: `temp-${generateTempId()}`,
         name,
         color,
-        guestPermission: "none",
         ownerId: null,
         createdAt: new Date(),
         updatedAt: new Date(),

@@ -44,7 +44,12 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
   >(null);
   const [saving, setSaving] = useState(false);
   const calendar = calendars.find((c) => c.id === calendarId);
-  const guestPermission = optimisticGuest ?? calendar?.guestPermission ?? "none";
+  // Provisional: the API dropped the guestPermission enum in Stufe 2 (Paket 2)
+  // in favor of guestBundleId, and writing here is already inert server-side
+  // — this whole panel is replaced by the real bundle-based guest picker in
+  // Stufe 2 Paket 4. Until then, approximate from bundle presence only.
+  const guestPermission: GuestPermission =
+    optimisticGuest ?? (calendar?.guestBundleId ? "write" : "none");
   const allowSelfSignup =
     optimisticAllowSelfSignup ?? calendar?.allowSelfSignup ?? true;
   const signupsEnabled =

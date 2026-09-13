@@ -5,32 +5,60 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCalendars } from "@/hooks/useCalendars";
 import { CalendarWithCount } from "@/lib/types";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import type { CalendarPermission } from "@/lib/auth/permissions";
+import type { Capability } from "@/lib/permission-bundles";
+
+export interface CalendarPermission {
+  isOwner: boolean;
+  /** Whether the caller may perform a specific capability on the calendar — mirrors CalendarAccess.can() server-side. */
+  can(capability: Capability): boolean;
+  /** Whether the caller may act on a resource given its own/any capabilities and creator — mirrors CalendarAccess.canOwned() server-side (E1/E8). */
+  canOwned(own: Capability, any: Capability, createdBy: string | null): boolean;
+  canView: boolean;
+  /** Coarse "may change something here" — prefer can()/canOwned() for a specific action. */
+  canEdit: boolean;
+  /** Coarse "may manage other people's entries or calendar settings" — prefer can()/canOwned() for a specific action. */
+  canManage: boolean;
+  canDelete: boolean;
+  canShare: boolean;
+  isReadOnly: boolean;
+}
+
+const NO_ACCESS: CalendarPermission = {
+  isOwner: false,
+  can: () => false,
+  canOwned: () => false,
+  canView: false,
+  canEdit: false,
+  canManage: false,
+  canDelete: false,
+  canShare: false,
+  isReadOnly: true,
+};
 
 /**
- * Hook to check calendar permissions client-side
+ * Hook to check calendar permissions client-side.
  *
- * Returns permission helpers for the given calendar.
- * Takes into account:
- * - User authentication status
- * - Calendar ownership
- * - Guest permissions (if user is guest)
+ * Mirrors lib/auth/permissions.ts's getCalendarAccess() using the effective
+ * `capabilities` the calendar list API already resolved for the caller
+ * (share > token > subscribed guest bundle priority, ceiling-filtered) —
+ * this hook does no permission resolution of its own.
  *
- * Accepts either a calendar object or a calendar ID string.
- * If a string is provided, it will look up the calendar from the calendars list.
+ * canEdit/canManage/canShare stay as coarse, best-effort approximations of
+ * the old write/manage/admin levels for components not yet updated to check
+ * a precise capability (Stufe 2 Paket 4/5) — new code should prefer can()/
+ * canOwned() for the concrete capability an action actually needs.
+ *
+ * Accepts either a calendar object or a calendar ID string. If a string is
+ * provided, it will look up the calendar from the calendars list.
  *
  * @example
- * // With calendar object
  * const { canEdit, canView, canManage, isReadOnly } = useCalendarPermission(calendar);
- *
- * // With calendar ID
- * const { canEdit, canView, canManage, isReadOnly } = useCalendarPermission(calendarId);
- *
- * if (!canEdit) return <ReadOnlyBanner />;
+ * const { can, canOwned } = useCalendarPermission(calendarId);
+ * if (!canOwned("editOwnShift", "editAnyShift", shift.createdBy)) return;
  */
 export function useCalendarPermission(
   calendarOrId?: CalendarWithCount | string | null
-) {
+): CalendarPermission {
   const { user, isGuest } = useAuth();
   const { calendars } = useCalendars();
   const { auth } = usePublicConfig();
@@ -44,192 +72,47 @@ export function useCalendarPermission(
     return calendarOrId;
   }, [calendarOrId, calendars]);
 
-  const permission = useMemo(() => {
-    if (!calendar) {
-      return {
-        level: "none" as const,
-        canView: false,
-        canEdit: false,
-        canManage: false,
-        canDelete: false,
-        canShare: false,
-        isReadOnly: true,
-        isOwner: false,
-      };
-    }
+  return useMemo(() => {
+    if (!calendar) return NO_ACCESS;
+    // Auth disabled grants full owner access to everyone regardless of
+    // user/isGuest, which otherwise both stay false in that mode.
+    if (auth.enabled && !user && !isGuest) return NO_ACCESS;
 
-    // If auth is disabled, grant full owner access (backwards compatibility)
-    if (!auth.enabled) {
-      return {
-        level: "owner" as const,
-        canView: true,
-        canEdit: true,
-        canManage: true,
-        canDelete: true,
-        canShare: true,
-        isReadOnly: false,
-        isOwner: true,
-      };
-    }
+    const isOwner = !auth.enabled || calendar.ownerId === user?.id;
+    const capabilities = calendar.capabilities ?? [];
+    const userId = user?.id ?? null;
 
-    // If user is authenticated
-    if (user) {
-      // User is owner
-      if (calendar.ownerId === user.id) {
-        return {
-          level: "owner" as const,
-          canView: true,
-          canEdit: true,
-          canManage: true,
-          canDelete: true,
-          canShare: true,
-          isReadOnly: false,
-          isOwner: true,
-        };
-      }
+    const can = (capability: Capability): boolean =>
+      isOwner || capabilities.includes(capability);
 
-      // Check if user has explicit share permission
-      const sharePermission = (calendar as { sharePermission?: string })
-        .sharePermission;
-      if (sharePermission) {
-        const isOwner = sharePermission === "owner";
-        const isAdmin = sharePermission === "admin";
-        const isWrite = sharePermission === "write";
-        const isRead = sharePermission === "read";
+    const canOwned = (
+      own: Capability,
+      any: Capability,
+      createdBy: string | null
+    ): boolean => {
+      if (isOwner) return true;
+      if (can(any)) return true;
+      if (!can(own)) return false;
+      return createdBy === null || createdBy === userId;
+    };
 
-        return {
-          level: sharePermission,
-          canView: true,
-          canEdit: isOwner || isAdmin || isWrite,
-          canManage: isOwner || isAdmin,
-          canDelete: isOwner,
-          canShare: isOwner || isAdmin,
-          isReadOnly: isRead,
-          isOwner: isOwner,
-        };
-      }
+    const canEdit =
+      isOwner ||
+      can("createShift") ||
+      can("editOwnShift") ||
+      can("editAnyShift");
+    const canManage = isOwner || can("editAnyShift") || can("manageCalendarSettings");
 
-      // Check if user has token-based access
-      const tokenPermission = (
-        calendar as { tokenPermission?: "read" | "write" }
-      ).tokenPermission;
-      if (tokenPermission) {
-        return {
-          level: tokenPermission,
-          canView: true,
-          canEdit: tokenPermission === "write",
-          canManage: false,
-          canDelete: false,
-          canShare: false,
-          isReadOnly: tokenPermission === "read",
-          isOwner: false,
-        };
-      }
-
-      // Check if calendar is public (guest permission) and user is subscribed
-      // In this case, user gets the guest permission level
-      const isSubscribed = (calendar as { isSubscribed?: boolean })
-        .isSubscribed;
-      if (isSubscribed && calendar.guestPermission !== "none") {
-        const guestPerm = calendar.guestPermission as CalendarPermission;
-        return {
-          level: guestPerm,
-          canView: true,
-          canEdit: guestPerm === "write",
-          canManage: false,
-          canDelete: false,
-          canShare: false,
-          isReadOnly: guestPerm === "read",
-          isOwner: false,
-        };
-      }
-
-      // User has no access to this calendar
-      return {
-        level: "none" as const,
-        canView: false,
-        canEdit: false,
-        canManage: false,
-        canDelete: false,
-        canShare: false,
-        isReadOnly: true,
-        isOwner: false,
-      };
-    }
-
-    // If user is guest (not authenticated)
-    if (isGuest) {
-      // Check for token-based access first (higher priority)
-      const tokenPermission = (
-        calendar as { tokenPermission?: "read" | "write" }
-      ).tokenPermission;
-      if (tokenPermission) {
-        return {
-          level: tokenPermission,
-          canView: true,
-          canEdit: tokenPermission === "write",
-          canManage: false,
-          canDelete: false,
-          canShare: false,
-          isReadOnly: tokenPermission === "read",
-          isOwner: false,
-        };
-      }
-
-      // Then check guest permission
-      const guestPerm = calendar.guestPermission || "none";
-
-      if (guestPerm === "write") {
-        return {
-          level: "write" as const,
-          canView: true,
-          canEdit: true,
-          canManage: false,
-          canDelete: false,
-          canShare: false,
-          isReadOnly: false,
-          isOwner: false,
-        };
-      }
-
-      if (guestPerm === "read") {
-        return {
-          level: "read" as const,
-          canView: true,
-          canEdit: false,
-          canManage: false,
-          canDelete: false,
-          canShare: false,
-          isReadOnly: true,
-          isOwner: false,
-        };
-      }
-
-      // guestPerm === "none"
-      return {
-        level: "none" as const,
-        canView: false,
-        canEdit: false,
-        canManage: false,
-        canDelete: false,
-        canShare: false,
-        isReadOnly: true,
-        isOwner: false,
-      };
-    }
-
-    // No user, no guest access
     return {
-      level: "none" as const,
-      canView: false,
-      canEdit: false,
-      canManage: false,
-      canDelete: false,
-      canShare: false,
-      isReadOnly: true,
-      isOwner: false,
+      isOwner,
+      can,
+      canOwned,
+      canView: isOwner || can("viewShifts"),
+      canEdit,
+      canManage,
+      canDelete: isOwner,
+      canShare: isOwner || can("manageShares"),
+      isReadOnly: !canEdit,
     };
   }, [calendar, user, isGuest, auth.enabled]);
-
-  return permission;
 }

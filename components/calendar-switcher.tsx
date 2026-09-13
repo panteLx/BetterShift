@@ -43,9 +43,12 @@ export function isCalendarReadOnly(
   userId: string | undefined
 ): boolean {
   if (userId && calendar.ownerId === userId) return false;
-  if (calendar.sharePermission) return calendar.sharePermission === "read";
-  if (calendar.tokenPermission) return calendar.tokenPermission === "read";
-  return calendar.guestPermission === "read";
+  const capabilities = calendar.capabilities ?? [];
+  return !(
+    capabilities.includes("createShift") ||
+    capabilities.includes("editOwnShift") ||
+    capabilities.includes("editAnyShift")
+  );
 }
 
 export function CalendarSwitcher({
@@ -61,13 +64,7 @@ export function CalendarSwitcher({
   const { isAuthEnabled } = useAuthFeatures();
 
   const visible = isGuest
-    ? calendars.filter(
-        (c) =>
-          c.guestPermission === "read" ||
-          c.guestPermission === "write" ||
-          c.tokenPermission === "read" ||
-          c.tokenPermission === "write"
-      )
+    ? calendars.filter((c) => (c.capabilities?.length ?? 0) > 0)
     : calendars;
   const selected = visible.find((c) => c.id === selectedId);
   const signedIn = isAuthEnabled && !!user && !isGuest;
@@ -84,14 +81,16 @@ export function CalendarSwitcher({
           key: "shared",
           label: t("calendar.sharedCalendars"),
           icon: Users,
-          items: visible.filter((c) => c.ownerId !== user!.id && c.sharePermission),
+          items: visible.filter(
+            (c) => c.ownerId !== user!.id && c.subscriptionSource === "shared"
+          ),
         },
         {
           key: "token",
           label: t("calendar.tokenCalendars"),
           icon: Link2,
           items: visible.filter(
-            (c) => c.tokenPermission && !c.sharePermission && c.ownerId !== user!.id
+            (c) => c.ownerId !== user!.id && c.subscriptionSource === "token"
           ),
         },
         {
@@ -99,11 +98,7 @@ export function CalendarSwitcher({
           label: t("calendar.publicCalendars"),
           icon: Globe,
           items: visible.filter(
-            (c) =>
-              c.guestPermission &&
-              !c.sharePermission &&
-              !c.tokenPermission &&
-              c.ownerId !== user!.id
+            (c) => c.ownerId !== user!.id && c.subscriptionSource === "guest"
           ),
         },
       ].filter((g) => g.items.length > 0)
@@ -111,7 +106,10 @@ export function CalendarSwitcher({
 
   const statusIcon = (calendar: CalendarWithCount) => {
     if (!isAuthEnabled) return null;
-    if (calendar.sharePermission === "admin" || calendar.sharePermission === "owner") {
+    if (
+      calendar.ownerId !== user?.id &&
+      calendar.capabilities?.includes("manageShares")
+    ) {
       return <ShieldCheck className="h-3.5 w-3.5 text-brand-ink" />;
     }
     if (isCalendarReadOnly(calendar, user?.id)) {

@@ -73,17 +73,14 @@ export function useShiftSignupPermission(calendarId: string | undefined) {
   const calendar = calendars.find((c) => c.id === calendarId);
   // Signups tie a shift to a real account, so without auth there is no one to sign up.
   const signupsEnabled = isAuthEnabled && (calendar?.signupsEnabled ?? true);
-  const allowSelfSignup = calendar?.allowSelfSignup ?? true;
 
   if (!user || !signupsEnabled) {
     return { canManageOwn: false, canManageOthers: false, signupsEnabled };
   }
 
   return {
-    canManageOwn:
-      calendarPermission.canView &&
-      (calendarPermission.canEdit || allowSelfSignup),
-    canManageOthers: calendarPermission.canEdit,
+    canManageOwn: calendarPermission.can("signUpSelf"),
+    canManageOthers: calendarPermission.can("signUpOthers"),
     signupsEnabled,
   };
 }
