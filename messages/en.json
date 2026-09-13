@@ -330,6 +330,9 @@
     "description": "Version, changelog and ways to support the project",
     "tabInfo": "Info",
     "devBuild": "Development build",
+    "updateAvailable": "Version {version} is available",
+    "updateDismissedHint": "You hid this notice.",
+    "showUpdateAgain": "Show again",
     "supportTitle": "Support the project",
     "supportDescription": "BetterShift is open source and built in spare time. If it helps you, I'd appreciate your support.",
     "buyMeACoffee": "Buy Me a Coffee",
@@ -354,7 +357,8 @@
     "selectAtLeastOne": "Please select at least one calendar"
   },
   "update": {
-    "newVersion": "Version {version} is available"
+    "newVersion": "Version {version} is available",
+    "dismiss": "Dismiss"
   },
   "auth": {
     "login": "Sign In",
@@ -512,6 +516,16 @@
       "viewRelease": "View Release",
       "development": "Development",
       "unknown": "Unknown"
+    },
+    "systemSettings": {
+      "title": "Update Notifications",
+      "description": "Controls whether the app checks for new releases and who sees the banner about it.",
+      "checkEnabled": "Check for updates",
+      "checkEnabledHint": "Periodically checks the latest GitHub release. When disabled, no check is performed.",
+      "visibility": "Banner visible to",
+      "visibilityAll": "Everyone",
+      "visibilityAdmins": "Admins only",
+      "updateError": "Failed to save settings"
     },
     "orphanedCalendarsWarning": "Orphaned Calendars Detected",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",
@@ -999,6 +1013,7 @@
       "calendarsTransferred": "{count, plural, one {# calendar} other {# calendars}} transferred to {user}",
       "calendarsDeleted": "{count, plural, one {# calendar} other {# calendars}} deleted",
       "logsDeleted": "{count, plural, one {# log entry} other {# log entries}} deleted",
+      "systemSettingsUpdated": "System settings changed",
       "calendarUpdated": "Calendar “{calendar}” edited",
       "calendarDeleted": "Calendar “{calendar}” deleted",
       "calendarCreated": "Calendar “{calendar}” created",

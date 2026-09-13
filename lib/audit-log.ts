@@ -143,6 +143,11 @@ export interface AdminPasswordResetMetadata {
   targetUser: string;
 }
 
+export interface AdminSystemSettingsUpdatedMetadata {
+  before: { updateCheckEnabled: boolean; updateBannerVisibility: string };
+  after: { updateCheckEnabled: boolean; updateBannerVisibility: string };
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -162,7 +167,8 @@ export type AuditLogMetadata =
   | RateLimitHitMetadata
   | AdminUserDeleteMetadata
   | AdminCalendarTransferMetadata
-  | AdminPasswordResetMetadata;
+  | AdminPasswordResetMetadata
+  | AdminSystemSettingsUpdatedMetadata;
 
 // =====================================================
 // Audit Log Types

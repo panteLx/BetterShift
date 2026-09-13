@@ -320,3 +320,19 @@ export function canDeleteAuditLogs(
 ): boolean {
   return isSuperAdmin(adminUser);
 }
+
+/**
+ * Check if admin can view or change instance-wide system settings
+ * (e.g. whether the update check runs and who sees its banner).
+ *
+ * Rules:
+ * - Both admin and superadmin can manage system settings
+ *
+ * @param adminUser - The admin performing the action
+ * @returns boolean - true if admin can manage system settings
+ */
+export function canManageSystemSettings(
+  adminUser: User | null | undefined
+): boolean {
+  return isAdmin(adminUser);
+}

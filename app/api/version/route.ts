@@ -1,12 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getBuildInfo, buildGitHubUrl } from "@/lib/version";
+import { getAdminUser } from "@/lib/auth/admin-helpers";
+import { isAdmin } from "@/lib/auth/admin";
+import { getSystemSettings } from "@/lib/system-settings";
 
 /**
- * Cache Strategy: 15 minutes unified across all version/release endpoints
- * - Server-side cache (cachedVersionInfo): 15 minutes
- * - HTTP Cache-Control: 15 minutes
- * - GitHub API revalidation: 15 minutes
+ * Cache Strategy: 15 minutes for the GitHub release lookup.
+ * - GitHub API revalidation: 15 minutes (cachedLatestRelease below)
  * - Client polling interval: 15 minutes
+ *
+ * The response as a whole is NOT cached server-wide any more: whether
+ * latestVersion/hasUpdate are included depends on the requester's role
+ * (see updateBannerVisibility), so a shared cache would leak one user's
+ * view to another. Cache-Control is "private" for the same reason.
  */
 
 interface VersionResponse {
@@ -19,12 +25,6 @@ interface VersionResponse {
   latestUrl?: string;
   hasUpdate?: boolean;
 }
-
-// Cache version info with timestamp
-let cachedVersionInfo: {
-  data: VersionResponse;
-  timestamp: number;
-} | null = null;
 
 // Cache latest release info
 let cachedLatestRelease: {
@@ -108,21 +108,22 @@ function isDevVersion(version: string): boolean {
   return version === "dev" || version.includes("dev");
 }
 
-export async function GET() {
-  // Check cache
-  if (
-    cachedVersionInfo &&
-    Date.now() - cachedVersionInfo.timestamp < CACHE_DURATION
-  ) {
-    return NextResponse.json(cachedVersionInfo.data, {
-      headers: {
-        "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
-      },
-    });
-  }
+/** Whether the given requester's role is included in the configured banner audience. */
+async function isVisibleToRequester(
+  request: NextRequest,
+  visibility: "all" | "admins"
+): Promise<boolean> {
+  if (visibility === "all") return true;
 
-  // Get build info from .build-info.json (created at build time)
-  const buildInfo = await getBuildInfo();
+  // "admins": only requesters with an admin/superadmin role qualify
+  return isAdmin(await getAdminUser(request.headers));
+}
+
+export async function GET(request: NextRequest) {
+  const [buildInfo, settings] = await Promise.all([
+    getBuildInfo(), // from .build-info.json (created at build time)
+    getSystemSettings(),
+  ]);
 
   // Build GitHub URL based on version and commit
   const githubUrl = buildGitHubUrl(buildInfo.version, buildInfo.commitSha);
@@ -130,12 +131,17 @@ export async function GET() {
   // Determine if this is a dev version
   const isDev = isDevVersion(buildInfo.version);
 
-  // Get latest release for update check (only if not dev version)
-  const latestRelease = !isDev ? await getLatestRelease() : null;
+  // Get latest release for update check (only if enabled and not a dev version)
+  const latestRelease =
+    settings.updateCheckEnabled && !isDev ? await getLatestRelease() : null;
   const hasUpdate =
     latestRelease && !isDev
       ? compareVersions(buildInfo.version, latestRelease.version)
       : undefined;
+
+  const showUpdateInfo =
+    !!latestRelease &&
+    (await isVisibleToRequester(request, settings.updateBannerVisibility));
 
   const response: VersionResponse = {
     version: buildInfo.version,
@@ -146,22 +152,18 @@ export async function GET() {
     buildDate: buildInfo.buildDate,
     githubUrl,
     isDev,
-    ...(latestRelease && {
-      latestVersion: latestRelease.version,
-      latestUrl: latestRelease.url,
-      hasUpdate,
-    }),
-  };
-
-  // Cache the response
-  cachedVersionInfo = {
-    data: response,
-    timestamp: Date.now(),
+    ...(showUpdateInfo &&
+      latestRelease && {
+        latestVersion: latestRelease.version,
+        latestUrl: latestRelease.url,
+        hasUpdate,
+      }),
   };
 
   return NextResponse.json(response, {
     headers: {
-      "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
+      // "private": the response varies by requester role, so shared/CDN caches must not reuse it
+      "Cache-Control": `private, max-age=${CACHE_SECONDS}`,
     },
   });
 }

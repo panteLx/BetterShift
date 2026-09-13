@@ -7,13 +7,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { format, formatDistanceToNow } from "date-fns";
 import { ArrowUpCircle, ChevronRight, FolderClosed } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/form-kit";
+import { ChoiceChips, Field, Pill, ToggleRow } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminPageHeader, SeverityPill } from "@/components/admin/admin-kit";
 import { useAdminSections } from "@/components/admin/admin-sidebar";
 import { useAuditDescription } from "@/components/admin/audit-describe";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
+import type { UpdateBannerVisibility } from "@/lib/system-settings";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { useClientValue } from "@/hooks/useMediaQuery";
@@ -51,6 +53,7 @@ export default function AdminDashboardPage() {
 
   const { stats, isLoading: statsLoading } = useAdminStats();
   const { versionInfo } = useVersionUpdateCheck();
+  const { settings, updateSettings, isUpdating } = useSystemSettings();
   const [, usersArea, calendarsArea, logsArea] = useAdminSections();
 
   // Admin actions plus security events, delivered with the stats
@@ -202,6 +205,37 @@ export default function AdminDashboardPage() {
           {t("admin.systemInfo.latestVersion")}: <span className="font-mono">{versionInfo.latestVersion}</span>
         </StatusBanner>
       )}
+
+      <section className="flex flex-col gap-2 lg:gap-0 lg:overflow-hidden lg:rounded-[12px] lg:border lg:border-line lg:bg-surface-card">
+        <div className="lg:border-b lg:border-line lg:px-4 lg:py-[13px]">
+          <h2 className="eyebrow lg:hidden">{t("admin.systemSettings.title")}</h2>
+          <span className="hidden text-[14px] font-semibold text-fg-strong lg:inline">
+            {t("admin.systemSettings.title")}
+          </span>
+          <p className="mt-0.5 text-[12.5px] text-fg-tertiary">{t("admin.systemSettings.description")}</p>
+        </div>
+        <div className="flex flex-col gap-4 rounded-[11px] border border-line bg-surface-card p-3 lg:rounded-none lg:border-0 lg:p-4">
+          <ToggleRow
+            id="update-check-enabled"
+            title={t("admin.systemSettings.checkEnabled")}
+            description={t("admin.systemSettings.checkEnabledHint")}
+            checked={settings?.updateCheckEnabled ?? true}
+            onCheckedChange={(checked) => updateSettings({ updateCheckEnabled: checked })}
+            disabled={!settings || isUpdating}
+          />
+          <Field label={t("admin.systemSettings.visibility")}>
+            <ChoiceChips<UpdateBannerVisibility>
+              value={settings?.updateBannerVisibility ?? "all"}
+              onChange={(updateBannerVisibility) => updateSettings({ updateBannerVisibility })}
+              disabled={!settings || isUpdating || !settings.updateCheckEnabled}
+              options={[
+                { value: "all", label: t("admin.systemSettings.visibilityAll") },
+                { value: "admins", label: t("admin.systemSettings.visibilityAdmins") },
+              ]}
+            />
+          </Field>
+        </div>
+      </section>
 
       <div className="grid gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-[18px]">
         {/* Recent activity */}

@@ -330,6 +330,9 @@
     "description": "Versión, registro de cambios y formas de apoyar el proyecto",
     "tabInfo": "Info",
     "devBuild": "Versión de desarrollo",
+    "updateAvailable": "La versión {version} está disponible",
+    "updateDismissedHint": "Ocultaste este aviso.",
+    "showUpdateAgain": "Mostrar de nuevo",
     "supportTitle": "Apoyar el proyecto",
     "supportDescription": "BetterShift es de código abierto y se desarrolla en el tiempo libre. Si te resulta útil, agradezco tu apoyo.",
     "buyMeACoffee": "Buy Me a Coffee",
@@ -354,7 +357,8 @@
     "selectAtLeastOne": "Por favor, selecciona al menos un calendario"
   },
   "update": {
-    "newVersion": "La versión {version} está disponible"
+    "newVersion": "La versión {version} está disponible",
+    "dismiss": "Descartar"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -512,6 +516,16 @@
       "viewRelease": "Ver lanzamiento",
       "development": "Desarrollo",
       "unknown": "Desconocido"
+    },
+    "systemSettings": {
+      "title": "Notificaciones de actualización",
+      "description": "Controla si la app busca nuevas versiones y quién ve el aviso al respecto.",
+      "checkEnabled": "Buscar actualizaciones",
+      "checkEnabledHint": "Consulta periódicamente la última versión de GitHub. Si está desactivado, no se realiza ninguna comprobación.",
+      "visibility": "Banner visible para",
+      "visibilityAll": "Todos",
+      "visibilityAdmins": "Solo administradores",
+      "updateError": "No se pudieron guardar los ajustes"
     },
     "orphanedCalendarsWarning": "Se han detectado calendarios huérfanos",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Hay 1 calendario sin propietario} other {Hay # calendarios sin propietario}}. Por favor, asígnalos a usuarios.",
@@ -999,6 +1013,7 @@
       "calendarsTransferred": "{count, plural, one {# calendario transferido} other {# calendarios transferidos}} a {user}",
       "calendarsDeleted": "{count, plural, one {# calendario eliminado} other {# calendarios eliminados}}",
       "logsDeleted": "{count, plural, one {# entrada de registro eliminada} other {# entradas de registro eliminadas}}",
+      "systemSettingsUpdated": "Configuración del sistema modificada",
       "calendarUpdated": "Calendario «{calendar}» editado",
       "calendarDeleted": "Calendario «{calendar}» eliminado",
       "calendarCreated": "Calendario «{calendar}» creado",

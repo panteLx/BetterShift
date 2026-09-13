@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Settings,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import { CalendarWithCount } from "@/lib/types";
 import { CalendarSwitcher } from "@/components/calendar-switcher";
@@ -100,6 +101,59 @@ export function MonthArrows({
   );
 }
 
+/** The "new version available" pill (compact) or full-width banner (mobile), shared with auth-header. */
+export function UpdatePill({
+  version,
+  variant = "pill",
+  onShowChangelog,
+  onDismiss,
+  className,
+}: {
+  version: string;
+  variant?: "pill" | "banner";
+  onShowChangelog: () => void;
+  onDismiss: () => void;
+  className?: string;
+}) {
+  const t = useTranslations();
+  const isBanner = variant === "banner";
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-full bg-brand-soft text-[12.5px] font-semibold text-brand-ink",
+        isBanner
+          ? "w-full gap-2 rounded-none border-t border-line py-2 pl-4 pr-2"
+          : "h-8 pl-3 pr-1",
+        className
+      )}
+    >
+      <button
+        type="button"
+        onClick={onShowChangelog}
+        className={cn(
+          "flex items-center gap-2 transition-colors hover:opacity-80",
+          isBanner && "flex-1 text-left"
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-brand-dot" />
+        {t("update.newVersion", { version })}
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label={t("update.dismiss")}
+        className={cn(
+          "flex items-center justify-center rounded-full transition-colors hover:bg-brand-soft/70",
+          isBanner ? "size-7 shrink-0" : "size-6"
+        )}
+      >
+        <X className={isBanner ? "size-4" : "size-3.5"} />
+      </button>
+    </div>
+  );
+}
+
 export function MonthStepper({
   currentDate,
   onDateChange,
@@ -157,11 +211,10 @@ export function AppHeader({
   const locale = useLocale();
   const { isGuest } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
-  const { versionInfo } = useVersionUpdateCheck();
+  const { versionInfo, showUpdate, dismissUpdate } = useVersionUpdateCheck();
   const [showChangelog, setShowChangelog] = useState(false);
 
   const signedIn = isAuthEnabled && !isGuest;
-  const showUpdate = versionInfo?.hasUpdate && !versionInfo.isDev;
 
   const brand = (
     <Link
@@ -242,16 +295,11 @@ export function AppHeader({
           <MonthStepper currentDate={currentDate} onDateChange={onDateChange} />
           <div className="flex-1" />
           {showUpdate && (
-            <button
-              type="button"
-              onClick={() => setShowChangelog(true)}
-              className="flex h-8 items-center gap-2 rounded-full bg-brand-soft px-3 text-[12.5px] font-semibold text-brand-ink transition-colors hover:bg-brand-soft/70"
-            >
-              <span className="size-1.5 rounded-full bg-brand-dot" />
-              {t("update.newVersion", {
-                version: versionInfo?.latestVersion || "",
-              })}
-            </button>
+            <UpdatePill
+              version={versionInfo?.latestVersion || ""}
+              onShowChangelog={() => setShowChangelog(true)}
+              onDismiss={dismissUpdate}
+            />
           )}
           {actions}
         </div>
@@ -272,14 +320,13 @@ export function AppHeader({
           {actions}
         </div>
         {showUpdate && (
-          <button
-            type="button"
-            onClick={() => setShowChangelog(true)}
-            className="flex w-full items-center gap-2 border-t border-line bg-brand-soft px-4 py-2 text-left text-[12.5px] font-semibold text-brand-ink lg:hidden"
-          >
-            <span className="size-1.5 rounded-full bg-brand-dot" />
-            {t("update.newVersion", { version: versionInfo?.latestVersion || "" })}
-          </button>
+          <UpdatePill
+            version={versionInfo?.latestVersion || ""}
+            variant="banner"
+            onShowChangelog={() => setShowChangelog(true)}
+            onDismiss={dismissUpdate}
+            className="lg:hidden"
+          />
         )}
       </header>
 

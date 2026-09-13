@@ -7,6 +7,7 @@ import { CalendarDays } from "lucide-react";
 import { GuestMenu, UserMenu } from "@/components/user-menu";
 import { InfoDialog } from "@/components/info-dialog";
 import { Pill } from "@/components/form-kit";
+import { UpdatePill } from "@/components/app-header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
@@ -41,11 +42,10 @@ function HeaderSessionControls() {
   const locale = useLocale();
   const { isGuest } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
-  const { versionInfo } = useVersionUpdateCheck();
+  const { versionInfo, showUpdate, dismissUpdate } = useVersionUpdateCheck();
   const [showChangelog, setShowChangelog] = useState(false);
 
   const signedIn = isAuthEnabled && !isGuest;
-  const showUpdate = versionInfo?.hasUpdate && !versionInfo.isDev;
 
   return (
     <>
@@ -56,14 +56,12 @@ function HeaderSessionControls() {
       )}
       <div className="flex-1" />
       {showUpdate && (
-        <button
-          type="button"
-          onClick={() => setShowChangelog(true)}
-          className="hidden h-8 items-center gap-2 rounded-full bg-brand-soft px-3 text-[12.5px] font-semibold text-brand-ink transition-colors hover:bg-brand-soft/70 sm:flex"
-        >
-          <span className="size-1.5 rounded-full bg-brand-dot" />
-          {t("update.newVersion", { version: versionInfo?.latestVersion || "" })}
-        </button>
+        <UpdatePill
+          version={versionInfo?.latestVersion || ""}
+          onShowChangelog={() => setShowChangelog(true)}
+          onDismiss={dismissUpdate}
+          className="hidden sm:flex"
+        />
       )}
       {signedIn ? <UserMenu /> : <GuestMenu showLogin={isAuthEnabled} />}
       <InfoDialog

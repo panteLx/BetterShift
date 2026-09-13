@@ -52,6 +52,7 @@ export const queryKeys = {
     },
     auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
+    systemSettings: ["admin", "system-settings"] as const,
   },
 
   // Calendar Features
@@ -74,4 +75,7 @@ export const queryKeys = {
   // User Activity Logs
   activityLogsAll: ["activity-logs"] as const,
   activityLogs: (filters?: object) => ["activity-logs", filters] as const,
+
+  // App version / update check
+  version: ["version"] as const,
 } as const;

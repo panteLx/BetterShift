@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { CalendarDays, Coffee, Github, Heart } from "lucide-react";
+import { ArrowUpCircle, CalendarDays, Coffee, Github, Heart } from "lucide-react";
 import { PanelBody, PanelDialog } from "@/components/panel-dialog";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ChangelogPanel } from "@/components/changelog-dialog";
+import { Button } from "@/components/ui/button";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 
 type InfoTab = "info" | "changelog";
@@ -17,7 +18,7 @@ const DONATE_LINKS = [
 
 function InfoTabContent() {
   const t = useTranslations();
-  const { versionInfo } = useVersionUpdateCheck();
+  const { versionInfo, isDismissed, resetDismissal } = useVersionUpdateCheck();
 
   return (
     <div className="flex flex-col gap-5">
@@ -47,6 +48,23 @@ function InfoTabContent() {
           </a>
         )}
       </div>
+
+      {isDismissed && versionInfo?.latestVersion && (
+        <div className="flex items-center gap-3 rounded-[11px] border border-line bg-surface-panel px-4 py-3.5">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-brand-soft">
+            <ArrowUpCircle className="size-[18px] text-brand-ink" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13.5px] font-semibold text-fg-strong">
+              {t("info.updateAvailable", { version: versionInfo.latestVersion })}
+            </p>
+            <p className="mt-0.5 text-[12px] text-fg-tertiary">{t("info.updateDismissedHint")}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={resetDismissal} className="h-8 shrink-0 rounded-lg font-semibold">
+            {t("info.showUpdateAgain")}
+          </Button>
+        </div>
+      )}
 
       <div>
         <p className="text-[13.5px] font-semibold text-fg-strong">{t("info.supportTitle")}</p>

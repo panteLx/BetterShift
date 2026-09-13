@@ -330,6 +330,9 @@
     "description": "Version, journal des modifications et moyens de soutenir le projet",
     "tabInfo": "Infos",
     "devBuild": "Version de développement",
+    "updateAvailable": "La version {version} est disponible",
+    "updateDismissedHint": "Tu as masqué cette notification.",
+    "showUpdateAgain": "Réafficher",
     "supportTitle": "Soutenir le projet",
     "supportDescription": "BetterShift est open source et développé sur le temps libre. Si l'application vous aide, votre soutien est très apprécié.",
     "buyMeACoffee": "Buy Me a Coffee",
@@ -354,7 +357,8 @@
     "selectAtLeastOne": "Veuillez sélectionner au moins un calendrier"
   },
   "update": {
-    "newVersion": "La version {version} est disponible"
+    "newVersion": "La version {version} est disponible",
+    "dismiss": "Masquer"
   },
   "auth": {
     "login": "Se connecter",
@@ -512,6 +516,16 @@
       "viewRelease": "Voir la version",
       "development": "Développement",
       "unknown": "Inconnu"
+    },
+    "systemSettings": {
+      "title": "Notifications de mise à jour",
+      "description": "Contrôle si l'application recherche de nouvelles versions et qui voit la bannière correspondante.",
+      "checkEnabled": "Rechercher les mises à jour",
+      "checkEnabledHint": "Vérifie périodiquement la dernière version GitHub. Si désactivé, aucune vérification n'est effectuée.",
+      "visibility": "Bannière visible pour",
+      "visibilityAll": "Tout le monde",
+      "visibilityAdmins": "Administrateurs uniquement",
+      "updateError": "Échec de l'enregistrement des paramètres"
     },
     "orphanedCalendarsWarning": "Calendriers orphelins détectés",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {1 calendrier n'a pas de propriétaire} other {# calendriers n'ont pas de propriétaire}}. Veuillez les attribuer à des utilisateurs.",
@@ -999,6 +1013,7 @@
       "calendarsTransferred": "{count, plural, one {# calendrier transféré} other {# calendriers transférés}} à {user}",
       "calendarsDeleted": "{count, plural, one {# calendrier supprimé} other {# calendriers supprimés}}",
       "logsDeleted": "{count, plural, one {# entrée de journal supprimée} other {# entrées de journal supprimées}}",
+      "systemSettingsUpdated": "Paramètres système modifiés",
       "calendarUpdated": "Calendrier « {calendar} » modifié",
       "calendarDeleted": "Calendrier « {calendar} » supprimé",
       "calendarCreated": "Calendrier « {calendar} » créé",

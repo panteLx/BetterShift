@@ -330,6 +330,9 @@
     "description": "Versione, changelog e modi per sostenere il progetto",
     "tabInfo": "Info",
     "devBuild": "Versione di sviluppo",
+    "updateAvailable": "Versione {version} è disponibile",
+    "updateDismissedHint": "Hai nascosto questo avviso.",
+    "showUpdateAgain": "Mostra di nuovo",
     "supportTitle": "Sostieni il progetto",
     "supportDescription": "BetterShift è open source e sviluppato nel tempo libero. Se ti è utile, il tuo sostegno è molto apprezzato.",
     "buyMeACoffee": "Buy Me a Coffee",
@@ -354,7 +357,8 @@
     "selectAtLeastOne": "Seleziona almeno un calendario"
   },
   "update": {
-    "newVersion": "Versione {version} è disponibile"
+    "newVersion": "Versione {version} è disponibile",
+    "dismiss": "Nascondi"
   },
   "auth": {
     "login": "Accedi",
@@ -512,6 +516,16 @@
       "viewRelease": "Visualizza release",
       "development": "Sviluppo",
       "unknown": "Sconosciuto"
+    },
+    "systemSettings": {
+      "title": "Notifiche di aggiornamento",
+      "description": "Controlla se l'app cerca nuove versioni e chi vede il banner relativo.",
+      "checkEnabled": "Cerca aggiornamenti",
+      "checkEnabledHint": "Controlla periodicamente l'ultima versione su GitHub. Se disattivato, non viene eseguito alcun controllo.",
+      "visibility": "Banner visibile a",
+      "visibilityAll": "Tutti",
+      "visibilityAdmins": "Solo amministratori",
+      "updateError": "Impossibile salvare le impostazioni"
     },
     "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
@@ -999,6 +1013,7 @@
       "calendarsTransferred": "{count, plural, one {# calendario trasferito} other {# calendari trasferiti}} a {user}",
       "calendarsDeleted": "{count, plural, one {# calendario eliminato} other {# calendari eliminati}}",
       "logsDeleted": "{count, plural, one {# voce di log eliminata} other {# voci di log eliminate}}",
+      "systemSettingsUpdated": "Impostazioni di sistema modificate",
       "calendarUpdated": "Calendario «{calendar}» modificato",
       "calendarDeleted": "Calendario «{calendar}» eliminato",
       "calendarCreated": "Calendario «{calendar}» creato",

@@ -75,6 +75,8 @@ export function useAuditDescription() {
         case "admin.audit_log.delete_by_ids":
         case "admin.audit_log.delete_by_date":
           return t("adminAudit.describe.logsDeleted", { count: count(m, "deletedCount") });
+        case "admin.system_settings.update":
+          return t("adminAudit.describe.systemSettingsUpdated");
         case "admin.calendar.update":
         case "calendar.updated":
           if (calendar) return t("adminAudit.describe.calendarUpdated", { calendar });

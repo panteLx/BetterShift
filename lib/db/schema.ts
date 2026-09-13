@@ -205,6 +205,23 @@ export const userPreferences = sqliteTable("user_preferences", {
     .$onUpdate(() => new Date()),
 });
 
+// Single-row table (id is always "default") for instance-wide toggles.
+export const systemSettings = sqliteTable("system_settings", {
+  id: text("id").primaryKey().default("default"),
+  updateCheckEnabled: integer("update_check_enabled", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  updateBannerVisibility: text("update_banner_visibility", {
+    enum: ["all", "admins"],
+  })
+    .notNull()
+    .default("all"),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
 export const externalSyncs = sqliteTable("external_syncs", {
   id: text("id")
     .primaryKey()

@@ -113,6 +113,13 @@
       "when": 1789245373291,
       "tag": "0015_neat_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1789289621960,
+      "tag": "0016_smart_maximus",
+      "breakpoints": true
     }
   ]
 }

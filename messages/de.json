@@ -330,6 +330,9 @@
     "description": "Version, Changelog und Wege, das Projekt zu unterstützen",
     "tabInfo": "Info",
     "devBuild": "Entwicklungsversion",
+    "updateAvailable": "Version {version} ist verfügbar",
+    "updateDismissedHint": "Du hast diesen Hinweis ausgeblendet.",
+    "showUpdateAgain": "Wieder anzeigen",
     "supportTitle": "Projekt unterstützen",
     "supportDescription": "BetterShift ist Open Source und wird in der Freizeit entwickelt. Wenn es dir hilft, freue ich mich über deine Unterstützung.",
     "buyMeACoffee": "Buy Me a Coffee",
@@ -354,7 +357,8 @@
     "selectAtLeastOne": "Bitte wähle mindestens einen Kalender aus"
   },
   "update": {
-    "newVersion": "Version {version} ist verfügbar"
+    "newVersion": "Version {version} ist verfügbar",
+    "dismiss": "Hinweis ausblenden"
   },
   "auth": {
     "login": "Anmelden",
@@ -512,6 +516,16 @@
       "viewRelease": "Release anzeigen",
       "development": "Entwicklung",
       "unknown": "Unbekannt"
+    },
+    "systemSettings": {
+      "title": "Update-Benachrichtigungen",
+      "description": "Steuert, ob nach neuen Versionen gesucht wird und wer den Hinweis dazu sieht.",
+      "checkEnabled": "Auf Updates prüfen",
+      "checkEnabledHint": "Fragt regelmäßig die neueste GitHub-Version ab. Deaktiviert, findet keine Prüfung statt.",
+      "visibility": "Banner sichtbar für",
+      "visibilityAll": "Alle",
+      "visibilityAdmins": "Nur Admins",
+      "updateError": "Einstellungen konnten nicht gespeichert werden"
     },
     "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weise diese(n) Benutzern zu.",
@@ -999,6 +1013,7 @@
       "calendarsTransferred": "{count, plural, one {# Kalender} other {# Kalender}} an {user} übertragen",
       "calendarsDeleted": "{count, plural, one {# Kalender} other {# Kalender}} gelöscht",
       "logsDeleted": "{count, plural, one {# Protokolleintrag} other {# Protokolleinträge}} gelöscht",
+      "systemSettingsUpdated": "Systemeinstellungen geändert",
       "calendarUpdated": "Kalender „{calendar}“ bearbeitet",
       "calendarDeleted": "Kalender „{calendar}“ gelöscht",
       "calendarCreated": "Kalender „{calendar}“ angelegt",

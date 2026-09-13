@@ -330,6 +330,9 @@
     "description": "Verze, seznam změn a možnosti podpory projektu",
     "tabInfo": "Info",
     "devBuild": "Vývojová verze",
+    "updateAvailable": "Je dostupná verze {version}",
+    "updateDismissedHint": "Toto oznámení jsi skryl(a).",
+    "showUpdateAgain": "Zobrazit znovu",
     "supportTitle": "Podpořit projekt",
     "supportDescription": "BetterShift je open source a vzniká ve volném čase. Pokud ti pomáhá, budu rád za tvou podporu.",
     "buyMeACoffee": "Buy Me a Coffee",
@@ -354,7 +357,8 @@
     "selectAtLeastOne": "Vyberte prosím alespoň jeden kalendář"
   },
   "update": {
-    "newVersion": "Je dostupná verze {version}"
+    "newVersion": "Je dostupná verze {version}",
+    "dismiss": "Skrýt"
   },
   "auth": {
     "login": "Přihlásit se",
@@ -512,6 +516,16 @@
       "viewRelease": "Zobrazit vydání",
       "development": "Vývoj",
       "unknown": "Neznámé"
+    },
+    "systemSettings": {
+      "title": "Oznámení o aktualizaci",
+      "description": "Určuje, zda aplikace kontroluje nové verze a kdo vidí příslušný banner.",
+      "checkEnabled": "Kontrolovat aktualizace",
+      "checkEnabledHint": "Pravidelně kontroluje nejnovější verzi na GitHubu. Pokud je vypnuto, kontrola neprobíhá.",
+      "visibility": "Banner viditelný pro",
+      "visibilityAll": "Všechny",
+      "visibilityAdmins": "Pouze administrátory",
+      "updateError": "Nastavení se nepodařilo uložit"
     },
     "orphanedCalendarsWarning": "Zjištěny osiřelé kalendáře",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Existuje 1 kalendář bez vlastníka} few {Existují # kalendáře bez vlastníka} other {Existuje # kalendářů bez vlastníka}}. Přiřaďte je prosím uživatelům.",
@@ -999,6 +1013,7 @@
       "calendarsTransferred": "{count, plural, one {# kalendář převeden} few {# kalendáře převedeny} other {# kalendářů převedeno}} na {user}",
       "calendarsDeleted": "{count, plural, one {# kalendář smazán} few {# kalendáře smazány} other {# kalendářů smazáno}}",
       "logsDeleted": "{count, plural, one {# záznam protokolu smazán} few {# záznamy protokolu smazány} other {# záznamů protokolu smazáno}}",
+      "systemSettingsUpdated": "Systémová nastavení změněna",
       "calendarUpdated": "Kalendář „{calendar}“ upraven",
       "calendarDeleted": "Kalendář „{calendar}“ smazán",
       "calendarCreated": "Kalendář „{calendar}“ vytvořen",
