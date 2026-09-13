@@ -111,10 +111,11 @@ export function CompareWorkspace(props: CompareWorkspaceProps) {
     props.calendars.find((c) => presetOwnerIds.has(c.id))?.id ?? props.calendars[0]?.id;
   const activePresets = orderStampPresets(props.presetsMap.get(activeColumnId ?? "") ?? []);
 
-  // Each column carries its own permission, and only an editable one renders the
-  // presets the shortcuts arm — without this a key press stamps into a read-only
-  // calendar and the write is rejected server-side.
-  const { canEdit: canEditActiveColumn } = useCalendarPermission(activeColumnId);
+  // Each column carries its own permission, and only a stampable one renders the
+  // presets the shortcuts arm — without this a key press stamps into a calendar
+  // the caller can't create shifts in and the write is rejected server-side.
+  const { can: canStampActiveColumn } = useCalendarPermission(activeColumnId);
+  const canEditActiveColumn = canStampActiveColumn("createShift");
   const { isOnline } = useConnectionStatus({ toasts: false });
 
   useStampShortcuts({
@@ -321,7 +322,11 @@ function CompareColumn({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const { canEdit } = useCalendarPermission(calendar.id);
+  const { can } = useCalendarPermission(calendar.id);
+  const canStamp = can("createShift");
+  // The gear only needs to be worth opening — PresetManageSheet gates its own actions internally.
+  const canOpenPresetManage = can("createPreset") || can("manageOwnPresets");
+  const canAddNote = can("manageOwnNotesEvents");
   const { primary, secondary } = splitStampPresets(presetsMap.get(calendar.id) ?? []);
   const activeIds = new Set(selectedPresetIds);
   const totals = monthTotals(shifts, currentDate);
@@ -343,10 +348,10 @@ function CompareColumn({
             {formatHours(totals.minutes, locale)}
           </span>
         </div>
-        {canEdit && (
+        {(canStamp || canOpenPresetManage) && (
           <div className="mt-2.5 flex h-8 items-center gap-1.5 overflow-hidden">
             <div className="flex min-w-0 items-center gap-1.5 overflow-hidden empty:hidden">
-              {primary.map((preset, index) => {
+              {canStamp && primary.map((preset, index) => {
                 const active = activeIds.has(preset.id);
                 return (
                   <button
@@ -374,27 +379,33 @@ function CompareColumn({
                 );
               })}
             </div>
-            <MorePresets
-              variant="compare"
-              presets={secondary}
-              selectedPresetIds={selectedPresetIds}
-              onSelectPreset={onSelectPreset}
-              multiMode={multiMode}
-            />
-            <MultiSelectToggle
-              variant="compare"
-              active={multiMode}
-              onClick={() => setMultiMode((m) => !m)}
-            />
-            <button
-              type="button"
-              onClick={onManagePresets}
-              aria-label={t("calendarView.managePresets")}
-              className="flex size-7 shrink-0 items-center justify-center rounded-[7px] text-fg-tertiary hover:bg-surface-sunken"
-            >
-              <SlidersHorizontal className="size-3.5" />
-            </button>
-            {!keysActive && primary.length + secondary.length > 0 && (
+            {canStamp && (
+              <MorePresets
+                variant="compare"
+                presets={secondary}
+                selectedPresetIds={selectedPresetIds}
+                onSelectPreset={onSelectPreset}
+                multiMode={multiMode}
+              />
+            )}
+            {canStamp && (
+              <MultiSelectToggle
+                variant="compare"
+                active={multiMode}
+                onClick={() => setMultiMode((m) => !m)}
+              />
+            )}
+            {canOpenPresetManage && (
+              <button
+                type="button"
+                onClick={onManagePresets}
+                aria-label={t("calendarView.managePresets")}
+                className="flex size-7 shrink-0 items-center justify-center rounded-[7px] text-fg-tertiary hover:bg-surface-sunken"
+              >
+                <SlidersHorizontal className="size-3.5" />
+              </button>
+            )}
+            {canStamp && !keysActive && primary.length + secondary.length > 0 && (
               <span className="min-w-0 flex-1 truncate pl-1 text-[12px] text-fg-tertiary">
                 {t("calendarCompare.tapToMoveStamp")}
               </span>
@@ -416,7 +427,7 @@ function CompareColumn({
         highlightedWeekdays={highlightedWeekdays}
         highlightColor={highlightColor}
         onDayClick={(date) => onDayClick(calendar.id, date)}
-        onDayContextMenu={canEdit ? (date) => onDayContextMenu(calendar.id, date) : undefined}
+        onDayContextMenu={canAddNote ? (date) => onDayContextMenu(calendar.id, date) : undefined}
       />
     </section>
   );
