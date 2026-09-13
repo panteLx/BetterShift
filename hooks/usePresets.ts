@@ -18,6 +18,7 @@ export interface PresetFormData {
   isSecondary: boolean;
   isAllDay: boolean;
   hideFromStats: boolean;
+  defaultSignupCapacity?: number | null;
 }
 
 // API functions
@@ -114,6 +115,7 @@ function createOptimisticPreset(
     isSecondary: formData.isSecondary,
     isAllDay: formData.isAllDay,
     hideFromStats: formData.hideFromStats,
+    defaultSignupCapacity: formData.defaultSignupCapacity ?? null,
     order: 999, // Will be corrected by server
     createdAt: new Date(),
     updatedAt: new Date(),

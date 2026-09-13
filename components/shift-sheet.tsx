@@ -7,9 +7,11 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftFormFields } from "@/components/shift-form-fields";
 import { PresetSelect } from "@/components/preset-select";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
+import { ShiftSignupList } from "@/components/shift-signup-list";
 import { useShiftForm } from "@/hooks/useShiftForm";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { formatDateToLocal, formatLongDate, parseLocalDate } from "@/lib/date-utils";
+import { isTempId } from "@/lib/utils";
 
 interface ShiftSheetProps {
   open: boolean;
@@ -31,6 +33,9 @@ export interface ShiftFormData {
   notes?: string;
   presetId?: string;
   isAllDay?: boolean;
+  signupCapacity?: number | null;
+  /** New shifts only: people to sign up immediately once the shift is created. */
+  signupUserIds?: string[];
 }
 
 // presetId is left out: the form never changes it and does not load it
@@ -43,6 +48,7 @@ function snapshot(data: ShiftFormData) {
     notes: data.notes || "",
     color: data.color,
     isAllDay: data.isAllDay || false,
+    signupCapacity: data.signupCapacity ?? null,
   });
 }
 
@@ -78,10 +84,14 @@ export function ShiftSheet({
     resetForm,
   } = useShiftForm({ open, shift, selectedDate, calendarId });
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [pendingSignupUserIds, setPendingSignupUserIds] = useState<string[]>([]);
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setSelectedPresetId(null);
+    if (open) {
+      setSelectedPresetId(null);
+      setPendingSignupUserIds([]);
+    }
   }
 
   const initialSnapshot = useMemo(
@@ -98,6 +108,7 @@ export function ShiftSheet({
             notes: shift.notes || "",
             color: shift.color,
             isAllDay: shift.isAllDay || false,
+            signupCapacity: shift.signupCapacity ?? null,
           })
         : null,
     [shift]
@@ -113,7 +124,8 @@ export function ShiftSheet({
       formData.title.trim() !== "" ||
       formData.notes?.trim() !== "" ||
       saveAsPreset ||
-      presetName.trim() !== ""
+      presetName.trim() !== "" ||
+      pendingSignupUserIds.length > 0
     );
   };
 
@@ -127,6 +139,7 @@ export function ShiftSheet({
         ...formData,
         startTime: formData.isAllDay ? "00:00" : formData.startTime,
         endTime: formData.isAllDay ? "23:59" : formData.endTime,
+        ...(!shift ? { signupUserIds: pendingSignupUserIds } : {}),
       };
 
       await onSubmit(submitData);
@@ -199,6 +212,23 @@ export function ShiftSheet({
           isEditing={!!shift}
           readOnly={isReadOnly}
         />
+
+        {/* Signups aren't gated by isReadOnly: a read-only member may still
+            be allowed to sign themselves up when the calendar permits it. A
+            new (unsaved) shift uses local pending state instead of the API. */}
+        {calendarId && (
+          <ShiftSignupList
+            calendarId={calendarId}
+            signupCapacity={formData.signupCapacity ?? null}
+            onSignupCapacityChange={(value) =>
+              setFormData({ ...formData, signupCapacity: value })
+            }
+            readOnly={isReadOnly}
+            shiftId={shift && !isTempId(shift.id) ? shift.id : undefined}
+            pendingUserIds={pendingSignupUserIds}
+            onPendingUserIdsChange={setPendingSignupUserIds}
+          />
+        )}
       </div>
     </BaseSheet>
   );

@@ -9,6 +9,7 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { StatusBanner } from "@/components/status-banner";
 import { CalendarShareList } from "@/components/calendar-share-list";
 import { AccessLinksPanel } from "@/components/calendar-token-list";
+import { ToggleRow } from "@/components/form-kit";
 import {
   GuestPermissionSelector,
   usePublicAccessNote,
@@ -41,9 +42,19 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
   useReportDirty(linkForm.dirty, onDirtyChange);
 
   const [optimisticGuest, setOptimisticGuest] = useState<GuestPermission | null>(null);
+  const [optimisticAllowSelfSignup, setOptimisticAllowSelfSignup] = useState<
+    boolean | null
+  >(null);
+  const [optimisticSignupsEnabled, setOptimisticSignupsEnabled] = useState<
+    boolean | null
+  >(null);
   const [saving, setSaving] = useState(false);
   const calendar = calendars.find((c) => c.id === calendarId);
   const guestPermission = optimisticGuest ?? calendar?.guestPermission ?? "none";
+  const allowSelfSignup =
+    optimisticAllowSelfSignup ?? calendar?.allowSelfSignup ?? true;
+  const signupsEnabled =
+    optimisticSignupsEnabled ?? calendar?.signupsEnabled ?? true;
 
   // guestPermission also governs signed-in users without a share, so it is offered whenever auth is on.
   const showPublicTab = isAuthEnabled;
@@ -59,6 +70,34 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
     } finally {
       setSaving(false);
       setOptimisticGuest(null);
+    }
+  };
+
+  const handleAllowSelfSignupChange = async (value: boolean) => {
+    if (!canShare || value === allowSelfSignup) return;
+    setOptimisticAllowSelfSignup(value);
+    setSaving(true);
+    try {
+      await updateCalendar(calendarId, { allowSelfSignup: value });
+    } catch {
+      // updateCalendar already reported the error and rolled back the cache.
+    } finally {
+      setSaving(false);
+      setOptimisticAllowSelfSignup(null);
+    }
+  };
+
+  const handleSignupsEnabledChange = async (value: boolean) => {
+    if (!canShare || value === signupsEnabled) return;
+    setOptimisticSignupsEnabled(value);
+    setSaving(true);
+    try {
+      await updateCalendar(calendarId, { signupsEnabled: value });
+    } catch {
+      // updateCalendar already reported the error and rolled back the cache.
+    } finally {
+      setSaving(false);
+      setOptimisticSignupsEnabled(null);
     }
   };
 
@@ -98,6 +137,26 @@ export function SharingPanel({ calendarId, onClose, onDirtyChange }: SharingPane
         {activeTab === "people" ? (
           <>
             <CalendarShareList calendarId={calendarId} canManageShares={canShare} />
+            {canShare && (
+              <ToggleRow
+                id="signups-enabled"
+                title={t("sharingSheet.signupsEnabledLabel")}
+                description={t("sharingSheet.signupsEnabledDesc")}
+                checked={signupsEnabled}
+                onCheckedChange={handleSignupsEnabledChange}
+                disabled={saving}
+              />
+            )}
+            {canShare && signupsEnabled && (
+              <ToggleRow
+                id="allow-self-signup"
+                title={t("sharingSheet.allowSelfSignupLabel")}
+                description={t("sharingSheet.allowSelfSignupDesc")}
+                checked={allowSelfSignup}
+                onCheckedChange={handleAllowSelfSignupChange}
+                disabled={saving}
+              />
+            )}
             {showPublicTab &&
               (guestPermission === "none" ? (
                 <StatusBanner tone="info" icon={Shield} title={t("sharingSheet.publicOffTitle")}>

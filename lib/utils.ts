@@ -59,6 +59,11 @@ export function generateTempId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** Whether an id is an optimistic placeholder created via `temp-${generateTempId()}`. */
+export function isTempId(id: string): boolean {
+  return id.startsWith("temp-");
+}
+
 /** Up to two initials from a name, falling back to the e-mail. */
 export function getUserInitials(user: { name?: string | null; email?: string }): string {
   const source = user.name?.trim();

@@ -9,6 +9,7 @@ import {
   RefreshCw,
   StickyNote,
   Trash2,
+  UserPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,9 +20,60 @@ import {
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 import { getDateLocale } from "@/lib/locales";
-import { formatHours, formatTimeRange, getShiftMinutes, shiftVars } from "@/lib/shift-display";
+import {
+  formatHours,
+  formatSignupCapacityLabel,
+  formatTimeRange,
+  getShiftMinutes,
+  shiftVars,
+} from "@/lib/shift-display";
 import { PeriodSummary } from "@/hooks/useDaySummary";
-import { cn } from "@/lib/utils";
+import { cn, getUserInitials } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuickSelfSignup, useShiftSignupPermission } from "@/hooks/useShiftSignups";
+
+/** Compact avatar stack for who signed up; renders nothing when unused. */
+function ShiftSignupBadge({
+  shift,
+  signupsEnabled,
+}: {
+  shift: ShiftWithCalendar;
+  signupsEnabled: boolean;
+}) {
+  const t = useTranslations();
+  const signups = shift.signups ?? [];
+  const capacity = shift.signupCapacity ?? null;
+  if (!signupsEnabled || (signups.length === 0 && capacity == null)) return null;
+
+  const visible = signups.slice(0, 3);
+  const overflow = signups.length - visible.length;
+  const tooltip =
+    capacity != null
+      ? formatSignupCapacityLabel(t, signups.length, capacity).text
+      : undefined;
+
+  return (
+    <div className="flex shrink-0 items-center -space-x-1.5" title={tooltip}>
+      {visible.map((person) => (
+        <Avatar key={person.id} className="size-5 border border-surface-card">
+          {person.image && <AvatarImage src={person.image} alt="" />}
+          <AvatarFallback className="bg-surface-sunken text-[9px] font-semibold text-fg-secondary">
+            {getUserInitials({ name: person.name })}
+          </AvatarFallback>
+        </Avatar>
+      ))}
+      {overflow > 0 && (
+        <span
+          className="flex size-5 items-center justify-center rounded-full border border-surface-card bg-surface-sunken text-[9px] font-semibold text-fg-secondary"
+          aria-label={t("shiftSignup.andMore", { count: overflow })}
+        >
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export function Kpi({
   label,
@@ -73,8 +125,20 @@ export function ShiftDetailRow({
   const editable = canEdit && !synced;
   const minutes = getShiftMinutes(shift);
 
+  const { user: currentUser } = useAuth();
+  const { canManageOwn, signupsEnabled } = useShiftSignupPermission(shift.calendarId);
+  const { signUpForShift, isPending: signingUp } = useQuickSelfSignup();
+  const signups = shift.signups ?? [];
+  const capacity = shift.signupCapacity ?? null;
+  const alreadySignedUp = !!currentUser && signups.some((s) => s.id === currentUser.id);
+  const isFull = capacity != null && signups.length >= capacity;
+  const showQuickSignup = canManageOwn && !alreadySignedUp && !isFull;
+
   return (
-    <div className="flex items-center gap-[11px] rounded-lg border border-line bg-surface-card px-3 py-[11px]">
+    <div
+      onClick={() => onEdit(shift)}
+      className="flex cursor-pointer items-center gap-[11px] rounded-lg border border-line bg-surface-card px-3 py-[11px] transition-colors hover:bg-surface-panel"
+    >
       <span
         className="shift-rail h-[34px] w-1 shrink-0 rounded-full"
         style={shiftVars(shift.color)}
@@ -90,6 +154,22 @@ export function ShiftDetailRow({
           <div className="mt-1 line-clamp-2 text-xs text-fg-secondary">{shift.notes}</div>
         )}
       </div>
+      <ShiftSignupBadge shift={shift} signupsEnabled={signupsEnabled} />
+      {showQuickSignup && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            signUpForShift(shift.id);
+          }}
+          disabled={signingUp}
+          aria-label={t("shiftSignup.addSelf")}
+          title={t("shiftSignup.addSelf")}
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken disabled:opacity-40"
+        >
+          <UserPlus className="size-4" />
+        </button>
+      )}
       {synced && (
         <span
           className="flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-semibold text-fg-secondary"
@@ -108,6 +188,7 @@ export function ShiftDetailRow({
         (actions === "menu" ? (
           <DropdownMenu>
             <DropdownMenuTrigger
+              onClick={(e) => e.stopPropagation()}
               className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
               aria-label={t("calendarView.shiftActions")}
             >
@@ -131,7 +212,10 @@ export function ShiftDetailRow({
           <div className="flex items-center">
             <button
               type="button"
-              onClick={() => onEdit(shift)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(shift);
+              }}
               aria-label={t("shift.edit")}
               className="flex size-9 items-center justify-center rounded-md text-fg-secondary"
             >
@@ -139,7 +223,10 @@ export function ShiftDetailRow({
             </button>
             <button
               type="button"
-              onClick={() => onDelete(shift)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(shift);
+              }}
               aria-label={t("common.delete")}
               className="flex size-9 items-center justify-center rounded-md text-fg-secondary"
             >

@@ -32,6 +32,7 @@ export function useShiftForm({
     notes: shift?.notes || "",
     color: shift?.color || DEFAULT_COLOR,
     isAllDay: false,
+    signupCapacity: shift?.signupCapacity ?? null,
   });
 
   const { presets, createPreset } = usePresets(calendarId);
@@ -66,6 +67,7 @@ export function useShiftForm({
       notes: preset.notes || "",
       color: preset.color,
       isAllDay: preset.isAllDay || false,
+      signupCapacity: preset.defaultSignupCapacity ?? null,
     });
   };
 
@@ -79,6 +81,7 @@ export function useShiftForm({
       notes: "",
       color: DEFAULT_COLOR,
       isAllDay: false,
+      signupCapacity: null,
     });
   };
 
@@ -93,6 +96,7 @@ export function useShiftForm({
       notes: "",
       color: DEFAULT_COLOR,
       isAllDay: false,
+      signupCapacity: null,
     });
     setPresetName("");
     setSaveAsPreset(false);
@@ -120,6 +124,7 @@ export function useShiftForm({
         notes: shift?.notes || "",
         color: shift?.color || DEFAULT_COLOR,
         isAllDay: shift?.isAllDay || false,
+        signupCapacity: shift?.signupCapacity ?? null,
       };
 
       // Compare form data fields directly
@@ -130,7 +135,8 @@ export function useShiftForm({
         formDataRef.current.title !== newFormData.title ||
         formDataRef.current.notes !== newFormData.notes ||
         formDataRef.current.color !== newFormData.color ||
-        formDataRef.current.isAllDay !== newFormData.isAllDay;
+        formDataRef.current.isAllDay !== newFormData.isAllDay ||
+        formDataRef.current.signupCapacity !== newFormData.signupCapacity;
 
       if (needsUpdate) {
         setFormData(newFormData);

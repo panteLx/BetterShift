@@ -12,9 +12,11 @@ import {
   DayLayoutOptions,
   DayShiftLayout,
   buildDayShiftLayout,
+  formatSignupCapacityLabel,
   shiftVars,
 } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
+import { useCalendars } from "@/hooks/useCalendars";
 
 const WEEKDAY_KEYS = [
   "monday",
@@ -158,6 +160,11 @@ export function MonthGrid({
 }: MonthGridProps) {
   const t = useTranslations();
   const locale = useLocale();
+  const { calendars } = useCalendars();
+  const signupsEnabledById = useMemo(
+    () => new Map(calendars.map((c) => [c.id, c.signupsEnabled ?? true])),
+    [calendars]
+  );
   const phone = variant === "phone";
   const desktop = variant === "desktop";
   // 2024-01-01 was a Monday
@@ -174,6 +181,25 @@ export function MonthGrid({
     ? Math.max(PHONE_MIN_ROW, (gridSize.height - (rows - 1) * PHONE_GAP) / rows)
     : (gridSize.height - (rows - 1)) / rows;
   const colWidth = gridSize.width > 0 ? (gridSize.width - 8) / 7 : PHONE_FALLBACK_COL;
+  // Compact "N" / "N/capacity" badge shared by the desktop chip and the compare row
+  const signupBadge = (shift: ShiftWithCalendar) => {
+    if (!(signupsEnabledById.get(shift.calendarId) ?? true)) return null;
+    const count = shift.signups?.length ?? 0;
+    const capacity = shift.signupCapacity ?? null;
+    if (count === 0 && capacity == null) return null;
+    const label = capacity != null ? formatSignupCapacityLabel(t, count, capacity) : null;
+    return (
+      <span
+        className={cn(
+          "shrink-0 rounded-[4px] px-1 font-mono text-[10px] leading-4",
+          label?.isFull ? "bg-brand-soft text-brand-ink" : "bg-surface-sunken/70 text-fg-tertiary"
+        )}
+        title={label?.text}
+      >
+        {capacity != null ? `${count}/${capacity}` : count}
+      </span>
+    );
+  };
 
   useEffect(
     () => () => {
@@ -343,6 +369,7 @@ export function MonthGrid({
                       </span>
                     )}
                   </span>
+                  {signupBadge(shift)}
                   {time(shift)}
                 </span>
               );
@@ -536,6 +563,7 @@ export function MonthGrid({
                 style={shiftVars(shift.color)}
               />
               <span className="min-w-0 flex-1 truncate">{shift.title}</span>
+              {signupBadge(shift)}
             </span>
           ))}
           {minimalGroups.map(({ sync, shifts: syncShifts }) => (

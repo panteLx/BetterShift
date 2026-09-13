@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { isSameDay } from "date-fns";
+import { useTranslations } from "next-intl";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ExternalSync, ShiftPreset } from "@/lib/db/schema";
 import { calculateShiftDuration } from "@/lib/date-utils";
@@ -145,6 +146,19 @@ export function sumShiftMinutes(shifts: ShiftWithCalendar[]): number {
 /** Shift colour for the `shift-chip` / `shift-solid` / `shift-rail` utilities. */
 export function shiftVars(color?: string | null): CSSProperties {
   return { "--shift": color || undefined } as CSSProperties;
+}
+
+/** "3/5 signed up · Full"-style label shared by every signup-capacity display. */
+export function formatSignupCapacityLabel(
+  t: ReturnType<typeof useTranslations>,
+  count: number,
+  capacity: number
+): { text: string; isFull: boolean } {
+  const isFull = count >= capacity;
+  const text = `${t("shiftSignup.capacityProgress", { count, capacity })}${
+    isFull ? ` · ${t("shiftSignup.full")}` : ""
+  }`;
+  return { text, isFull };
 }
 
 /** One-letter stamp code used where only a block fits (stamp dock, preset list, compare). */

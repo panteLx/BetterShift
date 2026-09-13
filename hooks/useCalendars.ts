@@ -18,6 +18,15 @@ import { queryKeys } from "@/lib/query-keys";
 import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { ApiError } from "@/lib/api-error";
 
+export interface CalendarUpdateInput {
+  name?: string;
+  color?: string;
+  guestPermission?: "none" | "read" | "write";
+  viewSettings?: CalendarViewSettings | null;
+  allowSelfSignup?: boolean;
+  signupsEnabled?: boolean;
+}
+
 // API functions
 async function fetchCalendarsApi(): Promise<CalendarWithCount[]> {
   const response = await fetch("/api/calendars");
@@ -69,12 +78,7 @@ async function createCalendarApi(
 
 async function updateCalendarApi(
   calendarId: string,
-  updates: {
-    name?: string;
-    color?: string;
-    guestPermission?: "none" | "read" | "write";
-    viewSettings?: CalendarViewSettings | null;
-  }
+  updates: CalendarUpdateInput
 ): Promise<CalendarWithCount> {
   const response = await fetch(`/api/calendars/${calendarId}`, {
     method: "PATCH",
@@ -252,12 +256,7 @@ export function useCalendars(initialCalendarId?: string | null) {
     Error,
     {
       calendarId: string;
-      updates: {
-        name?: string;
-        color?: string;
-        guestPermission?: "none" | "read" | "write";
-        viewSettings?: CalendarViewSettings | null;
-      };
+      updates: CalendarUpdateInput;
     },
     UpdateCalendarContext
   >({
@@ -376,12 +375,7 @@ export function useCalendars(initialCalendarId?: string | null) {
   // Wrapper for updateCalendar to maintain original signature
   const updateCalendar = async (
     calendarId: string,
-    updates: {
-      name?: string;
-      color?: string;
-      guestPermission?: "none" | "read" | "write";
-      viewSettings?: CalendarViewSettings | null;
-    }
+    updates: CalendarUpdateInput
   ) => {
     try {
       return await updateMutation.mutateAsync({ calendarId, updates });
