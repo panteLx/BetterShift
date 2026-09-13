@@ -23,7 +23,7 @@ import { CalendarViewPanel, ViewSettingsState } from "@/components/view-settings
 import { PresetsPanel } from "@/components/preset-manage-sheet";
 import { ExternalSyncPanel } from "@/components/external-sync-manage-sheet";
 import { SyncNotificationsPanel } from "@/components/sync-notification-dialog";
-import { SharingPanel } from "@/components/calendar-share-management-sheet";
+import { PermissionsPanel } from "@/components/calendar-permissions-panel";
 import { isUsableToken } from "@/components/calendar-token-list";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
@@ -39,7 +39,7 @@ export type SettingsSection =
   | "general"
   | "presets"
   | "external"
-  | "sharing"
+  | "permissions"
   | "export"
   | "view"
   | "notifications";
@@ -185,7 +185,9 @@ export function useCalendarSettings(calendarId: string | null) {
   const { externalSyncs, hasSyncErrors } = useExternalSync(
     permission.canManage ? calendarId : null
   );
-  const { tokens } = useCalendarTokens(permission.canShare ? calendarId : null);
+  const canOpenPermissions =
+    permission.can("manageShares") || permission.can("manageGuestAccess");
+  const { tokens } = useCalendarTokens(canOpenPermissions ? calendarId : null);
 
   const items: SettingsItem[] = [];
   if (!calendar) return { calendar, items };
@@ -212,12 +214,14 @@ export function useCalendarSettings(calendarId: string | null) {
       description: t("settings.externalHint", { count: externalSyncs.length }),
       meta: externalSyncs.length,
     });
-  if (isAuthEnabled && permission.canShare)
+  // S2: the panel is worth opening with either capability — it self-gates each
+  // section (manageShares for people, manageGuestAccess for guest/links).
+  if (isAuthEnabled && canOpenPermissions)
     items.push({
-      id: "sharing",
+      id: "permissions",
       icon: Users,
-      title: t("settings.sharing"),
-      description: t("settings.sharingHint", { count: tokens.filter(isUsableToken).length }),
+      title: t("settings.permissions"),
+      description: t("settings.permissionsHint", { count: tokens.filter(isUsableToken).length }),
     });
   items.push(
     {
@@ -295,8 +299,8 @@ export function CalendarSettingsPanel({
           onDirtyChange={onDirtyChange}
         />
       );
-    case "sharing":
-      return <SharingPanel calendarId={calendarId} onClose={onCancel} onDirtyChange={onDirtyChange} />;
+    case "permissions":
+      return <PermissionsPanel calendarId={calendarId} onClose={onCancel} onDirtyChange={onDirtyChange} />;
     case "export":
       return <ExportPanel calendarId={calendarId} onClose={onClose} />;
     case "view":

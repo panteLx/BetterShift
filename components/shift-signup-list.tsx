@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, inputClass, Pill, RowIconButton, SectionLabel } from "@/components/form-kit";
-import { PersonRow } from "@/components/calendar-share-list";
+import { PersonRow } from "@/components/person-row";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useShiftSignupPermission,

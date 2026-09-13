@@ -9,17 +9,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, InfoNote, OptionCards, inputClass } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
+import { BundlePicker } from "@/components/permission-bundle-picker";
 import type {
   CreatedAccessLink,
-  LinkPermission,
   LinkValidity,
-  useAccessLinkForm,
-} from "@/hooks/useAccessLinkForm";
+  usePermissionLinkForm,
+} from "@/hooks/usePermissionLinkForm";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
-type AccessLinkForm = ReturnType<typeof useAccessLinkForm>;
+type AccessLinkForm = ReturnType<typeof usePermissionLinkForm>;
 
 function useValidityLabel() {
   const t = useTranslations();
@@ -31,12 +31,6 @@ function useValidityLabel() {
         : validity === "30"
           ? t("token.expiration30Days")
           : t("sharingSheet.validityUnlimited");
-}
-
-function usePermissionLabel() {
-  const t = useTranslations();
-  return (permission: LinkPermission) =>
-    permission === "read" ? t("sharingSheet.permRead") : t("sharingSheet.permWrite");
 }
 
 /** Fields of the "Neuen Link erzeugen" block; submit lives in the owning panel's footer. */
@@ -73,22 +67,13 @@ export function AccessLinkCreateForm({ form }: { form: AccessLinkForm }) {
       </Field>
 
       <Field label={t("common.labels.permission")}>
-        <OptionCards<LinkPermission>
-          label={t("common.labels.permission")}
-          value={form.permission}
-          onChange={form.setPermission}
-          options={[
-            {
-              value: "read",
-              title: t("sharingSheet.permRead"),
-              description: t("sharingSheet.permReadDesc"),
-            },
-            {
-              value: "write",
-              title: t("sharingSheet.permWrite"),
-              description: t("sharingSheet.permWriteDesc"),
-            },
-          ]}
+        <BundlePicker
+          bundles={form.guestEligibleBundles}
+          value={form.bundleId || null}
+          onChange={(id) => id && form.setBundleId(id)}
+          guestEligibleOnly
+          triggerAriaLabel={t("common.labels.permission")}
+          className="h-10 w-full justify-between px-3"
         />
       </Field>
 
@@ -116,10 +101,15 @@ export function AccessLinkCreateForm({ form }: { form: AccessLinkForm }) {
 }
 
 /** Header block of the result view (9b), shown inside the panel body. */
-export function AccessLinkCreatedHeader({ created }: { created: CreatedAccessLink }) {
+export function AccessLinkCreatedHeader({
+  created,
+  bundleName,
+}: {
+  created: CreatedAccessLink;
+  bundleName: string;
+}) {
   const t = useTranslations();
   const validityLabel = useValidityLabel();
-  const permissionLabel = usePermissionLabel();
 
   return (
     <div className="flex items-start gap-3">
@@ -131,11 +121,9 @@ export function AccessLinkCreatedHeader({ created }: { created: CreatedAccessLin
           {t("sharingSheet.linkReady")}
         </h3>
         <p className="mt-1 truncate text-[13px] text-fg-secondary">
-          {[
-            created.name || t("token.unnamed"),
-            permissionLabel(created.permission),
-            validityLabel(created.validity),
-          ].join(" · ")}
+          {[created.name || t("token.unnamed"), bundleName, validityLabel(created.validity)].join(
+            " · "
+          )}
         </p>
       </div>
     </div>
@@ -143,7 +131,13 @@ export function AccessLinkCreatedHeader({ created }: { created: CreatedAccessLin
 }
 
 /** The one-time view of a freshly created token. */
-export function AccessLinkCreated({ created }: { created: CreatedAccessLink }) {
+export function AccessLinkCreated({
+  created,
+  bundleName,
+}: {
+  created: CreatedAccessLink;
+  bundleName: string;
+}) {
   const t = useTranslations();
   const { allowGuest } = useAuthFeatures();
   const linkInput = useRef<HTMLInputElement>(null);
@@ -163,7 +157,7 @@ export function AccessLinkCreated({ created }: { created: CreatedAccessLink }) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <AccessLinkCreatedHeader created={created} />
+      <AccessLinkCreatedHeader created={created} bundleName={bundleName} />
 
       <StatusBanner tone="warning" icon={TriangleAlert} title={t("sharingSheet.copyNowTitle")}>
         {t("sharingSheet.copyNowBody")}
