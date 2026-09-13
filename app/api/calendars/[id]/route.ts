@@ -5,6 +5,7 @@ import {
   shifts,
   shiftPresets,
   calendarNotes,
+  calendarPermissionBundles,
 } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
@@ -13,12 +14,8 @@ import {
   canDeleteCalendar,
   hasCapability,
 } from "@/lib/auth/permissions";
-import {
-  getCoarseGuestLevel,
-  findSeededGuestBundleId,
-  setBundleCapability,
-  findSeededBundleId,
-} from "@/lib/auth/legacy-permission-compat";
+import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
+import { isGuestEligible } from "@/lib/permission-bundles";
 import {
   calendarViewSettingsEqual,
   sanitizeCalendarViewSettings,
@@ -27,7 +24,7 @@ import {
   logUserAction,
   type CalendarUpdatedMetadata,
   type CalendarDeletedMetadata,
-  type CalendarGuestPermissionChangedMetadata,
+  type CalendarGuestBundleChangedMetadata,
 } from "@/lib/audit-log";
 
 // GET single calendar
@@ -85,14 +82,7 @@ export async function PATCH(
     const { id } = await params;
     const user = await getSessionUser(request.headers);
     const body = await request.json();
-    const {
-      name,
-      color,
-      guestPermission,
-      viewSettings,
-      allowSelfSignup,
-      signupsEnabled,
-    } = body;
+    const { name, color, guestBundleId, viewSettings, signupsEnabled } = body;
 
     if (
       viewSettings !== undefined &&
@@ -118,15 +108,14 @@ export async function PATCH(
       );
     }
 
-    // guestPermission is gated separately from the rest of the calendar's
+    // guestBundleId is gated separately from the rest of the calendar's
     // settings — a bundle can hold manageCalendarSettings without
     // manageGuestAccess, or vice versa.
-    const wantsGuestChange = guestPermission !== undefined;
+    const wantsGuestChange = guestBundleId !== undefined;
     const wantsGeneralChange =
       name !== undefined ||
       color !== undefined ||
       viewSettings !== undefined ||
-      typeof allowSelfSignup === "boolean" ||
       typeof signupsEnabled === "boolean";
 
     if (
@@ -150,8 +139,9 @@ export async function PATCH(
 
     const updateData: Partial<typeof calendars.$inferInsert> = {};
     const changes: string[] = [];
-    let guestPermissionChanged = false;
-    let oldGuestPermission: string | undefined;
+    let guestBundleChanged = false;
+    let oldGuestBundleId: string | null = null;
+    let newGuestBundleId: string | null = null;
     let viewSettingsChange: CalendarUpdatedMetadata["viewSettings"];
 
     if (name && name !== existingCalendar.name) {
@@ -162,30 +152,47 @@ export async function PATCH(
       updateData.color = color;
       changes.push("color");
     }
-    if (
-      wantsGuestChange &&
-      ["none", "read", "write"].includes(guestPermission)
-    ) {
-      const currentLevel = await getCoarseGuestLevel(
-        existingCalendar.guestBundleId
-      );
-      if (guestPermission !== currentLevel) {
-        updateData.guestBundleId = await findSeededGuestBundleId(
-          id,
-          guestPermission
+    if (wantsGuestChange) {
+      if (guestBundleId === null) {
+        if (existingCalendar.guestBundleId !== null) {
+          updateData.guestBundleId = null;
+          changes.push("guestBundleId");
+          guestBundleChanged = true;
+          oldGuestBundleId = existingCalendar.guestBundleId;
+          newGuestBundleId = null;
+        }
+      } else if (typeof guestBundleId === "string") {
+        const bundle = await getBundleForCalendar(id, guestBundleId);
+        if (!bundle) {
+          return NextResponse.json(
+            { error: "Bundle not found" },
+            { status: 404 }
+          );
+        }
+        if (!isGuestEligible(bundle.capabilities)) {
+          return NextResponse.json(
+            {
+              error:
+                "Bundle contains capabilities that cannot be granted to guests",
+              forbiddenCapabilities: bundle.capabilities.filter(
+                (c) => !isGuestEligible([c])
+              ),
+            },
+            { status: 400 }
+          );
+        }
+        if (guestBundleId !== existingCalendar.guestBundleId) {
+          updateData.guestBundleId = guestBundleId;
+          changes.push("guestBundleId");
+          guestBundleChanged = true;
+          oldGuestBundleId = existingCalendar.guestBundleId;
+          newGuestBundleId = guestBundleId;
+        }
+      } else {
+        return NextResponse.json(
+          { error: "Invalid guestBundleId" },
+          { status: 400 }
         );
-        changes.push("guestPermission");
-        guestPermissionChanged = true;
-        oldGuestPermission = currentLevel;
-      }
-    }
-    if (typeof allowSelfSignup === "boolean") {
-      const readBundleId = await findSeededBundleId(id, "read");
-      if (
-        readBundleId &&
-        (await setBundleCapability(readBundleId, "signUpSelf", allowSelfSignup))
-      ) {
-        changes.push("allowSelfSignup");
       }
     }
     if (
@@ -241,20 +248,33 @@ export async function PATCH(
         request,
       });
 
-      // Log separate event for guest permission changes
-      if (guestPermissionChanged) {
-        await logUserAction<CalendarGuestPermissionChangedMetadata>({
+      // Log separate event for guest bundle changes
+      if (guestBundleChanged) {
+        const [oldBundle, newBundle] = await Promise.all([
+          oldGuestBundleId
+            ? db.query.calendarPermissionBundles.findFirst({
+                where: eq(calendarPermissionBundles.id, oldGuestBundleId),
+                columns: { name: true },
+              })
+            : null,
+          newGuestBundleId
+            ? db.query.calendarPermissionBundles.findFirst({
+                where: eq(calendarPermissionBundles.id, newGuestBundleId),
+                columns: { name: true },
+              })
+            : null,
+        ]);
+        await logUserAction<CalendarGuestBundleChangedMetadata>({
           action: "calendar.guest_permission.changed",
           userId: user.id,
           resourceType: "calendar",
           resourceId: calendar.id,
           metadata: {
             calendarName: calendar.name,
-            oldPermission: (oldGuestPermission || "none") as
-              | "none"
-              | "read"
-              | "write",
-            newPermission: guestPermission as "none" | "read" | "write",
+            oldBundleId: oldGuestBundleId,
+            oldBundleName: oldBundle?.name ?? null,
+            newBundleId: newGuestBundleId,
+            newBundleName: newBundle?.name ?? null,
           },
           request,
         });

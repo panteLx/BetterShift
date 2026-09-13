@@ -92,34 +92,6 @@ export async function findSeededGuestBundleId(
   return findSeededBundleId(calendarId, level);
 }
 
-/**
- * Toggles one capability on a bundle in place, returning whether it actually
- * changed anything. Only used by the allowSelfSignup compat toggle
- * (calendar-wide "Read" bundle) — real bundle editing belongs to the
- * not-yet-built Bundle editor, not this shim.
- */
-export async function setBundleCapability(
-  bundleId: string,
-  capability: Capability,
-  enabled: boolean
-): Promise<boolean> {
-  const bundle = await db.query.calendarPermissionBundles.findFirst({
-    where: eq(calendarPermissionBundles.id, bundleId),
-    columns: { capabilities: true },
-  });
-  if (!bundle) return false;
-  const current = sanitizeCapabilities(bundle.capabilities);
-  if (current.includes(capability) === enabled) return false;
-  const next = enabled
-    ? [...current, capability]
-    : current.filter((c) => c !== capability);
-  await db
-    .update(calendarPermissionBundles)
-    .set({ capabilities: next })
-    .where(eq(calendarPermissionBundles.id, bundleId));
-  return true;
-}
-
 /** Coarse guest level for a calendar, given its current guestBundleId column. */
 export async function getCoarseGuestLevel(
   guestBundleId: string | null
