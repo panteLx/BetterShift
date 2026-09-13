@@ -68,7 +68,11 @@ export function ShiftSheet({
   const [isSaving, setIsSaving] = useState(false);
 
   // Determine if sheet should be in read-only mode
-  const isReadOnly = readOnly || !permission.canEdit;
+  const isReadOnly =
+    readOnly ||
+    (shift
+      ? !permission.canOwned("editOwnShift", "editAnyShift", shift.createdBy ?? null)
+      : !permission.can("createShift"));
 
   const {
     formData,
