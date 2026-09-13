@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar } from "@/lib/auth/permissions";
+import { hasCapability } from "@/lib/auth/permissions";
 import { addShiftSignup, getShiftOrNull, getShiftSignupUsers } from "@/lib/shift-signups";
 
 // GET all signups for a shift
@@ -17,7 +17,11 @@ export async function GET(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    const hasAccess = await canViewCalendar(user?.id, shift.calendarId);
+    const hasAccess = await hasCapability(
+      user?.id,
+      shift.calendarId,
+      "viewShifts"
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

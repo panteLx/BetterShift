@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar, hasOwnedCapability } from "@/lib/auth/permissions";
+import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // GET single shift
@@ -45,7 +45,11 @@ export async function GET(
     }
 
     // Check read permission (works for both authenticated users and guests)
-    const hasAccess = await canViewCalendar(user?.id, result[0].calendarId);
+    const hasAccess = await hasCapability(
+      user?.id,
+      result[0].calendarId,
+      "viewShifts"
+    );
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

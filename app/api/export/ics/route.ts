@@ -4,7 +4,7 @@ import { calendars, shifts } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
 import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { canViewCalendar } from "@/lib/auth/permissions";
+import { hasCapability } from "@/lib/auth/permissions";
 import { getServerTimezone, formatDateToLocal } from "@/lib/date-utils";
 import { rateLimit } from "@/lib/rate-limiter";
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Filter calendars by permission - only include calendars user can view
     const accessibleCalendars = [];
     for (const calendar of requestedCalendars) {
-      const hasAccess = await canViewCalendar(user?.id, calendar.id);
+      const hasAccess = await hasCapability(user?.id, calendar.id, "viewShifts");
       if (hasAccess) {
         accessibleCalendars.push(calendar);
       }
