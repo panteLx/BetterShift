@@ -1,10 +1,7 @@
 import { db } from "@/lib/db";
 import { shifts, shiftSignups } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import {
-  getShiftSignupPermission,
-  getUserCalendarPermission,
-} from "@/lib/auth/permissions";
+import { getShiftSignupPermission, canViewCalendar } from "@/lib/auth/permissions";
 import type { CalendarMember, ShiftSignupUser } from "@/lib/types";
 
 export type AddShiftSignupResult =
@@ -82,11 +79,8 @@ export async function addShiftSignup(
   // The assigned user must already have access to the calendar, otherwise
   // they would have no way to see a shift they are signed up for.
   if (targetUserId !== requestingUserId) {
-    const targetPermission = await getUserCalendarPermission(
-      targetUserId,
-      calendarId
-    );
-    if (!targetPermission) {
+    const targetHasAccess = await canViewCalendar(targetUserId, calendarId);
+    if (!targetHasAccess) {
       return {
         ok: false,
         error: "Target user has no access to this calendar",

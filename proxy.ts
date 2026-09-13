@@ -238,7 +238,7 @@ export async function proxy(request: NextRequest) {
         storeTokenInCookie(
           token,
           validation.calendarId,
-          validation.permission,
+          validation.bundleId,
           response,
           request // Pass request to read existing tokens
         );
@@ -255,7 +255,7 @@ export async function proxy(request: NextRequest) {
           metadata: {
             tokenId: validation.id,
             calendarName: validation.calendarName,
-            permission: validation.permission,
+            bundleId: validation.bundleId,
           },
           request,
           severity: "info",

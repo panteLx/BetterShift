@@ -26,7 +26,7 @@ const TOKEN_COOKIE_OPTIONS = {
 export interface TokenCookieData {
   token: string;
   calendarId: string;
-  permission: "read" | "write";
+  bundleId: string;
 }
 
 /**
@@ -43,7 +43,7 @@ export async function validateAccessToken(
 ): Promise<{
   id: string;
   calendarId: string;
-  permission: "read" | "write";
+  bundleId: string;
   calendarName: string;
 } | null> {
   try {
@@ -51,7 +51,7 @@ export async function validateAccessToken(
       .select({
         id: calendarAccessTokens.id,
         calendarId: calendarAccessTokens.calendarId,
-        permission: calendarAccessTokens.permission,
+        bundleId: calendarAccessTokens.bundleId,
         expiresAt: calendarAccessTokens.expiresAt,
         isActive: calendarAccessTokens.isActive,
         calendarName: calendars.name,
@@ -78,7 +78,7 @@ export async function validateAccessToken(
     return {
       id: tokenData.id,
       calendarId: tokenData.calendarId,
-      permission: tokenData.permission as "read" | "write",
+      bundleId: tokenData.bundleId,
       calendarName: tokenData.calendarName,
     };
   } catch (error) {
@@ -124,14 +124,14 @@ export async function updateTokenUsage(tokenId: string): Promise<void> {
  *
  * @param token - The token string
  * @param calendarId - The calendar ID
- * @param permission - The permission level
+ * @param bundleId - The permission bundle id
  * @param response - The NextResponse to set the cookie on
  * @param request - Optional NextRequest to read existing tokens from
  */
 export function storeTokenInCookie(
   token: string,
   calendarId: string,
-  permission: "read" | "write",
+  bundleId: string,
   response: NextResponse,
   request?: NextRequest
 ): void {
@@ -148,7 +148,7 @@ export function storeTokenInCookie(
       // Add new token
       const newTokens: TokenCookieData[] = [
         ...existingTokens,
-        { token, calendarId, permission },
+        { token, calendarId, bundleId },
       ];
 
       // Store in cookie
@@ -189,7 +189,7 @@ export async function getTokensFromCookie(): Promise<TokenCookieData[]> {
       (t) =>
         typeof t.token === "string" &&
         typeof t.calendarId === "string" &&
-        (t.permission === "read" || t.permission === "write")
+        typeof t.bundleId === "string"
     );
 
     // Validate each token against the database
@@ -250,7 +250,7 @@ export function getTokensFromRequest(request: NextRequest): TokenCookieData[] {
       (t) =>
         typeof t.token === "string" &&
         typeof t.calendarId === "string" &&
-        (t.permission === "read" || t.permission === "write")
+        typeof t.bundleId === "string"
     );
   } catch (error) {
     console.error("[token-auth] getTokensFromRequest error:", error);
@@ -283,7 +283,7 @@ function getTokensFromResponse(response: NextResponse): TokenCookieData[] {
       (t) =>
         typeof t.token === "string" &&
         typeof t.calendarId === "string" &&
-        (t.permission === "read" || t.permission === "write")
+        typeof t.bundleId === "string"
     );
   } catch (error) {
     console.error("[token-auth] getTokensFromResponse error:", error);
@@ -308,15 +308,15 @@ export function generateAccessToken(): string {
 }
 
 /**
- * Get calendar permission from access token
- * Used by permission checks to grant token-based access
+ * Get the permission bundle granted by an access token for a calendar.
+ * Used by permission checks to grant token-based access.
  *
  * @param calendarId - The calendar ID to check
- * @returns Permission level or null if no token grants access
+ * @returns Bundle id or null if no token grants access
  */
-export async function getTokenPermission(
+export async function getTokenBundleId(
   calendarId: string
-): Promise<"read" | "write" | null> {
+): Promise<string | null> {
   try {
     const tokens = await getTokensFromCookie();
 
@@ -333,15 +333,15 @@ export async function getTokenPermission(
       const validation = await validateAccessToken(tokenData.token);
 
       if (validation && validation.calendarId === calendarId) {
-        // Found a valid token - return its permission
-        return validation.permission;
+        // Found a valid token - return its bundle
+        return validation.bundleId;
       }
     }
 
     // No valid tokens found
     return null;
   } catch (error) {
-    console.error("[token-auth] getTokenPermission error:", error);
+    console.error("[token-auth] getTokenBundleId error:", error);
     return null;
   }
 }
