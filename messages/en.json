@@ -1100,6 +1100,7 @@
     "addOtherHint": "Can't find someone? Share the calendar with them first, then you can pick them here."
   },
   "permissionBundles": {
+    "bundle": "Permission bundle",
     "seed": {
       "read": "Read",
       "contribute": "Contribute",

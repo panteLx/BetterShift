@@ -1100,6 +1100,7 @@
     "addOtherHint": "Nemůžete někoho najít? Nejdřív s ním sdílejte kalendář, pak ho tu budete moct vybrat."
   },
   "permissionBundles": {
+    "bundle": "Skupina oprávnění",
     "seed": {
       "read": "Čtení",
       "contribute": "Přispívání",

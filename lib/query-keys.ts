@@ -68,6 +68,10 @@ export const queryKeys = {
   tokens: {
     byCalendar: (calendarId: string) => ["tokens", calendarId] as const,
   },
+  permissionBundles: {
+    byCalendar: (calendarId: string) =>
+      ["permission-bundles", calendarId] as const,
+  },
   subscriptions: {
     all: ["subscriptions"] as const,
   },

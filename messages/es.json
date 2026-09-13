@@ -1100,6 +1100,7 @@
     "addOtherHint": "¿No encuentras a alguien? Comparte primero el calendario con esa persona; luego podrás seleccionarla aquí."
   },
   "permissionBundles": {
+    "bundle": "Grupo de permisos",
     "seed": {
       "read": "Lectura",
       "contribute": "Colaborar",

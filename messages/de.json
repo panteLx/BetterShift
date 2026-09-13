@@ -1100,6 +1100,7 @@
     "addOtherHint": "Person nicht in der Liste? Teile den Kalender zuerst mit ihr, dann kannst du sie hier auswählen."
   },
   "permissionBundles": {
+    "bundle": "Berechtigungsgruppe",
     "seed": {
       "read": "Lesen",
       "contribute": "Mitwirken",
