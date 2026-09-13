@@ -115,9 +115,12 @@ export async function listBundlesWithUsage(
       capabilities: calendarPermissionBundles.capabilities,
       createdAt: calendarPermissionBundles.createdAt,
       updatedAt: calendarPermissionBundles.updatedAt,
-      shareCount: sql<number>`(select count(*) from ${calendarShares} where ${calendarShares.bundleId} = ${calendarPermissionBundles.id})`,
-      tokenCount: sql<number>`(select count(*) from ${calendarAccessTokens} where ${calendarAccessTokens.bundleId} = ${calendarPermissionBundles.id})`,
-      guestCount: sql<number>`(select count(*) from ${calendars} where ${calendars.guestBundleId} = ${calendarPermissionBundles.id})`,
+      // Correlated column must be qualified as a literal — a tagged-template
+      // reference here renders unqualified and SQLite resolves it against the
+      // subquery's own table instead of the correlated outer bundle row.
+      shareCount: sql<number>`(select count(*) from ${calendarShares} where ${calendarShares.bundleId} = "calendar_permission_bundles"."id")`,
+      tokenCount: sql<number>`(select count(*) from ${calendarAccessTokens} where ${calendarAccessTokens.bundleId} = "calendar_permission_bundles"."id")`,
+      guestCount: sql<number>`(select count(*) from ${calendars} where ${calendars.guestBundleId} = "calendar_permission_bundles"."id")`,
     })
     .from(calendarPermissionBundles)
     .where(eq(calendarPermissionBundles.calendarId, calendarId))
