@@ -161,6 +161,7 @@ export function useNotes(calendarId: string | undefined) {
         recurringPattern: formData.recurringPattern || "none",
         recurringInterval: formData.recurringInterval ?? null,
         calendarId: calendarId!,
+        createdBy: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

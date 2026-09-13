@@ -117,6 +117,7 @@ function createOptimisticPreset(
     hideFromStats: formData.hideFromStats,
     defaultSignupCapacity: formData.defaultSignupCapacity ?? null,
     order: 999, // Will be corrected by server
+    createdBy: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

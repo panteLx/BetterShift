@@ -157,6 +157,12 @@ export const calendarPermissionBundles = sqliteTable(
       .notNull()
       .references(() => calendars.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    // Set for the four seeded bundles (read/contribute/manage/admin), null
+    // once renamed. While set, the UI shows the translated standard name
+    // instead of `name` (which stays as an English fallback).
+    seedKey: text("seed_key", {
+      enum: ["read", "contribute", "manage", "admin"],
+    }),
     capabilities: text("capabilities", { mode: "json" })
       .$type<Capability[]>()
       .notNull(),
@@ -185,9 +191,13 @@ export const calendarShares = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // restrict, not cascade: deleting a bundle must never silently delete
+    // shares — the app checks usage first and rejects deletion (see plan).
     bundleId: text("bundle_id")
       .notNull()
-      .references(() => calendarPermissionBundles.id, { onDelete: "cascade" }),
+      .references(() => calendarPermissionBundles.id, {
+        onDelete: "restrict",
+      }),
     sharedBy: text("shared_by")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -322,6 +332,12 @@ export const shifts = sqliteTable("shifts", {
   syncedFromExternal: integer("synced_from_external", { mode: "boolean" })
     .notNull()
     .default(false),
+  // null = no known creator (pre-migration data, anonymous guest, or the
+  // creating user was later deleted) — counts as "own" for anyone with the
+  // Own capability, see hasOwnedCapability().
+  createdBy: text("created_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -353,6 +369,10 @@ export const shiftPresets = sqliteTable("shift_presets", {
   // Copied into signupCapacity on shifts created from this preset
   defaultSignupCapacity: integer("default_signup_capacity"),
   order: integer("order").notNull().default(0),
+  // null = no known creator, see shifts.createdBy above.
+  createdBy: text("created_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -374,6 +394,10 @@ export const calendarNotes = sqliteTable("calendar_notes", {
   color: text("color"), // for events only
   recurringPattern: text("recurring_pattern").notNull().default("none"), // none, custom-weeks, custom-months
   recurringInterval: integer("recurring_interval"), // for custom pattern (e.g., every 3 months)
+  // null = no known creator, see shifts.createdBy above.
+  createdBy: text("created_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -450,9 +474,12 @@ export const calendarAccessTokens = sqliteTable(
       .references(() => calendars.id, { onDelete: "cascade" }),
     token: text("token").notNull().unique(), // base64url encoded, 43 chars
     name: text("name"), // Optional label (e.g., "Family Link")
+    // restrict, not cascade: see calendarShares.bundleId above.
     bundleId: text("bundle_id")
       .notNull()
-      .references(() => calendarPermissionBundles.id, { onDelete: "cascade" }),
+      .references(() => calendarPermissionBundles.id, {
+        onDelete: "restrict",
+      }),
     expiresAt: integer("expires_at", { mode: "timestamp" }), // null = never expires
     createdBy: text("created_by")
       .notNull()
@@ -616,6 +643,32 @@ export const shiftsRelations = relations(shifts, ({ one, many }) => ({
     references: [shiftPresets.id],
   }),
   signups: many(shiftSignups),
+  creator: one(user, {
+    fields: [shifts.createdBy],
+    references: [user.id],
+  }),
+}));
+
+export const shiftPresetsRelations = relations(shiftPresets, ({ one }) => ({
+  calendar: one(calendars, {
+    fields: [shiftPresets.calendarId],
+    references: [calendars.id],
+  }),
+  creator: one(user, {
+    fields: [shiftPresets.createdBy],
+    references: [user.id],
+  }),
+}));
+
+export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
+  calendar: one(calendars, {
+    fields: [calendarNotes.calendarId],
+    references: [calendars.id],
+  }),
+  creator: one(user, {
+    fields: [calendarNotes.createdBy],
+    references: [user.id],
+  }),
 }));
 
 export const shiftSignupsRelations = relations(shiftSignups, ({ one }) => ({
