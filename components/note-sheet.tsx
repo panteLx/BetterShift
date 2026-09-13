@@ -116,7 +116,11 @@ export function NoteSheet({
     setIntervalDraft(null);
   }
 
-  const isReadOnly = readOnly || !permission.canEdit;
+  const isReadOnly =
+    readOnly ||
+    (note
+      ? !permission.canOwned("manageOwnNotesEvents", "manageAnyNotesEvents", note.createdBy)
+      : !permission.can("manageOwnNotesEvents"));
   const isEvent = form.type === "event";
   const update = (patch: Partial<NoteFormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
