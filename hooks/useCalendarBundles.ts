@@ -136,6 +136,15 @@ const EMPTY_USAGE: PermissionBundleUsage = {
   isGuestBundle: false,
 };
 
+/** create/update/clone all 409 only on a name collision (delete's 409 carries `details.usage` instead). */
+function isNameConflict(err: unknown): boolean {
+  return (
+    err instanceof PermissionBundleApiError &&
+    err.status === 409 &&
+    !(err.details && typeof err.details === "object" && "usage" in err.details)
+  );
+}
+
 /**
  * CRUD for a calendar's permission bundles (Stufe 2, 7.3), optimistic per the
  * onMutate/onError/onSettled pattern in hooks/useShifts.ts. Every mutation
@@ -187,7 +196,11 @@ export function useCalendarBundles(calendarId: string | undefined) {
     onError: (err, _input, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       console.error("Failed to create permission bundle:", err);
-      toast.error(t("common.createError", { item: t("permissionBundles.bundle") }));
+      toast.error(
+        isNameConflict(err)
+          ? t("permissionBundles.nameTaken")
+          : t("common.createError", { item: t("permissionBundles.bundle") })
+      );
     },
     onSuccess: () => {
       toast.success(t("common.created", { item: t("permissionBundles.bundle") }));
@@ -225,7 +238,11 @@ export function useCalendarBundles(calendarId: string | undefined) {
     onError: (err, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       console.error("Failed to update permission bundle:", err);
-      toast.error(t("common.updateError", { item: t("permissionBundles.bundle") }));
+      toast.error(
+        isNameConflict(err)
+          ? t("permissionBundles.nameTaken")
+          : t("common.updateError", { item: t("permissionBundles.bundle") })
+      );
     },
     onSuccess: () => {
       toast.success(t("common.updated", { item: t("permissionBundles.bundle") }));
@@ -246,6 +263,24 @@ export function useCalendarBundles(calendarId: string | undefined) {
     onError: (err, _bundleId, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       console.error("Failed to delete permission bundle:", err);
+      if (
+        err instanceof PermissionBundleApiError &&
+        err.status === 409 &&
+        err.details &&
+        typeof err.details === "object" &&
+        "usage" in err.details
+      ) {
+        const usage = (err.details as { usage: PermissionBundleUsage }).usage;
+        const parts = [
+          usage.shareCount > 0 &&
+            t("permissionBundles.usageShares", { count: usage.shareCount }),
+          usage.tokenCount > 0 &&
+            t("permissionBundles.usageTokens", { count: usage.tokenCount }),
+          usage.isGuestBundle && t("permissionBundles.usageGuestAccess"),
+        ].filter(Boolean);
+        toast.error(t("permissionBundles.deleteInUse", { usage: parts.join(", ") }));
+        return;
+      }
       toast.error(t("common.deleteError", { item: t("permissionBundles.bundle") }));
     },
     onSuccess: () => {
@@ -286,7 +321,11 @@ export function useCalendarBundles(calendarId: string | undefined) {
     onError: (err, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       console.error("Failed to clone permission bundle:", err);
-      toast.error(t("common.createError", { item: t("permissionBundles.bundle") }));
+      toast.error(
+        isNameConflict(err)
+          ? t("permissionBundles.nameTaken")
+          : t("common.createError", { item: t("permissionBundles.bundle") })
+      );
     },
     onSuccess: () => {
       toast.success(t("common.created", { item: t("permissionBundles.bundle") }));

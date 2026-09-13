@@ -6,15 +6,20 @@ import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { ApiError } from "@/lib/api-error";
+import type { BundleSeedKey, Capability } from "@/lib/permission-bundles";
 
 type CalendarSource = "guest" | "shared";
+type BundleRef = { id: string; name: string; seedKey: BundleSeedKey | null } | null;
 
 export type AvailableCalendar = {
   id: string;
   name: string;
   color: string;
-  guestPermission: string;
-  permission?: string; // For shared calendars: actual share permission (owner/admin/write/read)
+  // Effective (ceiling-filtered) capabilities the caller would get, and the
+  // bundle behind them — see previewGuestCapabilities()/getEffectiveAccessSummary()
+  // in app/api/calendars/subscriptions/route.ts.
+  capabilities: Capability[];
+  bundle: BundleRef;
   owner: {
     id: string;
     name: string;
@@ -27,7 +32,8 @@ export type DismissedCalendar = {
   id: string;
   name: string;
   color: string;
-  permission: string;
+  capabilities: Capability[];
+  bundle: BundleRef;
   owner: {
     id: string;
     name: string;
@@ -157,8 +163,8 @@ export function useCalendarSubscriptions(enabled = true) {
                   id: dismissedCal.id,
                   name: dismissedCal.name,
                   color: dismissedCal.color,
-                  guestPermission: dismissedCal.permission,
-                  permission: dismissedCal.permission,
+                  capabilities: dismissedCal.capabilities,
+                  bundle: dismissedCal.bundle,
                   owner: dismissedCal.owner,
                   source: dismissedCal.source,
                   isSubscribed: true,
@@ -226,7 +232,8 @@ export function useCalendarSubscriptions(enabled = true) {
                 id: calendar.id,
                 name: calendar.name,
                 color: calendar.color,
-                permission: calendar.permission || calendar.guestPermission,
+                capabilities: calendar.capabilities,
+                bundle: calendar.bundle,
                 owner: calendar.owner,
                 source: calendar.source,
               },

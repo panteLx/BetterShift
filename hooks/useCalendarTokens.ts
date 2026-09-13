@@ -8,13 +8,15 @@ import { queryKeys } from "@/lib/query-keys";
 import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { ApiError } from "@/lib/api-error";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
+import type { BundleSeedKey } from "@/lib/permission-bundles";
 
 export interface CalendarAccessToken {
   id: string;
   tokenPreview: string; // First 6 chars (e.g., "abcxyz")
   token?: string; // Full token only provided on creation
   name: string | null;
-  permission: "read" | "write";
+  bundleId: string;
+  bundle: { id: string; name: string; seedKey: BundleSeedKey | null } | null;
   expiresAt: string | null;
   createdBy: string;
   createdAt: string;
@@ -25,7 +27,7 @@ export interface CalendarAccessToken {
 
 export interface CreateTokenParams {
   name?: string;
-  permission: "read" | "write";
+  bundleId: string;
   expiresAt?: string | null;
 }
 
@@ -96,7 +98,7 @@ async function createTokenApi(
 async function updateTokenApi(
   calendarId: string,
   tokenId: string,
-  updates: { isActive?: boolean }
+  updates: { isActive?: boolean; bundleId?: string }
 ): Promise<CalendarAccessToken> {
   const response = await fetch(
     `/api/calendars/${calendarId}/tokens/${tokenId}`,
@@ -199,7 +201,7 @@ export function useCalendarTokens(calendarId: string | null) {
       updates,
     }: {
       tokenId: string;
-      updates: { isActive?: boolean };
+      updates: { isActive?: boolean; bundleId?: string };
     }) => updateTokenApi(calendarId!, tokenId, updates),
     onMutate: async ({ tokenId, updates }) => {
       await queryClient.cancelQueries({
@@ -326,7 +328,7 @@ export function useCalendarTokens(calendarId: string | null) {
     },
     updateToken: async (
       tokenId: string,
-      updates: { isActive?: boolean }
+      updates: { isActive?: boolean; bundleId?: string }
     ): Promise<boolean> => {
       if (!calendarId) return false;
       try {

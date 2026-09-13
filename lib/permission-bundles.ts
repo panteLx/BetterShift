@@ -41,6 +41,42 @@ export const CAPABILITIES = [
 
 export type Capability = (typeof CAPABILITIES)[number];
 
+export type CapabilityGroupKey =
+  | "view"
+  | "shifts"
+  | "notesEvents"
+  | "signups"
+  | "presets"
+  | "externalSync"
+  | "administration";
+
+/** Groups CAPABILITIES for display (Bundle editor, 5.1) — order matches the catalog above. */
+export const CAPABILITY_GROUPS: ReadonlyArray<{
+  key: CapabilityGroupKey;
+  capabilities: readonly Capability[];
+}> = [
+  { key: "view", capabilities: ["viewShifts", "viewNotesEvents", "viewStats", "viewMembers"] },
+  {
+    key: "shifts",
+    capabilities: [
+      "stampPreset",
+      "createShift",
+      "editOwnShift",
+      "editAnyShift",
+      "deleteOwnShift",
+      "deleteAnyShift",
+    ],
+  },
+  { key: "notesEvents", capabilities: ["manageOwnNotesEvents", "manageAnyNotesEvents"] },
+  { key: "signups", capabilities: ["signUpSelf", "signUpOthers"] },
+  { key: "presets", capabilities: ["createPreset", "manageOwnPresets", "manageAnyPresets"] },
+  { key: "externalSync", capabilities: ["manageExternalSync", "deleteSyncLogs"] },
+  {
+    key: "administration",
+    capabilities: ["manageShares", "manageGuestAccess", "manageCalendarSettings"],
+  },
+];
+
 const CAPABILITY_SET: ReadonlySet<string> = new Set(CAPABILITIES);
 
 /**

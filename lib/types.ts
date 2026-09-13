@@ -17,11 +17,6 @@ export interface CalendarWithCount {
   color: string;
   ownerId?: string | null;
   guestBundleId?: string | null;
-  // Dead field: the underlying column was dropped in Stufe 1 and the API has
-  // never populated it since. Kept only so the pre-Stufe-2 sharing UI
-  // (components/calendar-share-management-sheet.tsx) still type-checks until
-  // Stufe 2 Paket 4 replaces it with the real bundle editor.
-  allowSelfSignup?: boolean;
   signupsEnabled?: boolean;
   /** The calendar's own view; null means everyone sees their personal view */
   viewSettings?: CalendarViewSettings | null;

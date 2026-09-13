@@ -11,9 +11,10 @@ import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import {
   AccessLinkCreateForm,
   AccessLinkCreated,
-} from "@/components/calendar-token-create-dialog";
+} from "@/components/calendar-token-form";
+import { useBundleDisplayName } from "@/components/permission-bundle-picker";
 import { useCalendarTokens, type CalendarAccessToken } from "@/hooks/useCalendarTokens";
-import type { useAccessLinkForm } from "@/hooks/useAccessLinkForm";
+import type { usePermissionLinkForm } from "@/hooks/usePermissionLinkForm";
 import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ function TokenRow({
   onRevoke: () => void;
 }) {
   const t = useTranslations();
+  const displayName = useBundleDisplayName();
   const dateLocale = getDateLocale(useLocale());
   const expired = isExpired(token);
   const dimmed = expired || !token.isActive;
@@ -85,11 +87,7 @@ function TokenRow({
         </div>
         <div className="truncate text-[12px] text-fg-tertiary">{usage}</div>
       </div>
-      {token.permission === "write" ? (
-        <Pill tone="warning">{t("sharingSheet.permWrite")}</Pill>
-      ) : (
-        <Pill>{t("sharingSheet.permRead")}</Pill>
-      )}
+      <Pill>{displayName(token.bundle) ?? t("common.labels.permissions.none")}</Pill>
       <RowIconButton
         icon={token.isActive ? EyeOff : Eye}
         label={token.isActive ? t("token.disable") : t("token.enable")}
@@ -169,17 +167,19 @@ export function AccessLinksPanel({
   leading,
 }: {
   calendarId: string;
-  form: ReturnType<typeof useAccessLinkForm>;
+  form: ReturnType<typeof usePermissionLinkForm>;
   onClose: () => void;
   leading?: ReactNode;
 }) {
   const t = useTranslations();
+  const displayName = useBundleDisplayName();
 
   if (form.created) {
+    const createdBundle = form.guestEligibleBundles.find((b) => b.id === form.created!.bundleId);
     return (
       <>
         <PanelBody>
-          <AccessLinkCreated created={form.created} />
+          <AccessLinkCreated created={form.created} bundleName={displayName(createdBundle) ?? ""} />
         </PanelBody>
         <PanelFooter>
           <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={form.reset}>

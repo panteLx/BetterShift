@@ -13,8 +13,12 @@ import {
   type AvailableCalendar,
   type DismissedCalendar,
 } from "@/hooks/useCalendarSubscriptions";
+import { useBundleDisplayName } from "@/components/permission-bundle-picker";
+import type { BundleSeedKey } from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 import { shiftVars } from "@/lib/shift-display";
+
+type BundleRefLike = { name: string; seedKey: BundleSeedKey | null } | null;
 
 type CalendarDiscoverySheetProps = {
   open: boolean;
@@ -59,21 +63,9 @@ export function CalendarDiscoverySheet({
     await subscribe(calendar.id, calendar.name);
   };
 
-  const permissionPill = (permission: string | undefined) => {
-    if (permission === "owner" || permission === "admin") {
-      return (
-        <Pill tone="brand">
-          {permission === "owner"
-            ? t("sharingSheet.owner")
-            : t("common.labels.permissions.admin")}
-        </Pill>
-      );
-    }
-    if (permission === "write") {
-      return <Pill tone="warning">{t("sharingSheet.permWrite")}</Pill>;
-    }
-    return <Pill>{t("sharingSheet.permRead")}</Pill>;
-  };
+  const displayName = useBundleDisplayName();
+  const bundlePill = (bundle: BundleRefLike) =>
+    bundle ? <Pill>{displayName(bundle)}</Pill> : null;
 
   const renderRow = ({
     calendar,
@@ -113,15 +105,10 @@ export function CalendarDiscoverySheet({
     </ListRow>
   );
 
-  // Shared calendars carry the share permission, public ones the guest permission
   const renderAvailable = (calendar: AvailableCalendar) =>
     renderRow({
       calendar,
-      pills: permissionPill(
-        calendar.source === "shared" && calendar.permission
-          ? calendar.permission
-          : calendar.guestPermission
-      ),
+      pills: bundlePill(calendar.bundle),
       action: (
         <Button
           size="sm"
@@ -150,7 +137,7 @@ export function CalendarDiscoverySheet({
           ) : (
             <Pill>{t("calendar.publicBadge")}</Pill>
           )}
-          {permissionPill(calendar.permission)}
+          {bundlePill(calendar.bundle)}
         </>
       ),
       action: (

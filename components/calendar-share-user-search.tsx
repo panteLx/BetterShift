@@ -10,11 +10,17 @@ import { getUserInitials } from "@/lib/utils";
 
 interface CalendarShareUserSearchProps {
   calendarId: string;
+  /** Bundle the invited user is granted; the caller renders the picker that sets this. */
+  bundleId: string;
   onSuccess?: () => void;
 }
 
-/** Invite row of the sharing panel: search a user and share with read access. */
-export function CalendarShareUserSearch({ calendarId, onSuccess }: CalendarShareUserSearchProps) {
+/** Invite row of the permissions panel: search a user and share with the selected bundle. */
+export function CalendarShareUserSearch({
+  calendarId,
+  bundleId,
+  onSuccess,
+}: CalendarShareUserSearchProps) {
   const t = useTranslations();
   const { searchUsers, searchResults, searchLoading, addShare } = useCalendarShares(calendarId);
 
@@ -54,9 +60,9 @@ export function CalendarShareUserSearch({ calendarId, onSuccess }: CalendarShare
   };
 
   const handleInvite = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || !bundleId) return;
     setInviting(true);
-    const result = await addShare(selectedUser.id, "read");
+    const result = await addShare(selectedUser.id, bundleId);
     setInviting(false);
     if (result.success) {
       clear();
@@ -100,7 +106,7 @@ export function CalendarShareUserSearch({ calendarId, onSuccess }: CalendarShare
           type="button"
           size="sm"
           onClick={handleInvite}
-          disabled={!selectedUser || inviting}
+          disabled={!selectedUser || !bundleId || inviting}
           className="h-7 shrink-0 rounded-[7px] px-3 text-[12.5px] font-semibold"
         >
           {t("sharingSheet.invite")}
