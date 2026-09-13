@@ -305,7 +305,10 @@ function CalendarViewPanelBody({
   const t = useTranslations();
   const id = useId();
   const { calendars, updateCalendar } = useCalendars();
-  const { canManage } = useCalendarPermission(calendarId);
+  // Calendar-wide view settings are calendar-settings territory, not an editAnyShift
+  // approximation — narrower than the old canEdit/canManage coarse checks (see Paket 5b report).
+  const { can } = useCalendarPermission(calendarId);
+  const canManage = can("manageCalendarSettings");
   const calendar = calendars.find((c) => c.id === calendarId);
   const saved = calendar?.viewSettings ? sanitizeCalendarViewSettings(calendar.viewSettings) : null;
   const personalFields = sanitizeCalendarViewSettings(personal);
