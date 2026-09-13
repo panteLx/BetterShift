@@ -1098,5 +1098,13 @@
       "removeFailed": "Withdrawing failed"
     },
     "addOtherHint": "Can't find someone? Share the calendar with them first, then you can pick them here."
+  },
+  "permissionBundles": {
+    "seed": {
+      "read": "Read",
+      "contribute": "Contribute",
+      "manage": "Manage",
+      "admin": "Admin"
+    }
   }
 }

@@ -148,6 +148,31 @@ export interface AdminSystemSettingsUpdatedMetadata {
   after: { updateCheckEnabled: boolean; updateBannerVisibility: string };
 }
 
+export interface CalendarBundleCreatedMetadata {
+  calendarName: string;
+  bundleName: string;
+  capabilities: string[];
+}
+
+export interface CalendarBundleUpdatedMetadata {
+  calendarName: string;
+  bundleName: string;
+  addedCapabilities: string[];
+  removedCapabilities: string[];
+  renamed?: { from: string; to: string };
+}
+
+export interface CalendarBundleClonedMetadata {
+  calendarName: string;
+  sourceBundleName: string;
+  newBundleName: string;
+}
+
+export interface CalendarBundleDeletedMetadata {
+  calendarName: string;
+  bundleName: string;
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -168,7 +193,11 @@ export type AuditLogMetadata =
   | AdminUserDeleteMetadata
   | AdminCalendarTransferMetadata
   | AdminPasswordResetMetadata
-  | AdminSystemSettingsUpdatedMetadata;
+  | AdminSystemSettingsUpdatedMetadata
+  | CalendarBundleCreatedMetadata
+  | CalendarBundleUpdatedMetadata
+  | CalendarBundleClonedMetadata
+  | CalendarBundleDeletedMetadata;
 
 // =====================================================
 // Audit Log Types

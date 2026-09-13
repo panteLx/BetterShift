@@ -1098,5 +1098,13 @@
       "removeFailed": "Austragen ist fehlgeschlagen"
     },
     "addOtherHint": "Person nicht in der Liste? Teile den Kalender zuerst mit ihr, dann kannst du sie hier auswählen."
+  },
+  "permissionBundles": {
+    "seed": {
+      "read": "Lesen",
+      "contribute": "Mitwirken",
+      "manage": "Verwalten",
+      "admin": "Administration"
+    }
   }
 }

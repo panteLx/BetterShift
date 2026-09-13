@@ -1098,5 +1098,13 @@
       "removeFailed": "La desinscription a echoue"
     },
     "addOtherHint": "Vous ne trouvez pas quelqu'un ? Partagez d'abord le calendrier avec cette personne, vous pourrez ensuite la sélectionner ici."
+  },
+  "permissionBundles": {
+    "seed": {
+      "read": "Lecture",
+      "contribute": "Contribuer",
+      "manage": "Gerer",
+      "admin": "Administration"
+    }
   }
 }

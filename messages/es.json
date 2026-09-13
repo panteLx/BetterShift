@@ -1098,5 +1098,13 @@
       "removeFailed": "La baja ha fallado"
     },
     "addOtherHint": "¿No encuentras a alguien? Comparte primero el calendario con esa persona; luego podrás seleccionarla aquí."
+  },
+  "permissionBundles": {
+    "seed": {
+      "read": "Lectura",
+      "contribute": "Colaborar",
+      "manage": "Gestionar",
+      "admin": "Administración"
+    }
   }
 }

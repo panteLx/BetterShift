@@ -1098,5 +1098,13 @@
       "removeFailed": "Il ritiro non e riuscito"
     },
     "addOtherHint": "Non trovi qualcuno? Condividi prima il calendario con questa persona, poi potrai selezionarla qui."
+  },
+  "permissionBundles": {
+    "seed": {
+      "read": "Lettura",
+      "contribute": "Contribuire",
+      "manage": "Gestire",
+      "admin": "Amministrazione"
+    }
   }
 }

@@ -1098,5 +1098,13 @@
       "removeFailed": "Odhlášení se nezdařilo"
     },
     "addOtherHint": "Nemůžete někoho najít? Nejdřív s ním sdílejte kalendář, pak ho tu budete moct vybrat."
+  },
+  "permissionBundles": {
+    "seed": {
+      "read": "Čtení",
+      "contribute": "Přispívání",
+      "manage": "Správa",
+      "admin": "Administrace"
+    }
   }
 }

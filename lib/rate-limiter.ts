@@ -27,6 +27,8 @@
  * - RATE_LIMIT_TOKEN_CREATION_WINDOW
  * - RATE_LIMIT_USER_SEARCH_REQUESTS - User directory search (per user)
  * - RATE_LIMIT_USER_SEARCH_WINDOW
+ * - RATE_LIMIT_BUNDLE_MUTATIONS_REQUESTS - Permission bundle create/update/delete/clone (per calendar)
+ * - RATE_LIMIT_BUNDLE_MUTATIONS_WINDOW
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -168,6 +170,18 @@ const config = {
         10
       ) * 1000, // 1 minute
   },
+  // Permission bundle create/update/delete/clone, keyed per calendar like
+  // tokenCreation/externalSync — an owner editing their group setup is
+  // bursty, but shouldn't be able to hammer the endpoint.
+  bundleMutations: {
+    requests: parseInt(
+      process.env.RATE_LIMIT_BUNDLE_MUTATIONS_REQUESTS || "30",
+      10
+    ),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_BUNDLE_MUTATIONS_WINDOW || "3600", 10) *
+      1000, // 1 hour
+  },
 };
 
 /**
@@ -193,6 +207,7 @@ const limitsByType = {
   "admin-password-reset": config.adminPasswordReset,
   "admin-bulk-operations": config.adminBulkOperations,
   "admin-calendar-mutations": config.adminCalendarMutations,
+  "bundle-mutations": config.bundleMutations,
 } as const;
 
 export type RateLimitType = keyof typeof limitsByType;
@@ -396,7 +411,9 @@ export function rateLimit(
   // Special handling for resource-based limits (e.g., token-creation per calendar)
   let identifier: string;
   if (
-    (type === "token-creation" || type === "external-sync") &&
+    (type === "token-creation" ||
+      type === "external-sync" ||
+      type === "bundle-mutations") &&
     resourceId
   ) {
     identifier = `calendar:${resourceId}`;
