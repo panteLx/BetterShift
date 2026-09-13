@@ -41,11 +41,12 @@ const hasTokens = sql`exists (select 1 from ${calendarAccessTokens} where ${cale
 const hasSyncs = sql`exists (select 1 from ${externalSyncs} where ${externalSyncs.calendarId} = ${calendars.id})`;
 const isShared = sql`(${hasUserShares} or ${hasTokens})`;
 
-// guestBundleId only ever points at this calendar's seeded "Read" or
-// "Contribute" bundle (the guest/link ceiling forbids anything higher) — see
-// lib/auth/legacy-permission-compat.ts. Sorting/filtering by bundle NAME is
-// therefore a safe stand-in for the old guestPermission enum, without having
-// to inspect the bundle's capabilities JSON in raw SQL.
+// Paket 6: the admin panel now shows the guest bundle's actual name/seedKey
+// instead of collapsing it to a read/write tier (lib/auth/legacy-permission-compat.ts
+// is no longer consulted here). The join also doubles as the "has guest
+// access" check for sorting/filtering — an orphaned guestBundleId (pointing
+// at a deleted bundle) produces a null row here, which correctly counts as
+// no guest access, same as getUserAccessibleCalendars() elsewhere.
 const guestBundleTable = alias(calendarPermissionBundles, "guest_bundle");
 
 /** Timestamps defaulted by SQLite are "YYYY-MM-DD HH:MM:SS" text in UTC; app-written ones are unix seconds. */
@@ -74,7 +75,7 @@ function countFor(table: SQLiteTable, column: SQLiteColumn) {
  * - search: Calendar name, owner name or owner email contains (case-insensitive)
  * - content: all | shared | synced (default: all; shared = user shares or share links)
  * - owner: all | orphaned | with-owner (default: all)
- * - sort: name | createdAt | owner | shiftsCount | sharesCount | externalSyncsCount | guestPermission (default: createdAt)
+ * - sort: name | createdAt | owner | shiftsCount | sharesCount | externalSyncsCount | guestBundle (default: createdAt)
  * - order: asc | desc (default: desc)
  * - page: 1-based page, clamped to the last page (default: 1)
  * - limit: Page size (default: 25, max: 100)
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
       shiftsCount: sql`(select count(*) from ${shifts} where ${shifts.calendarId} = ${calendars.id})`,
       sharesCount: sql`((select count(*) from ${calendarShares} where ${calendarShares.calendarId} = ${calendars.id}) + (select count(*) from ${calendarAccessTokens} where ${calendarAccessTokens.calendarId} = ${calendars.id}))`,
       externalSyncsCount: sql`(select count(*) from ${externalSyncs} where ${externalSyncs.calendarId} = ${calendars.id})`,
-      guestPermission: sql`case ${guestBundleTable.name} when 'Contribute' then 2 when 'Read' then 1 else 0 end`,
+      guestBundle: sql`case when ${guestBundleTable.id} is null then 0 else 1 end`,
     };
     const direction = order === "asc" ? asc : desc;
 
@@ -160,7 +161,9 @@ export async function GET(request: NextRequest) {
         name: calendars.name,
         color: calendars.color,
         ownerId: calendars.ownerId,
+        guestBundleRowId: guestBundleTable.id,
         guestBundleName: guestBundleTable.name,
+        guestBundleSeedKey: guestBundleTable.seedKey,
         // Raw values: rows created with the SQL default hold text, not unix seconds
         createdAt: sql<unknown>`${calendars.createdAt}`,
         updatedAt: sql<unknown>`${calendars.updatedAt}`,
@@ -195,12 +198,9 @@ export async function GET(request: NextRequest) {
       owner: row.ownerUserId
         ? { name: row.ownerName, email: row.ownerEmail, image: row.ownerImage }
         : null,
-      guestPermission:
-        row.guestBundleName === "Contribute"
-          ? "write"
-          : row.guestBundleName === "Read"
-            ? "read"
-            : "none",
+      guestBundle: row.guestBundleRowId
+        ? { id: row.guestBundleRowId, name: row.guestBundleName!, seedKey: row.guestBundleSeedKey }
+        : null,
       createdAt: toDate(row.createdAt),
       updatedAt: toDate(row.updatedAt),
       shiftsCount: Number(row.shiftsCount),

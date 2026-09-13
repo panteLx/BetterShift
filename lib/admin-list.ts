@@ -69,7 +69,7 @@ export const CALENDAR_SORT_FIELDS = [
   "shiftsCount",
   "sharesCount",
   "externalSyncsCount",
-  "guestPermission",
+  "guestBundle",
 ] as const;
 
 export type CalendarContentFilter = (typeof CALENDAR_CONTENT_FILTERS)[number];

@@ -25,12 +25,8 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import {
-  coarseLevelFromCapabilities,
-  findSeededGuestBundleId,
-  getCoarseGuestLevel,
-} from "@/lib/auth/legacy-permission-compat";
-import { sanitizeCapabilities } from "@/lib/permission-bundles";
+import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
+import { isGuestEligible } from "@/lib/permission-bundles";
 
 /**
  * Admin Calendar Detail API
@@ -39,7 +35,7 @@ import { sanitizeCapabilities } from "@/lib/permission-bundles";
  * Returns detailed information about a specific calendar.
  *
  * PATCH /api/admin/calendars/[id]
- * Updates calendar information (name, color, guestPermission).
+ * Updates calendar information (name, color, guestBundleId).
  * - Admin & Superadmin: Can update calendars
  * - Cannot change ownerId via PATCH (use transfer endpoint)
  *
@@ -180,9 +176,12 @@ export async function GET(
       .from(externalSyncsTable)
       .where(eq(externalSyncsTable.calendarId, calendarId));
 
-    // Batch-resolve every bundle involved (guest, shares, tokens) to a
-    // coarse read/write/admin level for the response — see
-    // lib/auth/legacy-permission-compat.ts.
+    // Batch-resolve every bundle involved (guest, shares, tokens) to its
+    // {id, name, seedKey} for display — the admin panel now shows the
+    // owner-defined bundle directly instead of a collapsed read/write/admin
+    // tier (Paket 6). Shares/tokens always resolve (bundleId is a restrict
+    // FK); a guest bundle can be orphaned (no FK, see 4.2 in the plan) and
+    // then correctly falls back to null, i.e. "no guest access".
     const bundleIds = new Set<string>();
     if (calendar.guestBundleId) bundleIds.add(calendar.guestBundleId);
     for (const s of shares) bundleIds.add(s.bundleId);
@@ -191,18 +190,13 @@ export async function GET(
       bundleIds.size > 0
         ? await db.query.calendarPermissionBundles.findMany({
             where: (b, { inArray }) => inArray(b.id, Array.from(bundleIds)),
-            columns: { id: true, capabilities: true },
+            columns: { id: true, name: true, seedKey: true },
           })
         : [];
-    const levelByBundleId = new Map(
-      bundleRows.map((b) => [
-        b.id,
-        coarseLevelFromCapabilities(sanitizeCapabilities(b.capabilities)),
-      ])
-    );
-    const guestPermission = calendar.guestBundleId
-      ? (levelByBundleId.get(calendar.guestBundleId) ?? "none")
-      : "none";
+    const bundleById = new Map(bundleRows.map((b) => [b.id, b]));
+    const guestBundle = calendar.guestBundleId
+      ? (bundleById.get(calendar.guestBundleId) ?? null)
+      : null;
 
     return NextResponse.json({
       id: calendar.id,
@@ -216,7 +210,7 @@ export async function GET(
             image: calendar.ownerImage,
           }
         : null,
-      guestPermission,
+      guestBundle,
       createdAt: calendar.createdAt ? new Date(calendar.createdAt) : new Date(),
       updatedAt: calendar.updatedAt ? new Date(calendar.updatedAt) : new Date(),
       shiftsCount: Number(shiftCount?.count || 0),
@@ -230,12 +224,12 @@ export async function GET(
         userName: s.userName || "",
         userEmail: s.userEmail || "",
         userImage: s.userImage,
-        permission: levelByBundleId.get(s.bundleId) ?? "read",
+        bundle: bundleById.get(s.bundleId) ?? { id: s.bundleId, name: "?", seedKey: null },
       })),
       shareTokens: shareTokens.map((t) => ({
         id: t.id,
         name: t.name,
-        permission: levelByBundleId.get(t.bundleId) ?? "read",
+        bundle: bundleById.get(t.bundleId) ?? { id: t.bundleId, name: "?", seedKey: null },
         createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
       })),
       externalSyncs: externalSyncsWithLastSync,
@@ -327,18 +321,34 @@ export async function PATCH(
       changes.push("color");
     }
 
-    if (body.guestPermission !== undefined) {
-      if (!["none", "read", "write"].includes(body.guestPermission)) {
+    if (body.guestBundleId !== undefined) {
+      if (body.guestBundleId === null) {
+        updates.guestBundleId = null;
+      } else if (typeof body.guestBundleId === "string") {
+        const bundle = await getBundleForCalendar(calendarId, body.guestBundleId);
+        if (!bundle) {
+          return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
+        }
+        if (!isGuestEligible(bundle.capabilities)) {
+          return NextResponse.json(
+            {
+              error:
+                "Bundle contains capabilities that cannot be granted to guests",
+              forbiddenCapabilities: bundle.capabilities.filter(
+                (c) => !isGuestEligible([c])
+              ),
+            },
+            { status: 400 }
+          );
+        }
+        updates.guestBundleId = body.guestBundleId;
+      } else {
         return NextResponse.json(
-          { error: "Invalid guest permission" },
+          { error: "Invalid guestBundleId" },
           { status: 400 }
         );
       }
-      updates.guestBundleId = await findSeededGuestBundleId(
-        calendarId,
-        body.guestPermission
-      );
-      changes.push("guestPermission");
+      changes.push("guestBundleId");
     }
 
     // Don't allow ownerId changes via PATCH (use transfer endpoint)
@@ -376,16 +386,22 @@ export async function PATCH(
         oldValues: {
           name: calendar.name,
           color: calendar.color,
-          guestPermission: await getCoarseGuestLevel(calendar.guestBundleId),
+          guestBundleId: calendar.guestBundleId,
         },
         newValues: updates,
         updatedBy: currentUser.email,
       },
     });
 
+    let guestBundle: { id: string; name: string; seedKey: string | null } | null = null;
+    if (updatedCalendar.guestBundleId) {
+      const bundle = await getBundleForCalendar(calendarId, updatedCalendar.guestBundleId);
+      guestBundle = bundle ? { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey } : null;
+    }
+
     return NextResponse.json({
       ...updatedCalendar,
-      guestPermission: await getCoarseGuestLevel(updatedCalendar.guestBundleId),
+      guestBundle,
       guestBundleId: undefined,
     });
   } catch (error) {

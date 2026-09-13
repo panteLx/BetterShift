@@ -18,8 +18,6 @@ import {
 } from "@/lib/auth/admin";
 import { logAuditEvent } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
-import { coarseLevelFromCapabilities } from "@/lib/auth/legacy-permission-compat";
-import { sanitizeCapabilities } from "@/lib/permission-bundles";
 import { auth } from "@/lib/auth";
 import {
   getValidatedAdminUser,
@@ -100,18 +98,17 @@ export async function GET(
       shareBundleIds.length > 0
         ? await db.query.calendarPermissionBundles.findMany({
             where: (b, { inArray }) => inArray(b.id, shareBundleIds),
-            columns: { id: true, capabilities: true },
+            columns: { id: true, name: true, seedKey: true },
           })
         : [];
-    const shareLevelByBundleId = new Map(
-      shareBundleRows.map((b) => [
-        b.id,
-        coarseLevelFromCapabilities(sanitizeCapabilities(b.capabilities)),
-      ])
-    );
+    const shareBundleById = new Map(shareBundleRows.map((b) => [b.id, b]));
     const sharedCalendars = sharedCalendarRows.map((share) => ({
       ...share,
-      permission: shareLevelByBundleId.get(share.bundleId) ?? "read",
+      bundle: shareBundleById.get(share.bundleId) ?? {
+        id: share.bundleId,
+        name: "?",
+        seedKey: null,
+      },
     }));
 
     const sharesCount = sharedCalendars.length;
@@ -152,7 +149,7 @@ export async function GET(
       sharedCalendars: sharedCalendars.map((share) => ({
         id: share.calendarId,
         name: share.name,
-        permission: share.permission,
+        bundle: share.bundle,
       })),
       sharesCount: sharesCount,
       accounts,

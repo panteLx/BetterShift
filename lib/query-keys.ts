@@ -55,6 +55,8 @@ export const queryKeys = {
       list: (params: object) => ["admin", "calendars", "list", params] as const,
       detail: (calendarId: string) =>
         ["admin", "calendars", "detail", calendarId] as const,
+      bundles: (calendarId: string) =>
+        ["admin", "calendars", "bundles", calendarId] as const,
     },
     auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
