@@ -120,6 +120,20 @@
       "when": 1789289621960,
       "tag": "0016_smart_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1789298650520,
+      "tag": "0017_brainy_blonde_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1789303001140,
+      "tag": "0018_skinny_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

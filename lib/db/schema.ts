@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { sql, relations } from "drizzle-orm";
 import type {
   CalendarViewSettings,
@@ -117,6 +123,16 @@ export const calendars = sqliteTable(
     })
       .notNull()
       .default("none"),
+    // Whether read-only members may sign themselves up for a shift without
+    // write access. Owner/admin can turn this off to require assignment instead.
+    allowSelfSignup: integer("allow_self_signup", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    // Master switch for the whole shift-signup feature on this calendar.
+    // Owner/admin only; off hides capacity, signup lists and badges everywhere.
+    signupsEnabled: integer("signups_enabled", { mode: "boolean" })
+      .notNull()
+      .default(true),
     // null = no own view; every user sees their personal view
     viewSettings: text("view_settings", {
       mode: "json",
@@ -271,6 +287,8 @@ export const shifts = sqliteTable("shifts", {
   isSecondary: integer("is_secondary", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Target headcount for shift signups; null = unlimited
+  signupCapacity: integer("signup_capacity"),
   externalEventId: text("external_event_id"),
   externalSyncId: text("external_sync_id").references(() => externalSyncs.id, {
     onDelete: "cascade",
@@ -306,6 +324,8 @@ export const shiftPresets = sqliteTable("shift_presets", {
   hideFromStats: integer("hide_from_stats", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Copied into signupCapacity on shifts created from this preset
+  defaultSignupCapacity: integer("default_signup_capacity"),
   order: integer("order").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
@@ -428,6 +448,37 @@ export const calendarAccessTokens = sqliteTable(
   ]
 );
 
+export const shiftSignups = sqliteTable(
+  "shift_signups",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    shiftId: text("shift_id")
+      .notNull()
+      .references(() => shifts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Who created this signup: the user themself, or an admin/write-permission
+    // user who assigned someone else. Distinct from userId for that reason.
+    signedUpBy: text("signed_up_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("shift_signups_shiftId_idx").on(table.shiftId),
+    index("shift_signups_userId_idx").on(table.userId),
+    uniqueIndex("shift_signups_shiftId_userId_idx").on(
+      table.shiftId,
+      table.userId
+    ),
+  ]
+);
+
 export type Calendar = typeof calendars.$inferSelect;
 export type NewCalendar = typeof calendars.$inferInsert;
 
@@ -447,6 +498,8 @@ export type CalendarNote = typeof calendarNotes.$inferSelect;
 export type NewCalendarNote = typeof calendarNotes.$inferInsert;
 export type SyncLog = typeof syncLogs.$inferSelect;
 export type NewSyncLog = typeof syncLogs.$inferInsert;
+export type ShiftSignup = typeof shiftSignups.$inferSelect;
+export type NewShiftSignup = typeof shiftSignups.$inferInsert;
 
 // Better Auth types
 export type User = typeof user.$inferSelect;
@@ -503,6 +556,33 @@ export const calendarsRelations = relations(calendars, ({ one, many }) => ({
   notes: many(calendarNotes),
   externalSyncs: many(externalSyncs),
   syncLogs: many(syncLogs),
+}));
+
+export const shiftsRelations = relations(shifts, ({ one, many }) => ({
+  calendar: one(calendars, {
+    fields: [shifts.calendarId],
+    references: [calendars.id],
+  }),
+  preset: one(shiftPresets, {
+    fields: [shifts.presetId],
+    references: [shiftPresets.id],
+  }),
+  signups: many(shiftSignups),
+}));
+
+export const shiftSignupsRelations = relations(shiftSignups, ({ one }) => ({
+  shift: one(shifts, {
+    fields: [shiftSignups.shiftId],
+    references: [shifts.id],
+  }),
+  user: one(user, {
+    fields: [shiftSignups.userId],
+    references: [user.id],
+  }),
+  signedUpByUser: one(user, {
+    fields: [shiftSignups.signedUpBy],
+    references: [user.id],
+  }),
 }));
 
 export const calendarSharesRelations = relations(calendarShares, ({ one }) => ({

@@ -1,0 +1,1 @@
+ALTER TABLE `calendars` ADD `signups_enabled` integer DEFAULT true NOT NULL;
