@@ -105,7 +105,12 @@ export function NotesListDialog({
   const t = useTranslations();
   const locale = useLocale();
   const permission = useCalendarPermission(calendarId);
-  const isReadOnly = readOnly || !permission.canEdit;
+  // Single capability pair for notes, so "can create" doubles as the banner's
+  // "no notes capability at all" — per-row edit/delete still gate themselves.
+  const canCreate = !readOnly && permission.can("manageOwnNotesEvents");
+  const canEditNote = (note: CalendarNote) =>
+    !readOnly &&
+    permission.canOwned("manageOwnNotesEvents", "manageAnyNotesEvents", note.createdBy);
 
   const formattedDate = formatLongDate(date, locale, { year: true });
 
@@ -139,7 +144,7 @@ export function NotesListDialog({
         </Button>
       }
     >
-      {isReadOnly && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
+      {!canCreate && <ReadOnlyBanner message={t("guest.cannotEdit")} />}
 
       {entries.length === 0 && (
         <p className="py-6 text-center text-[13px] text-fg-tertiary">{t("note.noEntries")}</p>
@@ -149,13 +154,13 @@ export function NotesListDialog({
         <NoteRow
           key={note.id}
           note={note}
-          editable={!isReadOnly}
+          editable={canEditNote(note)}
           onEdit={() => onEditNote(note)}
           onDelete={() => onDeleteNote(note.id)}
         />
       ))}
 
-      {!isReadOnly && (
+      {canCreate && (
         <button
           type="button"
           onClick={handleAdd}
