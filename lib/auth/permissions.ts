@@ -634,12 +634,21 @@ export async function listPermissionBundles(
   }));
 }
 
-/** Inserts the given bundle definitions for a calendar and returns the created rows. */
-export async function seedPermissionBundles(
+/**
+ * Inserts the given bundle definitions for a calendar and returns the
+ * created rows. Synchronous (not async) so a caller can seed bundles
+ * atomically with the calendar row itself inside a db.transaction()
+ * callback (see POST /api/calendars) — better-sqlite3 transactions must be
+ * fully synchronous, they reject a callback that returns a promise.
+ * Accepts an optional transaction executor, defaulting to the module-level
+ * db for callers outside a transaction.
+ */
+export function seedPermissionBundles(
   calendarId: string,
-  definitions: BundleDefinition[]
-): Promise<CalendarPermissionBundle[]> {
-  return db
+  definitions: BundleDefinition[],
+  executor: Pick<typeof db, "insert"> = db
+): CalendarPermissionBundle[] {
+  return executor
     .insert(calendarPermissionBundles)
     .values(
       definitions.map((def) => ({
@@ -649,5 +658,6 @@ export async function seedPermissionBundles(
         capabilities: def.capabilities,
       }))
     )
-    .returning();
+    .returning()
+    .all();
 }

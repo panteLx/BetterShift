@@ -203,21 +203,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [calendar] = await db
-      .insert(calendars)
-      .values({
-        name,
-        color: color || "#3b82f6",
-        ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
-      })
-      .returning();
+    // Insert and bundle-seeding happen atomically: a calendar must never
+    // exist even briefly without its four recommended bundles, since every
+    // permission check assumes they're already there. better-sqlite3
+    // transactions must be synchronous (no async/await inside), see
+    // seedPermissionBundles().
+    const calendar = db.transaction((tx) => {
+      const calendar = tx
+        .insert(calendars)
+        .values({
+          name,
+          color: color || "#3b82f6",
+          ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
+        })
+        .returning()
+        .get();
 
-    // Every calendar always ships with the four recommended bundles, so it's
-    // never "configured from nothing" — see lib/permission-bundles.ts.
-    await seedPermissionBundles(
-      calendar.id,
-      defaultBundleDefinitionsForNewCalendar()
-    );
+      // Every calendar always ships with the four recommended bundles, so
+      // it's never "configured from nothing" — see lib/permission-bundles.ts.
+      seedPermissionBundles(
+        calendar.id,
+        defaultBundleDefinitionsForNewCalendar(),
+        tx
+      );
+
+      return calendar;
+    });
 
     if (guestPermission && guestPermission !== "none") {
       const guestBundleId = await findSeededGuestBundleId(
