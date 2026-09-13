@@ -35,7 +35,12 @@ export interface DayViewModel {
   dayNotes: CalendarNote[];
   totalMinutes: number;
   summary: PeriodSummary;
-  canEdit: boolean;
+  /** createShift — gates the "add a new shift" affordance */
+  canAddShift: boolean;
+  /** manageOwnNotesEvents — creating a note/event only ever needs "own" */
+  canAddNote: boolean;
+  /** Per-shift own/any precision (editOwnShift/editAnyShift) */
+  canEditShift: (shift: ShiftWithCalendar) => boolean;
 }
 
 export function useDayLabels(day: Date) {
@@ -62,7 +67,7 @@ export function DayInspector({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const { selectedDay, currentDate, dayShifts, dayNotes, totalMinutes, summary, canEdit } =
+  const { selectedDay, currentDate, dayShifts, dayNotes, totalMinutes, summary, canAddShift, canAddNote, canEditShift } =
     model;
   const labels = useDayLabels(selectedDay);
   const monthName = format(currentDate, "LLLL", { locale: getDateLocale(locale) });
@@ -84,7 +89,7 @@ export function DayInspector({
               {labels.short}
             </h2>
           </div>
-          {canEdit && (
+          {canAddShift && (
             <Button
               size="sm"
               onClick={actions.onAddShift}
@@ -107,7 +112,7 @@ export function DayInspector({
           <ShiftDetailRow
             key={shift.id}
             shift={shift}
-            canEdit={canEdit}
+            canEdit={canEditShift(shift)}
             actions="menu"
             onEdit={actions.onEditShift}
             onDelete={actions.onDeleteShift}
@@ -117,7 +122,7 @@ export function DayInspector({
           <NoteDetailCard
             key={note.id}
             note={note}
-            onOpen={canEdit ? actions.onOpenNote : undefined}
+            onOpen={canAddNote ? actions.onOpenNote : undefined}
           />
         ))}
         {dayShifts.length === 0 && dayNotes.length === 0 && (
@@ -125,7 +130,7 @@ export function DayInspector({
             {t("calendarView.dayEmpty")}
           </p>
         )}
-        {canEdit && (
+        {canAddNote && (
           <button
             type="button"
             onClick={actions.onAddNote}

@@ -42,12 +42,13 @@ export function MonthShiftsDialog({
   onOpenChange,
   currentDate,
   shifts,
-  canEdit,
+  canEditShift,
   onEditShift,
   onDeleteShift,
 }: MonthDialogProps & {
   shifts: ShiftWithCalendar[];
-  canEdit: boolean;
+  /** Per-shift own/any precision (editOwnShift/editAnyShift) */
+  canEditShift: (shift: ShiftWithCalendar) => boolean;
   onEditShift: (shift: ShiftWithCalendar) => void;
   onDeleteShift: (shift: ShiftWithCalendar) => void;
 }) {
@@ -115,7 +116,7 @@ export function MonthShiftsDialog({
                   <ShiftDetailRow
                     key={shift.id}
                     shift={shift}
-                    canEdit={canEdit}
+                    canEdit={canEditShift(shift)}
                     actions="menu"
                     onEdit={(s) => {
                       onOpenChange(false);

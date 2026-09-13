@@ -81,7 +81,12 @@ function HomeContent() {
     hasLoadedOnce: presetsLoadedOnce,
   } = usePresets(selectedCalendar);
 
-  const { canEdit, canManage } = useCalendarPermission(selectedCalendar);
+  const { can, canOwned } = useCalendarPermission(selectedCalendar);
+  // Own/Any precision (Paket 5b): a single calendar-wide boolean can't express who
+  // may touch a specific shift, so callers needing per-shift precision get this closure
+  // instead of a coarse canEdit — kept in sync with CalendarWorkspace/DialogManager below.
+  const canEditShift = (shift: ShiftWithCalendar) =>
+    canOwned("editOwnShift", "editAnyShift", shift.createdBy ?? null);
   // Toasts are owned by CalendarWorkspace; this is only the stamping gate
   const { isOnline } = useConnectionStatus({ toasts: false });
 
@@ -155,7 +160,7 @@ function HomeContent() {
     deleteNote: deleteNoteHook,
   } = useNotes(isCompareMode ? compareNoteCalendarId : selectedCalendar);
   const { externalSyncs, hasSyncErrors } = useExternalSync(
-    canManage ? selectedCalendar || null : null
+    can("manageExternalSync") ? selectedCalendar || null : null
   );
 
   const viewSettings = useViewSettings();
@@ -287,7 +292,7 @@ function HomeContent() {
   // the dock. Derived here so a day click can never stamp without it on screen.
   const presetIdSet = new Set(presets.map((p) => p.id));
   const armedPresetIds =
-    canEdit && isOnline && calendarView.showStampBar
+    can("createShift") && isOnline && calendarView.showStampBar
       ? selectedPresetIds.filter((id) => presetIdSet.has(id))
       : [];
 
@@ -343,7 +348,7 @@ function HomeContent() {
       onAddNewNote={handleAddNewNoteFromList}
       currentDate={currentDate}
       shifts={shifts}
-      canEditShifts={canEdit}
+      canEditShift={canEditShift}
       showMonthStatsDialog={dialogStates.showMonthStatsDialog}
       onMonthStatsDialogChange={dialogStates.setShowMonthStatsDialog}
       showMonthShiftsDialog={dialogStates.showMonthShiftsDialog}
@@ -444,7 +449,7 @@ function HomeContent() {
       selectedCalendar={selectedCalendar}
       currentDate={currentDate}
       hasSyncErrors={hasSyncErrors}
-      canManageSync={canManage}
+      canManageSync={can("manageExternalSync")}
       onDateChange={handleDateChange}
       onSelectCalendar={setSelectedCalendar}
       onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
@@ -477,7 +482,9 @@ function HomeContent() {
         showShiftNotes={calendarView.showShiftNotes}
         highlightedWeekdays={calendarView.highlightedWeekdays}
         highlightColor={calendarView.highlightColor}
-        canEdit={canEdit}
+        canCreateShift={can("createShift")}
+        canAddNote={can("manageOwnNotesEvents")}
+        canEditShift={canEditShift}
         showStampBar={calendarView.showStampBar}
         selectedPresetIds={armedPresetIds}
         onSelectPreset={handlePresetSelection}

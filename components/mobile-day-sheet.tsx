@@ -134,7 +134,7 @@ export function MobileDaySheet({
     setWasOpen(open);
     if (open) setSnapIndex(0);
   }
-  const { selectedDay, dayShifts, dayNotes, canEdit } = model;
+  const { selectedDay, dayShifts, dayNotes, canAddShift, canAddNote, canEditShift } = model;
   const labels = useDayLabels(selectedDay);
 
   const windowHeight = useWindowHeight();
@@ -220,7 +220,7 @@ export function MobileDaySheet({
                 <ShiftDetailRow
                   key={shift.id}
                   shift={shift}
-                  canEdit={canEdit}
+                  canEdit={canEditShift(shift)}
                   actions="inline"
                   onEdit={(s) => {
                     close();
@@ -233,7 +233,7 @@ export function MobileDaySheet({
                 <NoteDetailCard
                   key={note.id}
                   note={note}
-                  onOpen={canEdit ? (n) => { close(); actions.onOpenNote(n); } : undefined}
+                  onOpen={canAddNote ? (n) => { close(); actions.onOpenNote(n); } : undefined}
                 />
               ))}
               {dayShifts.length === 0 && dayNotes.length === 0 && (
@@ -244,26 +244,30 @@ export function MobileDaySheet({
             </div>
           </div>
 
-          {canEdit && (
+          {(canAddShift || canAddNote) && (
             <div
               ref={barRef}
               className="flex shrink-0 gap-2 border-t border-line px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3"
             >
-              <Button
-                onClick={run(actions.onAddShift)}
-                className="h-11 flex-1 gap-2 rounded-[10px] text-[14px] font-semibold"
-              >
-                <Plus className="size-[18px]" />
-                {t("calendarView.shift")}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={run(actions.onAddNote)}
-                className="h-11 flex-1 gap-2 rounded-[10px] text-[14px] font-semibold"
-              >
-                <StickyNote className="size-[18px]" />
-                {t("calendarView.note")}
-              </Button>
+              {canAddShift && (
+                <Button
+                  onClick={run(actions.onAddShift)}
+                  className="h-11 flex-1 gap-2 rounded-[10px] text-[14px] font-semibold"
+                >
+                  <Plus className="size-[18px]" />
+                  {t("calendarView.shift")}
+                </Button>
+              )}
+              {canAddNote && (
+                <Button
+                  variant="outline"
+                  onClick={run(actions.onAddNote)}
+                  className="h-11 flex-1 gap-2 rounded-[10px] text-[14px] font-semibold"
+                >
+                  <StickyNote className="size-[18px]" />
+                  {t("calendarView.note")}
+                </Button>
+              )}
             </div>
           )}
         </div>

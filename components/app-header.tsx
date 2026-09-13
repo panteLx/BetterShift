@@ -28,7 +28,7 @@ interface AppHeaderProps {
   selectedCalendar: string | undefined;
   currentDate: Date;
   hasSyncErrors?: boolean;
-  /** Sync notifications manage external syncs — hidden for guests and other non-managers */
+  /** Gated on the manageExternalSync capability — hidden for anyone without it */
   canManageSync?: boolean;
   onDateChange: (date: Date) => void;
   onSelectCalendar: (id: string) => void;
