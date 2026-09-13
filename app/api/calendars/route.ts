@@ -20,13 +20,14 @@ import {
   getTokensFromCookie,
   validateAccessToken,
 } from "@/lib/auth/token-auth";
+import { findSeededGuestBundleId } from "@/lib/auth/legacy-permission-compat";
 import {
-  coarseLevelFromCapabilities,
-  findSeededGuestBundleId,
-} from "@/lib/auth/legacy-permission-compat";
-import {
+  CAPABILITIES,
   defaultBundleDefinitionsForNewCalendar,
+  isAdminOnlyCapability,
   sanitizeCapabilities,
+  type BundleSeedKey,
+  type Capability,
 } from "@/lib/permission-bundles";
 
 // GET all calendars (only those accessible to the user)
@@ -103,8 +104,10 @@ export async function GET(request: Request) {
     }
 
     // Batch-resolve every bundle involved (guest, share, token) to its
-    // capabilities so the legacy read/write/admin fields below stay a plain
-    // in-memory lookup — see lib/auth/legacy-permission-compat.ts.
+    // capabilities + identity, so the per-calendar enrichment below is a
+    // plain in-memory lookup instead of one resolveCalendarAccess() per
+    // calendar (which would re-run the calendar/share/token/subscription
+    // lookups already done above, once per row).
     const bundleIds = new Set<string>();
     for (const cal of userCalendars) {
       if (cal.guestBundleId) bundleIds.add(cal.guestBundleId);
@@ -115,19 +118,60 @@ export async function GET(request: Request) {
       bundleIds.size > 0
         ? await db.query.calendarPermissionBundles.findMany({
             where: (b, { inArray }) => inArray(b.id, Array.from(bundleIds)),
-            columns: { id: true, capabilities: true },
+            columns: { id: true, name: true, seedKey: true, capabilities: true },
           })
         : [];
     const capabilitiesByBundleId = new Map(
       bundleRows.map((row) => [row.id, sanitizeCapabilities(row.capabilities)])
     );
+    const bundleRefById = new Map<
+      string,
+      { id: string; name: string; seedKey: BundleSeedKey | null }
+    >(
+      bundleRows.map((row) => [
+        row.id,
+        { id: row.id, name: row.name, seedKey: row.seedKey },
+      ])
+    );
+    // A guest/link bundle can never carry an administrative capability
+    // (GUEST_INELIGIBLE), even if one somehow ended up in its saved set —
+    // mirrors the ceiling in getCalendarAccess()/getEffectiveAccessSummary().
+    const guestCeiling = (capabilities: Capability[]): Capability[] =>
+      capabilities.filter((c) => !isAdminOnlyCapability(c));
 
-    // Enrich calendars with permission metadata
+    // Enrich calendars with the caller's effective capabilities for that
+    // calendar (share > token > subscribed guest bundle for authenticated
+    // users; token > guest bundle for guests), matching the priority in
+    // resolveCalendarAccess() — computed here in-memory from the batched
+    // lookups above instead of re-resolving per calendar.
     const enrichedCalendars = await Promise.all(
       userCalendars.map(async (cal) => {
         const shareBundleId = shares.get(cal.id);
         const subscription = subscriptions.get(cal.id);
         const tokenBundleId = tokens.get(cal.id);
+        const isOwnerRow = !isAuthEnabled() || cal.ownerId === user?.id;
+
+        let capabilities: Capability[];
+        let bundle: { id: string; name: string; seedKey: BundleSeedKey | null } | null;
+        if (isOwnerRow) {
+          capabilities = [...CAPABILITIES];
+          bundle = null;
+        } else if (shareBundleId) {
+          // Invited users (source "share") are never ceilinged — see 5.2.
+          capabilities = capabilitiesByBundleId.get(shareBundleId) ?? [];
+          bundle = bundleRefById.get(shareBundleId) ?? null;
+        } else if (tokenBundleId) {
+          capabilities = guestCeiling(capabilitiesByBundleId.get(tokenBundleId) ?? []);
+          bundle = bundleRefById.get(tokenBundleId) ?? null;
+        } else if (cal.guestBundleId && (!user || subscription)) {
+          capabilities = guestCeiling(
+            capabilitiesByBundleId.get(cal.guestBundleId) ?? []
+          );
+          bundle = bundleRefById.get(cal.guestBundleId) ?? null;
+        } else {
+          capabilities = [];
+          bundle = null;
+        }
 
         // Determine subscription source
         let subscriptionSource: "guest" | "shared" | "token" | undefined =
@@ -143,21 +187,8 @@ export async function GET(request: Request) {
 
         return {
           ...cal,
-          guestPermission: cal.guestBundleId
-            ? coarseLevelFromCapabilities(
-                capabilitiesByBundleId.get(cal.guestBundleId) ?? []
-              )
-            : "none",
-          sharePermission: shareBundleId
-            ? coarseLevelFromCapabilities(
-                capabilitiesByBundleId.get(shareBundleId) ?? []
-              )
-            : undefined,
-          tokenPermission: tokenBundleId
-            ? coarseLevelFromCapabilities(
-                capabilitiesByBundleId.get(tokenBundleId) ?? []
-              )
-            : undefined,
+          capabilities,
+          bundle,
           canSignUpSelf: signupPermission.canManageOwn,
           canSignUpOthers: signupPermission.canManageOthers,
           isSubscribed: !!subscription || !!tokenBundleId,

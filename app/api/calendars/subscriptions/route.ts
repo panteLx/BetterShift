@@ -7,9 +7,30 @@ import {
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { eq, and, or, ne, isNotNull, isNull } from "drizzle-orm";
-import { undismissCalendar } from "@/lib/auth/permissions";
-import { coarseLevelFromCapabilities } from "@/lib/auth/legacy-permission-compat";
-import { sanitizeCapabilities } from "@/lib/permission-bundles";
+import { undismissCalendar, getEffectiveAccessSummary } from "@/lib/auth/permissions";
+import {
+  isAdminOnlyCapability,
+  sanitizeCapabilities,
+  type BundleSeedKey,
+  type Capability,
+} from "@/lib/permission-bundles";
+
+type BundleRef = { id: string; name: string; seedKey: BundleSeedKey | null };
+
+/**
+ * A guest bundle's capabilities, ceiling-filtered like every other guest/link
+ * source (5.2). Used for "what would I get" previews of a public calendar's
+ * guest access — deliberately NOT resolveCalendarAccess()/
+ * getEffectiveAccessSummary(), which require an active "subscribed"
+ * subscription and would return no access at all for a calendar the caller
+ * hasn't subscribed to (or has dismissed) yet, exactly the two cases this
+ * preview needs to cover.
+ */
+function previewGuestCapabilities(capabilities: unknown): Capability[] {
+  return sanitizeCapabilities(capabilities).filter(
+    (c) => !isAdminOnlyCapability(c)
+  );
+}
 
 /**
  * GET /api/calendars/subscriptions
@@ -41,7 +62,7 @@ export async function GET(request: NextRequest) {
           },
         },
         guestBundle: {
-          columns: { capabilities: true },
+          columns: { id: true, name: true, seedKey: true, capabilities: true },
         },
       },
     });
@@ -67,7 +88,6 @@ export async function GET(request: NextRequest) {
     const userShares = await db.query.calendarShares.findMany({
       where: eq(calendarShares.userId, user.id),
       with: {
-        bundle: { columns: { capabilities: true } },
         calendar: {
           with: {
             owner: {
@@ -76,7 +96,9 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
-            guestBundle: { columns: { capabilities: true } },
+            guestBundle: {
+              columns: { id: true, name: true, seedKey: true },
+            },
           },
         },
       },
@@ -101,11 +123,10 @@ export async function GET(request: NextRequest) {
         id: cal.id,
         name: cal.name,
         color: cal.color,
-        guestPermission: cal.guestBundle
-          ? coarseLevelFromCapabilities(
-              sanitizeCapabilities(cal.guestBundle.capabilities)
-            )
-          : "none",
+        capabilities: cal.guestBundle
+          ? previewGuestCapabilities(cal.guestBundle.capabilities)
+          : [],
+        bundle: (cal.guestBundle as BundleRef | null) ?? null,
         owner: cal.owner
           ? {
               id: cal.owner.id,
@@ -116,32 +137,41 @@ export async function GET(request: NextRequest) {
         source: "guest" as const,
       }));
 
-    // Add shared calendars to available list (already filtered for dismissed in activeShares)
-    const sharedCalendars = activeShares.map((share) => ({
-      id: share.calendar.id,
-      name: share.calendar.name,
-      color: share.calendar.color,
-      permission: coarseLevelFromCapabilities(
-        sanitizeCapabilities(share.bundle.capabilities)
-      ), // User's share permission level
-      guestPermission: share.calendar.guestBundle
-        ? coarseLevelFromCapabilities(
-            sanitizeCapabilities(share.calendar.guestBundle.capabilities)
-          )
-        : "none", // Calendar's guest permission (for reference)
-      owner: share.calendar.owner
-        ? {
-            id: share.calendar.owner.id,
-            name: share.calendar.owner.name,
-          }
-        : null,
-      isSubscribed: subscribedIds.has(share.calendarId),
-      source: "shared" as const,
-    }));
+    // Add shared calendars to available list (already filtered for dismissed
+    // in activeShares). A share is unaffected by subscription/dismissal
+    // status, so getEffectiveAccessSummary() always resolves it.
+    const sharedCalendars = await Promise.all(
+      activeShares.map(async (share) => {
+        const access = await getEffectiveAccessSummary(
+          user.id,
+          share.calendar.id
+        );
+        return {
+          id: share.calendar.id,
+          name: share.calendar.name,
+          color: share.calendar.color,
+          capabilities: access?.capabilities ?? [],
+          bundle: access?.bundle ?? null,
+          guestBundle: (share.calendar.guestBundle as BundleRef | null) ?? null, // for reference
+          owner: share.calendar.owner
+            ? {
+                id: share.calendar.owner.id,
+                name: share.calendar.owner.name,
+              }
+            : null,
+          isSubscribed: subscribedIds.has(share.calendarId),
+          source: "shared" as const,
+        };
+      })
+    );
 
     const availableCalendars = [...publicCalendars, ...sharedCalendars];
 
-    // Build dismissed calendars list (both shared and guest-subscribed)
+    // Build dismissed calendars list (both shared and guest-subscribed). A
+    // share-backed one resolves through getEffectiveAccessSummary() same as
+    // above; a guest-only one previews the guest bundle directly, since
+    // dismissing sets status to "dismissed" and resolveCalendarAccess()
+    // would otherwise report no access at all for it.
     const dismissedCalendars = await Promise.all(
       dismissedSubs.map(async (sub) => {
         const calendar = await db.query.calendars.findFirst({
@@ -153,7 +183,9 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
-            guestBundle: { columns: { capabilities: true } },
+            guestBundle: {
+              columns: { id: true, name: true, seedKey: true, capabilities: true },
+            },
           },
         });
 
@@ -161,20 +193,25 @@ export async function GET(request: NextRequest) {
 
         // Check if it's also a shared calendar
         const share = userShares.find((s) => s.calendarId === sub.calendarId);
+        const access = share
+          ? await getEffectiveAccessSummary(user.id, calendar.id)
+          : null;
 
-        const permission = share
-          ? coarseLevelFromCapabilities(sanitizeCapabilities(share.bundle.capabilities))
+        const capabilities = access
+          ? access.capabilities
           : calendar.guestBundle
-            ? coarseLevelFromCapabilities(
-                sanitizeCapabilities(calendar.guestBundle.capabilities)
-              )
-            : "none";
+            ? previewGuestCapabilities(calendar.guestBundle.capabilities)
+            : [];
+        const bundle = access
+          ? access.bundle
+          : ((calendar.guestBundle as BundleRef | null) ?? null);
 
         return {
           id: calendar.id,
           name: calendar.name,
           color: calendar.color,
-          permission,
+          capabilities,
+          bundle,
           owner: calendar.owner
             ? {
                 id: calendar.owner.id,
