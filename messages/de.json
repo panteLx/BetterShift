@@ -68,9 +68,6 @@
       "severity": "Schweregrad",
       "permission": "Berechtigung",
       "permissions": {
-        "admin": "Admin",
-        "read": "Lesen",
-        "write": "Schreiben",
         "none": "Keinen Zugriff"
       },
       "notes": "Notizen",
@@ -1043,10 +1040,9 @@
     "filterShared": "Geteilt",
     "filterSynced": "Mit Sync",
     "guestColumn": "Gastrecht",
+    "guestBundleHint": "Wer den Link kennt, hat gemäß dieser Gruppe Zugriff auf den Kalender",
     "guestNoneHint": "Nur Personen mit Freigabe sehen den Kalender",
     "guestPermissionValue": "Gastberechtigung: {permission}",
-    "guestReadHint": "Wer den Link kennt, sieht den Kalender",
-    "guestWriteHint": "Wer den Link kennt, kann den Kalender bearbeiten",
     "publicAccess": "Öffentlicher Zugriff",
     "selectAll": "Alle auswählen",
     "selectedCount": "Ausgewählt: {count}",

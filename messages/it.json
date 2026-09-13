@@ -68,9 +68,6 @@
       "severity": "Gravità",
       "permission": "Permesso",
       "permissions": {
-        "admin": "Admin",
-        "read": "Lettura",
-        "write": "Scrittura",
         "none": "Nessun Accesso"
       },
       "notes": "Note",
@@ -1043,10 +1040,9 @@
     "filterShared": "Condivisi",
     "filterSynced": "Con sync",
     "guestColumn": "Accesso ospite",
+    "guestBundleHint": "Chiunque abbia il link ha accesso al calendario in base a questo gruppo",
     "guestNoneHint": "Solo le persone con cui è condiviso vedono il calendario",
     "guestPermissionValue": "Permesso ospite: {permission}",
-    "guestReadHint": "Chiunque abbia il link vede il calendario",
-    "guestWriteHint": "Chiunque abbia il link può modificare il calendario",
     "publicAccess": "Accesso pubblico",
     "selectAll": "Seleziona tutto",
     "selectedCount": "Selezionati: {count}",

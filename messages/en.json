@@ -68,9 +68,6 @@
       "severity": "Severity",
       "permission": "Permission",
       "permissions": {
-        "admin": "Admin",
-        "read": "Read",
-        "write": "Write",
         "none": "No Access"
       },
       "notes": "Notes",
@@ -1043,10 +1040,9 @@
     "filterShared": "Shared",
     "filterSynced": "With sync",
     "guestColumn": "Guest access",
+    "guestBundleHint": "Anyone with the link has access to the calendar according to this group",
     "guestNoneHint": "Only people it is shared with can see the calendar",
     "guestPermissionValue": "Guest permission: {permission}",
-    "guestReadHint": "Anyone with the link can see the calendar",
-    "guestWriteHint": "Anyone with the link can edit the calendar",
     "publicAccess": "Public access",
     "selectAll": "Select all",
     "selectedCount": "Selected: {count}",

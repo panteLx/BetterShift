@@ -68,9 +68,6 @@
       "severity": "Závažnost",
       "permission": "Oprávnění",
       "permissions": {
-        "admin": "Správce",
-        "read": "Čtení",
-        "write": "Zápis",
         "none": "Bez přístupu"
       },
       "notes": "Poznámky",
@@ -1043,10 +1040,9 @@
     "filterShared": "Sdílené",
     "filterSynced": "Se synchronizací",
     "guestColumn": "Přístup hosta",
+    "guestBundleHint": "Kdokoli s odkazem má přístup ke kalendáři podle této skupiny",
     "guestNoneHint": "Kalendář vidí jen lidé, se kterými je sdílený",
     "guestPermissionValue": "Oprávnění hosta: {permission}",
-    "guestReadHint": "Kdokoli s odkazem kalendář uvidí",
-    "guestWriteHint": "Kdokoli s odkazem může kalendář upravovat",
     "publicAccess": "Veřejný přístup",
     "selectAll": "Vybrat vše",
     "selectedCount": "Vybráno: {count}",
