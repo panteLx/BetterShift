@@ -26,7 +26,7 @@ const LOW_MAX = 0.6;
 // vaul's own snap transition, so the inner height moves with the sheet
 const SNAP_EASE = "duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 
-/** Bottom bar under the phone grid: the visible month in figures and a button to add a shift. */
+/** Bottom bar under the phone grid: the visible month in figures — or, without viewStats, a link to the month's shifts — and a button to add a shift. */
 export function MobileDayFooter({
   summary,
   currentDate,
@@ -47,16 +47,20 @@ export function MobileDayFooter({
   const t = useTranslations();
   const locale = useLocale();
   const { stats, freeDays } = summary;
-  const figures = [
-    { label: t("calendarView.kpiShifts"), value: stats?.totalShifts ?? "–" },
-    {
-      label: t("calendarView.kpiHours"),
-      value: stats
-        ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(stats.totalMinutes / 60)
-        : "–",
-    },
-    { label: t("calendarView.kpiFreeDays"), value: freeDays ?? "–" },
-  ];
+  const figures = canViewStats
+    ? [
+        { label: t("calendarView.kpiShifts"), value: stats?.totalShifts ?? "–" },
+        {
+          label: t("calendarView.kpiHours"),
+          value: stats
+            ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(
+                stats.totalMinutes / 60
+              )
+            : "–",
+        },
+        { label: t("calendarView.kpiFreeDays"), value: freeDays ?? "–" },
+      ]
+    : [];
 
   return (
     <div className="flex items-center gap-2.5 border-t border-line bg-surface-panel px-3.5 pb-[max(9px,env(safe-area-inset-bottom))] pt-[9px]">
@@ -92,6 +96,7 @@ export function MobileDayFooter({
               month: format(currentDate, "LLLL", { locale: getDateLocale(locale) }),
             })}
           </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-tertiary" />
         </button>
       )}
       {onAddShift && (

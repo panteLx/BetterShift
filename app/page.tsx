@@ -169,6 +169,18 @@ function HomeContent() {
   const viewSettings = useViewSettings();
   const dialogStates = useDialogStates();
 
+  // Symmetric to CalendarWorkspace's mobile stats-sheet guard: close the
+  // desktop stats dialog immediately if the capability disappears mid-session,
+  // rather than leaving it open against a now-forbidden endpoint.
+  const canViewStats = can("viewStats");
+  const [prevCanViewStats, setPrevCanViewStats] = useState(canViewStats);
+  if (canViewStats !== prevCanViewStats) {
+    setPrevCanViewStats(canViewStats);
+    if (!canViewStats && dialogStates.showMonthStatsDialog) {
+      dialogStates.setShowMonthStatsDialog(false);
+    }
+  }
+
   const noteActions = useNoteActions({
     createNote: createNoteHook,
     updateNote: updateNoteHook,
@@ -496,7 +508,7 @@ function HomeContent() {
         canDeleteShift={canDeleteShift}
         showStampBar={calendarView.showStampBar}
         canStampPreset={canStampPreset}
-        canViewStats={can("viewStats")}
+        canViewStats={canViewStats}
         selectedPresetIds={armedPresetIds}
         onSelectPreset={handlePresetSelection}
         onManagePresets={() => dialogStates.setShowPresetManageDialog(true)}
