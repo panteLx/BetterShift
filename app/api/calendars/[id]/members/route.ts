@@ -13,10 +13,10 @@ export async function GET(
     const { id: calendarId } = await params;
     const user = await getSessionUser(request.headers);
 
-    const hasAccess = await hasCapability(user?.id, calendarId, "viewMembers");
+    const hasAccess = await hasCapability(user?.id, calendarId, "signUpOthers");
     if (!hasAccess) {
       return NextResponse.json(
-        { error: "Insufficient permissions. View members access required." },
+        { error: "Insufficient permissions. Sign up others access required." },
         { status: 403 }
       );
     }

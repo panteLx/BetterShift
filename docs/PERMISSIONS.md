@@ -29,7 +29,7 @@ Recommended defaults for a newly created calendar:
 | --- | --- |
 | **Read** | View shifts, notes & events, and statistics; sign up for shifts with open slots |
 | **Contribute** | Everything in Read, plus: create shifts, stamp presets, create presets, edit/delete shifts, presets, and notes/events you created yourself |
-| **Manage** | Everything in Contribute, plus: edit/delete shifts, presets, and notes/events created by anyone, sign up other people, and see who has access |
+| **Manage** | Everything in Contribute, plus: edit/delete shifts, presets, and notes/events created by anyone, and sign up other people |
 | **Admin** | Everything in Manage, plus: manage external calendar sync, delete sync log entries, manage shares, manage guest access & links, and manage calendar settings |
 
 These are only a starting point. Every capability can be added to or removed from any bundle, including the four starter ones — there's nothing special about them once edited, aside from the translated name.
@@ -42,7 +42,6 @@ The bundle editor groups capabilities by area:
 - View shifts — see the calendar and its shifts
 - View notes & events — see notes and events on the calendar
 - View statistics — see the statistics/summary panel
-- View members — see who has access to the calendar
 
 **Shifts**
 - Stamp presets — add a shift by picking an existing preset
@@ -55,7 +54,7 @@ The bundle editor groups capabilities by area:
 
 **Signups**
 - Sign up self — join or leave shifts that have open slots
-- Sign up others — add or remove other people from a shift's signups
+- Sign up others — add or remove other people from a shift's signups; this also lets you see the calendar's members (owner + shares), since that list is how you pick who to add
 
 **Presets**
 - Create presets — add new presets

@@ -12,7 +12,6 @@ export const CAPABILITIES = [
   "viewShifts",
   "viewNotesEvents",
   "viewStats",
-  "viewMembers",
   // Shifts
   "stampPreset",
   "createShift",
@@ -55,7 +54,7 @@ export const CAPABILITY_GROUPS: ReadonlyArray<{
   key: CapabilityGroupKey;
   capabilities: readonly Capability[];
 }> = [
-  { key: "view", capabilities: ["viewShifts", "viewNotesEvents", "viewStats", "viewMembers"] },
+  { key: "view", capabilities: ["viewShifts", "viewNotesEvents", "viewStats"] },
   {
     key: "shifts",
     capabilities: [
@@ -153,7 +152,7 @@ const CAPABILITY_DEPENDENCIES: Partial<Record<Capability, Capability[]>> = {
   manageOwnNotesEvents: ["viewNotesEvents"],
   manageAnyNotesEvents: ["manageOwnNotesEvents"],
   signUpSelf: ["viewShifts"],
-  signUpOthers: ["viewMembers", "viewShifts"],
+  signUpOthers: ["viewShifts"],
   createPreset: ["viewShifts"],
   manageOwnPresets: ["viewShifts"],
   manageAnyPresets: ["manageOwnPresets"],
@@ -242,7 +241,6 @@ const MANAGE_BASE: Capability[] = [
   "manageAnyPresets",
   "manageAnyNotesEvents",
   "signUpOthers",
-  "viewMembers",
 ];
 const ADMIN_BASE: Capability[] = [
   ...MANAGE_BASE,
