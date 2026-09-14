@@ -104,6 +104,15 @@ export function isAdminOnlyCapability(capability: Capability): boolean {
   return GUEST_INELIGIBLE.has(capability);
 }
 
+/** Whether this capability set can change a shift at all — shared by useCalendarPermission's canEdit and calendar-switcher's read-only badge. */
+export function hasEditCapability(capabilities: readonly Capability[]): boolean {
+  return (
+    capabilities.includes("createShift") ||
+    capabilities.includes("editOwnShift") ||
+    capabilities.includes("editAnyShift")
+  );
+}
+
 /** Strips admin-only capabilities from a guest/link-sourced capability list — the GUEST_INELIGIBLE ceiling. */
 export function applyGuestCeiling(capabilities: readonly Capability[]): Capability[] {
   return capabilities.filter((c) => !isAdminOnlyCapability(c));

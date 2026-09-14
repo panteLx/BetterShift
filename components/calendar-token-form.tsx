@@ -71,7 +71,6 @@ export function AccessLinkCreateForm({ form }: { form: AccessLinkForm }) {
           bundles={form.guestEligibleBundles}
           value={form.bundleId || null}
           onChange={(id) => id && form.setBundleId(id)}
-          guestEligibleOnly
           triggerAriaLabel={t("common.labels.permission")}
           className="h-10 w-full justify-between px-3"
         />

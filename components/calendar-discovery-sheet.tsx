@@ -14,11 +14,9 @@ import {
   type DismissedCalendar,
 } from "@/hooks/useCalendarSubscriptions";
 import { useBundleDisplayName } from "@/components/permission-bundle-picker";
-import type { BundleSeedKey } from "@/lib/permission-bundles";
+import type { BundleRef } from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 import { shiftVars } from "@/lib/shift-display";
-
-type BundleRefLike = { name: string; seedKey: BundleSeedKey | null } | null;
 
 type CalendarDiscoverySheetProps = {
   open: boolean;
@@ -64,7 +62,7 @@ export function CalendarDiscoverySheet({
   };
 
   const displayName = useBundleDisplayName();
-  const bundlePill = (bundle: BundleRefLike) =>
+  const bundlePill = (bundle: BundleRef | null) =>
     bundle ? <Pill>{displayName(bundle)}</Pill> : null;
 
   const renderRow = ({

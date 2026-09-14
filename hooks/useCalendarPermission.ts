@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCalendars } from "@/hooks/useCalendars";
 import { CalendarWithCount } from "@/lib/types";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import type { Capability } from "@/lib/permission-bundles";
+import { hasEditCapability, type Capability } from "@/lib/permission-bundles";
 
 export interface CalendarPermission {
   isOwner: boolean;
@@ -96,10 +96,7 @@ export function useCalendarPermission(
       return createdBy === null || createdBy === userId;
     };
 
-    // can() already returns true unconditionally for an owner, so it alone
-    // is the single source of truth here — no need to restate isOwner.
-    const canEdit =
-      can("createShift") || can("editOwnShift") || can("editAnyShift");
+    const canEdit = isOwner || hasEditCapability(capabilities);
     const canManage = can("editAnyShift") || can("manageCalendarSettings");
 
     return {

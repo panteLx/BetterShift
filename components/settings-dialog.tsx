@@ -182,8 +182,9 @@ export function useCalendarSettings(calendarId: string | null) {
   const permission = useCalendarPermission(calendarId);
   const { isAuthEnabled } = useAuthFeatures();
   const { presets } = usePresets(calendarId ?? undefined);
+  const canOpenExternal = permission.can("manageExternalSync");
   const { externalSyncs, hasSyncErrors } = useExternalSync(
-    permission.canManage ? calendarId : null
+    canOpenExternal ? calendarId : null
   );
   const canOpenPermissions =
     permission.can("manageShares") || permission.can("manageGuestAccess");
@@ -191,14 +192,15 @@ export function useCalendarSettings(calendarId: string | null) {
 
   const items: SettingsItem[] = [];
   if (!calendar) return { calendar, items };
-  if (permission.canManage)
+  if (permission.can("manageCalendarSettings"))
     items.push({
       id: "general",
       icon: Palette,
       title: t("settings.general"),
       description: t("settings.generalHint"),
     });
-  if (permission.canEdit)
+  // Matches PresetsPanel's own "no preset capability at all" gate.
+  if (permission.can("createPreset") || permission.can("manageOwnPresets"))
     items.push({
       id: "presets",
       icon: Layers,
@@ -206,7 +208,7 @@ export function useCalendarSettings(calendarId: string | null) {
       description: t("settings.presetsHint", { count: presets.length }),
       meta: presets.length,
     });
-  if (permission.canManage)
+  if (canOpenExternal)
     items.push({
       id: "external",
       icon: RefreshCw,
@@ -240,7 +242,7 @@ export function useCalendarSettings(calendarId: string | null) {
   );
   // Sync notifications manage external syncs, so they need the same permission
   // tier as that section — guests only ever get read/write, never manage.
-  if (permission.canManage)
+  if (canOpenExternal)
     items.push({
       id: "notifications",
       icon: Bell,

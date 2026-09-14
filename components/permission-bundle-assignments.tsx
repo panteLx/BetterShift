@@ -17,11 +17,14 @@ import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useAuth } from "@/hooks/useAuth";
 import type { usePermissionLinkForm } from "@/hooks/usePermissionLinkForm";
+import type { CalendarWithCount } from "@/lib/types";
 
 interface PermissionAssignmentsProps {
   calendarId: string;
   allowGuest: boolean;
   linkForm: ReturnType<typeof usePermissionLinkForm>;
+  calendar: CalendarWithCount | undefined;
+  updateCalendar: ReturnType<typeof useCalendars>["updateCalendar"];
 }
 
 /** "Zuweisungen" tab: who and what holds each bundle — people, public/guest access, links. */
@@ -29,15 +32,15 @@ export function PermissionAssignments({
   calendarId,
   allowGuest,
   linkForm,
+  calendar,
+  updateCalendar,
 }: PermissionAssignmentsProps) {
   const t = useTranslations();
   const { user: currentUser } = useAuth();
-  const { calendars, updateCalendar } = useCalendars();
   const { bundles } = useCalendarBundles(calendarId);
   const { shares, updateShare, removeShare } = useCalendarShares(calendarId);
   const { can, isOwner } = useCalendarPermission(calendarId);
   const displayName = useBundleDisplayName();
-  const calendar = calendars.find((c) => c.id === calendarId);
 
   // S2: assigning shares needs manageShares; guest access and links need
   // manageGuestAccess — a bundle can hold one without the other.

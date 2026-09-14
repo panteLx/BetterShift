@@ -15,16 +15,27 @@ import {
 import { CheckRow, Field, InfoNote, SectionLabel, inputClass } from "@/components/form-kit";
 import {
   useCalendarBundles,
+  type PermissionBundle,
   type PermissionBundleWithUsage,
 } from "@/hooks/useCalendarBundles";
 import { usePermissionBundleForm } from "@/hooks/usePermissionBundleForm";
 import { useBundleDisplayName } from "@/components/permission-bundle-picker";
-import { CAPABILITY_GROUPS, isAdminOnlyCapability } from "@/lib/permission-bundles";
+import { CAPABILITY_GROUPS, isAdminOnlyCapability, type Capability } from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 
-function BundleEditor({ bundle }: { bundle: PermissionBundleWithUsage }) {
+type UpdateBundle = (
+  bundleId: string,
+  input: { name?: string; capabilities?: Capability[] }
+) => Promise<PermissionBundle>;
+
+function BundleEditor({
+  bundle,
+  updateBundle,
+}: {
+  bundle: PermissionBundleWithUsage;
+  updateBundle: UpdateBundle;
+}) {
   const t = useTranslations();
-  const { updateBundle } = useCalendarBundles(bundle.calendarId);
   const form = usePermissionBundleForm(bundle);
   const [saving, setSaving] = useState(false);
 
@@ -112,12 +123,14 @@ function BundleRow({
   onToggleExpand,
   onClone,
   onDelete,
+  updateBundle,
 }: {
   bundle: PermissionBundleWithUsage;
   expanded: boolean;
   onToggleExpand: () => void;
   onClone: () => void;
   onDelete: () => void;
+  updateBundle: UpdateBundle;
 }) {
   const t = useTranslations();
   const displayName = useBundleDisplayName();
@@ -173,7 +186,7 @@ function BundleRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {expanded && <BundleEditor bundle={bundle} />}
+      {expanded && <BundleEditor bundle={bundle} updateBundle={updateBundle} />}
     </div>
   );
 }
@@ -181,7 +194,8 @@ function BundleRow({
 /** "Gruppen" tab: bundle list, create/clone/delete, and the capability editor. */
 export function PermissionBundleEditor({ calendarId }: { calendarId: string }) {
   const t = useTranslations();
-  const { bundles, createBundle, cloneBundle, deleteBundle } = useCalendarBundles(calendarId);
+  const { bundles, createBundle, cloneBundle, deleteBundle, updateBundle } =
+    useCalendarBundles(calendarId);
   const displayName = useBundleDisplayName();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -213,6 +227,7 @@ export function PermissionBundleEditor({ calendarId }: { calendarId: string }) {
           onToggleExpand={() => setExpandedId((id) => (id === bundle.id ? null : bundle.id))}
           onClone={() => handleClone(bundle)}
           onDelete={() => setBundleToDelete(bundle)}
+          updateBundle={updateBundle}
         />
       ))}
 

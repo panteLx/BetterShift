@@ -97,7 +97,13 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
         {tab === "groups" && <PermissionBundleEditor calendarId={calendarId} />}
 
         {tab === "assignments" && (
-          <PermissionAssignments calendarId={calendarId} allowGuest={allowGuest} linkForm={linkForm} />
+          <PermissionAssignments
+            calendarId={calendarId}
+            allowGuest={allowGuest}
+            linkForm={linkForm}
+            calendar={calendar}
+            updateCalendar={updateCalendar}
+          />
         )}
 
         {tab === "signups" && (

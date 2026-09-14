@@ -25,6 +25,7 @@ import {
 import { CalendarWithCount } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { hasEditCapability } from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 
 interface CalendarSwitcherProps {
@@ -43,12 +44,7 @@ export function isCalendarReadOnly(
   userId: string | undefined
 ): boolean {
   if (userId && calendar.ownerId === userId) return false;
-  const capabilities = calendar.capabilities ?? [];
-  return !(
-    capabilities.includes("createShift") ||
-    capabilities.includes("editOwnShift") ||
-    capabilities.includes("editAnyShift")
-  );
+  return !hasEditCapability(calendar.capabilities ?? []);
 }
 
 export function CalendarSwitcher({

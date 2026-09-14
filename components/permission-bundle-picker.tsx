@@ -8,13 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { isGuestEligible, type BundleSeedKey, type Capability } from "@/lib/permission-bundles";
+import { isGuestEligible, type BundleRef, type Capability } from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 
-export interface BundleOption {
-  id: string;
-  name: string;
-  seedKey: BundleSeedKey | null;
+export interface BundleOption extends BundleRef {
   capabilities: Capability[];
 }
 
