@@ -6,6 +6,17 @@
 -- from lib/permission-bundles.ts, since a later change to that file must
 -- not rewrite what already-applied migrations did).
 
+-- FK enforcement (PRAGMA foreign_keys) has never actually been turned on
+-- by the app, so a pre-existing install could have accumulated shares or
+-- tokens whose calendar_id no longer matches any row in `calendars`. The
+-- UPDATE statements below would leave bundle_id NULL for such orphans,
+-- which then fails the NOT NULL rebuild in the next migration — drop them
+-- first so the upgrade can't be blocked by stale, already-meaningless rows.
+DELETE FROM calendar_shares WHERE calendar_id NOT IN (SELECT id FROM calendars);
+--> statement-breakpoint
+DELETE FROM calendar_access_tokens WHERE calendar_id NOT IN (SELECT id FROM calendars);
+--> statement-breakpoint
+
 -- Read: view-only, plus self-signup if this calendar currently allows it.
 INSERT INTO calendar_permission_bundles (id, calendar_id, name, capabilities, created_at, updated_at)
 SELECT

@@ -1,0 +1,3 @@
+CREATE INDEX `calendar_access_tokens_bundleId_idx` ON `calendar_access_tokens` (`bundle_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `calendar_permission_bundles_calendarId_seedKey_idx` ON `calendar_permission_bundles` (`calendar_id`,`seed_key`) WHERE "calendar_permission_bundles"."seed_key" is not null;--> statement-breakpoint
+CREATE INDEX `calendar_shares_bundleId_idx` ON `calendar_shares` (`bundle_id`);

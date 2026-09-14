@@ -176,6 +176,9 @@ export const calendarPermissionBundles = sqliteTable(
   },
   (table) => [
     index("calendar_permission_bundles_calendarId_idx").on(table.calendarId),
+    uniqueIndex("calendar_permission_bundles_calendarId_seedKey_idx")
+      .on(table.calendarId, table.seedKey)
+      .where(sql`${table.seedKey} is not null`),
   ]
 );
 
@@ -208,6 +211,7 @@ export const calendarShares = sqliteTable(
   (table) => [
     index("calendar_shares_calendarId_idx").on(table.calendarId),
     index("calendar_shares_userId_idx").on(table.userId),
+    index("calendar_shares_bundleId_idx").on(table.bundleId),
   ]
 );
 
@@ -498,6 +502,7 @@ export const calendarAccessTokens = sqliteTable(
       table.isActive
     ),
     index("calendar_access_tokens_createdBy_idx").on(table.createdBy),
+    index("calendar_access_tokens_bundleId_idx").on(table.bundleId),
   ]
 );
 
