@@ -1093,11 +1093,13 @@
     "guestLockedHint": "This group is assigned to guest access or a link. Administrative rights can never be given to guests.",
     "stampPresetBypassWarning": "Without “Create shifts”, this restriction can be bypassed: anyone who may create presets can create an arbitrary one and then stamp it.",
     "signupsCapabilityHint": "Who may sign themselves or others up for shifts is set per group in the “Groups” tab (the “Sign up self” / “Sign up others” capabilities).",
+    "signupsLocked": "Only someone who can manage calendar settings can turn sign-ups on or off.",
     "usageShares": "{count, plural, one {# share} other {# shares}}",
     "usageTokens": "{count, plural, one {# link} other {# links}}",
     "usageGuestAccess": "guest access",
     "deleteInUse": "Still used by: {usage}",
     "nameTaken": "A group with this name already exists",
+    "bundlesUnavailable": "Permission groups could not be loaded, so this action isn't available.",
     "seed": {
       "read": "Read",
       "contribute": "Contribute",

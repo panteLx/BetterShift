@@ -1093,11 +1093,13 @@
     "guestLockedHint": "Tato skupina je přiřazena k hostovskému přístupu nebo odkazu. Správcovská práva nelze hostům nikdy udělit.",
     "stampPresetBypassWarning": "Bez „Vytvářet směny“ lze toto omezení obejít: kdo smí vytvářet předvolby, může vytvořit libovolnou a poté ji použít jako razítko.",
     "signupsCapabilityHint": "Kdo se smí přihlásit sám nebo přihlásit ostatní na směny, se nastavuje po skupinách na kartě „Skupiny“ (práva „Přihlásit se“ / „Přihlásit ostatní“).",
+    "signupsLocked": "Zapnout nebo vypnout přihlašování může jen ten, kdo smí spravovat nastavení kalendáře.",
     "usageShares": "{count, plural, one {# sdílení} few {# sdílení} other {# sdílení}}",
     "usageTokens": "{count, plural, one {# odkaz} few {# odkazy} other {# odkazů}}",
     "usageGuestAccess": "hostovský přístup",
     "deleteInUse": "Stále používáno: {usage}",
     "nameTaken": "Skupina s tímto názvem už existuje",
+    "bundlesUnavailable": "Skupiny oprávnění se nepodařilo načíst, tato akce proto není k dispozici.",
     "seed": {
       "read": "Čtení",
       "contribute": "Přispívání",

@@ -6,6 +6,7 @@ import { ChevronDown, Copy, Info, MoreVertical, Plus, Trash2, TriangleAlert } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { StatusBanner } from "@/components/status-banner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -194,13 +195,21 @@ function BundleRow({
 /** "Gruppen" tab: bundle list, create/clone/delete, and the capability editor. */
 export function PermissionBundleEditor({ calendarId }: { calendarId: string }) {
   const t = useTranslations();
-  const { bundles, createBundle, cloneBundle, deleteBundle, updateBundle } =
+  const { bundles, isError, createBundle, cloneBundle, deleteBundle, updateBundle } =
     useCalendarBundles(calendarId);
   const displayName = useBundleDisplayName();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [bundleToDelete, setBundleToDelete] = useState<PermissionBundleWithUsage | null>(null);
+
+  if (isError) {
+    return (
+      <StatusBanner tone="danger" icon={TriangleAlert}>
+        {t("permissionBundles.bundlesUnavailable")}
+      </StatusBanner>
+    );
+  }
 
   const handleCreate = async () => {
     const name = newName.trim();

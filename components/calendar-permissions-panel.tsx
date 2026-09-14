@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Info } from "lucide-react";
+import { Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { SegmentedControl } from "@/components/segmented-control";
@@ -12,6 +12,7 @@ import { PermissionAssignments } from "@/components/permission-bundle-assignment
 import { AccessLinkCreated } from "@/components/calendar-token-form";
 import { useBundleDisplayName } from "@/components/permission-bundle-picker";
 import { useCalendars } from "@/hooks/useCalendars";
+import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { usePermissionLinkForm } from "@/hooks/usePermissionLinkForm";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useReportDirty } from "@/hooks/useDirtyState";
@@ -29,6 +30,8 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
   const t = useTranslations();
   const { calendars, updateCalendar } = useCalendars();
   const { allowGuest } = useAuthFeatures();
+  const { can } = useCalendarPermission(calendarId);
+  const canManageSettings = can("manageCalendarSettings");
   const displayName = useBundleDisplayName();
   const [tab, setTab] = useState<PermissionsTab>("groups");
   const linkForm = usePermissionLinkForm(calendarId);
@@ -114,8 +117,11 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
               description={t("sharingSheet.signupsEnabledDesc")}
               checked={signupsEnabled}
               onCheckedChange={handleSignupsEnabledChange}
-              disabled={saving}
+              disabled={saving || !canManageSettings}
             />
+            {!canManageSettings && (
+              <InfoNote icon={Lock}>{t("permissionBundles.signupsLocked")}</InfoNote>
+            )}
             <InfoNote icon={Info}>{t("permissionBundles.signupsCapabilityHint")}</InfoNote>
           </>
         )}

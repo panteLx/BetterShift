@@ -1093,11 +1093,13 @@
     "guestLockedHint": "Ce groupe est attribué à un accès invité ou à un lien. Les droits d'administration ne peuvent jamais être accordés aux invités.",
     "stampPresetBypassWarning": "Sans « Créer des créneaux », cette restriction peut être contournée : quiconque peut créer des modèles peut en créer un quelconque puis le pointer.",
     "signupsCapabilityHint": "Qui peut s'inscrire ou inscrire d'autres personnes aux créneaux se définit par groupe dans l'onglet « Groupes » (droits « S'inscrire » / « Inscrire d'autres personnes »).",
+    "signupsLocked": "Seule une personne pouvant gérer les paramètres du calendrier peut activer ou désactiver les inscriptions.",
     "usageShares": "{count, plural, one {# partage} other {# partages}}",
     "usageTokens": "{count, plural, one {# lien} other {# liens}}",
     "usageGuestAccess": "l'accès invité",
     "deleteInUse": "Encore utilisé par : {usage}",
     "nameTaken": "Un groupe portant ce nom existe déjà",
+    "bundlesUnavailable": "Les groupes de permissions n'ont pas pu être chargés, cette action n'est donc pas disponible.",
     "seed": {
       "read": "Lecture",
       "contribute": "Contribuer",

@@ -1093,11 +1093,13 @@
     "guestLockedHint": "Diese Gruppe ist einem Gastzugang oder Link zugewiesen. Verwaltungsrechte lassen sich Gästen nie geben.",
     "stampPresetBypassWarning": "Ohne „Schichten anlegen“ lässt sich diese Einschränkung umgehen: Wer Presets anlegen darf, kann ein beliebiges Preset erstellen und es dann stempeln.",
     "signupsCapabilityHint": "Wer sich selbst oder andere für Schichten eintragen darf, wird pro Gruppe im Tab „Gruppen“ festgelegt (Rechte „Sich selbst eintragen“ / „Andere eintragen“).",
+    "signupsLocked": "Nur wer Kalendereinstellungen verwalten darf, kann Anmeldungen ein- oder ausschalten.",
     "usageShares": "{count, plural, one {# Freigabe} other {# Freigaben}}",
     "usageTokens": "{count, plural, one {# Link} other {# Links}}",
     "usageGuestAccess": "dem Gastzugang",
     "deleteInUse": "Wird noch verwendet von: {usage}",
     "nameTaken": "Es gibt bereits eine Gruppe mit diesem Namen",
+    "bundlesUnavailable": "Berechtigungsgruppen konnten nicht geladen werden. Diese Aktion ist deshalb nicht möglich.",
     "seed": {
       "read": "Lesen",
       "contribute": "Mitwirken",

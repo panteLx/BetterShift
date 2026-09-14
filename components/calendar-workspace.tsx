@@ -46,8 +46,10 @@ interface CalendarWorkspaceProps {
   canCreateShift: boolean;
   /** manageOwnNotesEvents — creating a note/event only ever needs "own" */
   canAddNote: boolean;
-  /** Per-shift own/any precision (editOwnShift/editAnyShift) for edit/delete affordances */
+  /** Per-shift own/any precision (editOwnShift/editAnyShift) for the edit affordance */
   canEditShift: (shift: ShiftWithCalendar) => boolean;
+  /** Per-shift own/any precision (deleteOwnShift/deleteAnyShift) for the delete affordance */
+  canDeleteShift: (shift: ShiftWithCalendar) => boolean;
   showStampBar: boolean;
   selectedPresetIds: string[];
   onSelectPreset: (id: string | undefined, multiSelect?: boolean) => void;
@@ -78,6 +80,7 @@ export function CalendarWorkspace({
   canCreateShift,
   canAddNote,
   canEditShift,
+  canDeleteShift,
   showStampBar,
   selectedPresetIds,
   onSelectPreset,
@@ -130,6 +133,7 @@ export function CalendarWorkspace({
     canAddShift: canCreateShift && isOnline,
     canAddNote: canAddNote && isOnline,
     canEditShift: (shift) => canEditShift(shift) && isOnline,
+    canDeleteShift: (shift) => canDeleteShift(shift) && isOnline,
   };
 
   const banners = (

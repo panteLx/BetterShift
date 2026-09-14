@@ -168,7 +168,7 @@ export function useCalendarBundles(calendarId: string | undefined) {
   const queryClient = useQueryClient();
   const queryKey = queryKeys.permissionBundles.byCalendar(calendarId!);
 
-  const { data: bundles = [], isLoading } = useQuery({
+  const { data: bundles = [], isLoading, isError } = useQuery({
     queryKey,
     queryFn: () => fetchBundlesApi(calendarId!),
     enabled: !!calendarId,
@@ -367,6 +367,8 @@ export function useCalendarBundles(calendarId: string | undefined) {
   return {
     bundles,
     loading: isLoading,
+    /** The list fetch itself failed (e.g. a manageGuestAccess-only user against a manageShares-gated route) — callers must not render bundle pickers/editors as if `bundles` were a legitimate empty list. */
+    isError,
     createBundle: (input: { name: string; capabilities: Capability[] }) =>
       createMutation.mutateAsync(input),
     updateBundle: (

@@ -83,10 +83,13 @@ function HomeContent() {
 
   const { can, canOwned } = useCalendarPermission(selectedCalendar);
   // Own/Any precision (Paket 5b): a single calendar-wide boolean can't express who
-  // may touch a specific shift, so callers needing per-shift precision get this closure
+  // may touch a specific shift, so callers needing per-shift precision get these closures
   // instead of a coarse canEdit — kept in sync with CalendarWorkspace/DialogManager below.
+  // Edit and delete are independent capabilities (a bundle can grant one without the other).
   const canEditShift = (shift: ShiftWithCalendar) =>
     canOwned("editOwnShift", "editAnyShift", shift.createdBy ?? null);
+  const canDeleteShift = (shift: ShiftWithCalendar) =>
+    canOwned("deleteOwnShift", "deleteAnyShift", shift.createdBy ?? null);
   // Toasts are owned by CalendarWorkspace; this is only the stamping gate
   const { isOnline } = useConnectionStatus({ toasts: false });
 
@@ -349,6 +352,7 @@ function HomeContent() {
       currentDate={currentDate}
       shifts={shifts}
       canEditShift={canEditShift}
+      canDeleteShift={canDeleteShift}
       showMonthStatsDialog={dialogStates.showMonthStatsDialog}
       onMonthStatsDialogChange={dialogStates.setShowMonthStatsDialog}
       showMonthShiftsDialog={dialogStates.showMonthShiftsDialog}
@@ -485,6 +489,7 @@ function HomeContent() {
         canCreateShift={can("createShift")}
         canAddNote={can("manageOwnNotesEvents")}
         canEditShift={canEditShift}
+        canDeleteShift={canDeleteShift}
         showStampBar={calendarView.showStampBar}
         selectedPresetIds={armedPresetIds}
         onSelectPreset={handlePresetSelection}

@@ -35,7 +35,7 @@ const DEFAULT_VALIDITY: LinkValidity = "7";
 /** Form state for creating an access link; the full token is only available right after creation. */
 export function usePermissionLinkForm(calendarId: string) {
   const { createToken, getShareLink } = useCalendarTokens(calendarId);
-  const { bundles } = useCalendarBundles(calendarId);
+  const { bundles, isError: bundlesError } = useCalendarBundles(calendarId);
   const guestEligibleBundles = useMemo(
     () => bundles.filter((b) => isGuestEligible(b.capabilities)),
     [bundles]
@@ -105,6 +105,7 @@ export function usePermissionLinkForm(calendarId: string) {
     bundleId: effectiveBundleId,
     setBundleId,
     guestEligibleBundles,
+    bundlesError,
     validity,
     setValidity,
     expiresAt,

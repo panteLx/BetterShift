@@ -41,6 +41,8 @@ export interface DayViewModel {
   canAddNote: boolean;
   /** Per-shift own/any precision (editOwnShift/editAnyShift) */
   canEditShift: (shift: ShiftWithCalendar) => boolean;
+  /** Per-shift own/any precision (deleteOwnShift/deleteAnyShift) — independent from canEditShift */
+  canDeleteShift: (shift: ShiftWithCalendar) => boolean;
 }
 
 export function useDayLabels(day: Date) {
@@ -67,8 +69,18 @@ export function DayInspector({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const { selectedDay, currentDate, dayShifts, dayNotes, totalMinutes, summary, canAddShift, canAddNote, canEditShift } =
-    model;
+  const {
+    selectedDay,
+    currentDate,
+    dayShifts,
+    dayNotes,
+    totalMinutes,
+    summary,
+    canAddShift,
+    canAddNote,
+    canEditShift,
+    canDeleteShift,
+  } = model;
   const labels = useDayLabels(selectedDay);
   const monthName = format(currentDate, "LLLL", { locale: getDateLocale(locale) });
 
@@ -113,6 +125,7 @@ export function DayInspector({
             key={shift.id}
             shift={shift}
             canEdit={canEditShift(shift)}
+            canDelete={canDeleteShift(shift)}
             actions="menu"
             onEdit={actions.onEditShift}
             onDelete={actions.onDeleteShift}

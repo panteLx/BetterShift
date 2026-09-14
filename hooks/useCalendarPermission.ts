@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCalendars } from "@/hooks/useCalendars";
 import { CalendarWithCount } from "@/lib/types";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import { hasEditCapability, type Capability } from "@/lib/permission-bundles";
+import { type Capability } from "@/lib/permission-bundles";
 
 export interface CalendarPermission {
   isOwner: boolean;
@@ -13,26 +13,15 @@ export interface CalendarPermission {
   can(capability: Capability): boolean;
   /** Whether the caller may act on a resource given its own/any capabilities and creator — mirrors CalendarAccess.canOwned() server-side (E1/E8). */
   canOwned(own: Capability, any: Capability, createdBy: string | null): boolean;
-  canView: boolean;
-  /** Coarse "may change something here" — prefer can()/canOwned() for a specific action. */
-  canEdit: boolean;
-  /** Coarse "may manage other people's entries or calendar settings" — prefer can()/canOwned() for a specific action. */
-  canManage: boolean;
+  /** Owner-only — deletion of the calendar itself, not a resource on it. */
   canDelete: boolean;
-  canShare: boolean;
-  isReadOnly: boolean;
 }
 
 const NO_ACCESS: CalendarPermission = {
   isOwner: false,
   can: () => false,
   canOwned: () => false,
-  canView: false,
-  canEdit: false,
-  canManage: false,
   canDelete: false,
-  canShare: false,
-  isReadOnly: true,
 };
 
 /**
@@ -43,16 +32,10 @@ const NO_ACCESS: CalendarPermission = {
  * (share > token > subscribed guest bundle priority, ceiling-filtered) —
  * this hook does no permission resolution of its own.
  *
- * canEdit/canManage/canShare stay as coarse, best-effort approximations of
- * the old write/manage/admin levels for components not yet updated to check
- * a precise capability (Stufe 2 Paket 4/5) — new code should prefer can()/
- * canOwned() for the concrete capability an action actually needs.
- *
  * Accepts either a calendar object or a calendar ID string. If a string is
  * provided, it will look up the calendar from the calendars list.
  *
  * @example
- * const { canEdit, canView, canManage, isReadOnly } = useCalendarPermission(calendar);
  * const { can, canOwned } = useCalendarPermission(calendarId);
  * if (!canOwned("editOwnShift", "editAnyShift", shift.createdBy)) return;
  */
@@ -96,19 +79,11 @@ export function useCalendarPermission(
       return createdBy === null || createdBy === userId;
     };
 
-    const canEdit = isOwner || hasEditCapability(capabilities);
-    const canManage = can("editAnyShift") || can("manageCalendarSettings");
-
     return {
       isOwner,
       can,
       canOwned,
-      canView: can("viewShifts"),
-      canEdit,
-      canManage,
       canDelete: isOwner,
-      canShare: can("manageShares"),
-      isReadOnly: !canEdit,
     };
   }, [calendar, user, isGuest, auth.enabled]);
 }

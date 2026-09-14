@@ -134,7 +134,8 @@ export function MobileDaySheet({
     setWasOpen(open);
     if (open) setSnapIndex(0);
   }
-  const { selectedDay, dayShifts, dayNotes, canAddShift, canAddNote, canEditShift } = model;
+  const { selectedDay, dayShifts, dayNotes, canAddShift, canAddNote, canEditShift, canDeleteShift } =
+    model;
   const labels = useDayLabels(selectedDay);
 
   const windowHeight = useWindowHeight();
@@ -221,6 +222,7 @@ export function MobileDaySheet({
                   key={shift.id}
                   shift={shift}
                   canEdit={canEditShift(shift)}
+                  canDelete={canDeleteShift(shift)}
                   actions="inline"
                   onEdit={(s) => {
                     close();

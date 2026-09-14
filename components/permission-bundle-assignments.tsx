@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Trash2 } from "lucide-react";
+import { Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { SectionLabel } from "@/components/form-kit";
+import { StatusBanner } from "@/components/status-banner";
 import { PersonRow } from "@/components/person-row";
 import { CalendarShareUserSearch } from "@/components/calendar-share-user-search";
 import { BundlePicker, useBundleDisplayName } from "@/components/permission-bundle-picker";
@@ -37,7 +38,7 @@ export function PermissionAssignments({
 }: PermissionAssignmentsProps) {
   const t = useTranslations();
   const { user: currentUser } = useAuth();
-  const { bundles } = useCalendarBundles(calendarId);
+  const { bundles, isError: bundlesError } = useCalendarBundles(calendarId);
   const { shares, updateShare, removeShare } = useCalendarShares(calendarId);
   const { can, isOwner } = useCalendarPermission(calendarId);
   const displayName = useBundleDisplayName();
@@ -92,7 +93,12 @@ export function PermissionAssignments({
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
         <SectionLabel className="mb-0">{t("permissionBundles.people")}</SectionLabel>
-        {canManageShares && (
+        {canManageShares && bundlesError && (
+          <StatusBanner tone="danger" icon={TriangleAlert}>
+            {t("permissionBundles.bundlesUnavailable")}
+          </StatusBanner>
+        )}
+        {canManageShares && !bundlesError && (
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">
               <CalendarShareUserSearch calendarId={calendarId} bundleId={effectiveInviteBundleId} />
@@ -109,7 +115,7 @@ export function PermissionAssignments({
         {ownerRow}
         {shares.map((share) => {
           const isSelf = share.userId === currentUser?.id;
-          const editable = canManageShares && !isSelf;
+          const editable = canManageShares && !isSelf && !bundlesError;
           return (
             <PersonRow
               key={share.id}
@@ -153,23 +159,29 @@ export function PermissionAssignments({
 
       <section className="flex flex-col gap-2">
         <SectionLabel className="mb-0">{t("share.publicAccess")}</SectionLabel>
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 flex-1 text-[13px] text-fg-secondary">
-            {allowGuest
-              ? t("share.publicAccessDescriptionGuestsOn")
-              : t("share.publicAccessDescriptionGuestsOff")}
-          </p>
-          <BundlePicker
-            bundles={bundles}
-            value={guestBundleId}
-            onChange={handleGuestChange}
-            guestEligibleOnly
-            allowNone
-            noneLabel={t("sharingSheet.accessNone")}
-            disabled={!canManageGuestAccess || guestSaving}
-            triggerAriaLabel={t("share.publicAccess")}
-          />
-        </div>
+        {canManageGuestAccess && bundlesError ? (
+          <StatusBanner tone="danger" icon={TriangleAlert}>
+            {t("permissionBundles.bundlesUnavailable")}
+          </StatusBanner>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <p className="min-w-0 flex-1 text-[13px] text-fg-secondary">
+              {allowGuest
+                ? t("share.publicAccessDescriptionGuestsOn")
+                : t("share.publicAccessDescriptionGuestsOff")}
+            </p>
+            <BundlePicker
+              bundles={bundles}
+              value={guestBundleId}
+              onChange={handleGuestChange}
+              guestEligibleOnly
+              allowNone
+              noneLabel={t("sharingSheet.accessNone")}
+              disabled={!canManageGuestAccess || guestSaving}
+              triggerAriaLabel={t("share.publicAccess")}
+            />
+          </div>
+        )}
       </section>
 
       {allowGuest && (
@@ -178,7 +190,12 @@ export function PermissionAssignments({
           <section className="flex flex-col gap-3.5">
             <SectionLabel className="mb-0">{t("share.links")}</SectionLabel>
             <CalendarTokenList calendarId={calendarId} />
-            {canManageGuestAccess && (
+            {canManageGuestAccess && linkForm.bundlesError && (
+              <StatusBanner tone="danger" icon={TriangleAlert}>
+                {t("permissionBundles.bundlesUnavailable")}
+              </StatusBanner>
+            )}
+            {canManageGuestAccess && !linkForm.bundlesError && (
               <>
                 <AccessLinkCreateForm form={linkForm} />
                 <Button

@@ -1093,11 +1093,13 @@
     "guestLockedHint": "Este grupo está asignado a un acceso de invitado o a un enlace. Los derechos de administración nunca pueden darse a invitados.",
     "stampPresetBypassWarning": "Sin «Crear turnos», esta restricción se puede eludir: quien pueda crear plantillas puede crear una cualquiera y luego usarla para fichar.",
     "signupsCapabilityHint": "Quién puede inscribirse a sí mismo o a otros en turnos se define por grupo en la pestaña «Grupos» (permisos «Inscribirse» / «Inscribir a otros»).",
+    "signupsLocked": "Solo quien puede gestionar los ajustes del calendario puede activar o desactivar las inscripciones.",
     "usageShares": "{count, plural, one {# compartido} other {# compartidos}}",
     "usageTokens": "{count, plural, one {# enlace} other {# enlaces}}",
     "usageGuestAccess": "el acceso de invitados",
     "deleteInUse": "Todavía en uso por: {usage}",
     "nameTaken": "Ya existe un grupo con este nombre",
+    "bundlesUnavailable": "No se pudieron cargar los grupos de permisos, por lo que esta acción no está disponible.",
     "seed": {
       "read": "Lectura",
       "contribute": "Colaborar",

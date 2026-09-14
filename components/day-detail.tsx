@@ -107,6 +107,7 @@ export function Kpi({
 interface ShiftDetailRowProps {
   shift: ShiftWithCalendar;
   canEdit: boolean;
+  canDelete: boolean;
   actions: "menu" | "inline";
   onEdit: (shift: ShiftWithCalendar) => void;
   onDelete: (shift: ShiftWithCalendar) => void;
@@ -115,6 +116,7 @@ interface ShiftDetailRowProps {
 export function ShiftDetailRow({
   shift,
   canEdit,
+  canDelete,
   actions,
   onEdit,
   onDelete,
@@ -122,7 +124,10 @@ export function ShiftDetailRow({
   const t = useTranslations();
   const locale = useLocale();
   const synced = shift.syncedFromExternal || !!shift.externalSyncId;
+  // editOwnShift/editAnyShift and deleteOwnShift/deleteAnyShift are independent
+  // capabilities — a bundle can grant one without the other.
   const editable = canEdit && !synced;
+  const deletable = canDelete && !synced;
   const minutes = getShiftMinutes(shift);
 
   const { user: currentUser } = useAuth();
@@ -184,7 +189,7 @@ export function ShiftDetailRow({
           {formatHours(minutes, locale)}
         </span>
       )}
-      {editable &&
+      {(editable || deletable) &&
         (actions === "menu" ? (
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -195,43 +200,51 @@ export function ShiftDetailRow({
               <Ellipsis className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(shift)}>
-                <Pencil className="mr-2 size-4" />
-                {t("shift.edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(shift)}
-                className="text-danger focus:text-danger"
-              >
-                <Trash2 className="mr-2 size-4" />
-                {t("common.delete")}
-              </DropdownMenuItem>
+              {editable && (
+                <DropdownMenuItem onClick={() => onEdit(shift)}>
+                  <Pencil className="mr-2 size-4" />
+                  {t("shift.edit")}
+                </DropdownMenuItem>
+              )}
+              {deletable && (
+                <DropdownMenuItem
+                  onClick={() => onDelete(shift)}
+                  className="text-danger focus:text-danger"
+                >
+                  <Trash2 className="mr-2 size-4" />
+                  {t("common.delete")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
           <div className="flex items-center">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(shift);
-              }}
-              aria-label={t("shift.edit")}
-              className="flex size-9 items-center justify-center rounded-md text-fg-secondary"
-            >
-              <Pencil className="size-[17px]" />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(shift);
-              }}
-              aria-label={t("common.delete")}
-              className="flex size-9 items-center justify-center rounded-md text-fg-secondary"
-            >
-              <Trash2 className="size-[17px]" />
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(shift);
+                }}
+                aria-label={t("shift.edit")}
+                className="flex size-9 items-center justify-center rounded-md text-fg-secondary"
+              >
+                <Pencil className="size-[17px]" />
+              </button>
+            )}
+            {deletable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(shift);
+                }}
+                aria-label={t("common.delete")}
+                className="flex size-9 items-center justify-center rounded-md text-fg-secondary"
+              >
+                <Trash2 className="size-[17px]" />
+              </button>
+            )}
           </div>
         ))}
     </div>
