@@ -163,7 +163,7 @@ function HomeContent() {
     deleteNote: deleteNoteHook,
   } = useNotes(isCompareMode ? compareNoteCalendarId : selectedCalendar);
   const { externalSyncs, hasSyncErrors } = useExternalSync(
-    can("manageExternalSync") ? selectedCalendar || null : null
+    selectedCalendar || null
   );
 
   const viewSettings = useViewSettings();
