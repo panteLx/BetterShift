@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendars, shifts } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { calendars, shiftPresets, shifts } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
@@ -166,6 +166,26 @@ export async function PUT(
         return NextResponse.json(
           { error: "Invalid date format" },
           { status: 400 }
+        );
+      }
+    }
+
+    // A client-submitted presetId must belong to the shift's own calendar,
+    // otherwise a shift could get silently linked to another calendar's preset.
+    if (body.presetId && body.presetId !== existingShift.presetId) {
+      const [preset] = await db
+        .select()
+        .from(shiftPresets)
+        .where(
+          and(
+            eq(shiftPresets.id, body.presetId),
+            eq(shiftPresets.calendarId, existingShift.calendarId)
+          )
+        );
+      if (!preset) {
+        return NextResponse.json(
+          { error: "Preset not found" },
+          { status: 404 }
         );
       }
     }

@@ -195,6 +195,23 @@ export async function POST(request: Request) {
       isAllDay: boolean;
     };
     if (access.can("createShift")) {
+      if (presetId) {
+        const [preset] = await db
+          .select()
+          .from(shiftPresets)
+          .where(
+            and(
+              eq(shiftPresets.id, presetId),
+              eq(shiftPresets.calendarId, calendarId)
+            )
+          );
+        if (!preset) {
+          return NextResponse.json(
+            { error: "Preset not found" },
+            { status: 404 }
+          );
+        }
+      }
       insertValues = {
         title,
         startTime: isAllDay ? "00:00" : startTime,
