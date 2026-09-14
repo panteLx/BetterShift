@@ -201,14 +201,22 @@ export function ShiftDetailRow({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {editable && (
-                <DropdownMenuItem onClick={() => onEdit(shift)}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(shift);
+                  }}
+                >
                   <Pencil className="mr-2 size-4" />
                   {t("shift.edit")}
                 </DropdownMenuItem>
               )}
               {deletable && (
                 <DropdownMenuItem
-                  onClick={() => onDelete(shift)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(shift);
+                  }}
                   className="text-danger focus:text-danger"
                 >
                   <Trash2 className="mr-2 size-4" />
