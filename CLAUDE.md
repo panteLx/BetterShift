@@ -26,6 +26,10 @@ There is no unit-test framework here — "tests" means the lint/build/i18n pipel
 
 `npm run release:patch|minor|major` bumps the version and pushes the tag; the release workflow builds the image from it.
 
+## Workflow
+
+Commits follow Conventional Commits (`type(scope): summary`, e.g. `feat(ui):`, `fix(auth):`, `chore:`, `perf:`; `!` before the colon for breaking changes). `scripts/changelog.sh`, called from `.github/workflows/release.yml`, builds the release changelog straight from `git log --pretty=%s --no-merges` between tags — grouped by that prefix, with `refactor|ci|style|test|build` dropped as internal-only. It reads commit subjects, not the PR title or body, so **multi-commit PRs must merge via "Rebase and merge", not Squash** — squashing collapses every commit into one line under the merge commit's message and the per-commit changelog entries are lost. A single-commit PR can go either way since there's nothing to collapse.
+
 ## Architecture
 
 ### Request flow

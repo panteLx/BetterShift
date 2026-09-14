@@ -38,13 +38,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Filter calendars by permission - only include calendars user can view
-    const accessibleCalendars = [];
-    for (const calendar of requestedCalendars) {
-      const hasAccess = await hasCapability(user?.id, calendar.id, "viewShifts");
-      if (hasAccess) {
-        accessibleCalendars.push(calendar);
-      }
-    }
+    const accessFlags = await Promise.all(
+      requestedCalendars.map((calendar) =>
+        hasCapability(user?.id, calendar.id, "viewShifts")
+      )
+    );
+    const accessibleCalendars = requestedCalendars.filter(
+      (_, i) => accessFlags[i]
+    );
 
     if (accessibleCalendars.length === 0) {
       return NextResponse.json(

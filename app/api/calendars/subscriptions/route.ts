@@ -6,7 +6,7 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { eq, and, or, ne, isNotNull, isNull } from "drizzle-orm";
+import { eq, and, or, ne, isNotNull, isNull, inArray } from "drizzle-orm";
 import { undismissCalendar } from "@/lib/auth/permissions";
 import {
   applyGuestCeiling,
@@ -180,52 +180,66 @@ export async function GET(request: NextRequest) {
     // above; a guest-only one previews the guest bundle directly, since
     // dismissing sets status to "dismissed" and resolveCalendarAccess()
     // would otherwise report no access at all for it.
-    const dismissedCalendars = await Promise.all(
-      dismissedSubs.map(async (sub) => {
-        const calendar = await db.query.calendars.findFirst({
-          where: eq(calendars.id, sub.calendarId),
-          with: {
-            owner: {
-              columns: {
-                id: true,
-                name: true,
+    // Batched (one query for every dismissed calendar) rather than one
+    // findFirst per row — this list scales with how many calendars a user
+    // has dismissed over time, not just their currently-visible ones.
+    const dismissedCalendarIds = dismissedSubs.map((sub) => sub.calendarId);
+    const dismissedCalendarRows =
+      dismissedCalendarIds.length > 0
+        ? await db.query.calendars.findMany({
+            where: inArray(calendars.id, dismissedCalendarIds),
+            with: {
+              owner: {
+                columns: {
+                  id: true,
+                  name: true,
+                },
+              },
+              guestBundle: {
+                columns: {
+                  id: true,
+                  name: true,
+                  seedKey: true,
+                  capabilities: true,
+                },
               },
             },
-            guestBundle: {
-              columns: { id: true, name: true, seedKey: true, capabilities: true },
-            },
-          },
-        });
-
-        if (!calendar) return null;
-
-        // Check if it's also a shared calendar
-        const share = userShares.find((s) => s.calendarId === sub.calendarId);
-        const access = share ? shareAccess(share) : null;
-
-        const capabilities = access
-          ? access.capabilities
-          : calendar.guestBundle
-            ? previewGuestCapabilities(calendar.guestBundle.capabilities)
-            : [];
-        const bundle = access ? access.bundle : (calendar.guestBundle ?? null);
-
-        return {
-          id: calendar.id,
-          name: calendar.name,
-          color: calendar.color,
-          capabilities,
-          bundle,
-          owner: calendar.owner
-            ? {
-                id: calendar.owner.id,
-                name: calendar.owner.name,
-              }
-            : null,
-          source: sub.source,
-        };
-      })
+          })
+        : [];
+    const dismissedCalendarById = new Map(
+      dismissedCalendarRows.map((cal) => [cal.id, cal])
     );
+
+    const dismissedCalendars = dismissedSubs.map((sub) => {
+      const calendar = dismissedCalendarById.get(sub.calendarId);
+      if (!calendar) return null;
+
+      // Check if it's also a shared calendar
+      const share = userShares.find((s) => s.calendarId === sub.calendarId);
+      const access = share ? shareAccess(share) : null;
+
+      const capabilities = access
+        ? access.capabilities
+        : calendar.guestBundle
+          ? previewGuestCapabilities(calendar.guestBundle.capabilities)
+          : [];
+      const bundle = access ? access.bundle : (calendar.guestBundle ?? null);
+
+      return {
+        id: calendar.id,
+        name: calendar.name,
+        color: calendar.color,
+        capabilities,
+        bundle,
+        owner: calendar.owner
+          ? {
+              id: calendar.owner.id,
+              name: calendar.owner.name,
+            }
+          : null,
+        source: sub.source,
+      };
+    });
 
     // Filter out nulls
     const validDismissedCalendars = dismissedCalendars.filter(

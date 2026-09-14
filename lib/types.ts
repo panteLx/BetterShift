@@ -1,15 +1,11 @@
 import type { CalendarViewSettings } from "./view-settings";
-import type { BundleSeedKey, Capability } from "./permission-bundles";
+import type { BundleRef, Capability } from "./permission-bundles";
 
 // Re-export types from Drizzle schema
 export type { Calendar, Shift, ExternalSync } from "./db/schema";
 
 /** The bundle identity behind a caller's effective access — null for the owner. */
-export interface CalendarBundleRef {
-  id: string;
-  name: string;
-  seedKey: BundleSeedKey | null;
-}
+export type CalendarBundleRef = BundleRef;
 
 export interface CalendarWithCount {
   id: string;

@@ -16,7 +16,7 @@ export async function GET(
     const hasAccess = await hasCapability(user?.id, calendarId, "viewMembers");
     if (!hasAccess) {
       return NextResponse.json(
-        { error: "Insufficient permissions. Write access required." },
+        { error: "Insufficient permissions. View members access required." },
         { status: 403 }
       );
     }
