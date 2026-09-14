@@ -89,7 +89,7 @@ The bundle picker shown when assigning guest access or a link only offers bundle
 
 ### Read access is enforced everywhere
 
-Viewing shifts, notes & events, statistics, and the member list is checked on every request that reads that data, not just used to decide what the interface shows. A bundle without "view statistics", for example, gets the statistics endpoint blocked outright — removing a button from the UI isn't what keeps the underlying data private. As a UX improvement, the client also hides the corresponding controls (the statistics button and the preset-stamp bar) when these capabilities are missing, though the server-side enforcement above remains the actual security boundary.
+Viewing shifts, notes & events, statistics, and the member list is checked on every request that reads that data, not just used to decide what the interface shows. A bundle without "view statistics", for example, gets the statistics endpoint blocked outright — removing a button from the UI isn't what keeps the underlying data private. As a UX improvement, the client also hides the corresponding controls and summaries (the statistics panel and its button, replaced by a plain "all shifts in month" link when absent, and the preset-stamp bar) when these capabilities are missing, though the server-side enforcement above remains the actual security boundary.
 
 ### Who can assign or edit bundles
 

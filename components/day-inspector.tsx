@@ -158,9 +158,11 @@ export function DayInspector({
       </div>
 
       <div className="border-t border-line px-[18px] py-3.5">
-        <div className="mb-2.5 flex items-center justify-between">
+        <div className={cn("flex items-center justify-between", canViewStats && "mb-2.5")}>
           <span className="eyebrow">
-            {t("calendarView.monthTotal", { month: monthName })}
+            {canViewStats
+              ? t("calendarView.monthTotal", { month: monthName })
+              : t("calendarView.allShiftsIn", { month: monthName })}
           </span>
           <div className="flex items-center gap-0.5">
             <button
@@ -185,7 +187,7 @@ export function DayInspector({
             )}
           </div>
         </div>
-        <PeriodSummaryView summary={summary} />
+        {canViewStats && <PeriodSummaryView summary={summary} />}
       </div>
     </aside>
   );

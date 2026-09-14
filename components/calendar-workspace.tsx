@@ -104,6 +104,16 @@ export function CalendarWorkspace({
   const [period, setPeriod] = useState<StatsPeriod>("month");
   const [statsOpen, setStatsOpen] = useState(false);
 
+  // MobileStatsSheet is skip-mounted below when !canViewStats, so a lingering
+  // `true` here would pop it open unbidden if the capability comes back later.
+  // Adjusted during render (not an effect) per React's "adjusting state when a
+  // prop changes" pattern, to avoid an extra commit.
+  const [prevCanViewStats, setPrevCanViewStats] = useState(canViewStats);
+  if (canViewStats !== prevCanViewStats) {
+    setPrevCanViewStats(canViewStats);
+    if (!canViewStats) setStatsOpen(false);
+  }
+
   const dayData = useDayData({ selectedDay, shifts, notes });
   const monthSummary = usePeriodSummary({
     calendarId: canViewStats ? calendarId : undefined,
@@ -244,12 +254,14 @@ export function CalendarWorkspace({
         )}
         <MobileDayFooter
           summary={monthSummary}
+          currentDate={currentDate}
           canViewStats={canViewStats}
           onOpenStats={() => {
             // The footer shows the month, so the sheet opens on it
             setPeriod("month");
             setStatsOpen(true);
           }}
+          onOpenMonthShifts={actions.onOpenMonthShifts}
           onAddShift={model.canAddShift ? actions.onAddShift : undefined}
         />
       </div>

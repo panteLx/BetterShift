@@ -29,12 +29,17 @@ const SNAP_EASE = "duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 /** Bottom bar under the phone grid: the visible month in figures and a button to add a shift. */
 export function MobileDayFooter({
   summary,
+  currentDate,
   onOpenStats,
+  onOpenMonthShifts,
   onAddShift,
   canViewStats,
 }: {
   summary: PeriodSummary;
+  /** Only needed for the "all shifts in <month>" fallback label when stats are hidden */
+  currentDate: Date;
   onOpenStats: () => void;
+  onOpenMonthShifts: () => void;
   /** Hidden when the calendar can't be edited */
   onAddShift?: () => void;
   canViewStats: boolean;
@@ -76,18 +81,18 @@ export function MobileDayFooter({
           <ChevronUp className="size-4 shrink-0 text-fg-tertiary" />
         </button>
       ) : (
-        <span className="grid min-w-0 flex-1 grid-cols-3 gap-2 py-0.5">
-          {figures.map((figure) => (
-            <span key={figure.label} className="min-w-0">
-              <span className="block truncate font-mono text-[15px] font-medium leading-5 text-fg-strong">
-                {figure.value}
-              </span>
-              <span className="block truncate text-[10.5px] leading-[14px] text-fg-tertiary">
-                {figure.label}
-              </span>
-            </span>
-          ))}
-        </span>
+        <button
+          type="button"
+          onClick={onOpenMonthShifts}
+          className="flex min-w-0 flex-1 items-center gap-2.5 py-0.5 text-left"
+        >
+          <List className="size-4 shrink-0 text-fg-tertiary" />
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg-secondary">
+            {t("calendarView.allShiftsIn", {
+              month: format(currentDate, "LLLL", { locale: getDateLocale(locale) }),
+            })}
+          </span>
+        </button>
       )}
       {onAddShift && (
         <button
