@@ -106,14 +106,14 @@ export function CalendarWorkspace({
 
   const dayData = useDayData({ selectedDay, shifts, notes });
   const monthSummary = usePeriodSummary({
-    calendarId,
+    calendarId: canViewStats ? calendarId : undefined,
     anchorDate: currentDate,
     period: "month",
     shifts,
   });
   // Anchored on the week, not the day, so tapping around inside a week reuses one cache entry
   const sheetSummary = usePeriodSummary({
-    calendarId: statsOpen ? calendarId : undefined,
+    calendarId: statsOpen && canViewStats ? calendarId : undefined,
     anchorDate: period === "week" ? startOfWeek(selectedDay, { weekStartsOn: 1 }) : currentDate,
     period,
     shifts,

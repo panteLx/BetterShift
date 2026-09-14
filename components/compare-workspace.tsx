@@ -115,7 +115,8 @@ export function CompareWorkspace(props: CompareWorkspaceProps) {
   // presets the shortcuts arm — without this a key press stamps into a calendar
   // the caller can't create shifts in and the write is rejected server-side.
   const { can: canStampActiveColumn } = useCalendarPermission(activeColumnId);
-  const canEditActiveColumn = canStampActiveColumn("createShift");
+  const canEditActiveColumn =
+    canStampActiveColumn("stampPreset") || canStampActiveColumn("createShift");
   const { isOnline } = useConnectionStatus({ toasts: false });
 
   useStampShortcuts({
@@ -323,7 +324,7 @@ function CompareColumn({
   const t = useTranslations();
   const locale = useLocale();
   const { can } = useCalendarPermission(calendar.id);
-  const canStamp = can("createShift");
+  const canStamp = can("stampPreset") || can("createShift");
   // The gear only needs to be worth opening — PresetManageSheet gates its own actions internally.
   const canOpenPresetManage = can("createPreset") || can("manageOwnPresets");
   const canAddNote = can("manageOwnNotesEvents");
