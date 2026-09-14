@@ -281,8 +281,14 @@ export async function getUserAccessibleCalendars(
     const results: Array<{ id: string; permission: CalendarPermission }> = [];
     const existingIds = new Set<string>();
 
+    // Token-based access and the guest-access flag don't depend on each
+    // other, so resolve them concurrently instead of one after another.
+    const [tokens, guestAccessEnabled] = await Promise.all([
+      getTokensFromCookie(),
+      allowGuestAccess(),
+    ]);
+
     // First, check for token-based access (always works, regardless of allowGuestAccess)
-    const tokens = await getTokensFromCookie();
     for (const tokenData of tokens) {
       // Validate token is still valid
       const validation = await validateAccessToken(tokenData.token);
@@ -296,7 +302,7 @@ export async function getUserAccessibleCalendars(
     }
 
     // Then, check for guest permissions (only if guest access is enabled)
-    if (await allowGuestAccess()) {
+    if (guestAccessEnabled) {
       const guestAccessibleCalendars = await db.query.calendars.findMany({
         where: (calendars, { ne }) => ne(calendars.guestPermission, "none"),
       });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { user, calendars, session, calendarShares } from "@/lib/db/schema";
 import { and, asc, count, desc, eq, getTableColumns, getTableName, or, sql, type SQL } from "drizzle-orm";
-import { isAdmin, isSuperAdmin, canCreateUser } from "@/lib/auth/admin";
+import { isAdmin, canCreateUser, ADMIN_ROLES } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
   isErrorResponse,
@@ -21,6 +21,7 @@ import {
 import { auth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logAuditEvent, type AdminUserCreateMetadata } from "@/lib/audit-log";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-utils";
 import { APIError } from "better-auth/api";
 
 /**
@@ -171,7 +172,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-const CREATABLE_ROLES = ["user", "admin", "superadmin"] as const;
+const CREATABLE_ROLES = ["user", ...ADMIN_ROLES] as const;
 
 /**
  * POST /api/admin/users
@@ -215,9 +216,9 @@ export async function POST(request: NextRequest) {
     if (typeof email !== "string" || !email.trim()) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
-    if (typeof password !== "string" || password.length < 8) {
+    if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters long" },
+        { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long` },
         { status: 400 }
       );
     }
@@ -230,9 +231,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      // Only superadmin may hand out anything above "user" at creation time --
-      // mirrors canChangeUserRole's superadmin-only restriction.
-      if (role !== "user" && !isSuperAdmin(currentUser)) {
+      if (!canCreateUser(currentUser, role as (typeof CREATABLE_ROLES)[number])) {
         return NextResponse.json(
           { error: "Insufficient permissions to assign this role" },
           { status: 403 }

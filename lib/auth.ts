@@ -151,9 +151,13 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (_user, context) => {
-          // Admin-created users (POST /admin/create-user) always work, even
-          // when self-registration is disabled -- see docs/ADMIN_PANEL.md.
-          if (context?.path === "/admin/create-user") return;
+          // Admin-created users always work, even when self-registration is
+          // disabled -- see docs/ADMIN_PANEL.md. Checked via the acting
+          // session's role (mirrors isAdmin's rule) rather than matching
+          // better-auth's internal /admin/create-user route, which is an
+          // implementation detail.
+          const actorRole = context?.context?.session?.user?.role;
+          if (actorRole === "admin" || actorRole === "superadmin") return;
 
           // Block OAuth/OIDC registration when ALLOW_USER_REGISTRATION is false
           // This hook runs for ALL user creation attempts (email + OAuth/OIDC)
