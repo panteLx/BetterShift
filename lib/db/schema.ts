@@ -236,9 +236,10 @@ export const systemSettings = sqliteTable("system_settings", {
   })
     .notNull()
     .default("all"),
-  allowGuestAccess: integer("allow_guest_access", { mode: "boolean" })
-    .notNull()
-    .default(false),
+  // Nullable: existing rows from before this column existed must fall back
+  // to ALLOW_GUEST_ACCESS (see lib/system-settings.ts), not silently to
+  // false -- a NOT NULL DEFAULT would force that on every upgrade.
+  allowGuestAccess: integer("allow_guest_access", { mode: "boolean" }),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)

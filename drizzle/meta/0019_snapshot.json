@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d441f83c-f70f-4ca5-97c7-0543bec41cf3",
+  "id": "20a88346-8085-45af-901f-ced11a89ebcf",
   "prevId": "46c43bf1-957b-48a6-80b6-8bb2d5c9ac6c",
   "tables": {
     "account": {
@@ -1533,9 +1533,8 @@
           "name": "allow_guest_access",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
+          "notNull": false,
+          "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
