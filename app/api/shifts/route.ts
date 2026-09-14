@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts, shiftPresets, externalSyncs } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, getCalendarAccess } from "@/lib/auth/permissions";
 import { addShiftSignup, withSignups } from "@/lib/shift-signups";
 import { parseLocalDate } from "@/lib/date-utils";
 import type { CalendarMember } from "@/lib/types";
@@ -160,11 +160,11 @@ export async function POST(request: Request) {
     }
 
     // A caller needs at least one of the two shift-creation capabilities.
-    const [canStampPreset, canCreateShift] = await Promise.all([
-      hasCapability(user?.id, calendarId, "stampPreset"),
-      hasCapability(user?.id, calendarId, "createShift"),
-    ]);
-    if (!canStampPreset && !canCreateShift) {
+    const access = await getCalendarAccess(user?.id, calendarId);
+    if (
+      !access ||
+      !(access.can("stampPreset") || access.can("createShift"))
+    ) {
       return NextResponse.json(
         { error: "Insufficient permissions. Write access required." },
         { status: 403 }
@@ -186,15 +186,24 @@ export async function POST(request: Request) {
     // preset record itself instead of trusting client-submitted overrides,
     // otherwise "presets only" is trivially bypassed by sending presetId
     // alongside arbitrary fields.
-    let insertValues = {
-      title,
-      startTime: isAllDay ? "00:00" : startTime,
-      endTime: isAllDay ? "23:59" : endTime,
-      color: color || "#3b82f6",
-      notes: notes || null,
-      isAllDay: isAllDay || false,
+    let insertValues: {
+      title: string;
+      startTime: string;
+      endTime: string;
+      color: string;
+      notes: string | null;
+      isAllDay: boolean;
     };
-    if (!canCreateShift) {
+    if (access.can("createShift")) {
+      insertValues = {
+        title,
+        startTime: isAllDay ? "00:00" : startTime,
+        endTime: isAllDay ? "23:59" : endTime,
+        color: color || "#3b82f6",
+        notes: notes || null,
+        isAllDay: isAllDay || false,
+      };
+    } else {
       if (!presetId) {
         return NextResponse.json(
           { error: "presetId is required" },

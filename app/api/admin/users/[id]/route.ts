@@ -75,40 +75,19 @@ export async function GET(
       .from(calendarsTable)
       .where(eq(calendarsTable.ownerId, targetUserId));
 
-    // Get shared calendars (with calendar name and permission)
-    const sharedCalendarRows = await db
-      .select({
-        id: calendarSharesTable.id,
-        calendarId: calendarSharesTable.calendarId,
-        name: calendarsTable.name,
-        bundleId: calendarSharesTable.bundleId,
-        createdAt: calendarSharesTable.createdAt,
-      })
-      .from(calendarSharesTable)
-      .innerJoin(
-        calendarsTable,
-        eq(calendarSharesTable.calendarId, calendarsTable.id)
-      )
-      .where(eq(calendarSharesTable.userId, targetUserId));
-
-    const shareBundleIds = Array.from(
-      new Set(sharedCalendarRows.map((s) => s.bundleId))
-    );
-    const shareBundleRows =
-      shareBundleIds.length > 0
-        ? await db.query.calendarPermissionBundles.findMany({
-            where: (b, { inArray }) => inArray(b.id, shareBundleIds),
-            columns: { id: true, name: true, seedKey: true },
-          })
-        : [];
-    const shareBundleById = new Map(shareBundleRows.map((b) => [b.id, b]));
-    const sharedCalendars = sharedCalendarRows.map((share) => ({
-      ...share,
-      bundle: shareBundleById.get(share.bundleId) ?? {
-        id: share.bundleId,
-        name: "?",
-        seedKey: null,
+    // Get shared calendars (with calendar name and bundle)
+    const shareRows = await db.query.calendarShares.findMany({
+      where: (shares, { eq: eqOp }) => eqOp(shares.userId, targetUserId),
+      columns: { calendarId: true },
+      with: {
+        calendar: { columns: { name: true } },
+        bundle: { columns: { id: true, name: true, seedKey: true } },
       },
+    });
+    const sharedCalendars = shareRows.map((share) => ({
+      id: share.calendarId,
+      name: share.calendar.name,
+      bundle: share.bundle,
     }));
 
     const sharesCount = sharedCalendars.length;
@@ -146,11 +125,7 @@ export async function GET(
         updatedAt: targetUser.updatedAt,
       },
       calendars: ownedCalendars,
-      sharedCalendars: sharedCalendars.map((share) => ({
-        id: share.calendarId,
-        name: share.name,
-        bundle: share.bundle,
-      })),
+      sharedCalendars,
       sharesCount: sharesCount,
       accounts,
       sessionsCount: Number(sessionsCount?.count || 0),

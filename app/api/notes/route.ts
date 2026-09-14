@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability, getCalendarAccess } from "@/lib/auth/permissions";
+import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
@@ -131,13 +131,17 @@ export async function POST(request: Request) {
 
     // Check permissions (works for both authenticated users and guests).
     // Creating needs either capability — own vs. any only matters once the
-    // note exists, for editing/deleting it.
+    // note exists, for editing/deleting it. The caller is the note's future
+    // creator, so passing their id as createdBy folds that check in too.
     const user = await getSessionUser(request.headers);
-    const access = await getCalendarAccess(user?.id, calendar.id);
-    if (
-      !access ||
-      !(access.can("manageOwnNotesEvents") || access.can("manageAnyNotesEvents"))
-    ) {
+    const hasAccess = await hasOwnedCapability(
+      user?.id,
+      calendar.id,
+      "manageOwnNotesEvents",
+      "manageAnyNotesEvents",
+      user?.id ?? null
+    );
+    if (!hasAccess) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
