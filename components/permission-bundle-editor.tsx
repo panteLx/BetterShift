@@ -21,7 +21,12 @@ import {
 } from "@/hooks/useCalendarBundles";
 import { usePermissionBundleForm } from "@/hooks/usePermissionBundleForm";
 import { useBundleDisplayName } from "@/components/permission-bundle-picker";
-import { CAPABILITY_GROUPS, isAdminOnlyCapability, type Capability } from "@/lib/permission-bundles";
+import {
+  CAPABILITY_GROUPS,
+  getBlockingDependents,
+  isAdminOnlyCapability,
+  type Capability,
+} from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 
 type UpdateBundle = (
@@ -80,16 +85,27 @@ function BundleEditor({
           </SectionLabel>
           <div className="flex flex-col gap-2.5">
             {group.capabilities.map((capability) => {
-              const locked = form.isGuestBound && isAdminOnlyCapability(capability);
+              const guestLocked = form.isGuestBound && isAdminOnlyCapability(capability);
+              const blockers = guestLocked
+                ? []
+                : getBlockingDependents(capability, form.capabilities);
+              const dependencyLocked = blockers.length > 0;
+              const hint = guestLocked
+                ? undefined
+                : dependencyLocked
+                  ? t("permissionBundles.requiredByHint", {
+                      capability: t(`permissionBundles.capabilityLabels.${blockers[0]}`),
+                    })
+                  : t(`permissionBundles.capabilityHints.${capability}`);
               return (
                 <CheckRow
                   key={capability}
                   id={`cap-${bundle.id}-${capability}`}
                   checked={form.capabilities.includes(capability)}
                   onCheckedChange={(checked) => form.toggle(capability, checked)}
-                  disabled={locked}
+                  disabled={guestLocked || dependencyLocked}
                   label={t(`permissionBundles.capabilityLabels.${capability}`)}
-                  hint={locked ? undefined : t(`permissionBundles.capabilityHints.${capability}`)}
+                  hint={hint}
                 />
               );
             })}

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { SectionLabel } from "@/components/form-kit";
+import { SegmentedControl } from "@/components/segmented-control";
 import { StatusBanner } from "@/components/status-banner";
 import { PersonRow } from "@/components/person-row";
 import { CalendarShareUserSearch } from "@/components/calendar-share-user-search";
@@ -55,6 +55,16 @@ export function PermissionAssignments({
     string | null | undefined
   >(undefined);
 
+  type AssignmentSubTab = "people" | "public" | "links";
+  const [subTab, setSubTab] = useState<AssignmentSubTab>("people");
+  const subTabs: { value: AssignmentSubTab; label: string }[] = [
+    { value: "people", label: t("permissionBundles.people") },
+    { value: "public", label: t("share.publicAccess") },
+    ...(allowGuest
+      ? [{ value: "links" as const, label: t("share.links") }]
+      : []),
+  ];
+
   const effectiveInviteBundleId =
     inviteBundleId || bundles.find((b) => b.seedKey === "read")?.id || bundles[0]?.id || "";
 
@@ -89,126 +99,133 @@ export function PermissionAssignments({
     />
   );
 
+  const cardClass = "flex flex-col gap-3 rounded-[11px] border border-line p-3.5";
+
   return (
-    <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-2">
-        <SectionLabel className="mb-0">{t("permissionBundles.people")}</SectionLabel>
-        {canManageShares && bundlesError && (
-          <StatusBanner tone="danger" icon={TriangleAlert}>
-            {t("permissionBundles.bundlesUnavailable")}
-          </StatusBanner>
-        )}
-        {canManageShares && !bundlesError && (
-          <div className="flex gap-2">
-            <div className="min-w-0 flex-1">
-              <CalendarShareUserSearch calendarId={calendarId} bundleId={effectiveInviteBundleId} />
+    <div className="flex flex-col gap-3.5">
+      <SegmentedControl
+        label={t("permissionBundles.tabAssignments")}
+        value={subTab}
+        onChange={setSubTab}
+        options={subTabs}
+      />
+
+      {subTab === "people" && (
+        <section className={cardClass}>
+          {canManageShares && bundlesError && (
+            <StatusBanner tone="danger" icon={TriangleAlert}>
+              {t("permissionBundles.bundlesUnavailable")}
+            </StatusBanner>
+          )}
+          {canManageShares && !bundlesError && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="min-w-0 flex-1">
+                <CalendarShareUserSearch calendarId={calendarId} bundleId={effectiveInviteBundleId} />
+              </div>
+              <BundlePicker
+                bundles={bundles}
+                value={effectiveInviteBundleId || null}
+                onChange={(id) => id && setInviteBundleId(id)}
+                triggerAriaLabel={t("permissionBundles.inviteAs")}
+                className="h-10 shrink-0 self-start"
+              />
             </div>
-            <BundlePicker
-              bundles={bundles}
-              value={effectiveInviteBundleId || null}
-              onChange={(id) => id && setInviteBundleId(id)}
-              triggerAriaLabel={t("permissionBundles.inviteAs")}
-              className="h-10 shrink-0 self-start"
-            />
-          </div>
-        )}
-        {ownerRow}
-        {shares.map((share) => {
-          const isSelf = share.userId === currentUser?.id;
-          const editable = canManageShares && !isSelf && !bundlesError;
-          return (
-            <PersonRow
-              key={share.id}
-              user={share.user}
-              suffix={isSelf ? you : undefined}
-              action={
-                editable ? (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <BundlePicker
-                      bundles={bundles}
-                      value={share.bundleId}
-                      onChange={(id) => id && updateShare(share.id, id)}
-                      triggerAriaLabel={t("sharingSheet.changePermission", {
-                        name: share.user.name || share.user.email,
-                      })}
-                    />
-                    <button
-                      type="button"
-                      aria-label={t("share.removeAccess")}
-                      onClick={() => setShareToDelete(share)}
-                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-danger-soft hover:text-danger"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                ) : (
-                  staticLabel(displayName(share.bundle) ?? "")
-                )
-              }
-            />
-          );
-        })}
-        {shares.length === 0 && !ownerRow && (
-          <p className="rounded-[11px] border border-dashed border-control px-3.5 py-3 text-center text-[13px] text-fg-tertiary">
-            {t("share.noSharesDescription")}
-          </p>
-        )}
-      </section>
-
-      <div className="h-px shrink-0 bg-line" />
-
-      <section className="flex flex-col gap-2">
-        <SectionLabel className="mb-0">{t("share.publicAccess")}</SectionLabel>
-        {canManageGuestAccess && bundlesError ? (
-          <StatusBanner tone="danger" icon={TriangleAlert}>
-            {t("permissionBundles.bundlesUnavailable")}
-          </StatusBanner>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 flex-1 text-[13px] text-fg-secondary">
-              {allowGuest
-                ? t("share.publicAccessDescriptionGuestsOn")
-                : t("share.publicAccessDescriptionGuestsOff")}
-            </p>
-            <BundlePicker
-              bundles={bundles}
-              value={guestBundleId}
-              onChange={handleGuestChange}
-              guestEligibleOnly
-              allowNone
-              noneLabel={t("sharingSheet.accessNone")}
-              disabled={!canManageGuestAccess || guestSaving}
-              triggerAriaLabel={t("share.publicAccess")}
-            />
-          </div>
-        )}
-      </section>
-
-      {allowGuest && (
-        <>
-          <div className="h-px shrink-0 bg-line" />
-          <section className="flex flex-col gap-3.5">
-            <SectionLabel className="mb-0">{t("share.links")}</SectionLabel>
-            <CalendarTokenList calendarId={calendarId} />
-            {canManageGuestAccess && linkForm.bundlesError && (
-              <StatusBanner tone="danger" icon={TriangleAlert}>
-                {t("permissionBundles.bundlesUnavailable")}
-              </StatusBanner>
+          )}
+          <div className="flex flex-col gap-2">
+            {ownerRow}
+            {shares.map((share) => {
+              const isSelf = share.userId === currentUser?.id;
+              const editable = canManageShares && !isSelf && !bundlesError;
+              return (
+                <PersonRow
+                  key={share.id}
+                  user={share.user}
+                  suffix={isSelf ? you : undefined}
+                  action={
+                    editable ? (
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <BundlePicker
+                          bundles={bundles}
+                          value={share.bundleId}
+                          onChange={(id) => id && updateShare(share.id, id)}
+                          triggerAriaLabel={t("sharingSheet.changePermission", {
+                            name: share.user.name || share.user.email,
+                          })}
+                        />
+                        <button
+                          type="button"
+                          aria-label={t("share.removeAccess")}
+                          onClick={() => setShareToDelete(share)}
+                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-danger-soft hover:text-danger"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      staticLabel(displayName(share.bundle) ?? "")
+                    )
+                  }
+                />
+              );
+            })}
+            {shares.length === 0 && !ownerRow && (
+              <p className="rounded-[11px] border border-dashed border-control px-3.5 py-3 text-center text-[13px] text-fg-tertiary">
+                {t("share.noSharesDescription")}
+              </p>
             )}
-            {canManageGuestAccess && !linkForm.bundlesError && (
-              <>
-                <AccessLinkCreateForm form={linkForm} />
-                <Button
-                  onClick={linkForm.create}
-                  disabled={linkForm.creating || !linkForm.bundleId}
-                  className="h-10 self-start font-semibold"
-                >
-                  {linkForm.creating ? t("sharingSheet.creating") : t("sharingSheet.createLink")}
-                </Button>
-              </>
-            )}
-          </section>
-        </>
+          </div>
+        </section>
+      )}
+
+      {subTab === "public" && (
+        <section className={cardClass}>
+          {canManageGuestAccess && bundlesError ? (
+            <StatusBanner tone="danger" icon={TriangleAlert}>
+              {t("permissionBundles.bundlesUnavailable")}
+            </StatusBanner>
+          ) : (
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <p className="min-w-0 flex-1 text-[13px] text-fg-secondary">
+                {allowGuest
+                  ? t("share.publicAccessDescriptionGuestsOn")
+                  : t("share.publicAccessDescriptionGuestsOff")}
+              </p>
+              <BundlePicker
+                bundles={bundles}
+                value={guestBundleId}
+                onChange={handleGuestChange}
+                guestEligibleOnly
+                allowNone
+                noneLabel={t("sharingSheet.accessNone")}
+                disabled={!canManageGuestAccess || guestSaving}
+                triggerAriaLabel={t("share.publicAccess")}
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {subTab === "links" && allowGuest && (
+        <section className={cardClass}>
+          <CalendarTokenList calendarId={calendarId} />
+          {canManageGuestAccess && linkForm.bundlesError && (
+            <StatusBanner tone="danger" icon={TriangleAlert}>
+              {t("permissionBundles.bundlesUnavailable")}
+            </StatusBanner>
+          )}
+          {canManageGuestAccess && !linkForm.bundlesError && (
+            <>
+              <AccessLinkCreateForm form={linkForm} />
+              <Button
+                onClick={linkForm.create}
+                disabled={linkForm.creating || !linkForm.bundleId}
+                className="h-10 self-start font-semibold"
+              >
+                {linkForm.creating ? t("sharingSheet.creating") : t("sharingSheet.createLink")}
+              </Button>
+            </>
+          )}
+        </section>
       )}
 
       {shareToDelete && (

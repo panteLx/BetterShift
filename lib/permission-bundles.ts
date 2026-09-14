@@ -167,6 +167,24 @@ const CAPABILITY_DEPENDENCIES: Partial<Record<Capability, Capability[]>> = {
  * use plain sanitizeCapabilities() for read-only display where dependencies
  * are already guaranteed to hold.
  */
+/**
+ * Which of the currently-ticked capabilities directly require `capability`
+ * — i.e. removing it would immediately be undone by normalizeCapabilities().
+ * Empty when `capability` can be safely removed. Only direct dependents need
+ * checking: since `capabilities` is always already normalized (closed under
+ * CAPABILITY_DEPENDENCIES), anything depending on `capability` transitively
+ * has its own direct link to it already ticked too, and that direct link is
+ * what triggers the re-add.
+ */
+export function getBlockingDependents(
+  capability: Capability,
+  capabilities: readonly Capability[]
+): Capability[] {
+  return capabilities.filter(
+    (c) => c !== capability && (CAPABILITY_DEPENDENCIES[c] ?? []).includes(capability)
+  );
+}
+
 export function normalizeCapabilities(input: unknown): Capability[] {
   const result = new Set<Capability>(sanitizeCapabilities(input));
   let changed = true;

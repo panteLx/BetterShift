@@ -78,6 +78,7 @@ export function useShiftStats({
   const {
     data: stats = null,
     isLoading: loading,
+    error,
     refetch,
   } = useQuery({
     queryKey: queryKeys.stats.shifts(
@@ -90,9 +91,12 @@ export function useShiftStats({
     refetchInterval: LIVE_REFETCH_INTERVAL,
   });
 
+  const forbidden = error instanceof ApiError && error.status === 403;
+
   return {
     stats,
     loading,
+    forbidden,
     refetch,
   };
 }

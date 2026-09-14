@@ -6,7 +6,7 @@ import { Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { SegmentedControl } from "@/components/segmented-control";
-import { InfoNote, ToggleRow } from "@/components/form-kit";
+import { InfoNote, SectionLabel, ToggleRow } from "@/components/form-kit";
 import { PermissionBundleEditor } from "@/components/permission-bundle-editor";
 import { PermissionAssignments } from "@/components/permission-bundle-assignments";
 import { AccessLinkCreated } from "@/components/calendar-token-form";
@@ -83,7 +83,7 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
   const tabs: { value: PermissionsTab; label: string }[] = [
     { value: "groups", label: t("permissionBundles.tabGroups") },
     { value: "assignments", label: t("permissionBundles.tabAssignments") },
-    { value: "signups", label: t("permissionBundles.tabSignups") },
+    { value: "signups", label: t("permissionBundles.tabMore") },
   ];
 
   return (
@@ -111,6 +111,7 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
 
         {tab === "signups" && (
           <>
+            <SectionLabel className="mb-0">{t("permissionBundles.groups.signups")}</SectionLabel>
             <ToggleRow
               id="signups-enabled"
               title={t("sharingSheet.signupsEnabledLabel")}

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { useShiftStats } from "@/hooks/useShiftStats";
 import { useShifts } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
@@ -117,7 +117,7 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const outerRadius = useMediaQuery("(min-width: 640px)", true) ? 120 : 80;
 
-  const { stats, loading } = useShiftStats({
+  const { stats, loading, forbidden } = useShiftStats({
     calendarId,
     currentDate,
     period,
@@ -187,6 +187,15 @@ export function ShiftStats({ calendarId, currentDate }: ShiftStatsProps) {
 
 
   if (!calendarId) return null;
+
+  if (forbidden) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-12 text-center">
+        <Lock className="size-6 text-fg-tertiary" />
+        <p className="text-[13px] text-fg-tertiary">{t("stats.noPermission")}</p>
+      </div>
+    );
+  }
 
   const colorFor = (title: string) => colorByTitle.get(title) ?? "var(--chart-1)";
   const totalShifts = stats?.totalShifts || 0;
