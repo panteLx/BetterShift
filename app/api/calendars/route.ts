@@ -20,7 +20,6 @@ import {
   getTokensFromCookie,
   validateAccessToken,
 } from "@/lib/auth/token-auth";
-import { findSeededGuestBundleId } from "@/lib/auth/legacy-permission-compat";
 import {
   CAPABILITIES,
   defaultBundleDefinitionsForNewCalendar,
@@ -225,7 +224,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, color, guestPermission } = body;
+    const { name, color } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -261,19 +260,8 @@ export async function POST(request: NextRequest) {
       return calendar;
     });
 
-    if (guestPermission && guestPermission !== "none") {
-      const guestBundleId = await findSeededGuestBundleId(
-        calendar.id,
-        guestPermission
-      );
-      if (guestBundleId) {
-        await db
-          .update(calendars)
-          .set({ guestBundleId })
-          .where(eq(calendars.id, calendar.id));
-        calendar.guestBundleId = guestBundleId;
-      }
-    }
+    // Guest access is not configurable at creation time — set it afterwards
+    // via PATCH /api/calendars/[id], same as any other bundle assignment.
 
     // Log calendar creation event
     if (user) {

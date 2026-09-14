@@ -41,12 +41,11 @@ const hasTokens = sql`exists (select 1 from ${calendarAccessTokens} where ${cale
 const hasSyncs = sql`exists (select 1 from ${externalSyncs} where ${externalSyncs.calendarId} = ${calendars.id})`;
 const isShared = sql`(${hasUserShares} or ${hasTokens})`;
 
-// Paket 6: the admin panel now shows the guest bundle's actual name/seedKey
-// instead of collapsing it to a read/write tier (lib/auth/legacy-permission-compat.ts
-// is no longer consulted here). The join also doubles as the "has guest
-// access" check for sorting/filtering — an orphaned guestBundleId (pointing
-// at a deleted bundle) produces a null row here, which correctly counts as
-// no guest access, same as getUserAccessibleCalendars() elsewhere.
+// The admin panel shows the guest bundle's actual name/seedKey instead of
+// collapsing it to a read/write tier. The join also doubles as the "has
+// guest access" check for sorting/filtering — an orphaned guestBundleId
+// (pointing at a deleted bundle) produces a null row here, which correctly
+// counts as no guest access, same as getUserAccessibleCalendars() elsewhere.
 const guestBundleTable = alias(calendarPermissionBundles, "guest_bundle");
 
 /** Timestamps defaulted by SQLite are "YYYY-MM-DD HH:MM:SS" text in UTC; app-written ones are unix seconds. */

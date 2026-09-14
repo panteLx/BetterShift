@@ -23,14 +23,6 @@ import {
   type Capability,
 } from "@/lib/permission-bundles";
 
-/**
- * Coarse legacy view of a calendar-wide access level, kept only for the one
- * remaining client-side consumer (hooks/useCalendarPermission.ts) that reads
- * it off the calendar list API response. Real enforcement never uses this —
- * see hasCapability().
- */
-export type CalendarPermission = "owner" | "admin" | "write" | "read";
-
 async function getBundleById(
   bundleId: string
 ): Promise<CalendarPermissionBundle | null> {

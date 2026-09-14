@@ -54,11 +54,7 @@ async function createCalendarApi(
   const response = await fetch("/api/calendars", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      color,
-      guestPermission: "none",
-    }),
+    body: JSON.stringify({ name, color }),
   });
 
   // Check for rate-limit error first

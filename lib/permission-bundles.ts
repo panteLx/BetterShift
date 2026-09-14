@@ -3,8 +3,8 @@
  *
  * Replaces the old fixed read/write/admin ladder: an owner defines what a
  * named bundle means per calendar by ticking capabilities, instead of the
- * app hard-coding what "write" bundles together. See
- * .LOCAL/calendar-permission-bundles-plan.md for the full design.
+ * app hard-coding what "write" bundles together. See docs/PERMISSIONS.md
+ * for the full design.
  */
 
 export const CAPABILITIES = [
