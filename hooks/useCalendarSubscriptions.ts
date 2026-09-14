@@ -6,10 +6,9 @@ import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { ApiError } from "@/lib/api-error";
-import type { BundleSeedKey, Capability } from "@/lib/permission-bundles";
+import type { BundleRef, Capability } from "@/lib/permission-bundles";
 
 type CalendarSource = "guest" | "shared";
-type BundleRef = { id: string; name: string; seedKey: BundleSeedKey | null } | null;
 
 export type AvailableCalendar = {
   id: string;
@@ -19,7 +18,7 @@ export type AvailableCalendar = {
   // bundle behind them — see previewGuestCapabilities()/getEffectiveAccessSummary()
   // in app/api/calendars/subscriptions/route.ts.
   capabilities: Capability[];
-  bundle: BundleRef;
+  bundle: BundleRef | null;
   owner: {
     id: string;
     name: string;
@@ -33,7 +32,7 @@ export type DismissedCalendar = {
   name: string;
   color: string;
   capabilities: Capability[];
-  bundle: BundleRef;
+  bundle: BundleRef | null;
   owner: {
     id: string;
     name: string;

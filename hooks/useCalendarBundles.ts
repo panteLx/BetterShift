@@ -5,6 +5,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
 import { generateTempId } from "@/lib/utils";
 import { normalizeCapabilities, type BundleSeedKey, type Capability } from "@/lib/permission-bundles";
+import { isRateLimitError, handleRateLimitError } from "@/lib/rate-limit-client";
 
 export interface PermissionBundleUsage {
   shareCount: number;
@@ -38,10 +39,21 @@ export class PermissionBundleApiError extends ApiError {
   }
 }
 
+/** Thrown instead of PermissionBundleApiError on a 429 so onError can show the rate-limit toast. */
+class RateLimitError extends Error {
+  constructor(public response: Response) {
+    super("Rate limit exceeded");
+    this.name = "RateLimitError";
+  }
+}
+
 async function parseErrorResponse(
   response: Response,
   fallback: string
 ): Promise<never> {
+  if (isRateLimitError(response)) {
+    throw new RateLimitError(response);
+  }
   const body = await response.json().catch(() => ({}));
   throw new PermissionBundleApiError(
     body.error || fallback,
@@ -167,6 +179,24 @@ export function useCalendarBundles(calendarId: string | undefined) {
     queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
   };
 
+  const rollback = (context?: MutationContext) => {
+    if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+  };
+
+  const buildOptimisticBundle = (
+    name: string,
+    capabilities: Capability[]
+  ): PermissionBundleWithUsage => ({
+    id: `temp-${generateTempId()}`,
+    calendarId: calendarId!,
+    name,
+    seedKey: null,
+    capabilities,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    usage: EMPTY_USAGE,
+  });
+
   const createMutation = useMutation<
     PermissionBundle,
     Error,
@@ -177,25 +207,23 @@ export function useCalendarBundles(calendarId: string | undefined) {
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<PermissionBundleWithUsage[]>(queryKey);
-      const optimistic: PermissionBundleWithUsage = {
-        id: `temp-${generateTempId()}`,
-        calendarId: calendarId!,
-        name: input.name,
-        seedKey: null,
-        capabilities: normalizeCapabilities(input.capabilities),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        usage: EMPTY_USAGE,
-      };
+      const optimistic = buildOptimisticBundle(
+        input.name,
+        normalizeCapabilities(input.capabilities)
+      );
       queryClient.setQueryData<PermissionBundleWithUsage[]>(queryKey, (old = []) => [
         ...old,
         optimistic,
       ]);
       return { previous };
     },
-    onError: (err, _input, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    onError: async (err, _input, context) => {
+      rollback(context);
       console.error("Failed to create permission bundle:", err);
+      if (err instanceof RateLimitError) {
+        await handleRateLimitError(err.response, t);
+        return;
+      }
       toast.error(
         isNameConflict(err)
           ? t("permissionBundles.nameTaken")
@@ -235,9 +263,13 @@ export function useCalendarBundles(calendarId: string | undefined) {
       );
       return { previous };
     },
-    onError: (err, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    onError: async (err, _variables, context) => {
+      rollback(context);
       console.error("Failed to update permission bundle:", err);
+      if (err instanceof RateLimitError) {
+        await handleRateLimitError(err.response, t);
+        return;
+      }
       toast.error(
         isNameConflict(err)
           ? t("permissionBundles.nameTaken")
@@ -260,9 +292,13 @@ export function useCalendarBundles(calendarId: string | undefined) {
       );
       return { previous };
     },
-    onError: (err, _bundleId, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    onError: async (err, _bundleId, context) => {
+      rollback(context);
       console.error("Failed to delete permission bundle:", err);
+      if (err instanceof RateLimitError) {
+        await handleRateLimitError(err.response, t);
+        return;
+      }
       if (
         err instanceof PermissionBundleApiError &&
         err.status === 409 &&
@@ -302,25 +338,20 @@ export function useCalendarBundles(calendarId: string | undefined) {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<PermissionBundleWithUsage[]>(queryKey);
       const source = previous?.find((b) => b.id === bundleId);
-      const optimistic: PermissionBundleWithUsage = {
-        id: `temp-${generateTempId()}`,
-        calendarId: calendarId!,
-        name,
-        seedKey: null,
-        capabilities: source?.capabilities ?? [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        usage: EMPTY_USAGE,
-      };
+      const optimistic = buildOptimisticBundle(name, source?.capabilities ?? []);
       queryClient.setQueryData<PermissionBundleWithUsage[]>(queryKey, (old = []) => [
         ...old,
         optimistic,
       ]);
       return { previous };
     },
-    onError: (err, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    onError: async (err, _variables, context) => {
+      rollback(context);
       console.error("Failed to clone permission bundle:", err);
+      if (err instanceof RateLimitError) {
+        await handleRateLimitError(err.response, t);
+        return;
+      }
       toast.error(
         isNameConflict(err)
           ? t("permissionBundles.nameTaken")

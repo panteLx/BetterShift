@@ -24,7 +24,9 @@ import {
   useAdminErrorToast,
 } from "@/hooks/useAdminList";
 import type { BundleOption } from "@/components/permission-bundle-picker";
-import type { BundleSeedKey } from "@/lib/permission-bundles";
+import type { BundleRef } from "@/lib/permission-bundles";
+
+export type { BundleRef };
 
 /**
  * Calendar Owner Info
@@ -33,13 +35,6 @@ export interface CalendarOwner {
   name: string | null;
   email: string | null;
   image: string | null;
-}
-
-/** A bundle as displayed in the admin panel — content editing stays owner-only (Paket 6). */
-export interface BundleRef {
-  id: string;
-  name: string;
-  seedKey: BundleSeedKey | null;
 }
 
 /**

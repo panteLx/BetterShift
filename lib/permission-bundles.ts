@@ -177,6 +177,13 @@ export function normalizeCapabilities(input: unknown): Capability[] {
 
 export type BundleSeedKey = "read" | "contribute" | "manage" | "admin";
 
+/** Client-safe bundle identity — id/name/seedKey only, no capabilities. */
+export interface BundleRef {
+  id: string;
+  name: string;
+  seedKey: BundleSeedKey | null;
+}
+
 export interface BundleDefinition {
   name: string;
   seedKey: BundleSeedKey;

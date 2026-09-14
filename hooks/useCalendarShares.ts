@@ -12,14 +12,14 @@ import {
 import { ApiError } from "@/lib/api-error";
 import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
-import type { BundleSeedKey } from "@/lib/permission-bundles";
+import type { BundleRef } from "@/lib/permission-bundles";
 
 export interface CalendarShare {
   id: string;
   calendarId: string;
   userId: string;
   bundleId: string;
-  bundle: { id: string; name: string; seedKey: BundleSeedKey | null };
+  bundle: BundleRef;
   sharedBy: string;
   createdAt: Date;
   user: {
@@ -40,6 +40,11 @@ export interface SearchUser {
   name: string | null;
   email: string;
   image: string | null;
+}
+
+/** Optimistic placeholder for a bundle reference — settles once the real response/refetch lands. */
+function placeholderBundle(bundleId: string): BundleRef {
+  return { id: bundleId, name: "…", seedKey: null };
 }
 
 /**
@@ -193,7 +198,7 @@ export function useCalendarShares(calendarId: string) {
         calendarId,
         userId,
         bundleId,
-        bundle: { id: bundleId, name: "…", seedKey: null },
+        bundle: placeholderBundle(bundleId),
         sharedBy: "current-user",
         createdAt: new Date(),
         user: {
@@ -260,7 +265,7 @@ export function useCalendarShares(calendarId: string) {
         (old: CalendarShare[] = []) =>
           old.map((s) =>
             s.id === shareId
-              ? { ...s, bundleId, bundle: { id: bundleId, name: "…", seedKey: null } }
+              ? { ...s, bundleId, bundle: placeholderBundle(bundleId) }
               : s
           )
       );

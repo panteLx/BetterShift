@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCalendarTokens } from "@/hooks/useCalendarTokens";
 import { useCalendarBundles } from "@/hooks/useCalendarBundles";
 import { isGuestEligible } from "@/lib/permission-bundles";
@@ -36,7 +36,10 @@ const DEFAULT_VALIDITY: LinkValidity = "7";
 export function usePermissionLinkForm(calendarId: string) {
   const { createToken, getShareLink } = useCalendarTokens(calendarId);
   const { bundles } = useCalendarBundles(calendarId);
-  const guestEligibleBundles = bundles.filter((b) => isGuestEligible(b.capabilities));
+  const guestEligibleBundles = useMemo(
+    () => bundles.filter((b) => isGuestEligible(b.capabilities)),
+    [bundles]
+  );
 
   const [name, setName] = useState("");
   const [bundleId, setBundleId] = useState("");

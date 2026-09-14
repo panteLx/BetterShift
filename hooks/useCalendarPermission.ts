@@ -96,22 +96,21 @@ export function useCalendarPermission(
       return createdBy === null || createdBy === userId;
     };
 
+    // can() already returns true unconditionally for an owner, so it alone
+    // is the single source of truth here — no need to restate isOwner.
     const canEdit =
-      isOwner ||
-      can("createShift") ||
-      can("editOwnShift") ||
-      can("editAnyShift");
-    const canManage = isOwner || can("editAnyShift") || can("manageCalendarSettings");
+      can("createShift") || can("editOwnShift") || can("editAnyShift");
+    const canManage = can("editAnyShift") || can("manageCalendarSettings");
 
     return {
       isOwner,
       can,
       canOwned,
-      canView: isOwner || can("viewShifts"),
+      canView: can("viewShifts"),
       canEdit,
       canManage,
       canDelete: isOwner,
-      canShare: isOwner || can("manageShares"),
+      canShare: can("manageShares"),
       isReadOnly: !canEdit,
     };
   }, [calendar, user, isGuest, auth.enabled]);

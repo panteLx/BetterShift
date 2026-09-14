@@ -8,7 +8,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { BACKGROUND_REFETCH_INTERVAL } from "@/lib/query-client";
 import { ApiError } from "@/lib/api-error";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
-import type { BundleSeedKey } from "@/lib/permission-bundles";
+import type { BundleRef } from "@/lib/permission-bundles";
 
 export interface CalendarAccessToken {
   id: string;
@@ -16,7 +16,7 @@ export interface CalendarAccessToken {
   token?: string; // Full token only provided on creation
   name: string | null;
   bundleId: string;
-  bundle: { id: string; name: string; seedKey: BundleSeedKey | null } | null;
+  bundle: BundleRef | null;
   expiresAt: string | null;
   createdBy: string;
   createdAt: string;
