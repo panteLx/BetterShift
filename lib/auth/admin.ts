@@ -11,7 +11,7 @@ import { APIError } from "better-auth/api";
 /**
  * Valid admin roles in the system
  */
-const ADMIN_ROLES = ["admin", "superadmin"] as const;
+export const ADMIN_ROLES = ["admin", "superadmin"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 /**
@@ -319,6 +319,27 @@ export function canDeleteAuditLogs(
   adminUser: User | null | undefined
 ): boolean {
   return isSuperAdmin(adminUser);
+}
+
+/**
+ * Check if admin can create new users from the admin panel.
+ *
+ * Rules:
+ * - Both admin and superadmin can create users
+ * - Only superadmin may assign a role other than "user" at creation time
+ *   (mirrors canChangeUserRole's superadmin-only restriction)
+ *
+ * @param adminUser - The admin performing the action
+ * @param role - The role to assign to the new user, if any (omit to just check base access)
+ * @returns boolean - true if admin can create a user with the given role
+ */
+export function canCreateUser(
+  adminUser: User | null | undefined,
+  role?: string
+): boolean {
+  if (!isAdmin(adminUser)) return false;
+  if (role !== undefined && role !== "user") return isSuperAdmin(adminUser);
+  return true;
 }
 
 /**

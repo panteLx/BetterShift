@@ -99,7 +99,8 @@ async function resolveCalendarAccess(
       const bundle = await getBundleById(tokenBundleId);
       if (bundle) return bundleAccess(calendar, "token", bundle);
     }
-    if (allowGuestAccess() && guestBundle) {
+    // Guest access only works when explicitly enabled
+    if ((await allowGuestAccess()) && guestBundle) {
       return bundleAccess(calendar, "guestBundle", guestBundle);
     }
     return null;
@@ -360,7 +361,14 @@ export async function getUserAccessibleCalendars(
     const results: Array<{ id: string; isOwner: boolean }> = [];
     const existingIds = new Set<string>();
 
-    const tokens = await getTokensFromCookie();
+    // Token-based access and the guest-access flag don't depend on each
+    // other, so resolve them concurrently instead of one after another.
+    const [tokens, guestAccessEnabled] = await Promise.all([
+      getTokensFromCookie(),
+      allowGuestAccess(),
+    ]);
+
+    // First, check for token-based access (always works, regardless of allowGuestAccess)
     for (const tokenData of tokens) {
       const validation = await validateAccessToken(tokenData.token);
       if (validation && validation.calendarId === tokenData.calendarId) {
@@ -369,7 +377,8 @@ export async function getUserAccessibleCalendars(
       }
     }
 
-    if (allowGuestAccess()) {
+    // Then, check for guest bundle access (only if guest access is enabled)
+    if (guestAccessEnabled) {
       const guestAccessibleCalendars = await db.query.calendars.findMany({
         where: (calendars, { isNotNull }) => isNotNull(calendars.guestBundleId),
         columns: { id: true, guestBundleId: true },

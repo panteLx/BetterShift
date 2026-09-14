@@ -36,6 +36,10 @@ export const user = sqliteTable("user", {
   banned: integer("banned", { mode: "boolean" }).default(false),
   banReason: text("ban_reason"),
   banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
+  // Set on admin-created accounts; cleared once the user changes their password
+  mustChangePassword: integer("must_change_password", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export const session = sqliteTable(
@@ -272,6 +276,10 @@ export const systemSettings = sqliteTable("system_settings", {
   })
     .notNull()
     .default("all"),
+  // Nullable: existing rows from before this column existed must fall back
+  // to ALLOW_GUEST_ACCESS (see lib/system-settings.ts), not silently to
+  // false -- a NOT NULL DEFAULT would force that on every upgrade.
+  allowGuestAccess: integer("allow_guest_access", { mode: "boolean" }),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)

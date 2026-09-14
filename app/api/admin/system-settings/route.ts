@@ -57,7 +57,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const patch: { updateCheckEnabled?: boolean; updateBannerVisibility?: UpdateBannerVisibility } = {};
+    const patch: {
+      updateCheckEnabled?: boolean;
+      updateBannerVisibility?: UpdateBannerVisibility;
+      allowGuestAccess?: boolean;
+    } = {};
 
     if ("updateCheckEnabled" in body) {
       if (typeof body.updateCheckEnabled !== "boolean") {
@@ -74,6 +78,13 @@ export async function PATCH(request: NextRequest) {
         );
       }
       patch.updateBannerVisibility = body.updateBannerVisibility;
+    }
+
+    if ("allowGuestAccess" in body) {
+      if (typeof body.allowGuestAccess !== "boolean") {
+        return NextResponse.json({ error: "allowGuestAccess must be a boolean" }, { status: 400 });
+      }
+      patch.allowGuestAccess = body.allowGuestAccess;
     }
 
     const { before, after } = await updateSystemSettings(patch);

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field, inputClass } from "@/components/form-kit";
 import { AdminFormPanel } from "@/components/admin/admin-form-panel";
+import { RoleSelect } from "@/components/admin/role-select";
 import { useAdminUserActions, type AdminUser } from "@/hooks/useAdminUsers";
 import { useCanEditUser, useCanChangeUserRole } from "@/hooks/useAdminAccess";
 
@@ -77,16 +77,7 @@ export function UserEditSheet({ open, onOpenChange, user }: UserEditSheetProps) 
 
       {canChangeRole && (
         <Field label={t("admin.role")} htmlFor="admin-user-role" hint={t("admin.roleChangeWarning")}>
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger id="admin-user-role" className="h-10 w-full rounded-[9px] px-3 text-[14px] data-[size=default]:h-10">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="user">{t("common.roles.user")}</SelectItem>
-              <SelectItem value="admin">{t("common.roles.admin")}</SelectItem>
-              <SelectItem value="superadmin">{t("common.roles.superadmin")}</SelectItem>
-            </SelectContent>
-          </Select>
+          <RoleSelect id="admin-user-role" value={role} onValueChange={setRole} />
         </Field>
       )}
     </AdminFormPanel>

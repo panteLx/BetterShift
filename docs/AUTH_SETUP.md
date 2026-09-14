@@ -49,10 +49,9 @@ BETTER_AUTH_URL=http://localhost:3000
 ```bash
 # Allow new user registration (default: true)
 ALLOW_USER_REGISTRATION=true
-
-# Allow viewing calendars without login (default: false)
-ALLOW_GUEST_ACCESS=false
 ```
+
+Guest access (viewing calendars without login) is not an environment variable — it's a live toggle in the admin panel under **System Settings**, off by default.
 
 ### First User Setup
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,12 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ChoiceChips } from "@/components/form-kit";
 import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
 import { FilterMenuButton, type SortState } from "@/components/admin/admin-table-controls";
 import { UserTable } from "@/components/admin/user-table";
+import { UserCreateSheet } from "@/components/admin/user-create-sheet";
 import { UserEditSheet } from "@/components/admin/user-edit-sheet";
 import { UserDetailsSheet } from "@/components/admin/user-details-sheet";
 import { UserBanDialog } from "@/components/admin/user-ban-dialog";
@@ -24,6 +27,7 @@ import { UserUnbanDialog } from "@/components/admin/user-unban-dialog";
 import { UserDeleteDialog } from "@/components/admin/user-delete-dialog";
 import { UserPasswordResetDialog } from "@/components/admin/user-password-reset-dialog";
 import { useAdminUserActions, useAdminUsers, type AdminUser } from "@/hooks/useAdminUsers";
+import { useCanCreateUser } from "@/hooks/useAdminAccess";
 import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
 import {
   ADMIN_PAGE_SIZE,
@@ -62,6 +66,7 @@ export default function AdminUsersPage() {
 
   const { users, total, counts, page, isLoading, isPlaceholderData } = useAdminUsers(params);
   const { banUser, unbanUser, deleteUser, resetPassword } = useAdminUserActions();
+  const canCreateUser = useCanCreateUser();
 
   // The segments cover the common cases; anything else lives in the filter menu.
   const preset: Preset | "custom" =
@@ -86,6 +91,7 @@ export default function AdminUsersPage() {
   const [showUnbanDialog, setShowUnbanDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
 
   const openFor = (setter: (open: boolean) => void) => (user: AdminUser) => {
     setSelectedUser(user);
@@ -159,6 +165,30 @@ export default function AdminUsersPage() {
           subtitle={
             counts ? t("adminUsers.subtitle", { count: counts.total, banned: counts.banned }) : undefined
           }
+          actions={
+            canCreateUser && (
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateSheet(true)}
+                className="h-[38px] gap-2 rounded-[9px] font-semibold"
+              >
+                <UserPlus className="size-4" />
+                {t("admin.createUser")}
+              </Button>
+            )
+          }
+          mobileActions={
+            canCreateUser && (
+              <button
+                type="button"
+                onClick={() => setShowCreateSheet(true)}
+                aria-label={t("admin.createUser")}
+                className="flex size-[34px] items-center justify-center rounded-[9px] border border-line text-fg-secondary"
+              >
+                <UserPlus className="size-[17px]" />
+              </button>
+            )
+          }
         />
 
         <div className="flex flex-col gap-[11px] lg:flex-row lg:items-center lg:gap-[9px]">
@@ -214,6 +244,8 @@ export default function AdminUsersPage() {
           onDeleteUser={openFor(setShowDeleteDialog)}
         />
       </div>
+
+      <UserCreateSheet open={showCreateSheet} onOpenChange={setShowCreateSheet} />
 
       {selectedUser && (
         <>

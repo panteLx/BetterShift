@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { systemSettings } from "@/lib/db/schema";
+import { ALLOW_GUEST_ACCESS } from "@/lib/auth/env";
 
 const SETTINGS_ID = "default";
 
@@ -9,11 +10,17 @@ export type UpdateBannerVisibility = "all" | "admins";
 export interface SystemSettings {
   updateCheckEnabled: boolean;
   updateBannerVisibility: UpdateBannerVisibility;
+  allowGuestAccess: boolean;
 }
 
+// Neither the row nor (on upgrade) this specific column may exist yet, so
+// both fallbacks have to mirror ALLOW_GUEST_ACCESS -- otherwise every
+// self-hosted instance would silently lose guest access until an admin
+// re-enables it here.
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   updateCheckEnabled: true,
   updateBannerVisibility: "all",
+  allowGuestAccess: ALLOW_GUEST_ACCESS,
 };
 
 // Settings are read on every /api/version request; a short cache avoids a DB
@@ -32,12 +39,15 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     .select({
       updateCheckEnabled: systemSettings.updateCheckEnabled,
       updateBannerVisibility: systemSettings.updateBannerVisibility,
+      allowGuestAccess: systemSettings.allowGuestAccess,
     })
     .from(systemSettings)
     .where(eq(systemSettings.id, SETTINGS_ID))
     .limit(1);
 
-  cachedSettings = row ?? DEFAULT_SYSTEM_SETTINGS;
+  cachedSettings = row
+    ? { ...row, allowGuestAccess: row.allowGuestAccess ?? ALLOW_GUEST_ACCESS }
+    : DEFAULT_SYSTEM_SETTINGS;
   cachedSettingsExpiresAt = Date.now() + CACHE_DURATION;
   return cachedSettings;
 }

@@ -69,10 +69,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
-  const publicConfig = getPublicConfig();
-  const nonce = (await headers()).get("x-nonce") || undefined;
+  const [locale, messages, publicConfig, requestHeaders] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getPublicConfig(),
+    headers(),
+  ]);
+  const nonce = requestHeaders.get("x-nonce") || undefined;
 
   return (
     <html lang={locale} suppressHydrationWarning>

@@ -10,6 +10,7 @@
   "common": {
     "cancel": "Cancelar",
     "save": "Guardar",
+    "create": "Crear",
     "saving": "Guardando...",
     "close": "Cerrar",
     "delete": "Eliminar",
@@ -516,7 +517,9 @@
       "visibility": "Banner visible para",
       "visibilityAll": "Todos",
       "visibilityAdmins": "Solo administradores",
-      "updateError": "No se pudieron guardar los ajustes"
+      "updateError": "No se pudieron guardar los ajustes",
+      "guestAccess": "Acceso de invitado",
+      "guestAccessHint": "Permite ver calendarios sin iniciar sesión, si el calendario lo permite."
     },
     "orphanedCalendarsWarning": "Se han detectado calendarios huérfanos",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Hay 1 calendario sin propietario} other {Hay # calendarios sin propietario}}. Por favor, asígnalos a usuarios.",
@@ -645,7 +648,11 @@
     "selectedLogs": "{count} seleccionados",
     "clearSelection": "Limpiar selección",
     "deleteSelectedLogsDescription": "Eliminar {count, plural, one {# registro seleccionado} other {# registros seleccionados}}. Esta acción no se puede deshacer.",
-    "willDeleteSelectedLogs": "{count, plural, one {# registro} other {# registros}} se borrarán permanentemente"
+    "willDeleteSelectedLogs": "{count, plural, one {# registro} other {# registros}} se borrarán permanentemente",
+    "createUser": "Crear usuario",
+    "createUserSubtitle": "Crea una nueva cuenta, incluso con el registro desactivado.",
+    "mustChangePasswordHint": "El usuario deberá cambiar esta contraseña en el primer inicio de sesión.",
+    "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico"
   },
   "appearance": {
     "title": "Apariencia",
@@ -941,7 +948,9 @@
     "unknownBrowser": "Navegador desconocido",
     "unknownOs": "Sistema desconocido",
     "deleteImpact": "También se eliminan los calendarios, turnos y compartidos.",
-    "deleteNeedsPassword": "Requiere tu contraseña."
+    "deleteNeedsPassword": "Requiere tu contraseña.",
+    "mustChangePasswordTitle": "Cambio de contraseña requerido",
+    "mustChangePasswordDescription": "Un administrador creó esta cuenta. Establece una nueva contraseña ahora para continuar."
   },
   "adminKit": {
     "banned": "Bloqueado",

@@ -147,7 +147,7 @@ Anyone with manage shares can assign any bundle to anyone they could already gra
 
 ## Access Tokens (Share Links)
 
-Access tokens provide a way to share calendars via a URL. With `ALLOW_GUEST_ACCESS=true` the recipient needs no account; otherwise they sign in first and the link's bundle applies afterwards.
+Access tokens provide a way to share calendars via a URL. With Guest Access enabled globally (admin panel → System Settings) the recipient needs no account; otherwise they sign in first and the link's bundle applies afterwards.
 
 ### Creating Access Tokens
 
@@ -181,7 +181,7 @@ Only bundles that don't contain any of the guest-locked capabilities (see [Permi
 ### Security Considerations
 
 - Tokens are stored in cookies after first validation
-- Users with tokens can access the calendar without logging in when `ALLOW_GUEST_ACCESS=true`
+- Users with tokens can access the calendar without logging in when Guest Access is enabled globally
 - Treat share links like passwords - anyone with the link has access
 - Set expiration dates for temporary access
 - Monitor usage in token management
@@ -204,10 +204,10 @@ Guest access allows unauthenticated users to view or edit calendars without any 
 
 ### Configuration
 
-1. Enable globally: Set `ALLOW_GUEST_ACCESS=true` in environment
+1. Enable globally: Turn on Guest Access in the admin panel under System Settings
 2. Assign per-calendar: In the calendar's Permissions settings, "Assignments" tab, pick a bundle under "Public access" (or "No access" to disable it for this calendar)
 
-The per-calendar bundle applies to visitors without an account only while `ALLOW_GUEST_ACCESS=true`; otherwise they are sent to the login page. Signed-in users get it through [Calendar Discovery](#calendar-discovery), whatever the flag says. Access links work even when public access is set to "No access", but with `ALLOW_GUEST_ACCESS=false` a recipient without a session is sent to the login page first; the link's bundle applies once they sign in.
+The per-calendar bundle applies to visitors without an account only while Guest Access is enabled globally; otherwise they are sent to the login page. Signed-in users get it through [Calendar Discovery](#calendar-discovery), whatever the setting says. Access links work even when public access is set to "No access", but with Guest Access disabled a recipient without a session is sent to the login page first; the link's bundle applies once they sign in.
 
 ### Guest Access Bundles
 
@@ -227,7 +227,7 @@ The "Public access" picker in the Assignments tab only offers bundles that are g
 
 ## Calendar Discovery
 
-Signed-in users can discover and subscribe to any calendar that has a guest access bundle assigned (i.e., public access is not set to "No access"). This does not depend on `ALLOW_GUEST_ACCESS`, which only governs visitors without an account.
+Signed-in users can discover and subscribe to any calendar that has a guest access bundle assigned (i.e., public access is not set to "No access"). This does not depend on the global Guest Access setting, which only governs visitors without an account.
 
 ### Finding Public Calendars
 
@@ -274,4 +274,4 @@ The first matching rule determines the bundle, and therefore the capabilities, t
 3. **Set token expiration**: Don't leave tokens valid indefinitely
 4. **Review shares and bundle assignments periodically**: Remove access that's no longer needed
 5. **Split own/any capabilities deliberately**: If you want contributors to only touch their own entries, don't also tick the matching "any" capability
-6. **Consider public access carefully**: Public calendars are open to every signed-in user, and to everyone when `ALLOW_GUEST_ACCESS=true`
+6. **Consider public access carefully**: Public calendars are open to every signed-in user, and to everyone when Guest Access is enabled globally

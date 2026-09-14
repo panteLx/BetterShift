@@ -234,6 +234,15 @@ export default function AdminDashboardPage() {
               ]}
             />
           </Field>
+          <div className="h-px bg-line-subtle" />
+          <ToggleRow
+            id="allow-guest-access"
+            title={t("admin.systemSettings.guestAccess")}
+            description={t("admin.systemSettings.guestAccessHint")}
+            checked={settings?.allowGuestAccess ?? false}
+            onCheckedChange={(checked) => updateSettings({ allowGuestAccess: checked })}
+            disabled={!settings || isUpdating}
+          />
         </div>
       </section>
 

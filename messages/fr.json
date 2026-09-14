@@ -10,6 +10,7 @@
   "common": {
     "cancel": "Annuler",
     "save": "Enregistrer",
+    "create": "Créer",
     "saving": "Enregistrement...",
     "close": "Fermer",
     "delete": "Supprimer",
@@ -516,7 +517,9 @@
       "visibility": "Bannière visible pour",
       "visibilityAll": "Tout le monde",
       "visibilityAdmins": "Administrateurs uniquement",
-      "updateError": "Échec de l'enregistrement des paramètres"
+      "updateError": "Échec de l'enregistrement des paramètres",
+      "guestAccess": "Accès invité",
+      "guestAccessHint": "Permet de consulter les calendriers sans connexion, si le calendrier l'autorise."
     },
     "orphanedCalendarsWarning": "Calendriers orphelins détectés",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {1 calendrier n'a pas de propriétaire} other {# calendriers n'ont pas de propriétaire}}. Veuillez les attribuer à des utilisateurs.",
@@ -645,7 +648,11 @@
     "selectedLogs": "{count} sélectionné(s)",
     "clearSelection": "Effacer la sélection",
     "deleteSelectedLogsDescription": "Supprimer {count, plural, one {# journal sélectionné} other {# journaux sélectionnés}}. Cette action est irréversible.",
-    "willDeleteSelectedLogs": "{count, plural, one {# journal} other {# journaux}} sera/seront supprimé(s) définitivement"
+    "willDeleteSelectedLogs": "{count, plural, one {# journal} other {# journaux}} sera/seront supprimé(s) définitivement",
+    "createUser": "Créer un utilisateur",
+    "createUserSubtitle": "Crée un nouveau compte, même si l'inscription est désactivée.",
+    "mustChangePasswordHint": "L'utilisateur devra changer ce mot de passe lors de sa première connexion.",
+    "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà"
   },
   "appearance": {
     "title": "Apparence",
@@ -941,7 +948,9 @@
     "unknownBrowser": "Navigateur inconnu",
     "unknownOs": "Système inconnu",
     "deleteImpact": "Les calendriers, créneaux et partages sont également supprimés.",
-    "deleteNeedsPassword": "Nécessite votre mot de passe."
+    "deleteNeedsPassword": "Nécessite votre mot de passe.",
+    "mustChangePasswordTitle": "Changement de mot de passe requis",
+    "mustChangePasswordDescription": "Un administrateur a créé ce compte. Définissez un nouveau mot de passe maintenant pour continuer."
   },
   "adminKit": {
     "banned": "Bloqué",

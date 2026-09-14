@@ -151,6 +151,15 @@ const config = {
         10
       ) * 1000, // 5 minutes
   },
+  // Separate from adminUserMutations: creating a real account (with a working
+  // password) is at least as sensitive as a password reset, so it gets the
+  // same stricter bucket instead of the general mutations budget.
+  adminUserCreate: {
+    requests: parseInt(process.env.RATE_LIMIT_ADMIN_USER_CREATE || "5", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_ADMIN_USER_CREATE_WINDOW || "300", 10) *
+      1000, // 5 minutes
+  },
   adminBulkOperations: {
     requests: parseInt(process.env.RATE_LIMIT_ADMIN_BULK_OPERATIONS || "3", 10),
     windowMs:
@@ -205,6 +214,7 @@ const limitsByType = {
   "user-search": config.userSearch,
   "admin-user-mutations": config.adminUserMutations,
   "admin-password-reset": config.adminPasswordReset,
+  "admin-user-create": config.adminUserCreate,
   "admin-bulk-operations": config.adminBulkOperations,
   "admin-calendar-mutations": config.adminCalendarMutations,
   "bundle-mutations": config.bundleMutations,

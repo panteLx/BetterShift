@@ -158,8 +158,14 @@ export interface AdminPasswordResetMetadata {
 }
 
 export interface AdminSystemSettingsUpdatedMetadata {
-  before: { updateCheckEnabled: boolean; updateBannerVisibility: string };
-  after: { updateCheckEnabled: boolean; updateBannerVisibility: string };
+  before: { updateCheckEnabled: boolean; updateBannerVisibility: string; allowGuestAccess: boolean };
+  after: { updateCheckEnabled: boolean; updateBannerVisibility: string; allowGuestAccess: boolean };
+}
+
+export interface AdminUserCreateMetadata {
+  createdUser: string;
+  role: string;
+  createdBy: string;
 }
 
 export interface CalendarBundleCreatedMetadata {
@@ -207,6 +213,7 @@ export type AuditLogMetadata =
   | SyncExecutedMetadata
   | RateLimitHitMetadata
   | AdminUserDeleteMetadata
+  | AdminUserCreateMetadata
   | AdminCalendarTransferMetadata
   | AdminPasswordResetMetadata
   | AdminSystemSettingsUpdatedMetadata
