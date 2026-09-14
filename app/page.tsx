@@ -290,12 +290,16 @@ function HomeContent() {
     calendars.find((c) => c.id === selectedCalendar)
   );
 
+  // Mirrors the server's OR check in app/api/shifts/route.ts — stamping only
+  // needs one of the two capabilities, not specifically createShift.
+  const canStampPreset = can("stampPreset") || can("createShift");
+
   // The armed presets are page state that outlives the stamp bar: it survives a
   // calendar switch, going offline and the personal toggle, none of which render
   // the dock. Derived here so a day click can never stamp without it on screen.
   const presetIdSet = new Set(presets.map((p) => p.id));
   const armedPresetIds =
-    can("createShift") && isOnline && calendarView.showStampBar
+    canStampPreset && isOnline && calendarView.showStampBar
       ? selectedPresetIds.filter((id) => presetIdSet.has(id))
       : [];
 
@@ -491,6 +495,8 @@ function HomeContent() {
         canEditShift={canEditShift}
         canDeleteShift={canDeleteShift}
         showStampBar={calendarView.showStampBar}
+        canStampPreset={canStampPreset}
+        canViewStats={can("viewStats")}
         selectedPresetIds={armedPresetIds}
         onSelectPreset={handlePresetSelection}
         onManagePresets={() => dialogStates.setShowPresetManageDialog(true)}

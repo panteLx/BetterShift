@@ -42,7 +42,7 @@ interface CalendarWorkspaceProps {
   showShiftNotes: boolean;
   highlightedWeekdays: number[];
   highlightColor: string;
-  /** createShift — gates stamping and the "add a new shift" affordances */
+  /** createShift — gates the manual "add a new shift" affordance only */
   canCreateShift: boolean;
   /** manageOwnNotesEvents — creating a note/event only ever needs "own" */
   canAddNote: boolean;
@@ -51,6 +51,10 @@ interface CalendarWorkspaceProps {
   /** Per-shift own/any precision (deleteOwnShift/deleteAnyShift) for the delete affordance */
   canDeleteShift: (shift: ShiftWithCalendar) => boolean;
   showStampBar: boolean;
+  /** stampPreset OR createShift — mirrors the server's OR check for stamping a preset */
+  canStampPreset: boolean;
+  /** viewStats — hides the stats trigger entirely when absent, instead of failing on click */
+  canViewStats: boolean;
   selectedPresetIds: string[];
   onSelectPreset: (id: string | undefined, multiSelect?: boolean) => void;
   onManagePresets: () => void;
@@ -82,6 +86,8 @@ export function CalendarWorkspace({
   canEditShift,
   canDeleteShift,
   showStampBar,
+  canStampPreset,
+  canViewStats,
   selectedPresetIds,
   onSelectPreset,
   onManagePresets,
@@ -113,7 +119,7 @@ export function CalendarWorkspace({
     shifts,
   });
 
-  const stampingEnabled = canCreateShift && isOnline && showStampBar;
+  const stampingEnabled = canStampPreset && isOnline && showStampBar;
   const stampPresetIds = useMemo(
     () => orderStampPresets(presets).map((p) => p.id),
     [presets]
@@ -194,7 +200,7 @@ export function CalendarWorkspace({
               />
             )}
           </main>
-          <DayInspector model={model} actions={actions} />
+          <DayInspector model={model} actions={actions} canViewStats={canViewStats} />
         </div>
       </div>
     );
@@ -238,6 +244,7 @@ export function CalendarWorkspace({
         )}
         <MobileDayFooter
           summary={monthSummary}
+          canViewStats={canViewStats}
           onOpenStats={() => {
             // The footer shows the month, so the sheet opens on it
             setPeriod("month");
@@ -252,15 +259,17 @@ export function CalendarWorkspace({
         open={sheetOpen}
         onOpenChange={onSheetOpenChange}
       />
-      <MobileStatsSheet
-        model={model}
-        actions={actions}
-        period={period}
-        onPeriodChange={setPeriod}
-        summary={sheetSummary}
-        open={statsOpen}
-        onOpenChange={setStatsOpen}
-      />
+      {canViewStats && (
+        <MobileStatsSheet
+          model={model}
+          actions={actions}
+          period={period}
+          onPeriodChange={setPeriod}
+          summary={sheetSummary}
+          open={statsOpen}
+          onOpenChange={setStatsOpen}
+        />
+      )}
     </div>
   );
 }

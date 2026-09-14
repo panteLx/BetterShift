@@ -63,9 +63,11 @@ export function useDayLabels(day: Date) {
 export function DayInspector({
   model,
   actions,
+  canViewStats,
 }: {
   model: DayViewModel;
   actions: DayActions;
+  canViewStats: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -170,15 +172,17 @@ export function DayInspector({
             >
               <List className="size-[15px]" />
             </button>
-            <button
-              type="button"
-              onClick={actions.onOpenStats}
-              title={t("calendarView.openStats")}
-              aria-label={t("calendarView.openStats")}
-              className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
-            >
-              <ArrowUpRight className="size-[15px]" />
-            </button>
+            {canViewStats && (
+              <button
+                type="button"
+                onClick={actions.onOpenStats}
+                title={t("calendarView.openStats")}
+                aria-label={t("calendarView.openStats")}
+                className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
+              >
+                <ArrowUpRight className="size-[15px]" />
+              </button>
+            )}
           </div>
         </div>
         <PeriodSummaryView summary={summary} />

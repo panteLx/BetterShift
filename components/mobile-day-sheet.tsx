@@ -31,11 +31,13 @@ export function MobileDayFooter({
   summary,
   onOpenStats,
   onAddShift,
+  canViewStats,
 }: {
   summary: PeriodSummary;
   onOpenStats: () => void;
   /** Hidden when the calendar can't be edited */
   onAddShift?: () => void;
+  canViewStats: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -53,12 +55,28 @@ export function MobileDayFooter({
 
   return (
     <div className="flex items-center gap-2.5 border-t border-line bg-surface-panel px-3.5 pb-[max(9px,env(safe-area-inset-bottom))] pt-[9px]">
-      <button
-        type="button"
-        onClick={onOpenStats}
-        className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
-      >
-        <span className="grid min-w-0 flex-1 grid-cols-3 gap-2">
+      {canViewStats ? (
+        <button
+          type="button"
+          onClick={onOpenStats}
+          className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
+        >
+          <span className="grid min-w-0 flex-1 grid-cols-3 gap-2">
+            {figures.map((figure) => (
+              <span key={figure.label} className="min-w-0">
+                <span className="block truncate font-mono text-[15px] font-medium leading-5 text-fg-strong">
+                  {figure.value}
+                </span>
+                <span className="block truncate text-[10.5px] leading-[14px] text-fg-tertiary">
+                  {figure.label}
+                </span>
+              </span>
+            ))}
+          </span>
+          <ChevronUp className="size-4 shrink-0 text-fg-tertiary" />
+        </button>
+      ) : (
+        <span className="grid min-w-0 flex-1 grid-cols-3 gap-2 py-0.5">
           {figures.map((figure) => (
             <span key={figure.label} className="min-w-0">
               <span className="block truncate font-mono text-[15px] font-medium leading-5 text-fg-strong">
@@ -70,8 +88,7 @@ export function MobileDayFooter({
             </span>
           ))}
         </span>
-        <ChevronUp className="size-4 shrink-0 text-fg-tertiary" />
-      </button>
+      )}
       {onAddShift && (
         <button
           type="button"
