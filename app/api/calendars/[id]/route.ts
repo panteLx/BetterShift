@@ -12,10 +12,9 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import {
   canViewCalendar,
   canDeleteCalendar,
-  hasCapability,
+  getCalendarAccess,
 } from "@/lib/auth/permissions";
-import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
-import { isGuestEligible } from "@/lib/permission-bundles";
+import { resolveGuestEligibleBundle } from "@/lib/auth/permission-bundles-service";
 import {
   calendarViewSettingsEqual,
   sanitizeCalendarViewSettings,
@@ -118,23 +117,20 @@ export async function PATCH(
       viewSettings !== undefined ||
       typeof signupsEnabled === "boolean";
 
+    const access = await getCalendarAccess(user?.id, id);
+    const deny = () =>
+      NextResponse.json(
+        { error: "Insufficient permissions. Admin access required." },
+        { status: 403 }
+      );
     if (
       (wantsGeneralChange || !wantsGuestChange) &&
-      !(await hasCapability(user?.id, id, "manageCalendarSettings"))
+      !access?.can("manageCalendarSettings")
     ) {
-      return NextResponse.json(
-        { error: "Insufficient permissions. Admin access required." },
-        { status: 403 }
-      );
+      return deny();
     }
-    if (
-      wantsGuestChange &&
-      !(await hasCapability(user?.id, id, "manageGuestAccess"))
-    ) {
-      return NextResponse.json(
-        { error: "Insufficient permissions. Admin access required." },
-        { status: 403 }
-      );
+    if (wantsGuestChange && !access?.can("manageGuestAccess")) {
+      return deny();
     }
 
     const updateData: Partial<typeof calendars.$inferInsert> = {};
@@ -162,25 +158,12 @@ export async function PATCH(
           newGuestBundleId = null;
         }
       } else if (typeof guestBundleId === "string") {
-        const bundle = await getBundleForCalendar(id, guestBundleId);
-        if (!bundle) {
-          return NextResponse.json(
-            { error: "Bundle not found" },
-            { status: 404 }
-          );
-        }
-        if (!isGuestEligible(bundle.capabilities)) {
-          return NextResponse.json(
-            {
-              error:
-                "Bundle contains capabilities that cannot be granted to guests",
-              forbiddenCapabilities: bundle.capabilities.filter(
-                (c) => !isGuestEligible([c])
-              ),
-            },
-            { status: 400 }
-          );
-        }
+        const bundle = await resolveGuestEligibleBundle(
+          id,
+          guestBundleId,
+          "Bundle contains capabilities that cannot be granted to guests"
+        );
+        if (bundle instanceof NextResponse) return bundle;
         if (guestBundleId !== existingCalendar.guestBundleId) {
           updateData.guestBundleId = guestBundleId;
           changes.push("guestBundleId");

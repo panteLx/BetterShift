@@ -9,7 +9,6 @@ import {
 import { sql, eq, or, and } from "drizzle-orm";
 import {
   getUserAccessibleCalendars,
-  getShiftSignupPermission,
   seedPermissionBundles,
 } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
@@ -21,13 +20,13 @@ import {
   validateAccessToken,
 } from "@/lib/auth/token-auth";
 import {
+  applyGuestCeiling,
   CAPABILITIES,
   defaultBundleDefinitionsForNewCalendar,
-  isAdminOnlyCapability,
   sanitizeCapabilities,
-  type BundleSeedKey,
   type Capability,
 } from "@/lib/permission-bundles";
+import type { CalendarBundleRef } from "@/lib/types";
 
 // GET all calendars (only those accessible to the user)
 export async function GET(request: Request) {
@@ -123,78 +122,72 @@ export async function GET(request: Request) {
     const capabilitiesByBundleId = new Map(
       bundleRows.map((row) => [row.id, sanitizeCapabilities(row.capabilities)])
     );
-    const bundleRefById = new Map<
-      string,
-      { id: string; name: string; seedKey: BundleSeedKey | null }
-    >(
+    const bundleRefById = new Map<string, CalendarBundleRef>(
       bundleRows.map((row) => [
         row.id,
         { id: row.id, name: row.name, seedKey: row.seedKey },
       ])
     );
-    // A guest/link bundle can never carry an administrative capability
-    // (GUEST_INELIGIBLE), even if one somehow ended up in its saved set —
-    // mirrors the ceiling in getCalendarAccess()/getEffectiveAccessSummary().
-    const guestCeiling = (capabilities: Capability[]): Capability[] =>
-      capabilities.filter((c) => !isAdminOnlyCapability(c));
 
     // Enrich calendars with the caller's effective capabilities for that
     // calendar (share > token > subscribed guest bundle for authenticated
     // users; token > guest bundle for guests), matching the priority in
     // resolveCalendarAccess() — computed here in-memory from the batched
     // lookups above instead of re-resolving per calendar.
-    const enrichedCalendars = await Promise.all(
-      userCalendars.map(async (cal) => {
-        const shareBundleId = shares.get(cal.id);
-        const subscription = subscriptions.get(cal.id);
-        const tokenBundleId = tokens.get(cal.id);
-        const isOwnerRow = !isAuthEnabled() || cal.ownerId === user?.id;
+    const enrichedCalendars = userCalendars.map((cal) => {
+      const shareBundleId = shares.get(cal.id);
+      const subscription = subscriptions.get(cal.id);
+      const tokenBundleId = tokens.get(cal.id);
+      const isOwnerRow = !isAuthEnabled() || cal.ownerId === user?.id;
 
-        let capabilities: Capability[];
-        let bundle: { id: string; name: string; seedKey: BundleSeedKey | null } | null;
-        if (isOwnerRow) {
-          capabilities = [...CAPABILITIES];
-          bundle = null;
-        } else if (shareBundleId) {
-          // Invited users (source "share") are never ceilinged — see 5.2.
-          capabilities = capabilitiesByBundleId.get(shareBundleId) ?? [];
-          bundle = bundleRefById.get(shareBundleId) ?? null;
-        } else if (tokenBundleId) {
-          capabilities = guestCeiling(capabilitiesByBundleId.get(tokenBundleId) ?? []);
-          bundle = bundleRefById.get(tokenBundleId) ?? null;
-        } else if (cal.guestBundleId && (!user || subscription)) {
-          capabilities = guestCeiling(
-            capabilitiesByBundleId.get(cal.guestBundleId) ?? []
-          );
-          bundle = bundleRefById.get(cal.guestBundleId) ?? null;
-        } else {
-          capabilities = [];
-          bundle = null;
-        }
-
-        // Determine subscription source
-        let subscriptionSource: "guest" | "shared" | "token" | undefined =
-          subscription?.source as "guest" | "shared" | undefined;
-        if (tokenBundleId && !shareBundleId && !subscription) {
-          subscriptionSource = "token";
-        }
-
-        const signupPermission = await getShiftSignupPermission(
-          user?.id,
-          cal.id
+      let capabilities: Capability[];
+      let bundle: CalendarBundleRef | null;
+      if (isOwnerRow) {
+        capabilities = [...CAPABILITIES];
+        bundle = null;
+      } else if (shareBundleId) {
+        // Invited users (source "share") are never ceilinged — see 5.2.
+        capabilities = capabilitiesByBundleId.get(shareBundleId) ?? [];
+        bundle = bundleRefById.get(shareBundleId) ?? null;
+      } else if (tokenBundleId) {
+        capabilities = applyGuestCeiling(capabilitiesByBundleId.get(tokenBundleId) ?? []);
+        bundle = bundleRefById.get(tokenBundleId) ?? null;
+      } else if (cal.guestBundleId && (!user || subscription)) {
+        capabilities = applyGuestCeiling(
+          capabilitiesByBundleId.get(cal.guestBundleId) ?? []
         );
+        bundle = bundleRefById.get(cal.guestBundleId) ?? null;
+      } else {
+        capabilities = [];
+        bundle = null;
+      }
 
-        return {
-          ...cal,
-          capabilities,
-          bundle,
-          canSignUpSelf: signupPermission.canManageOwn,
-          canSignUpOthers: signupPermission.canManageOthers,
-          isSubscribed: !!subscription || !!tokenBundleId,
-          subscriptionSource,
-        };
-      })
-    );
+      // Determine subscription source
+      let subscriptionSource: "guest" | "shared" | "token" | undefined =
+        subscription?.source as "guest" | "shared" | undefined;
+      if (tokenBundleId && !shareBundleId && !subscription) {
+        subscriptionSource = "token";
+      }
+
+      // Mirrors getShiftSignupPermission() using the capabilities already
+      // resolved above, instead of a second resolveCalendarAccess() per row.
+      const canSignUp = (capability: "signUpSelf" | "signUpOthers"): boolean => {
+        if (!cal.signupsEnabled) return false;
+        if (isOwnerRow) return true;
+        if (!user?.id) return false;
+        return capabilities.includes(capability);
+      };
+
+      return {
+        ...cal,
+        capabilities,
+        bundle,
+        canSignUpSelf: canSignUp("signUpSelf"),
+        canSignUpOthers: canSignUp("signUpOthers"),
+        isSubscribed: !!subscription || !!tokenBundleId,
+        subscriptionSource,
+      };
+    });
 
     return NextResponse.json(enrichedCalendars);
   } catch (error) {

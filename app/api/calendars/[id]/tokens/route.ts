@@ -4,8 +4,7 @@ import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
-import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
-import { isGuestEligible } from "@/lib/permission-bundles";
+import { resolveGuestEligibleBundle } from "@/lib/auth/permission-bundles-service";
 import { generateAccessToken } from "@/lib/auth/token-auth";
 import { logAuditEvent, type CalendarTokenCreatedMetadata } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
@@ -144,22 +143,12 @@ export async function POST(
     if (!bundleId || typeof bundleId !== "string") {
       return NextResponse.json({ error: "Invalid bundle id" }, { status: 400 });
     }
-    const bundle = await getBundleForCalendar(calendarId, bundleId);
-    if (!bundle) {
-      return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
-    }
-    if (!isGuestEligible(bundle.capabilities)) {
-      return NextResponse.json(
-        {
-          error:
-            "Bundle contains capabilities that cannot be granted via a link",
-          forbiddenCapabilities: bundle.capabilities.filter(
-            (c) => !isGuestEligible([c])
-          ),
-        },
-        { status: 400 }
-      );
-    }
+    const bundle = await resolveGuestEligibleBundle(
+      calendarId,
+      bundleId,
+      "Bundle contains capabilities that cannot be granted via a link"
+    );
+    if (bundle instanceof NextResponse) return bundle;
 
     // Validate expiration date (if provided)
     let expiresAtDate: Date | null = null;

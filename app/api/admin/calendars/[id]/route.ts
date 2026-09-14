@@ -25,8 +25,10 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
-import { isGuestEligible } from "@/lib/permission-bundles";
+import {
+  getBundleForCalendar,
+  resolveGuestEligibleBundle,
+} from "@/lib/auth/permission-bundles-service";
 
 /**
  * Admin Calendar Detail API
@@ -321,26 +323,18 @@ export async function PATCH(
       changes.push("color");
     }
 
+    let newGuestBundle: Awaited<ReturnType<typeof resolveGuestEligibleBundle>> | null =
+      null;
     if (body.guestBundleId !== undefined) {
       if (body.guestBundleId === null) {
         updates.guestBundleId = null;
       } else if (typeof body.guestBundleId === "string") {
-        const bundle = await getBundleForCalendar(calendarId, body.guestBundleId);
-        if (!bundle) {
-          return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
-        }
-        if (!isGuestEligible(bundle.capabilities)) {
-          return NextResponse.json(
-            {
-              error:
-                "Bundle contains capabilities that cannot be granted to guests",
-              forbiddenCapabilities: bundle.capabilities.filter(
-                (c) => !isGuestEligible([c])
-              ),
-            },
-            { status: 400 }
-          );
-        }
+        newGuestBundle = await resolveGuestEligibleBundle(
+          calendarId,
+          body.guestBundleId,
+          "Bundle contains capabilities that cannot be granted to guests"
+        );
+        if (newGuestBundle instanceof NextResponse) return newGuestBundle;
         updates.guestBundleId = body.guestBundleId;
       } else {
         return NextResponse.json(
@@ -393,17 +387,23 @@ export async function PATCH(
       },
     });
 
+    // Reuse the already-validated bundle when this request set it, instead
+    // of re-fetching the same row.
     let guestBundle: { id: string; name: string; seedKey: string | null } | null = null;
-    if (updatedCalendar.guestBundleId) {
+    if (newGuestBundle) {
+      guestBundle = {
+        id: newGuestBundle.id,
+        name: newGuestBundle.name,
+        seedKey: newGuestBundle.seedKey,
+      };
+    } else if (updatedCalendar.guestBundleId) {
       const bundle = await getBundleForCalendar(calendarId, updatedCalendar.guestBundleId);
       guestBundle = bundle ? { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey } : null;
     }
 
-    return NextResponse.json({
-      ...updatedCalendar,
-      guestBundle,
-      guestBundleId: undefined,
-    });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropping guestBundleId in favor of the guestBundle object below
+    const { guestBundleId: _guestBundleId, ...calendarResponse } = updatedCalendar;
+    return NextResponse.json({ ...calendarResponse, guestBundle });
   } catch (error) {
     console.error("[Admin Calendar Update API] Error:", error);
 

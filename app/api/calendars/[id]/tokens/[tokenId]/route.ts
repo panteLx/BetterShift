@@ -4,8 +4,7 @@ import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
-import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
-import { isGuestEligible } from "@/lib/permission-bundles";
+import { resolveGuestEligibleBundle } from "@/lib/auth/permission-bundles-service";
 import { logAuditEvent } from "@/lib/audit-log";
 
 /**
@@ -74,7 +73,8 @@ export async function PATCH(
 
     // Validate the new bundle if provided: must exist, belong to this
     // calendar, and be guest-eligible (E7) — a link is always a guest/link source.
-    let newBundle: Awaited<ReturnType<typeof getBundleForCalendar>> = null;
+    let newBundle: Awaited<ReturnType<typeof resolveGuestEligibleBundle>> | null =
+      null;
     if (bundleId !== undefined) {
       if (typeof bundleId !== "string") {
         return NextResponse.json(
@@ -82,22 +82,12 @@ export async function PATCH(
           { status: 400 }
         );
       }
-      newBundle = await getBundleForCalendar(calendarId, bundleId);
-      if (!newBundle) {
-        return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
-      }
-      if (!isGuestEligible(newBundle.capabilities)) {
-        return NextResponse.json(
-          {
-            error:
-              "Bundle contains capabilities that cannot be granted via a link",
-            forbiddenCapabilities: newBundle.capabilities.filter(
-              (c) => !isGuestEligible([c])
-            ),
-          },
-          { status: 400 }
-        );
-      }
+      newBundle = await resolveGuestEligibleBundle(
+        calendarId,
+        bundleId,
+        "Bundle contains capabilities that cannot be granted via a link"
+      );
+      if (newBundle instanceof NextResponse) return newBundle;
     }
 
     // Validate expiration date if provided
@@ -160,11 +150,15 @@ export async function PATCH(
       isUserVisible: true,
     });
 
-    // Resolve the token's bundle identity for the response
-    const updatedBundle = await db.query.calendarPermissionBundles.findFirst({
-      where: (b, { eq: eqOp }) => eqOp(b.id, updatedToken.bundleId),
-      columns: { id: true, name: true, seedKey: true },
-    });
+    // Resolve the token's bundle identity for the response — reuse the
+    // already-validated bundle instead of re-fetching it when it was part
+    // of this request.
+    const updatedBundle = newBundle
+      ? { id: newBundle.id, name: newBundle.name, seedKey: newBundle.seedKey }
+      : await db.query.calendarPermissionBundles.findFirst({
+          where: (b, { eq: eqOp }) => eqOp(b.id, updatedToken.bundleId),
+          columns: { id: true, name: true, seedKey: true },
+        });
 
     // Return sanitized token (no full token)
     return NextResponse.json({

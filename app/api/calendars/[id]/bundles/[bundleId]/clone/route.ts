@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { calendars } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
 import {
   clonePermissionBundle,
   getBundleForCalendar,
-  PermissionBundleServiceError,
+  getCalendarName,
+  handleBundleServiceError,
+  requireManageShares,
 } from "@/lib/auth/permission-bundles-service";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarBundleClonedMetadata } from "@/lib/audit-log";
@@ -18,27 +15,12 @@ export async function POST(
 ) {
   try {
     const { id: calendarId, bundleId } = await params;
-    const user = await getSessionUser(request.headers);
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const hasPermission = await hasCapability(
-      user.id,
-      calendarId,
-      "manageShares"
-    );
-    if (!hasPermission) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
+    const auth = await requireManageShares(request, calendarId);
+    if (auth instanceof NextResponse) return auth;
 
     const rateLimitResponse = rateLimit(
       request,
-      user.id,
+      auth.userId,
       "bundle-mutations",
       calendarId
     );
@@ -57,17 +39,12 @@ export async function POST(
 
     const clone = await clonePermissionBundle(calendarId, bundleId, name);
 
-    const calendar = await db.query.calendars.findFirst({
-      where: eq(calendars.id, calendarId),
-      columns: { name: true },
-    });
-
     await logUserAction<CalendarBundleClonedMetadata>({
-      userId: user.id,
+      userId: auth.userId,
       action: "calendar.bundle.cloned",
       request,
       metadata: {
-        calendarName: calendar?.name || "Unknown",
+        calendarName: await getCalendarName(calendarId),
         sourceBundleName: source.name,
         newBundleName: clone.name,
       },
@@ -75,16 +52,6 @@ export async function POST(
 
     return NextResponse.json(clone, { status: 201 });
   } catch (error) {
-    if (error instanceof PermissionBundleServiceError) {
-      return NextResponse.json(
-        { error: error.message, details: error.details },
-        { status: error.status }
-      );
-    }
-    console.error("Failed to clone permission bundle:", error);
-    return NextResponse.json(
-      { error: "Failed to clone permission bundle" },
-      { status: 500 }
-    );
+    return handleBundleServiceError(error, "Failed to clone permission bundle");
   }
 }

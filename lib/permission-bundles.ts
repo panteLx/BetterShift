@@ -104,6 +104,11 @@ export function isAdminOnlyCapability(capability: Capability): boolean {
   return GUEST_INELIGIBLE.has(capability);
 }
 
+/** Strips admin-only capabilities from a guest/link-sourced capability list — the GUEST_INELIGIBLE ceiling. */
+export function applyGuestCeiling(capabilities: readonly Capability[]): Capability[] {
+  return capabilities.filter((c) => !isAdminOnlyCapability(c));
+}
+
 /** Whitelists a JSON value down to known capability keys, deduped. Unknown/malformed input yields []. */
 export function sanitizeCapabilities(input: unknown): Capability[] {
   if (!Array.isArray(input)) return [];

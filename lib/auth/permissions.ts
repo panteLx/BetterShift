@@ -15,8 +15,8 @@ import {
 } from "@/lib/auth/token-auth";
 import type { CalendarBundleRef, CalendarMember } from "@/lib/types";
 import {
+  applyGuestCeiling,
   CAPABILITIES,
-  isAdminOnlyCapability,
   sanitizeBundle,
   type BundleDefinition,
   type Capability,
@@ -170,7 +170,7 @@ export interface CalendarAccess {
 function ceilingFilteredCapabilities(access: ResolvedCalendarAccess): Capability[] {
   if (access.isOwner) return [...CAPABILITIES];
   if (access.source === "share") return access.capabilities;
-  return access.capabilities.filter((c) => !isAdminOnlyCapability(c));
+  return applyGuestCeiling(access.capabilities);
 }
 
 /**

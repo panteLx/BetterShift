@@ -4,6 +4,7 @@
  * itself lives in lib/auth/permissions.ts — this file only manages the
  * bundles a calendar owns.
  */
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   calendars,
@@ -13,6 +14,8 @@ import {
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
+import { hasCapability } from "@/lib/auth/permissions";
+import { getSessionUser } from "@/lib/auth/sessions";
 import {
   isGuestEligible,
   normalizeCapabilities,
@@ -63,6 +66,78 @@ function seedLabelsFor(seedKey: BundleSeedKey): string[] {
   return SEED_LABEL_SOURCES.map(
     (messages) => messages.permissionBundles.seed[seedKey]
   );
+}
+
+/** Requires manageShares on the calendar; returns the caller's userId or a ready 401/403 response. */
+export async function requireManageShares(
+  request: NextRequest,
+  calendarId: string
+): Promise<{ userId: string } | NextResponse> {
+  const user = await getSessionUser(request.headers);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const hasPermission = await hasCapability(user.id, calendarId, "manageShares");
+  if (!hasPermission) {
+    return NextResponse.json(
+      { error: "Insufficient permissions" },
+      { status: 403 }
+    );
+  }
+  return { userId: user.id };
+}
+
+/** Maps a PermissionBundleServiceError to its HTTP shape, or falls back to a 500 for anything else. */
+export function handleBundleServiceError(
+  error: unknown,
+  fallbackMessage: string
+): NextResponse {
+  if (error instanceof PermissionBundleServiceError) {
+    return NextResponse.json(
+      { error: error.message, details: error.details },
+      { status: error.status }
+    );
+  }
+  console.error(fallbackMessage, error);
+  return NextResponse.json({ error: fallbackMessage }, { status: 500 });
+}
+
+/** Calendar name for audit-log metadata — "Unknown" if the calendar was deleted concurrently. */
+export async function getCalendarName(calendarId: string): Promise<string> {
+  const calendar = await db.query.calendars.findFirst({
+    where: eq(calendars.id, calendarId),
+    columns: { name: true },
+  });
+  return calendar?.name ?? "Unknown";
+}
+
+/**
+ * Loads a bundle for the calendar and rejects it (400, with the forbidden
+ * capabilities listed) if it isn't guest-eligible (E7) — shared by every
+ * route about to attach a bundle to a guest/link source
+ * (calendars.guestBundleId, calendarAccessTokens.bundleId).
+ */
+export async function resolveGuestEligibleBundle(
+  calendarId: string,
+  bundleId: string,
+  ineligibleMessage: string
+): Promise<CalendarPermissionBundle | NextResponse> {
+  const bundle = await getBundleForCalendar(calendarId, bundleId);
+  if (!bundle) {
+    return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
+  }
+  if (!isGuestEligible(bundle.capabilities)) {
+    return NextResponse.json(
+      {
+        error: ineligibleMessage,
+        forbiddenCapabilities: bundle.capabilities.filter(
+          (c) => !isGuestEligible([c])
+        ),
+      },
+      { status: 400 }
+    );
+  }
+  return bundle;
 }
 
 /** Loads a bundle only if it belongs to the given calendar — closes the cross-calendar gap noted in the plan. */

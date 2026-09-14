@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { calendars } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
 import {
   createPermissionBundle,
+  getCalendarName,
   listBundlesWithUsage,
-  PermissionBundleServiceError,
+  handleBundleServiceError,
+  requireManageShares,
 } from "@/lib/auth/permission-bundles-service";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarBundleCreatedMetadata } from "@/lib/audit-log";
@@ -18,19 +15,8 @@ export async function GET(
 ) {
   try {
     const { id: calendarId } = await params;
-    const user = await getSessionUser(request.headers);
-
-    const hasPermission = await hasCapability(
-      user?.id,
-      calendarId,
-      "manageShares"
-    );
-    if (!hasPermission) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
+    const auth = await requireManageShares(request, calendarId);
+    if (auth instanceof NextResponse) return auth;
 
     const bundles = await listBundlesWithUsage(calendarId);
     return NextResponse.json(bundles);
@@ -49,27 +35,12 @@ export async function POST(
 ) {
   try {
     const { id: calendarId } = await params;
-    const user = await getSessionUser(request.headers);
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const hasPermission = await hasCapability(
-      user.id,
-      calendarId,
-      "manageShares"
-    );
-    if (!hasPermission) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
+    const auth = await requireManageShares(request, calendarId);
+    if (auth instanceof NextResponse) return auth;
 
     const rateLimitResponse = rateLimit(
       request,
-      user.id,
+      auth.userId,
       "bundle-mutations",
       calendarId
     );
@@ -87,17 +58,12 @@ export async function POST(
       capabilities,
     });
 
-    const calendar = await db.query.calendars.findFirst({
-      where: eq(calendars.id, calendarId),
-      columns: { name: true },
-    });
-
     await logUserAction<CalendarBundleCreatedMetadata>({
-      userId: user.id,
+      userId: auth.userId,
       action: "calendar.bundle.created",
       request,
       metadata: {
-        calendarName: calendar?.name || "Unknown",
+        calendarName: await getCalendarName(calendarId),
         bundleName: bundle.name,
         capabilities: bundle.capabilities,
       },
@@ -105,16 +71,6 @@ export async function POST(
 
     return NextResponse.json(bundle, { status: 201 });
   } catch (error) {
-    if (error instanceof PermissionBundleServiceError) {
-      return NextResponse.json(
-        { error: error.message, details: error.details },
-        { status: error.status }
-      );
-    }
-    console.error("Failed to create permission bundle:", error);
-    return NextResponse.json(
-      { error: "Failed to create permission bundle" },
-      { status: 500 }
-    );
+    return handleBundleServiceError(error, "Failed to create permission bundle");
   }
 }
