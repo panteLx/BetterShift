@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { Field } from "@/components/form-kit";
 import { ShiftPreset } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
-import { shiftVars } from "@/lib/shift-display";
+import { groupPresetsByName, shiftVars } from "@/lib/shift-display";
 
 interface PresetSelectProps {
   presets: ShiftPreset[];
@@ -22,10 +22,13 @@ export function PresetSelect({ presets, value, onPresetSelect, onClear }: Preset
     return null;
   }
 
+  const { ungrouped, groups } = groupPresetsByName(presets);
+  const orderedPresets = [...ungrouped, ...groups.flatMap((group) => group.items)];
+
   return (
     <Field label={t("preset.preset")}>
       <div role="radiogroup" aria-label={t("preset.preset")} className="flex flex-wrap gap-2">
-        {presets.map((preset) => {
+        {orderedPresets.map((preset) => {
           const selected = preset.id === value;
           return (
             <button

@@ -19,9 +19,10 @@ import { getShiftCode, groupPresetsByName, presetTime, shiftVars } from "@/lib/s
 import { cn, isMultiSelectClick } from "@/lib/utils";
 
 export function splitStampPresets(presets: ShiftPreset[]) {
+  const { ungrouped } = groupPresetsByName(presets);
   return {
-    primary: presets.filter((p) => !p.isSecondary),
-    secondary: presets.filter((p) => p.isSecondary),
+    primary: ungrouped.filter((p) => !p.isSecondary),
+    secondary: ungrouped.filter((p) => p.isSecondary),
   };
 }
 
