@@ -25,7 +25,78 @@ Breaking changes between BetterShift releases and the steps to get through them.
 
 ## Versions
 
+- [3.1.0](#310-from-300) — from `3.0.0`
 - [3.0.0](#300-from-22x) — from `2.2.x`
+
+---
+
+## 3.1.0 (from 3.0.0)
+
+BetterShift 3.1.0 replaces the fixed calendar read/write/admin permission ladder with per-calendar **permission bundles** — an owner defines named bundles by ticking individual capabilities instead of the app hard-coding what "write" means. See the [Permissions and Sharing Guide](PERMISSIONS.md) for the full picture. The upgrade itself needs no configuration changes; there's a single deliberate behavior change to be aware of, described below.
+
+### Before You Start (3.1.0)
+
+**Prerequisites**
+
+- A BetterShift instance running `3.0.0`
+- Database backup (recommended) — this migration rewrites the permission tables and is not cleanly reversible in place
+
+```bash
+# SQLite database location (default)
+cp ./data/sqlite.db ./data/sqlite.db.backup
+
+# Or if using Docker
+docker cp bettershift:/app/data/sqlite.db ./sqlite.db.backup
+```
+
+The migration replaces the old `read`/`write`/`admin` enum columns on shares, tokens, and calendars with permission bundle rows, mapping every existing calendar's shares, links, and guest access onto equivalent bundles — see [Breaking Changes](#breaking-changes-310) for the one place where "equivalent" isn't identical.
+
+### Breaking Changes (3.1.0)
+
+#### 1. Guest and link access can no longer manage external sync
+
+This is the one deliberate behavior change for existing calendars. The old `write` tier is split into two new bundles: **Contribute** (create shifts/presets, edit your own entries — no external sync) and **Manage** (adds editing anyone's entries, still no external sync). The migration maps a calendar's `write` guest access or share links onto Contribute, and — specifically for guest/link access, not for invited users — strips `manageExternalSync` and `deleteSyncLogs` out of what it grants, even though those capabilities were part of the old `write` tier. A user invited directly (`calendarShares`, not guest/link) keeps exactly their previous capabilities, external sync management included; only guest and link access lose it.
+
+This isn't an incidental migration side effect — external sync configuration touches credentials and arbitrary URLs, and guest/link access is now hard-locked out of it at the enforcement layer, not just by the migrated defaults. No bundle assigned to guest access or a link can ever hold `manageExternalSync`/`deleteSyncLogs`, regardless of what an owner ticks into it afterwards.
+
+| Your setup | Action |
+| --- | --- |
+| No calendar ever had guest access or a share link set to `write` | No action |
+| A calendar's guest access or a share link was `write`, and you relied on that to manage external sync | Re-check your sync setup after upgrading — see [FAQ](#faq-310) |
+
+#### 2. Everything else keeps its prior effective permissions
+
+Every existing calendar's owner, shares (`read`/`write`/`admin`), and guest/link access (`none`/`read`/`write`) are mapped 1:1 onto the new bundle system — nobody gains or loses access as part of this upgrade, aside from the external-sync change above. The improved defaults introduced alongside bundles (for example, the Read bundle now granting self-signup out of the box) only apply to calendars created after upgrading, not retroactively to existing ones.
+
+### Upgrade Steps (3.1.0)
+
+1. **Back up your database** (see [Before You Start](#before-you-start-310)).
+2. **Pull the new image** (`ghcr.io/pantelx/bettershift:latest` or `:3.1.0`).
+3. **Restart the container** (or `npm run build && npm run db:migrate && npm start` from source). The migration runs automatically on container start.
+4. **If any calendar's guest access or a share link was previously `write`**: open that calendar's Permissions settings and confirm whether external sync management is still needed there — see [Breaking Change 1](#1-guest-and-link-access-can-no-longer-manage-external-sync).
+
+### FAQ (3.1.0)
+
+**Do I need to change anything in `.env` for this release?**
+
+No. This release has no new environment variables and no required configuration change — the migration runs automatically, and the one behavior change above is informational rather than an action every instance needs to take.
+
+**A guest or a link used to manage my external calendar sync. What do I do now?**
+
+Guest and link access can no longer hold that capability, by design — it touches sync credentials and URLs. Invite the person who needs to manage sync as a regular shared user instead, and assign them a bundle that includes "Manage external sync" (the built-in Admin bundle already does). See [Sharing Calendars](PERMISSIONS.md#sharing-calendars).
+
+**Will my existing shares, links, and guest access still work the same after upgrading?**
+
+Yes, with the one exception above. Every prior `read`/`write`/`admin` share, and every guest/link `read`/`write` setting, maps to an equivalent bundle with the same effective capabilities.
+
+**Do the new default bundles (e.g. self-signup on Read) apply to my existing calendars?**
+
+No. They only apply to calendars created after the upgrade. Existing calendars keep their migrated bundles, which you can still edit like any other bundle.
+
+### Rollback (3.1.0)
+
+1. Re-deploy the `v3.0.0` image tag (or your previous version).
+2. Restore the `sqlite.db` backup taken in [Before You Start](#before-you-start-310) — this migration drops the old permission enum columns in place, so an older version cannot read the new bundle tables and a plain image downgrade is not enough on its own.
 
 ---
 

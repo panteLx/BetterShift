@@ -26,10 +26,6 @@ There is no unit-test framework here — "tests" means the lint/build/i18n pipel
 
 `npm run release:patch|minor|major` bumps the version and pushes the tag; the release workflow builds the image from it.
 
-## Workflow
-
-Commits follow Conventional Commits (`type(scope): summary`, e.g. `feat(ui):`, `fix(auth):`, `chore:`, `perf:`; `!` before the colon for breaking changes). `scripts/changelog.sh`, called from `.github/workflows/release.yml`, builds the release changelog straight from `git log --pretty=%s --no-merges` between tags — grouped by that prefix, with `refactor|ci|style|test|build` dropped as internal-only. It reads commit subjects, not the PR title or body, so **multi-commit PRs must merge via "Rebase and merge", not Squash** — squashing collapses every commit into one line under the merge commit's message and the per-commit changelog entries are lost. A single-commit PR can go either way since there's nothing to collapse.
-
 ## Architecture
 
 ### Request flow
@@ -60,13 +56,13 @@ View preferences (shifts per day, sorting, note visibility, day highlighting) co
 
 Two independent questions, easy to conflate:
 
-**May the user do X?** `getUserCalendarPermission()` in `lib/auth/permissions.ts` resolves, in priority order: owner → `calendarShares` row → access-token cookie → `calendar.guestPermission`. That last step is not unconditional for a signed-in user: it applies only when a `userCalendarSubscriptions` row with `status: "subscribed"` exists, so a public calendar someone dismissed grants them nothing until they re-subscribe. Guests reach `guestPermission` without that check. In routes call the wrappers `canViewCalendar` / `canEditCalendar` / `canManageCalendar` / `canDeleteCalendar` instead of touching the tables.
+**May the user do X?** `resolveCalendarAccess()` in `lib/auth/permissions.ts` resolves, in priority order: owner → `calendarShares` row → access-token cookie → `calendars.guestBundleId`. There's no fixed read/write/admin ladder — every non-owner branch resolves to a **permission bundle** (`calendarPermissionBundles`, an owner-defined per-calendar set of ticked capabilities; catalog, dependencies and defaults live in `lib/permission-bundles.ts`, full design in `docs/PERMISSIONS.md`). The guest-bundle step is not unconditional for a signed-in user: it applies only when a `userCalendarSubscriptions` row with `status: "subscribed"` exists, so a public calendar someone dismissed grants them nothing until they re-subscribe. Guests reach `guestBundleId` without that check. Whatever the resolved bundle contains, a token or guest-bundle source additionally has `manageShares`/`manageGuestAccess`/`manageCalendarSettings`/`manageExternalSync`/`deleteSyncLogs` filtered out — the hard guest lockout (`GUEST_INELIGIBLE`/`isGuestEligible()` in `lib/permission-bundles.ts`), re-enforced here regardless of what a bundle's saved contents claim. Call `getCalendarAccess(userId, calendarId)` once per request for `can(capability)` / `canOwned(own, any, createdBy)`; `hasCapability()` / `hasOwnedCapability()` are single-check wrappers around it. `canOwned()` treats a resource with no known creator (legacy data, a deleted user, an anonymous guest's entry) as owned by anyone holding the matching own-capability. In routes, `canViewCalendar` (any access at all) and `canDeleteCalendar` (owner-only) remain as wrappers — there's no `canEditCalendar`/`canManageCalendar` anymore, since a coarse level can't express a specific capability or an own/any check; call `hasCapability()`/`hasOwnedCapability()` for the capability the action actually needs.
 
-**Does the calendar show up in their list?** `getUserAccessibleCalendars()` applies `userCalendarSubscriptions` across the board, not just on the guest-permission branch above. Shared and publicly visible calendars can be dismissed by a user (`status: "dismissed"`), the calendar-discovery sheet lets them re-subscribe, and owned calendars can never be hidden. A permission check alone therefore does not tell you whether a calendar is visible.
+**Does the calendar show up in their list?** `getUserAccessibleCalendars()` applies `userCalendarSubscriptions` across the board, not just on the guest-bundle branch above. Shared and publicly visible calendars can be dismissed by a user (`status: "dismissed"`), the calendar-discovery sheet lets them re-subscribe, and owned calendars can never be hidden. A capability check alone therefore does not tell you whether a calendar is visible.
 
 `AUTH_ENABLED=false` short-circuits both: every calendar becomes `owner` for everyone. Gate on `isAuthEnabled()` / `allowGuestAccess()` from `lib/auth/feature-flags.ts` rather than assuming a session exists.
 
-Access tokens (`calendarAccessTokens`) are shareable links. `lib/auth/token-auth.ts` validates them and stores grants in a cookie that both the middleware and the API routes read back.
+Access tokens (`calendarAccessTokens`) are shareable links, each carrying a `bundleId` (guest-eligible bundles only — checked at assignment time). `lib/auth/token-auth.ts` validates them and stores grants in a cookie that both the middleware and the API routes read back.
 
 ### Admin
 

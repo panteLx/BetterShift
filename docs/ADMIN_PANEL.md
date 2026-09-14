@@ -164,7 +164,7 @@ Displays all calendars in the system with:
 - Calendar name and color indicator
 - Owner information (or "Orphaned" badge)
 - Statistics (shifts, notes, presets, shares)
-- Guest permission setting
+- Guest access bundle
 - Action menu
 
 ### Orphaned Calendars
@@ -182,7 +182,7 @@ Orphaned calendars are invisible to regular users and can only be managed throug
 | Action             | Admin | Superadmin | Description                          |
 | ------------------ | ----- | ---------- | ------------------------------------ |
 | View Details       | Yes   | Yes        | View calendar info and statistics    |
-| Edit Calendar      | Yes   | Yes        | Change name, color, guest permission |
+| Edit Calendar      | Yes   | Yes        | Change name, color, guest access bundle |
 | Transfer Ownership | Yes   | Yes        | Assign calendar to a different user  |
 | Delete Calendar    | No    | Yes        | Permanently delete calendar          |
 
