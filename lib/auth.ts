@@ -134,13 +134,27 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
     },
+    additionalFields: {
+      // Set on admin-created accounts (see POST /api/admin/users); input: false
+      // blocks self-signup from setting it, but not the admin plugin's `data`
+      // passthrough on /admin/create-user.
+      mustChangePassword: {
+        type: "boolean",
+        defaultValue: false,
+        input: false,
+      },
+    },
   },
 
   // Database hooks for user creation control
   databaseHooks: {
     user: {
       create: {
-        before: async () => {
+        before: async (_user, context) => {
+          // Admin-created users (POST /admin/create-user) always work, even
+          // when self-registration is disabled -- see docs/ADMIN_PANEL.md.
+          if (context?.path === "/admin/create-user") return;
+
           // Block OAuth/OIDC registration when ALLOW_USER_REGISTRATION is false
           // This hook runs for ALL user creation attempts (email + OAuth/OIDC)
           // Email registration is already blocked by disableSignUp config

@@ -71,7 +71,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
-  const publicConfig = getPublicConfig();
+  const publicConfig = await getPublicConfig();
   const nonce = (await headers()).get("x-nonce") || undefined;
 
   return (

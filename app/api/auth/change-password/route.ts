@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   account as accountTable,
   session as sessionTable,
+  user as userTable,
 } from "@/lib/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
@@ -97,6 +98,12 @@ export async function POST(req: NextRequest) {
           eq(accountTable.providerId, "credential")
         )
       );
+
+    // Clears the forced-change flag set on admin-created accounts
+    await db
+      .update(userTable)
+      .set({ mustChangePassword: false })
+      .where(eq(userTable.id, session.user.id));
 
     // Revoke all other sessions (keep current session active)
     const revokedSessions = await db

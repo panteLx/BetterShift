@@ -84,7 +84,7 @@ From calendar settings, you can:
 
 ## Access Tokens (Share Links)
 
-Access tokens provide a way to share calendars via a URL. With `ALLOW_GUEST_ACCESS=true` the recipient needs no account; otherwise they sign in first and the token applies afterwards.
+Access tokens provide a way to share calendars via a URL. With Guest Access enabled globally (admin panel → System Settings) the recipient needs no account; otherwise they sign in first and the token applies afterwards.
 
 ### Creating Access Tokens
 
@@ -116,7 +116,7 @@ Access tokens provide a way to share calendars via a URL. With `ALLOW_GUEST_ACCE
 ### Security Considerations
 
 - Tokens are stored in cookies after first validation
-- Users with tokens can access the calendar without logging in when `ALLOW_GUEST_ACCESS=true`
+- Users with tokens can access the calendar without logging in when Guest Access is enabled globally
 - Treat share links like passwords - anyone with the link has access
 - Set expiration dates for temporary access
 - Monitor usage in token management
@@ -139,10 +139,10 @@ Guest access allows unauthenticated users to view or edit calendars without any 
 
 ### Configuration
 
-1. Enable globally: Set `ALLOW_GUEST_ACCESS=true` in environment
+1. Enable globally: Turn on Guest Access in the admin panel under System Settings
 2. Enable per-calendar: Set public access in calendar settings, "Sharing" section, "Public" tab
 
-The per-calendar level applies to visitors without an account only while `ALLOW_GUEST_ACCESS=true`; otherwise they are sent to the login page. Signed-in users get it through [Calendar Discovery](#calendar-discovery), whatever the flag says. Access links work even with public access set to `none`, but with `ALLOW_GUEST_ACCESS=false` a recipient without a session is sent to the login page first; the link's grant applies once they sign in.
+The per-calendar level applies to visitors without an account only while Guest Access is enabled globally; otherwise they are sent to the login page. Signed-in users get it through [Calendar Discovery](#calendar-discovery), whatever the setting says. Access links work even with public access set to `none`, but with Guest Access disabled a recipient without a session is sent to the login page first; the link's grant applies once they sign in.
 
 ### Guest Permission Levels
 
@@ -166,7 +166,7 @@ The per-calendar level applies to visitors without an account only while `ALLOW_
 
 ## Calendar Discovery
 
-Signed-in users can discover and subscribe to any calendar whose public access is `read` or `write`. This does not depend on `ALLOW_GUEST_ACCESS`, which only governs visitors without an account.
+Signed-in users can discover and subscribe to any calendar whose public access is `read` or `write`. This does not depend on the global Guest Access setting, which only governs visitors without an account.
 
 ### Finding Public Calendars
 
@@ -214,4 +214,4 @@ The first matching rule determines the permission level.
 3. **Set token expiration**: Don't leave tokens valid indefinitely
 4. **Review shares periodically**: Remove access that's no longer needed
 5. **Use read permission by default**: Only grant write when editing is required
-6. **Consider public access carefully**: Public calendars are open to every signed-in user, and to everyone when `ALLOW_GUEST_ACCESS=true`
+6. **Consider public access carefully**: Public calendars are open to every signed-in user, and to everyone when Guest Access is enabled globally

@@ -134,6 +134,13 @@
       "when": 1789303001140,
       "tag": "0018_skinny_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1789385158612,
+      "tag": "0019_aromatic_roughhouse",
+      "breakpoints": true
     }
   ]
 }

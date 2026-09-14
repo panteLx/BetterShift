@@ -73,10 +73,11 @@ BETTER_AUTH_SECRET=your-generated-secret-here
 # Set your application URL
 BETTER_AUTH_URL=https://your-domain.com
 
-# Optional: Configure registration and guest access
+# Optional: Configure registration
 ALLOW_USER_REGISTRATION=true
-ALLOW_GUEST_ACCESS=false
 ```
+
+Guest access (viewing calendars without login) is a live toggle in the admin panel under System Settings, not an environment variable.
 
 ### Step 4: Restart the Application
 
@@ -165,7 +166,7 @@ Yes, after assigning an owner:
 
 1. Open calendar settings
 2. Set "Guest Permission" to "Read" or "Write"
-3. Enable `ALLOW_GUEST_ACCESS=true` in environment
+3. Turn on Guest Access globally in the admin panel under System Settings
 
 ### How do I add more admins?
 

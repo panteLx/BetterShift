@@ -169,7 +169,18 @@ function ProfileContent() {
           <ProfileDetailsSection form={profileForm} canEdit={hasPasswordAuth} accounts={accounts} />
         );
       case "password":
-        return <PasswordSection />;
+        return (
+          <>
+            {user.mustChangePassword && (
+              <div className={cn(accountContentClass, "pt-[18px]")}>
+                <StatusBanner tone="warning" icon={TriangleAlert} title={t("profile.mustChangePasswordTitle")}>
+                  {t("profile.mustChangePasswordDescription")}
+                </StatusBanner>
+              </div>
+            )}
+            <PasswordSection onChanged={refetch} />
+          </>
+        );
       case "accounts":
         return <ConnectedAccountsSection accounts={accounts} />;
       case "sessions":

@@ -10,6 +10,7 @@
   "common": {
     "cancel": "Cancel",
     "save": "Save",
+    "create": "Create",
     "saving": "Saving...",
     "close": "Close",
     "delete": "Delete",
@@ -525,7 +526,9 @@
       "visibility": "Banner visible to",
       "visibilityAll": "Everyone",
       "visibilityAdmins": "Admins only",
-      "updateError": "Failed to save settings"
+      "updateError": "Failed to save settings",
+      "guestAccess": "Guest access",
+      "guestAccessHint": "Allows viewing calendars without logging in, where the calendar permits it."
     },
     "orphanedCalendarsWarning": "Orphaned Calendars Detected",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",
@@ -654,7 +657,11 @@
     "selectedLogs": "{count} selected",
     "clearSelection": "Clear Selection",
     "deleteSelectedLogsDescription": "Delete {count, plural, one {# selected log} other {# selected logs}}. This action cannot be undone.",
-    "willDeleteSelectedLogs": "{count, plural, one {# log} other {# logs}} will be permanently deleted"
+    "willDeleteSelectedLogs": "{count, plural, one {# log} other {# logs}} will be permanently deleted",
+    "createUser": "Create user",
+    "createUserSubtitle": "Creates a new account, even while registration is disabled.",
+    "mustChangePasswordHint": "The user will be required to change this password on first login.",
+    "emailAlreadyExists": "A user with this email address already exists"
   },
   "appearance": {
     "title": "Appearance",
@@ -964,7 +971,9 @@
     "unknownBrowser": "Unknown browser",
     "unknownOs": "Unknown system",
     "deleteImpact": "Calendars, shifts and shares are deleted as well.",
-    "deleteNeedsPassword": "Requires your password."
+    "deleteNeedsPassword": "Requires your password.",
+    "mustChangePasswordTitle": "Password change required",
+    "mustChangePasswordDescription": "An administrator created this account. Please set a new password now to continue."
   },
   "adminKit": {
     "banned": "Banned",

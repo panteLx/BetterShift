@@ -112,6 +112,33 @@ export async function fetchAdminUserDetails(userId: string): Promise<UserDetails
 }
 
 /**
+ * Create user via API
+ */
+async function createUserApi(
+  data: { name: string; email: string; password: string; role?: string },
+  t: ReturnType<typeof useTranslations>,
+): Promise<void> {
+  const response = await fetch("/api/admin/users", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    if (response.status === 409) {
+      throw new Error(t("admin.emailAlreadyExists"));
+    }
+    if (response.status === 403) {
+      throw new Error(t("admin.accessDenied"));
+    }
+    throw new Error(body?.error || t("common.createError", { item: t("common.labels.user") }));
+  }
+}
+
+/**
  * Update user via API
  */
 async function updateUserApi(
@@ -398,6 +425,24 @@ export function useAdminUserActions() {
     onSettled,
   });
 
+  // No optimistic update: the list is server-paginated/sorted/filtered with
+  // separate aggregate counts, so there's no well-defined slot to insert into
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; email: string; password: string; role?: string }) =>
+      createUserApi(data, t),
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.createError", { item: t("common.labels.user") }),
+      );
+    },
+    onSuccess: () => {
+      toast.success(t("common.created", { item: t("common.labels.user") }));
+    },
+    onSettled,
+  });
+
   // No optimistic update: nothing in the list changes
   const resetPasswordMutation = useMutation({
     mutationFn: ({
@@ -419,6 +464,9 @@ export function useAdminUserActions() {
 
   return {
     isUpdating: updateMutation.isPending,
+    isCreating: createMutation.isPending,
+    createUser: (data: { name: string; email: string; password: string; role?: string }) =>
+      run(createMutation.mutateAsync, data),
     updateUser: (userId: string, data: { name?: string; email?: string; role?: string }) =>
       run(updateMutation.mutateAsync, { userId, data }),
     banUser: (userId: string, reason: string, expiresAt?: Date) =>

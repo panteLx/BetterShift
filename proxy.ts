@@ -374,7 +374,7 @@ export async function proxy(request: NextRequest) {
   // If no session token, check guest access
   if (!sessionToken) {
     // If guest access is enabled, allow viewing without login
-    if (allowGuestAccess()) {
+    if (await allowGuestAccess()) {
       return nextWithNonce(request);
     }
 

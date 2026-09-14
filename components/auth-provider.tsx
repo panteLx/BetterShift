@@ -15,7 +15,7 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
  * - Respects auth and guest access feature flags
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -59,9 +59,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isPublicRoute && !isAuthenticated && !auth.allowGuestAccess) {
       const loginUrl = `/login?returnUrl=${encodeURIComponent(pathname + window.location.search)}`;
       router.replace(loginUrl);
+      return;
+    }
+
+    // Admin-created accounts must change their password before doing anything
+    // else. Client-side only, same trust level as the guest-access gating
+    // above -- this app's threat model doesn't require an API-layer block too.
+    if (isAuthenticated && user?.mustChangePassword && pathname !== "/profile") {
+      router.replace("/profile?section=password");
     }
   }, [
     mounted,
+    user,
     isAuthenticated,
     isLoading,
     auth.enabled,

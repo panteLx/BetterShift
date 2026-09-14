@@ -35,6 +35,10 @@ export const user = sqliteTable("user", {
   banned: integer("banned", { mode: "boolean" }).default(false),
   banReason: text("ban_reason"),
   banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
+  // Set on admin-created accounts; cleared once the user changes their password
+  mustChangePassword: integer("must_change_password", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export const session = sqliteTable(
@@ -232,6 +236,9 @@ export const systemSettings = sqliteTable("system_settings", {
   })
     .notNull()
     .default("all"),
+  allowGuestAccess: integer("allow_guest_access", { mode: "boolean" })
+    .notNull()
+    .default(false),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)

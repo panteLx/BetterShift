@@ -10,6 +10,7 @@
   "common": {
     "cancel": "Zrušit",
     "save": "Uložit",
+    "create": "Vytvořit",
     "saving": "Ukládání...",
     "close": "Zavřít",
     "delete": "Smazat",
@@ -525,7 +526,9 @@
       "visibility": "Banner viditelný pro",
       "visibilityAll": "Všechny",
       "visibilityAdmins": "Pouze administrátory",
-      "updateError": "Nastavení se nepodařilo uložit"
+      "updateError": "Nastavení se nepodařilo uložit",
+      "guestAccess": "Přístup pro hosty",
+      "guestAccessHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje."
     },
     "orphanedCalendarsWarning": "Zjištěny osiřelé kalendáře",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Existuje 1 kalendář bez vlastníka} few {Existují # kalendáře bez vlastníka} other {Existuje # kalendářů bez vlastníka}}. Přiřaďte je prosím uživatelům.",
@@ -654,7 +657,11 @@
     "selectedLogs": "{count} vybráno",
     "clearSelection": "Zrušit výběr",
     "deleteSelectedLogsDescription": "Smazat {count, plural, one {# vybraný protokol} few {# vybrané protokoly} other {# vybraných protokolů}}. Tuto akci nelze vrátit zpět.",
-    "willDeleteSelectedLogs": "{count, plural, one {# protokol} few {# protokoly} other {# protokolů}} bude trvale smazáno"
+    "willDeleteSelectedLogs": "{count, plural, one {# protokol} few {# protokoly} other {# protokolů}} bude trvale smazáno",
+    "createUser": "Vytvořit uživatele",
+    "createUserSubtitle": "Vytvoří nový účet i při vypnuté registraci.",
+    "mustChangePasswordHint": "Uživatel bude muset toto heslo změnit při prvním přihlášení.",
+    "emailAlreadyExists": "Uživatel s touto e-mailovou adresou již existuje"
   },
   "appearance": {
     "title": "Vzhled",
@@ -964,7 +971,9 @@
     "unknownBrowser": "Neznámý prohlížeč",
     "unknownOs": "Neznámý systém",
     "deleteImpact": "Smažou se i kalendáře, směny a sdílení.",
-    "deleteNeedsPassword": "Vyžaduje vaše heslo."
+    "deleteNeedsPassword": "Vyžaduje vaše heslo.",
+    "mustChangePasswordTitle": "Je vyžadována změna hesla",
+    "mustChangePasswordDescription": "Tento účet vytvořil administrátor. Nastavte si nyní nové heslo, abyste mohli pokračovat."
   },
   "adminKit": {
     "banned": "Zablokován",

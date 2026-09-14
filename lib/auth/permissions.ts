@@ -96,7 +96,7 @@ async function getUserCalendarPermissionWithCalendar(
     }
 
     // Guest access only works when explicitly enabled
-    if (allowGuestAccess() && calendar.guestPermission !== "none") {
+    if ((await allowGuestAccess()) && calendar.guestPermission !== "none") {
       return {
         permission: calendar.guestPermission as CalendarPermission,
         calendar,
@@ -296,7 +296,7 @@ export async function getUserAccessibleCalendars(
     }
 
     // Then, check for guest permissions (only if guest access is enabled)
-    if (allowGuestAccess()) {
+    if (await allowGuestAccess()) {
       const guestAccessibleCalendars = await db.query.calendars.findMany({
         where: (calendars, { ne }) => ne(calendars.guestPermission, "none"),
       });

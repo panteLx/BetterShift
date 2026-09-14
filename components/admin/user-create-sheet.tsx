@@ -2,22 +2,21 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Copy, Eye, EyeOff, RefreshCw, TriangleAlert } from "lucide-react";
+import { Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PanelDialog } from "@/components/panel-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field, inputClass } from "@/components/form-kit";
-import { StatusBanner } from "@/components/status-banner";
-import { cn } from "@/lib/utils";
+import { AdminFormPanel } from "@/components/admin/admin-form-panel";
+import { useAdminUserActions } from "@/hooks/useAdminUsers";
+import { useIsSuperAdmin } from "@/hooks/useAdminAccess";
 import { randomPassword } from "@/lib/password-utils";
-import type { AdminUser } from "@/hooks/useAdminUsers";
+import { cn } from "@/lib/utils";
 
-interface UserPasswordResetDialogProps {
+interface UserCreateSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: AdminUser;
-  onConfirm: (newPassword: string) => Promise<void>;
 }
 
 function PasswordInput({
@@ -60,21 +59,36 @@ function PasswordInput({
   );
 }
 
-export function UserPasswordResetDialog({
-  open,
-  onOpenChange,
-  user,
-  onConfirm,
-}: UserPasswordResetDialogProps) {
+export function UserCreateSheet({ open, onOpenChange }: UserCreateSheetProps) {
   const t = useTranslations();
+  const { createUser, isCreating } = useAdminUserActions();
+  const isSuperAdmin = useIsSuperAdmin();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("user");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const passwordsMatch = password === confirmPassword;
-  const isValid = password.length >= 8 && passwordsMatch;
+  const isValid =
+    name.trim().length > 0 &&
+    email.trim().length > 0 &&
+    password.length >= 8 &&
+    passwordsMatch;
+  const hasChanges = !!(name || email || password || confirmPassword);
+
+  const reset = () => {
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setRole("user");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
 
   const generateRandomPassword = () => {
     const newPassword = randomPassword();
@@ -89,62 +103,70 @@ export function UserPasswordResetDialog({
     toast.success(t("common.copied", { item: t("common.labels.password") }));
   };
 
-  const reset = () => {
-    setPassword("");
-    setConfirmPassword("");
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-  };
-
-  const handleConfirm = async () => {
+  const handleSave = async () => {
     if (!isValid) return;
-
-    setIsSubmitting(true);
-    try {
-      await onConfirm(password);
+    const success = await createUser({
+      name,
+      email,
+      password,
+      role: isSuperAdmin ? role : undefined,
+    });
+    if (success) {
       reset();
       onOpenChange(false);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    reset();
-    onOpenChange(false);
-  };
-
   return (
-    <PanelDialog
+    <AdminFormPanel
       open={open}
-      onOpenChange={onOpenChange}
-      title={t("admin.resetPassword")}
-      description={t("admin.resetPasswordFor", { name: user.name || user.email })}
-      width="sm"
-      bodyClassName="flex flex-col gap-4"
-      footer={
-        <>
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="h-10 flex-1 font-semibold"
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!isValid || isSubmitting}
-            className="h-10 flex-1 font-semibold"
-          >
-            {isSubmitting ? t("common.saving") : t("admin.setPassword")}
-          </Button>
-        </>
-      }
+      onOpenChange={(next) => {
+        if (!next) reset();
+        onOpenChange(next);
+      }}
+      title={t("admin.createUser")}
+      subtitle={t("admin.createUserSubtitle")}
+      onSave={handleSave}
+      isSaving={isCreating}
+      saveDisabled={!isValid}
+      saveLabel={t("common.create")}
+      hasUnsavedChanges={hasChanges}
     >
-      <StatusBanner tone="warning" icon={TriangleAlert} title={t("admin.passwordResetWarning")}>
-        {t("admin.passwordResetSecurityNote")}
-      </StatusBanner>
+      <Field label={t("common.labels.name")} htmlFor="admin-create-user-name">
+        <Input
+          id="admin-create-user-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("admin.namePlaceholder")}
+          className={inputClass}
+        />
+      </Field>
+
+      <Field label={t("common.labels.email")} htmlFor="admin-create-user-email">
+        <Input
+          id="admin-create-user-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={t("admin.emailPlaceholder")}
+          className={inputClass}
+        />
+      </Field>
+
+      {isSuperAdmin && (
+        <Field label={t("admin.role")} htmlFor="admin-create-user-role">
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger id="admin-create-user-role" className="h-10 w-full rounded-[9px] px-3 text-[14px] data-[size=default]:h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">{t("common.roles.user")}</SelectItem>
+              <SelectItem value="admin">{t("common.roles.admin")}</SelectItem>
+              <SelectItem value="superadmin">{t("common.roles.superadmin")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
 
       <Button
         type="button"
@@ -156,9 +178,9 @@ export function UserPasswordResetDialog({
         {t("admin.generatePassword")}
       </Button>
 
-      <Field label={t("common.labels.newPassword")} htmlFor="reset-password">
+      <Field label={t("common.labels.password")} htmlFor="admin-create-user-password" hint={t("admin.mustChangePasswordHint")}>
         <PasswordInput
-          id="reset-password"
+          id="admin-create-user-password"
           value={password}
           onChange={setPassword}
           visible={showPassword}
@@ -170,9 +192,9 @@ export function UserPasswordResetDialog({
         )}
       </Field>
 
-      <Field label={t("common.labels.confirmPassword")} htmlFor="reset-password-confirm">
+      <Field label={t("common.labels.confirmPassword")} htmlFor="admin-create-user-password-confirm">
         <PasswordInput
-          id="reset-password-confirm"
+          id="admin-create-user-password-confirm"
           value={confirmPassword}
           onChange={setConfirmPassword}
           visible={showConfirmPassword}
@@ -195,6 +217,6 @@ export function UserPasswordResetDialog({
           {t("admin.copyPassword")}
         </Button>
       )}
-    </PanelDialog>
+    </AdminFormPanel>
   );
 }

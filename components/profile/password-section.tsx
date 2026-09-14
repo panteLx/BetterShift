@@ -9,9 +9,9 @@ import { accountContentClass } from "@/components/profile/account-layout";
 import { usePasswordForm } from "@/hooks/useProfileForm";
 import { cn } from "@/lib/utils";
 
-export function PasswordSection() {
+export function PasswordSection({ onChanged }: { onChanged?: () => void }) {
   const t = useTranslations();
-  const form = usePasswordForm();
+  const form = usePasswordForm(onChanged);
 
   return (
     <form

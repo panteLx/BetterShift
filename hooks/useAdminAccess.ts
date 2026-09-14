@@ -16,6 +16,7 @@ import {
   canViewAuditLogs,
   canDeleteAuditLogs,
   canResetPassword,
+  canCreateUser,
 } from "@/lib/auth/admin";
 import type { User } from "@/lib/auth";
 
@@ -160,6 +161,16 @@ export function useCanViewAuditLogs(): boolean {
 export function useCanDeleteAuditLogs(): boolean {
   const { user } = useAuth();
   return useMemo(() => canDeleteAuditLogs(user), [user]);
+}
+
+/**
+ * Hook to check if current admin can create new users from the admin panel
+ *
+ * @returns boolean - true if current admin can create users
+ */
+export function useCanCreateUser(): boolean {
+  const { user } = useAuth();
+  return useMemo(() => canCreateUser(user), [user]);
 }
 
 /**

@@ -179,7 +179,7 @@ export function useProfileForm(
 
 export type ProfileForm = ReturnType<typeof useProfileForm>;
 
-export function usePasswordForm() {
+export function usePasswordForm(onSuccess?: () => void) {
   const t = useTranslations();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -237,6 +237,7 @@ export function usePasswordForm() {
 
       toast.success(t("auth.passwordChanged"));
       reset();
+      onSuccess?.();
     } catch (error) {
       console.error("Password change error:", error);
       toast.error(t("common.error"));

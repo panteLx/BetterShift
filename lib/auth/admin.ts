@@ -322,6 +322,21 @@ export function canDeleteAuditLogs(
 }
 
 /**
+ * Check if admin can create new users from the admin panel.
+ *
+ * Rules:
+ * - Both admin and superadmin can create users
+ * - Only superadmin may assign a role other than "user" at creation time
+ *   (mirrors canChangeUserRole's superadmin-only restriction)
+ *
+ * @param adminUser - The admin performing the action
+ * @returns boolean - true if admin can create users
+ */
+export function canCreateUser(adminUser: User | null | undefined): boolean {
+  return isAdmin(adminUser);
+}
+
+/**
  * Check if admin can view or change instance-wide system settings
  * (e.g. whether the update check runs and who sees its banner).
  *

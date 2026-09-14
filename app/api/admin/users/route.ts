@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { user, calendars, session, calendarShares } from "@/lib/db/schema";
-import { and, asc, count, desc, getTableColumns, getTableName, or, sql, type SQL } from "drizzle-orm";
-import { isAdmin } from "@/lib/auth/admin";
+import { and, asc, count, desc, eq, getTableColumns, getTableName, or, sql, type SQL } from "drizzle-orm";
+import { isAdmin, isSuperAdmin, canCreateUser } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
   isErrorResponse,
@@ -18,6 +18,10 @@ import {
   pickParam,
   type UserListCounts,
 } from "@/lib/admin-list";
+import { auth } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limiter";
+import { logAuditEvent, type AdminUserCreateMetadata } from "@/lib/audit-log";
+import { APIError } from "better-auth/api";
 
 /**
  * Admin User Management API
@@ -162,6 +166,141 @@ export async function GET(request: NextRequest) {
     console.error("Failed to fetch users:", error);
     return NextResponse.json(
       { error: "Failed to fetch users" },
+      { status: 500 }
+    );
+  }
+}
+
+const CREATABLE_ROLES = ["user", "admin", "superadmin"] as const;
+
+/**
+ * POST /api/admin/users
+ * Creates a user directly from the admin panel -- works even when public
+ * self-registration (ALLOW_USER_REGISTRATION) is disabled, see lib/auth.ts.
+ *
+ * Body: { name: string, email: string, password: string, role?: "user" | "admin" | "superadmin" }
+ * A `role` other than "user" is only honored for superadmin callers.
+ *
+ * Permission: Admin or Superadmin
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const currentUser = await getValidatedAdminUser(request);
+    if (isErrorResponse(currentUser)) return currentUser;
+
+    if (!canCreateUser(currentUser)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    const rateLimitResponse = rateLimit(
+      request,
+      currentUser.id,
+      "admin-user-create"
+    );
+    if (rateLimitResponse) return rateLimitResponse;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    const { name, email, password, role } = body as Record<string, unknown>;
+
+    if (typeof name !== "string" || !name.trim()) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+    if (typeof email !== "string" || !email.trim()) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+    if (typeof password !== "string" || password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters long" },
+        { status: 400 }
+      );
+    }
+
+    let resolvedRole: (typeof CREATABLE_ROLES)[number] = "user";
+    if (role !== undefined) {
+      if (!CREATABLE_ROLES.includes(role as (typeof CREATABLE_ROLES)[number])) {
+        return NextResponse.json(
+          { error: `role must be one of: ${CREATABLE_ROLES.join(", ")}` },
+          { status: 400 }
+        );
+      }
+      // Only superadmin may hand out anything above "user" at creation time --
+      // mirrors canChangeUserRole's superadmin-only restriction.
+      if (role !== "user" && !isSuperAdmin(currentUser)) {
+        return NextResponse.json(
+          { error: "Insufficient permissions to assign this role" },
+          { status: 403 }
+        );
+      }
+      resolvedRole = role as (typeof CREATABLE_ROLES)[number];
+    }
+
+    const [existing] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
+    if (existing) {
+      return NextResponse.json(
+        { error: "A user with this email already exists" },
+        { status: 409 }
+      );
+    }
+
+    let createdUserId: string;
+    try {
+      const result = await auth.api.createUser({
+        headers: request.headers,
+        body: {
+          email,
+          name,
+          password,
+          // "user" is the admin plugin's defaultRole already; its role type
+          // only accepts the configured custom roles ("admin"/"superadmin").
+          ...(resolvedRole !== "user" ? { role: resolvedRole } : {}),
+          data: { mustChangePassword: true },
+        },
+      });
+      createdUserId = result.user.id;
+    } catch (error) {
+      if (error instanceof APIError) {
+        return NextResponse.json(
+          { error: error.message || "Failed to create user" },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+
+    await logAuditEvent<AdminUserCreateMetadata>({
+      action: "admin.user.create",
+      userId: currentUser.id,
+      resourceType: "user",
+      resourceId: createdUserId,
+      metadata: {
+        createdUser: email,
+        role: resolvedRole,
+        createdBy: currentUser.email,
+      },
+      request,
+      severity: "warning",
+      isUserVisible: false,
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: { id: createdUserId, email, role: resolvedRole },
+    });
+  } catch (error) {
+    console.error("Failed to create user:", error);
+    return NextResponse.json(
+      { error: "Failed to create user" },
       { status: 500 }
     );
   }

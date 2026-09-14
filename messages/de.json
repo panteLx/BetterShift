@@ -10,6 +10,7 @@
   "common": {
     "cancel": "Abbrechen",
     "save": "Speichern",
+    "create": "Erstellen",
     "saving": "Speichere...",
     "close": "Schließen",
     "delete": "Löschen",
@@ -525,7 +526,9 @@
       "visibility": "Banner sichtbar für",
       "visibilityAll": "Alle",
       "visibilityAdmins": "Nur Admins",
-      "updateError": "Einstellungen konnten nicht gespeichert werden"
+      "updateError": "Einstellungen konnten nicht gespeichert werden",
+      "guestAccess": "Gastzugang",
+      "guestAccessHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt."
     },
     "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weise diese(n) Benutzern zu.",
@@ -654,7 +657,11 @@
     "selectedLogs": "{count} ausgewählt",
     "clearSelection": "Auswahl aufheben",
     "deleteSelectedLogsDescription": "{count, plural, one {# ausgewähltes Protokoll} other {# ausgewählte Protokolle}} löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "willDeleteSelectedLogs": "{count, plural, one {# Protokoll} other {# Protokolle}} werden dauerhaft gelöscht"
+    "willDeleteSelectedLogs": "{count, plural, one {# Protokoll} other {# Protokolle}} werden dauerhaft gelöscht",
+    "createUser": "Benutzer erstellen",
+    "createUserSubtitle": "Legt ein neues Konto an, auch wenn die Registrierung deaktiviert ist.",
+    "mustChangePasswordHint": "Der Benutzer muss dieses Passwort beim ersten Login ändern.",
+    "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits"
   },
   "appearance": {
     "title": "Erscheinungsbild",
@@ -964,7 +971,9 @@
     "unknownBrowser": "Unbekannter Browser",
     "unknownOs": "Unbekanntes System",
     "deleteImpact": "Kalender, Schichten und Freigaben werden mitgelöscht.",
-    "deleteNeedsPassword": "Verlangt dein Passwort."
+    "deleteNeedsPassword": "Verlangt dein Passwort.",
+    "mustChangePasswordTitle": "Passwortänderung erforderlich",
+    "mustChangePasswordDescription": "Ein Administrator hat dieses Konto erstellt. Bitte lege jetzt ein neues Passwort fest, um fortzufahren."
   },
   "adminKit": {
     "banned": "Gesperrt",
