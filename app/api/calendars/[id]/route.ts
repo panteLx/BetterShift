@@ -14,7 +14,11 @@ import {
   canDeleteCalendar,
   getCalendarAccess,
 } from "@/lib/auth/permissions";
-import { resolveGuestEligibleBundle } from "@/lib/auth/permission-bundles-service";
+import {
+  assertBundleWithinCallerCapabilities,
+  handleBundleServiceError,
+  resolveGuestEligibleBundle,
+} from "@/lib/auth/permission-bundles-service";
 import {
   calendarViewSettingsEqual,
   sanitizeCalendarViewSettings,
@@ -164,6 +168,10 @@ export async function PATCH(
           "Bundle contains capabilities that cannot be granted to guests"
         );
         if (bundle instanceof NextResponse) return bundle;
+        // A non-owner manageGuestAccess holder may only assign a bundle
+        // whose capabilities are a subset of their own — closes the
+        // self-escalation path a fixed cap used to guard against pre-PR.
+        assertBundleWithinCallerCapabilities(access!, bundle.capabilities);
         if (guestBundleId !== existingCalendar.guestBundleId) {
           updateData.guestBundleId = guestBundleId;
           changes.push("guestBundleId");
@@ -266,11 +274,7 @@ export async function PATCH(
 
     return NextResponse.json(calendar);
   } catch (error) {
-    console.error("Failed to update calendar:", error);
-    return NextResponse.json(
-      { error: "Failed to update calendar" },
-      { status: 500 }
-    );
+    return handleBundleServiceError(error, "Failed to update calendar");
   }
 }
 

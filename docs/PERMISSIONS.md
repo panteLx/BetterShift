@@ -94,7 +94,7 @@ Viewing shifts, notes & events, statistics, and the member list is checked on ev
 
 ### Who can assign or edit bundles
 
-Assigning a bundle to a person needs **manage shares**. Assigning a bundle to guest access or to a link needs **manage guest access**. Editing what a bundle actually contains — its ticked capabilities, its name — needs either of those two capabilities as well: anyone who can already hand someone the Admin bundle can just as easily edit a bundle's contents directly, so this isn't a wider grant than manage shares/manage guest access already imply.
+Assigning a bundle to a person needs **manage shares**. Assigning a bundle to guest access or to a link needs **manage guest access**. Editing what a bundle actually contains — its ticked capabilities, its name — needs either of those two capabilities as well: anyone who can assign a bundle can just as easily edit a bundle's contents directly, so this isn't a wider grant than manage shares/manage guest access already imply. Both are subject to the same cap: a non-owner can only create or assign a bundle whose capabilities are a subset of their own current access (see [Managing Shares](#managing-shares)).
 
 ### Signups
 
@@ -141,7 +141,7 @@ From the same tab, you can:
 - Change a person's bundle at any time
 - Remove access for a specific person
 
-Anyone with manage shares can assign any bundle to anyone, including the Admin bundle — there's no separate cap on how much access a sharer can grant.
+Anyone with manage shares can assign any bundle to anyone they could already grant themselves. The calendar owner can assign any bundle, including Admin. A non-owner is capped to bundles whose capabilities are a subset of their own current access — someone who only holds a narrow custom bundle plus manage shares cannot hand out Admin, even to themselves.
 
 ---
 

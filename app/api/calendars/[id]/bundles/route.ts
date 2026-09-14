@@ -4,7 +4,7 @@ import {
   getCalendarName,
   listBundlesWithUsage,
   handleBundleServiceError,
-  requireManageShares,
+  requireManageSharesOrGuestAccess,
 } from "@/lib/auth/permission-bundles-service";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarBundleCreatedMetadata } from "@/lib/audit-log";
@@ -15,7 +15,7 @@ export async function GET(
 ) {
   try {
     const { id: calendarId } = await params;
-    const auth = await requireManageShares(request, calendarId);
+    const auth = await requireManageSharesOrGuestAccess(request, calendarId);
     if (auth instanceof NextResponse) return auth;
 
     const bundles = await listBundlesWithUsage(calendarId);
@@ -35,7 +35,7 @@ export async function POST(
 ) {
   try {
     const { id: calendarId } = await params;
-    const auth = await requireManageShares(request, calendarId);
+    const auth = await requireManageSharesOrGuestAccess(request, calendarId);
     if (auth instanceof NextResponse) return auth;
 
     const rateLimitResponse = rateLimit(
@@ -53,10 +53,11 @@ export async function POST(
       return NextResponse.json({ error: "Invalid name" }, { status: 400 });
     }
 
-    const bundle = await createPermissionBundle(calendarId, {
-      name,
-      capabilities,
-    });
+    const bundle = await createPermissionBundle(
+      calendarId,
+      { name, capabilities },
+      auth.access
+    );
 
     await logUserAction<CalendarBundleCreatedMetadata>({
       userId: auth.userId,

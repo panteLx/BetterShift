@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendarShares, calendars } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
-import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
+import { getCalendarAccess, hasCapability } from "@/lib/auth/permissions";
+import {
+  assertBundleWithinCallerCapabilities,
+  getBundleForCalendar,
+  handleBundleServiceError,
+} from "@/lib/auth/permission-bundles-service";
 import { eq, and } from "drizzle-orm";
 import {
   logAuditEvent,
@@ -23,12 +27,8 @@ export async function PUT(
     }
 
     // Check if user has admin/owner permission
-    const hasPermission = await hasCapability(
-      user.id,
-      calendarId,
-      "manageShares"
-    );
-    if (!hasPermission) {
+    const access = await getCalendarAccess(user.id, calendarId);
+    if (!access?.can("manageShares")) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -38,9 +38,7 @@ export async function PUT(
     const body = await request.json();
     const { bundleId } = body;
 
-    // Validate the bundle: must exist and belong to this calendar (S2 — any
-    // manageShares holder may reassign to any bundle, admin-capable ones
-    // included; see S1's reasoning for why that isn't a privilege escalation).
+    // Validate the bundle: must exist and belong to this calendar.
     if (!bundleId || typeof bundleId !== "string") {
       return NextResponse.json({ error: "Invalid bundle id" }, { status: 400 });
     }
@@ -48,6 +46,10 @@ export async function PUT(
     if (!newBundle) {
       return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
     }
+    // A non-owner manageShares holder may only reassign to a bundle whose
+    // capabilities are a subset of their own — closes the self-escalation
+    // path a fixed cap used to guard against pre-PR.
+    assertBundleWithinCallerCapabilities(access, newBundle.capabilities);
 
     // Fetch existing share
     const existingShare = await db.query.calendarShares.findFirst({
@@ -132,11 +134,7 @@ export async function PUT(
 
     return NextResponse.json(shareWithUser);
   } catch (error) {
-    console.error("Failed to update calendar share:", error);
-    return NextResponse.json(
-      { error: "Failed to update share" },
-      { status: 500 }
-    );
+    return handleBundleServiceError(error, "Failed to update share");
   }
 }
 

@@ -5,7 +5,7 @@ import {
   getCalendarName,
   updatePermissionBundle,
   handleBundleServiceError,
-  requireManageShares,
+  requireManageSharesOrGuestAccess,
 } from "@/lib/auth/permission-bundles-service";
 import { rateLimit } from "@/lib/rate-limiter";
 import {
@@ -20,7 +20,7 @@ export async function PATCH(
 ) {
   try {
     const { id: calendarId, bundleId } = await params;
-    const auth = await requireManageShares(request, calendarId);
+    const auth = await requireManageSharesOrGuestAccess(request, calendarId);
     if (auth instanceof NextResponse) return auth;
 
     const rateLimitResponse = rateLimit(
@@ -43,10 +43,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid name" }, { status: 400 });
     }
 
-    const updated = await updatePermissionBundle(calendarId, bundleId, {
-      name,
-      capabilities,
-    });
+    const updated = await updatePermissionBundle(
+      calendarId,
+      bundleId,
+      { name, capabilities },
+      auth.access
+    );
 
     const before = new Set(existing.capabilities);
     const after = new Set(updated.capabilities);
@@ -82,7 +84,7 @@ export async function DELETE(
 ) {
   try {
     const { id: calendarId, bundleId } = await params;
-    const auth = await requireManageShares(request, calendarId);
+    const auth = await requireManageSharesOrGuestAccess(request, calendarId);
     if (auth instanceof NextResponse) return auth;
 
     const rateLimitResponse = rateLimit(

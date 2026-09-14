@@ -3,8 +3,12 @@ import { db } from "@/lib/db";
 import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
-import { resolveGuestEligibleBundle } from "@/lib/auth/permission-bundles-service";
+import { getCalendarAccess, hasCapability } from "@/lib/auth/permissions";
+import {
+  assertBundleWithinCallerCapabilities,
+  handleBundleServiceError,
+  resolveGuestEligibleBundle,
+} from "@/lib/auth/permission-bundles-service";
 import { logAuditEvent } from "@/lib/audit-log";
 
 /**
@@ -29,13 +33,9 @@ export async function PATCH(
     }
 
     // Check permissions
-    const canManage = await hasCapability(
-      user.id,
-      calendarId,
-      "manageGuestAccess"
-    );
+    const access = await getCalendarAccess(user.id, calendarId);
 
-    if (!canManage) {
+    if (!access?.can("manageGuestAccess")) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -88,6 +88,10 @@ export async function PATCH(
         "Bundle contains capabilities that cannot be granted via a link"
       );
       if (newBundle instanceof NextResponse) return newBundle;
+      // A non-owner manageGuestAccess holder may only assign a bundle whose
+      // capabilities are a subset of their own — closes the self-escalation
+      // path a fixed cap used to guard against pre-PR.
+      assertBundleWithinCallerCapabilities(access, newBundle.capabilities);
     }
 
     // Validate expiration date if provided
@@ -168,14 +172,7 @@ export async function PATCH(
       token: undefined,
     });
   } catch (error) {
-    console.error(
-      "[API] PATCH /api/calendars/[id]/tokens/[tokenId] error:",
-      error
-    );
-    return NextResponse.json(
-      { error: "Failed to update access token" },
-      { status: 500 }
-    );
+    return handleBundleServiceError(error, "Failed to update access token");
   }
 }
 

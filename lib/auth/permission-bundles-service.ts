@@ -14,7 +14,7 @@ import {
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
-import { hasCapability } from "@/lib/auth/permissions";
+import { getCalendarAccess, type CalendarAccess } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
 import {
   isGuestEligible,
@@ -68,23 +68,51 @@ function seedLabelsFor(seedKey: BundleSeedKey): string[] {
   );
 }
 
-/** Requires manageShares on the calendar; returns the caller's userId or a ready 401/403 response. */
-export async function requireManageShares(
+/**
+ * Requires manageShares or manageGuestAccess on the calendar — bundle CRUD is
+ * reachable via either, per docs/PERMISSIONS.md's "Who can assign or edit
+ * bundles". Returns the caller's userId and resolved access (reused by
+ * callers that also need to cap what the bundle may contain), or a ready
+ * 401/403 response.
+ */
+export async function requireManageSharesOrGuestAccess(
   request: NextRequest,
   calendarId: string
-): Promise<{ userId: string } | NextResponse> {
+): Promise<{ userId: string; access: CalendarAccess } | NextResponse> {
   const user = await getSessionUser(request.headers);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const hasPermission = await hasCapability(user.id, calendarId, "manageShares");
-  if (!hasPermission) {
+  const access = await getCalendarAccess(user.id, calendarId);
+  if (!access || (!access.can("manageShares") && !access.can("manageGuestAccess"))) {
     return NextResponse.json(
       { error: "Insufficient permissions" },
       { status: 403 }
     );
   }
-  return { userId: user.id };
+  return { userId: user.id, access };
+}
+
+/**
+ * Prevents a non-owner manageShares/manageGuestAccess holder from
+ * creating/assigning a bundle more powerful than what they hold themselves
+ * (self-escalation ceiling). Owners are exempt — they already hold every
+ * capability by definition, so this is a no-op for them, but it's still
+ * called for consistency.
+ */
+export function assertBundleWithinCallerCapabilities(
+  access: CalendarAccess,
+  capabilities: Capability[]
+): void {
+  if (access.isOwner) return;
+  const disallowed = capabilities.filter((cap) => !access.can(cap));
+  if (disallowed.length > 0) {
+    throw new PermissionBundleServiceError(
+      "Cannot grant capabilities you don't hold yourself",
+      403,
+      { forbiddenCapabilities: disallowed }
+    );
+  }
 }
 
 /** Maps a PermissionBundleServiceError to its HTTP shape, or falls back to a 500 for anything else. */
@@ -265,7 +293,8 @@ function assertGuestEligibleIfNeeded(
 
 export async function createPermissionBundle(
   calendarId: string,
-  input: { name: string; capabilities: unknown }
+  input: { name: string; capabilities: unknown },
+  callerAccess: CalendarAccess
 ): Promise<CalendarPermissionBundle> {
   const name = assertValidName(input.name);
   if (await isNameTaken(calendarId, name)) {
@@ -275,6 +304,7 @@ export async function createPermissionBundle(
     );
   }
   const capabilities = normalizeCapabilities(input.capabilities);
+  assertBundleWithinCallerCapabilities(callerAccess, capabilities);
   const [created] = await db
     .insert(calendarPermissionBundles)
     .values({ calendarId, name, seedKey: null, capabilities })
@@ -285,7 +315,8 @@ export async function createPermissionBundle(
 export async function updatePermissionBundle(
   calendarId: string,
   bundleId: string,
-  input: { name?: string; capabilities?: unknown }
+  input: { name?: string; capabilities?: unknown },
+  callerAccess: CalendarAccess
 ): Promise<CalendarPermissionBundle> {
   const existing = await getBundleForCalendar(calendarId, bundleId);
   if (!existing) {
@@ -314,15 +345,49 @@ export async function updatePermissionBundle(
     }
   }
 
+  let capabilities: Capability[] | undefined;
   if (input.capabilities !== undefined) {
-    const capabilities = normalizeCapabilities(input.capabilities);
-    const usage = await getBundleUsage(bundleId);
-    assertGuestEligibleIfNeeded(usage, capabilities);
+    capabilities = normalizeCapabilities(input.capabilities);
+    assertBundleWithinCallerCapabilities(callerAccess, capabilities);
     patch.capabilities = capabilities;
   }
 
   if (Object.keys(patch).length === 0) {
     return existing;
+  }
+
+  if (capabilities !== undefined) {
+    // Re-check guest-eligibility inside the same transaction as the write —
+    // otherwise a concurrent request could reassign the bundle to a
+    // token/guest slot between the check and the update (mirrors
+    // deletePermissionBundle's re-check of usage inside its transaction).
+    const updated = db.transaction((tx) => {
+      const usage: BundleUsage = {
+        shareCount: tx
+          .select({ total: count() })
+          .from(calendarShares)
+          .where(eq(calendarShares.bundleId, bundleId))
+          .get()!.total,
+        tokenCount: tx
+          .select({ total: count() })
+          .from(calendarAccessTokens)
+          .where(eq(calendarAccessTokens.bundleId, bundleId))
+          .get()!.total,
+        isGuestBundle: !!tx
+          .select({ id: calendars.id })
+          .from(calendars)
+          .where(eq(calendars.guestBundleId, bundleId))
+          .get(),
+      };
+      assertGuestEligibleIfNeeded(usage, capabilities!);
+      return tx
+        .update(calendarPermissionBundles)
+        .set(patch)
+        .where(eq(calendarPermissionBundles.id, bundleId))
+        .returning()
+        .get();
+    });
+    return sanitizeBundle(updated);
   }
 
   const [updated] = await db

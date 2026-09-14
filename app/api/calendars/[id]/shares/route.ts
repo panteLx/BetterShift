@@ -6,8 +6,12 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
-import { getBundleForCalendar } from "@/lib/auth/permission-bundles-service";
+import { getCalendarAccess, hasCapability } from "@/lib/auth/permissions";
+import {
+  assertBundleWithinCallerCapabilities,
+  getBundleForCalendar,
+  handleBundleServiceError,
+} from "@/lib/auth/permission-bundles-service";
 import { eq, and } from "drizzle-orm";
 import { logAuditEvent, type CalendarSharedMetadata } from "@/lib/audit-log";
 
@@ -85,12 +89,8 @@ export async function POST(
     }
 
     // Check if user has admin/owner permission
-    const hasPermission = await hasCapability(
-      user.id,
-      calendarId,
-      "manageShares"
-    );
-    if (!hasPermission) {
+    const access = await getCalendarAccess(user.id, calendarId);
+    if (!access?.can("manageShares")) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -108,9 +108,7 @@ export async function POST(
       );
     }
 
-    // Validate the bundle: must exist and belong to this calendar (S2 — any
-    // manageShares holder may assign any bundle, admin-capable ones
-    // included; see S1's reasoning for why that isn't a privilege escalation).
+    // Validate the bundle: must exist and belong to this calendar.
     if (!bundleId || typeof bundleId !== "string") {
       return NextResponse.json({ error: "Invalid bundle id" }, { status: 400 });
     }
@@ -118,6 +116,10 @@ export async function POST(
     if (!bundle) {
       return NextResponse.json({ error: "Bundle not found" }, { status: 404 });
     }
+    // A non-owner manageShares holder may only grant a bundle whose
+    // capabilities are a subset of their own — closes the self-escalation
+    // path a fixed cap used to guard against pre-PR.
+    assertBundleWithinCallerCapabilities(access, bundle.capabilities);
 
     // Ensure the target user actually exists
     const targetUserExists = await db.query.user.findFirst({
@@ -243,10 +245,6 @@ export async function POST(
 
     return NextResponse.json(shareWithUser, { status: 201 });
   } catch (error) {
-    console.error("Failed to create calendar share:", error);
-    return NextResponse.json(
-      { error: "Failed to create share" },
-      { status: 500 }
-    );
+    return handleBundleServiceError(error, "Failed to create share");
   }
 }

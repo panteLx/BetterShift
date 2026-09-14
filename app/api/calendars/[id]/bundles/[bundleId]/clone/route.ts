@@ -4,7 +4,7 @@ import {
   getBundleForCalendar,
   getCalendarName,
   handleBundleServiceError,
-  requireManageShares,
+  requireManageSharesOrGuestAccess,
 } from "@/lib/auth/permission-bundles-service";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarBundleClonedMetadata } from "@/lib/audit-log";
@@ -15,7 +15,7 @@ export async function POST(
 ) {
   try {
     const { id: calendarId, bundleId } = await params;
-    const auth = await requireManageShares(request, calendarId);
+    const auth = await requireManageSharesOrGuestAccess(request, calendarId);
     if (auth instanceof NextResponse) return auth;
 
     const rateLimitResponse = rateLimit(
