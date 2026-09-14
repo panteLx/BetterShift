@@ -116,6 +116,13 @@ export function sanitizeCapabilities(input: unknown): Capability[] {
   return Array.from(result);
 }
 
+/** Applies sanitizeCapabilities() to a bundle row read straight from the DB. */
+export function sanitizeBundle<T extends { capabilities: unknown }>(
+  bundle: T
+): T & { capabilities: Capability[] } {
+  return { ...bundle, capabilities: sanitizeCapabilities(bundle.capabilities) };
+}
+
 /**
  * Capability dependencies (S3 — enforced server-side, the UI just reflects
  * them by ticking the dependency visibly). Applied to a fixed point by

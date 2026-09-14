@@ -13,13 +13,12 @@ import {
   getTokensFromCookie,
   validateAccessToken,
 } from "@/lib/auth/token-auth";
-import type { CalendarMember } from "@/lib/types";
+import type { CalendarBundleRef, CalendarMember } from "@/lib/types";
 import {
   CAPABILITIES,
   isAdminOnlyCapability,
-  sanitizeCapabilities,
+  sanitizeBundle,
   type BundleDefinition,
-  type BundleSeedKey,
   type Capability,
 } from "@/lib/permission-bundles";
 
@@ -29,23 +28,40 @@ async function getBundleById(
   const bundle = await db.query.calendarPermissionBundles.findFirst({
     where: eq(calendarPermissionBundles.id, bundleId),
   });
-  if (!bundle) return null;
-  return { ...bundle, capabilities: sanitizeCapabilities(bundle.capabilities) };
-}
-
-interface ResolvedBundleRef {
-  id: string;
-  name: string;
-  seedKey: BundleSeedKey | null;
+  return bundle ? sanitizeBundle(bundle) : null;
 }
 
 interface ResolvedCalendarAccess {
   isOwner: boolean;
-  source: "share" | "token" | "guestBundle";
+  source: "owner" | "share" | "token" | "guestBundle";
   capabilities: Capability[];
   calendar: typeof calendars.$inferSelect;
   /** null for the owner/auth-disabled branches, which never go through a bundle. */
-  bundle: ResolvedBundleRef | null;
+  bundle: CalendarBundleRef | null;
+}
+
+function ownerAccess(calendar: typeof calendars.$inferSelect): ResolvedCalendarAccess {
+  return {
+    isOwner: true,
+    source: "owner",
+    capabilities: [...CAPABILITIES],
+    calendar,
+    bundle: null,
+  };
+}
+
+function bundleAccess(
+  calendar: typeof calendars.$inferSelect,
+  source: "share" | "token" | "guestBundle",
+  bundle: CalendarPermissionBundle
+): ResolvedCalendarAccess {
+  return {
+    isOwner: false,
+    source,
+    capabilities: bundle.capabilities,
+    calendar,
+    bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
+  };
 }
 
 /**
@@ -58,63 +74,39 @@ async function resolveCalendarAccess(
   userId: string | null | undefined,
   calendarId: string
 ): Promise<ResolvedCalendarAccess | null> {
+  // guestBundle fetched alongside the calendar (one hop via the relation)
+  // since almost every branch below may need it.
   const calendar = await db.query.calendars.findFirst({
     where: eq(calendars.id, calendarId),
+    with: { guestBundle: true },
   });
   if (!calendar) return null;
 
   // If auth is disabled, grant full owner access (backwards compatibility)
   if (!isAuthEnabled()) {
-    return {
-      isOwner: true,
-      source: "share",
-      capabilities: [...CAPABILITIES],
-      calendar,
-      bundle: null,
-    };
+    return ownerAccess(calendar);
   }
 
   // CRITICAL: Orphaned calendars (ownerId=null) are invisible to ALL users.
   // They can only be accessed via dedicated admin panel API routes.
   if (calendar.ownerId === null) return null;
 
+  const guestBundle = calendar.guestBundle ? sanitizeBundle(calendar.guestBundle) : null;
+
   if (!userId) {
     const tokenBundleId = await getTokenBundleId(calendarId);
     if (tokenBundleId) {
       const bundle = await getBundleById(tokenBundleId);
-      if (bundle) {
-        return {
-          isOwner: false,
-          source: "token",
-          capabilities: bundle.capabilities,
-          calendar,
-          bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
-        };
-      }
+      if (bundle) return bundleAccess(calendar, "token", bundle);
     }
-    if (allowGuestAccess() && calendar.guestBundleId) {
-      const bundle = await getBundleById(calendar.guestBundleId);
-      if (bundle) {
-        return {
-          isOwner: false,
-          source: "guestBundle",
-          capabilities: bundle.capabilities,
-          calendar,
-          bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
-        };
-      }
+    if (allowGuestAccess() && guestBundle) {
+      return bundleAccess(calendar, "guestBundle", guestBundle);
     }
     return null;
   }
 
   if (calendar.ownerId === userId) {
-    return {
-      isOwner: true,
-      source: "share",
-      capabilities: [...CAPABILITIES],
-      calendar,
-      bundle: null,
-    };
+    return ownerAccess(calendar);
   }
 
   const share = await db.query.calendarShares.findFirst({
@@ -122,32 +114,16 @@ async function resolveCalendarAccess(
       eq(calendarShares.calendarId, calendarId),
       eq(calendarShares.userId, userId)
     ),
+    with: { bundle: true },
   });
-  if (share) {
-    const bundle = await getBundleById(share.bundleId);
-    if (bundle) {
-      return {
-        isOwner: false,
-        source: "share",
-        capabilities: bundle.capabilities,
-        calendar,
-        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
-      };
-    }
+  if (share?.bundle) {
+    return bundleAccess(calendar, "share", sanitizeBundle(share.bundle));
   }
 
   const tokenBundleId = await getTokenBundleId(calendarId);
   if (tokenBundleId) {
     const bundle = await getBundleById(tokenBundleId);
-    if (bundle) {
-      return {
-        isOwner: false,
-        source: "token",
-        capabilities: bundle.capabilities,
-        calendar,
-        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
-      };
-    }
+    if (bundle) return bundleAccess(calendar, "token", bundle);
   }
 
   // Authenticated users can always access public calendars they're
@@ -159,17 +135,8 @@ async function resolveCalendarAccess(
       eq(userCalendarSubscriptions.status, "subscribed")
     ),
   });
-  if (subscription && calendar.guestBundleId) {
-    const bundle = await getBundleById(calendar.guestBundleId);
-    if (bundle) {
-      return {
-        isOwner: false,
-        source: "guestBundle",
-        capabilities: bundle.capabilities,
-        calendar,
-        bundle: { id: bundle.id, name: bundle.name, seedKey: bundle.seedKey },
-      };
-    }
+  if (subscription && guestBundle) {
+    return bundleAccess(calendar, "guestBundle", guestBundle);
   }
 
   return null;
@@ -240,7 +207,7 @@ export interface EffectiveAccessSummary {
   isOwner: boolean;
   capabilities: Capability[];
   /** null for the owner and for auth-disabled — every other source resolves through a bundle. */
-  bundle: ResolvedBundleRef | null;
+  bundle: CalendarBundleRef | null;
 }
 
 /**
@@ -310,19 +277,8 @@ export async function isCalendarOwner(
   userId: string | null | undefined,
   calendarId: string
 ): Promise<boolean> {
-  if (!isAuthEnabled()) {
-    const calendar = await db.query.calendars.findFirst({
-      where: eq(calendars.id, calendarId),
-      columns: { id: true },
-    });
-    return !!calendar;
-  }
-  if (!userId) return false;
-  const calendar = await db.query.calendars.findFirst({
-    where: eq(calendars.id, calendarId),
-    columns: { ownerId: true },
-  });
-  return !!calendar && calendar.ownerId === userId;
+  const access = await getCalendarAccess(userId, calendarId);
+  return access?.isOwner ?? false;
 }
 
 /**
@@ -434,22 +390,22 @@ export async function getUserAccessibleCalendars(
 
   const results: Array<{ id: string; isOwner: boolean }> = [];
 
-  const ownedCalendars = await db.query.calendars.findMany({
-    where: eq(calendars.ownerId, userId),
-    columns: { id: true },
-  });
+  const [ownedCalendars, subscriptions, sharedCalendars] = await Promise.all([
+    db.query.calendars.findMany({
+      where: eq(calendars.ownerId, userId),
+      columns: { id: true },
+    }),
+    db.query.userCalendarSubscriptions.findMany({
+      where: eq(userCalendarSubscriptions.userId, userId),
+      with: { calendar: true },
+    }),
+    db.query.calendarShares.findMany({
+      where: eq(calendarShares.userId, userId),
+    }),
+  ]);
   results.push(...ownedCalendars.map((cal) => ({ id: cal.id, isOwner: true })));
 
   const existingIds = new Set(results.map((r) => r.id));
-
-  const subscriptions = await db.query.userCalendarSubscriptions.findMany({
-    where: eq(userCalendarSubscriptions.userId, userId),
-    with: { calendar: true },
-  });
-
-  const sharedCalendars = await db.query.calendarShares.findMany({
-    where: eq(calendarShares.userId, userId),
-  });
 
   for (const share of sharedCalendars) {
     if (existingIds.has(share.calendarId)) continue;
@@ -698,10 +654,7 @@ export async function listPermissionBundles(
     where: eq(calendarPermissionBundles.calendarId, calendarId),
     orderBy: (bundles, { asc }) => [asc(bundles.createdAt)],
   });
-  return rows.map((row) => ({
-    ...row,
-    capabilities: sanitizeCapabilities(row.capabilities),
-  }));
+  return rows.map(sanitizeBundle);
 }
 
 /**

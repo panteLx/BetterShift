@@ -16,7 +16,7 @@ import { eq, and, count, sql } from "drizzle-orm";
 import {
   isGuestEligible,
   normalizeCapabilities,
-  sanitizeCapabilities,
+  sanitizeBundle,
   type BundleSeedKey,
   type Capability,
 } from "@/lib/permission-bundles";
@@ -76,8 +76,7 @@ export async function getBundleForCalendar(
       eq(calendarPermissionBundles.calendarId, calendarId)
     ),
   });
-  if (!bundle) return null;
-  return { ...bundle, capabilities: sanitizeCapabilities(bundle.capabilities) };
+  return bundle ? sanitizeBundle(bundle) : null;
 }
 
 export async function getBundleUsage(bundleId: string): Promise<BundleUsage> {
@@ -127,8 +126,7 @@ export async function listBundlesWithUsage(
     .orderBy(calendarPermissionBundles.createdAt);
 
   return rows.map(({ shareCount, tokenCount, guestCount, ...bundle }) => ({
-    ...bundle,
-    capabilities: sanitizeCapabilities(bundle.capabilities),
+    ...sanitizeBundle(bundle),
     usage: {
       shareCount: Number(shareCount),
       tokenCount: Number(tokenCount),
@@ -206,7 +204,7 @@ export async function createPermissionBundle(
     .insert(calendarPermissionBundles)
     .values({ calendarId, name, seedKey: null, capabilities })
     .returning();
-  return { ...created, capabilities: sanitizeCapabilities(created.capabilities) };
+  return sanitizeBundle(created);
 }
 
 export async function updatePermissionBundle(
@@ -257,7 +255,7 @@ export async function updatePermissionBundle(
     .set(patch)
     .where(eq(calendarPermissionBundles.id, bundleId))
     .returning();
-  return { ...updated, capabilities: sanitizeCapabilities(updated.capabilities) };
+  return sanitizeBundle(updated);
 }
 
 export async function clonePermissionBundle(
@@ -285,7 +283,7 @@ export async function clonePermissionBundle(
       capabilities: source.capabilities,
     })
     .returning();
-  return { ...created, capabilities: sanitizeCapabilities(created.capabilities) };
+  return sanitizeBundle(created);
 }
 
 export async function deletePermissionBundle(
