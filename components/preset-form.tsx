@@ -9,6 +9,10 @@ import { DEFAULT_COLOR } from "@/lib/constants";
 import type { PresetFormData } from "@/hooks/usePresets";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { cn } from "@/lib/utils";
+import { validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
+import type { TimeRange } from "@/lib/time-ranges";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 
 export const EMPTY_PRESET_FORM: PresetFormData = {
   title: "",
@@ -21,9 +25,10 @@ export const EMPTY_PRESET_FORM: PresetFormData = {
   isAllDay: false,
   hideFromStats: false,
   defaultSignupCapacity: null,
+  segments: [],
 };
 
-export function presetToFormData(preset: ShiftPreset): PresetFormData {
+export function presetToFormData(preset: ShiftPreset & { segments?: TimeRange[] }): PresetFormData {
   return {
     title: preset.title,
     startTime: preset.startTime,
@@ -35,11 +40,17 @@ export function presetToFormData(preset: ShiftPreset): PresetFormData {
     isAllDay: preset.isAllDay || false,
     hideFromStats: preset.hideFromStats || false,
     defaultSignupCapacity: preset.defaultSignupCapacity ?? null,
+    segments: preset.segments ?? [],
   };
 }
 
 export function samePresetForm(a: PresetFormData, b: PresetFormData): boolean {
-  return (Object.keys(a) as (keyof PresetFormData)[]).every((key) => a[key] === b[key]);
+  const { segments: segmentsA, ...restA } = a;
+  const { segments: segmentsB, ...restB } = b;
+  return (
+    (Object.keys(restA) as (keyof typeof restA)[]).every((key) => restA[key] === restB[key]) &&
+    JSON.stringify(segmentsA) === JSON.stringify(segmentsB)
+  );
 }
 
 
@@ -54,6 +65,7 @@ interface PresetFormCardProps {
   titleRef?: Ref<HTMLInputElement>;
   /** Existing group names across this calendar's presets, offered as datalist suggestions. */
   existingGroupNames?: string[];
+  splitShiftsEnabled?: boolean;
 }
 
 /** "Neue Vorlage" card; the same card edits an existing preset. */
@@ -67,6 +79,7 @@ export function PresetFormCard({
   cardRef,
   titleRef,
   existingGroupNames = [],
+  splitShiftsEnabled,
 }: PresetFormCardProps) {
   const t = useTranslations();
   const id = useId();
@@ -123,6 +136,72 @@ export function PresetFormCard({
           </Field>
         </div>
       )}
+
+      {!value.isAllDay && value.segments.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {value.segments.map((segment, index) => (
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2.5">
+              <Field label={t("presetSheet.start")}>
+                <Input
+                  type="time"
+                  value={segment.startTime}
+                  onChange={(e) => {
+                    const next = [...value.segments];
+                    next[index] = { ...next[index], startTime: e.target.value };
+                    onChange({ segments: next });
+                  }}
+                  className={cn(fieldClass, "font-mono")}
+                  disabled={disabled}
+                />
+              </Field>
+              <Field label={t("presetSheet.end")}>
+                <Input
+                  type="time"
+                  value={segment.endTime}
+                  onChange={(e) => {
+                    const next = [...value.segments];
+                    next[index] = { ...next[index], endTime: e.target.value };
+                    onChange({ segments: next });
+                  }}
+                  className={cn(fieldClass, "font-mono")}
+                  disabled={disabled}
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={t("timeRanges.remove")}
+                disabled={disabled}
+                onClick={() => onChange({ segments: value.segments.filter((_, i) => i !== index) })}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!value.isAllDay && splitShiftsEnabled && !disabled && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() =>
+            onChange({ segments: [...value.segments, { startTime: "12:00", endTime: "14:00" }] })
+          }
+        >
+          <Plus className="size-4" />
+          {t("timeRanges.add")}
+        </Button>
+      )}
+
+      {!value.isAllDay &&
+        (() => {
+          const error = validateTimeRanges(toTimeRanges(value));
+          return error ? <p className="text-[13px] text-destructive">{t(`timeRanges.errors.${error}`)}</p> : null;
+        })()}
 
       <ColorSwatches
         value={value.color}

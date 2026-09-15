@@ -55,6 +55,7 @@ export function useShiftForm({
       isAllDay: shiftData.isAllDay || false,
       isSecondary: false,
       hideFromStats: false,
+      segments: shiftData.segments ?? [],
     });
 
     return success;

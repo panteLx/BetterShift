@@ -18,8 +18,10 @@ import { ShiftPreset } from "@/lib/db/schema";
 import { groupPresetsByName } from "@/lib/shift-display";
 import { usePresets, type PresetFormData } from "@/hooks/usePresets";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useCalendars } from "@/hooks/useCalendars";
 import { useReportDirty } from "@/hooks/useDirtyState";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
+import { validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
 
 interface PresetsPanelProps {
   calendarId: string;
@@ -52,6 +54,8 @@ export function PresetsPanel({
     readOnly || (!permission.can("createPreset") && !permission.can("manageOwnPresets"));
   const { presets, loading, createPreset, updatePreset, deletePreset, reorderPresets } =
     usePresets(calendarId);
+  const { calendars } = useCalendars();
+  const splitShiftsEnabled = calendars.find((c) => c.id === calendarId)?.splitShiftsEnabled ?? false;
 
   const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
@@ -72,7 +76,11 @@ export function PresetsPanel({
   // for editing, reachable only via an already-gated Edit button.
   const formVisible = editingPreset ? canEditPreset(editingPreset) : canCreate;
   const isDirty = formVisible && !samePresetForm(formData, baseline);
-  const canSave = !isSaving && formData.title.trim() !== "" && (!editingPreset || isDirty);
+  const canSave =
+    !isSaving &&
+    formData.title.trim() !== "" &&
+    (!editingPreset || isDirty) &&
+    (formData.isAllDay || !validateTimeRanges(toTimeRanges(formData)));
 
   useReportDirty(isDirty, onDirtyChange);
 
@@ -232,6 +240,7 @@ export function PresetsPanel({
             cardRef={formRef}
             titleRef={titleRef}
             existingGroupNames={existingGroupNames}
+            splitShiftsEnabled={splitShiftsEnabled}
           />
         )}
       </PanelBody>

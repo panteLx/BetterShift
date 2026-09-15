@@ -6,6 +6,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api-error";
 import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
+import type { TimeRange } from "@/lib/time-ranges";
 
 // Form data interface
 export interface PresetFormData {
@@ -19,6 +20,7 @@ export interface PresetFormData {
   isAllDay: boolean;
   hideFromStats: boolean;
   defaultSignupCapacity?: number | null;
+  segments: TimeRange[];
 }
 
 // API functions
@@ -102,7 +104,7 @@ async function reorderPresetsApi(
 function createOptimisticPreset(
   calendarId: string,
   formData: PresetFormData
-): ShiftPreset {
+): ShiftPreset & { segments: TimeRange[] } {
   return {
     id: `temp-${generateTempId()}`,
     calendarId,
@@ -116,6 +118,7 @@ function createOptimisticPreset(
     isAllDay: formData.isAllDay,
     hideFromStats: formData.hideFromStats,
     defaultSignupCapacity: formData.defaultSignupCapacity ?? null,
+    segments: formData.segments,
     order: 999, // Will be corrected by server
     createdBy: null,
     createdAt: new Date(),
