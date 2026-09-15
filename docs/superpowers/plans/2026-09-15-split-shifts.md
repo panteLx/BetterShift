@@ -683,7 +683,7 @@ with:
 
 ```ts
     const shift = db.transaction((tx) => {
-      const [inserted] = tx
+      const inserted = tx
         .insert(shifts)
         .values({
           calendarId,
@@ -809,7 +809,7 @@ with:
 
 ```ts
     const updatedShift = db.transaction((tx) => {
-      const [updated] = tx
+      const updated = tx
         .update(shifts)
         .set({
           date,
@@ -980,7 +980,7 @@ with:
 
 ```ts
     const preset = db.transaction((tx) => {
-      const [inserted] = tx
+      const inserted = tx
         .insert(shiftPresets)
         .values({
           calendarId,
@@ -1076,7 +1076,7 @@ Replace the two existing update calls (preset row + cascaded shifts) with a sing
 
 ```ts
     const updatedPreset = db.transaction((tx) => {
-      const [updated] = tx
+      const updated = tx
         .update(shiftPresets)
         .set({
           title,
