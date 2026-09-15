@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useCalendarAccessFilter } from "@/hooks/useCalendars";
 import { LIVE_REFETCH_INTERVAL } from "@/lib/query-client";
+import type { TimeRange } from "@/lib/time-ranges";
+
+// The API attaches `segments` as a joined field; ShiftPreset itself doesn't declare it.
+export type PresetWithSegments = ShiftPreset & { segments?: TimeRange[] };
 
 // API functions
 async function fetchShiftsApi(
@@ -38,7 +42,7 @@ async function fetchExternalSyncsApi(
   return await response.json();
 }
 
-async function fetchPresetsApi(calendarId: string): Promise<ShiftPreset[]> {
+async function fetchPresetsApi(calendarId: string): Promise<PresetWithSegments[]> {
   const response = await fetch(`/api/presets?calendarId=${calendarId}`);
   if (!response.ok) return [];
   return await response.json();
@@ -162,7 +166,7 @@ export function useCompareData({
   }, [calendarIds, externalSyncsDataArray]);
 
   const presetsMap = useMemo(() => {
-    const map = new Map<string, ShiftPreset[]>();
+    const map = new Map<string, PresetWithSegments[]>();
     calendarIds.forEach((id, index) => {
       map.set(id, presetsDataArray[index] || []);
     });

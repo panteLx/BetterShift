@@ -1090,6 +1090,15 @@
     },
     "addOtherHint": "Nemůžete někoho najít? Nejdřív s ním sdílejte kalendář, pak ho tu budete moct vybrat."
   },
+  "timeRanges": {
+    "add": "Přidat časový úsek",
+    "remove": "Odebrat časový úsek",
+    "errors": {
+      "overlap": "Časové úseky se nesmí překrývat.",
+      "overnight_segment": "Při více časových úsecích musí každý skončit ve stejný den.",
+      "invalid_format": "Neplatný čas."
+    }
+  },
   "permissionBundles": {
     "bundle": "Skupina oprávnění",
     "title": "Oprávnění",

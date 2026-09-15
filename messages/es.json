@@ -1090,6 +1090,15 @@
     },
     "addOtherHint": "¿No encuentras a alguien? Comparte primero el calendario con esa persona; luego podrás seleccionarla aquí."
   },
+  "timeRanges": {
+    "add": "Añadir tramo horario",
+    "remove": "Quitar tramo horario",
+    "errors": {
+      "overlap": "Los tramos horarios no deben superponerse.",
+      "overnight_segment": "Con varios tramos horarios, cada uno debe terminar el mismo día.",
+      "invalid_format": "Hora no válida."
+    }
+  },
   "permissionBundles": {
     "bundle": "Grupo de permisos",
     "title": "Permisos",

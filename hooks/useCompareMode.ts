@@ -181,6 +181,7 @@ export function useCompareMode({
                   notes: preset.notes || "",
                   presetId: preset.id,
                   isAllDay: preset.isAllDay || false,
+                  segments: preset.segments ?? [],
                 },
               });
             }

@@ -1090,6 +1090,15 @@
     },
     "addOtherHint": "Can't find someone? Share the calendar with them first, then you can pick them here."
   },
+  "timeRanges": {
+    "add": "Add time range",
+    "remove": "Remove time range",
+    "errors": {
+      "overlap": "Time ranges must not overlap.",
+      "overnight_segment": "With multiple time ranges, each one must end on the same day.",
+      "invalid_format": "Invalid time."
+    }
+  },
   "permissionBundles": {
     "bundle": "Permission bundle",
     "title": "Permissions",

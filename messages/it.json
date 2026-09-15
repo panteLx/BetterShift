@@ -1090,6 +1090,15 @@
     },
     "addOtherHint": "Non trovi qualcuno? Condividi prima il calendario con questa persona, poi potrai selezionarla qui."
   },
+  "timeRanges": {
+    "add": "Aggiungi fascia oraria",
+    "remove": "Rimuovi fascia oraria",
+    "errors": {
+      "overlap": "Le fasce orarie non devono sovrapporsi.",
+      "overnight_segment": "Con più fasce orarie, ciascuna deve terminare lo stesso giorno.",
+      "invalid_format": "Ora non valida."
+    }
+  },
   "permissionBundles": {
     "bundle": "Gruppo di permessi",
     "title": "Permessi",

@@ -1,6 +1,8 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 import {
   CheckRow,
   ColorSwatches,
@@ -13,6 +15,7 @@ import { useAutoFocusRef } from "@/hooks/useAutoFocus";
 import { DEFAULT_COLOR } from "@/lib/constants";
 import { calculateShiftDuration } from "@/lib/date-utils";
 import { formatHours } from "@/lib/shift-display";
+import { validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
 import { cn } from "@/lib/utils";
 
 interface ShiftFormFieldsProps {
@@ -24,6 +27,7 @@ interface ShiftFormFieldsProps {
   onPresetNameChange: (value: string) => void;
   isEditing: boolean;
   readOnly?: boolean;
+  splitShiftsEnabled?: boolean;
 }
 
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
@@ -37,6 +41,7 @@ export function ShiftFormFields({
   onPresetNameChange,
   isEditing,
   readOnly = false,
+  splitShiftsEnabled = false,
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -98,6 +103,81 @@ export function ShiftFormFields({
             </output>
           </Field>
         </div>
+
+        {!formData.isAllDay && (formData.segments?.length ?? 0) > 0 && (
+          <div className="flex flex-col gap-2">
+            {(formData.segments ?? []).map((segment, index) => (
+              <div key={index} className="flex items-end gap-2.5">
+                <Field label={t("shiftSheet.start")} className="flex-1">
+                  <Input
+                    type="time"
+                    value={segment.startTime}
+                    onChange={(e) => {
+                      const next = [...(formData.segments ?? [])];
+                      next[index] = { ...next[index], startTime: e.target.value };
+                      onFormDataChange({ ...formData, segments: next });
+                    }}
+                    disabled={readOnly}
+                    className={cn(inputClass, "font-mono")}
+                  />
+                </Field>
+                <Field label={t("shiftSheet.end")} className="flex-1">
+                  <Input
+                    type="time"
+                    value={segment.endTime}
+                    onChange={(e) => {
+                      const next = [...(formData.segments ?? [])];
+                      next[index] = { ...next[index], endTime: e.target.value };
+                      onFormDataChange({ ...formData, segments: next });
+                    }}
+                    disabled={readOnly}
+                    className={cn(inputClass, "font-mono")}
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="mb-[1px] shrink-0"
+                  aria-label={t("timeRanges.remove")}
+                  disabled={readOnly}
+                  onClick={() => {
+                    const next = (formData.segments ?? []).filter((_, i) => i !== index);
+                    onFormDataChange({ ...formData, segments: next });
+                  }}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!formData.isAllDay && splitShiftsEnabled && !readOnly && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() =>
+              onFormDataChange({
+                ...formData,
+                segments: [...(formData.segments ?? []), { startTime: "12:00", endTime: "14:00" }],
+              })
+            }
+          >
+            <Plus className="size-4" />
+            {t("timeRanges.add")}
+          </Button>
+        )}
+
+        {!formData.isAllDay &&
+          (() => {
+            const error = validateTimeRanges(toTimeRanges(formData));
+            return error ? (
+              <p className="text-[13px] text-danger-body">{t(`timeRanges.errors.${error}`)}</p>
+            ) : null;
+          })()}
 
         <CheckRow
           id="allDay"

@@ -1090,6 +1090,15 @@
     },
     "addOtherHint": "Person nicht in der Liste? Teile den Kalender zuerst mit ihr, dann kannst du sie hier auswählen."
   },
+  "timeRanges": {
+    "add": "Zeitfenster hinzufügen",
+    "remove": "Zeitfenster entfernen",
+    "errors": {
+      "overlap": "Zeitfenster dürfen sich nicht überschneiden.",
+      "overnight_segment": "Bei mehreren Zeitfenstern muss jedes am selben Tag enden.",
+      "invalid_format": "Ungültige Uhrzeit."
+    }
+  },
   "permissionBundles": {
     "bundle": "Berechtigungsgruppe",
     "title": "Berechtigungen",

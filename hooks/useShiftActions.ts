@@ -4,10 +4,11 @@ import { ShiftFormData } from "@/components/shift-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal, toLocalDate } from "@/lib/date-utils";
+import type { TimeRange } from "@/lib/time-ranges";
 
 interface UseShiftActionsProps {
   shifts: ShiftWithCalendar[];
-  presets: ShiftPreset[];
+  presets: (ShiftPreset & { segments?: TimeRange[] })[];
   createShift: (data: ShiftFormData) => Promise<ShiftWithCalendar>;
   deleteShift: (id: string) => Promise<void>;
   onStatsRefresh?: () => void;
@@ -91,6 +92,7 @@ export function useShiftActions({
                 notes: preset.notes || "",
                 presetId: preset.id,
                 isAllDay: preset.isAllDay || false,
+                segments: preset.segments ?? [],
               };
 
               try {

@@ -5,6 +5,7 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { usePresets } from "@/hooks/usePresets";
 import { DEFAULT_COLOR } from "@/lib/constants";
+import type { TimeRange } from "@/lib/time-ranges";
 
 interface UseShiftFormOptions {
   open: boolean;
@@ -33,6 +34,7 @@ export function useShiftForm({
     color: shift?.color || DEFAULT_COLOR,
     isAllDay: false,
     signupCapacity: shift?.signupCapacity ?? null,
+    segments: shift?.segments ?? [],
   });
 
   const { presets, createPreset } = usePresets(calendarId);
@@ -58,7 +60,7 @@ export function useShiftForm({
     return success;
   };
 
-  const applyPreset = (preset: ShiftPreset) => {
+  const applyPreset = (preset: ShiftPreset & { segments?: TimeRange[] }) => {
     setFormData({
       ...formData,
       startTime: preset.startTime,
@@ -68,6 +70,7 @@ export function useShiftForm({
       color: preset.color,
       isAllDay: preset.isAllDay || false,
       signupCapacity: preset.defaultSignupCapacity ?? null,
+      segments: preset.segments ?? [],
     });
   };
 
@@ -82,6 +85,7 @@ export function useShiftForm({
       color: DEFAULT_COLOR,
       isAllDay: false,
       signupCapacity: null,
+      segments: [],
     });
   };
 
@@ -97,6 +101,7 @@ export function useShiftForm({
       color: DEFAULT_COLOR,
       isAllDay: false,
       signupCapacity: null,
+      segments: [],
     });
     setPresetName("");
     setSaveAsPreset(false);
@@ -125,6 +130,7 @@ export function useShiftForm({
         color: shift?.color || DEFAULT_COLOR,
         isAllDay: shift?.isAllDay || false,
         signupCapacity: shift?.signupCapacity ?? null,
+        segments: shift?.segments ?? [],
       };
 
       // Compare form data fields directly
@@ -136,7 +142,9 @@ export function useShiftForm({
         formDataRef.current.notes !== newFormData.notes ||
         formDataRef.current.color !== newFormData.color ||
         formDataRef.current.isAllDay !== newFormData.isAllDay ||
-        formDataRef.current.signupCapacity !== newFormData.signupCapacity;
+        formDataRef.current.signupCapacity !== newFormData.signupCapacity ||
+        JSON.stringify(formDataRef.current.segments ?? []) !==
+          JSON.stringify(newFormData.segments ?? []);
 
       if (needsUpdate) {
         setFormData(newFormData);

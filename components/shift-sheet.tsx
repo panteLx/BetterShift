@@ -10,8 +10,10 @@ import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { ShiftSignupList } from "@/components/shift-signup-list";
 import { useShiftForm } from "@/hooks/useShiftForm";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useCalendars } from "@/hooks/useCalendars";
 import { formatDateToLocal, formatLongDate, parseLocalDate } from "@/lib/date-utils";
 import { isTempId } from "@/lib/utils";
+import { validateTimeRanges, toTimeRanges, type TimeRange } from "@/lib/time-ranges";
 
 interface ShiftSheetProps {
   open: boolean;
@@ -34,6 +36,7 @@ export interface ShiftFormData {
   presetId?: string;
   isAllDay?: boolean;
   signupCapacity?: number | null;
+  segments?: TimeRange[];
   /** New shifts only: people to sign up immediately once the shift is created. */
   signupUserIds?: string[];
 }
@@ -49,6 +52,7 @@ function snapshot(data: ShiftFormData) {
     color: data.color,
     isAllDay: data.isAllDay || false,
     signupCapacity: data.signupCapacity ?? null,
+    segments: data.segments ?? [],
   });
 }
 
@@ -65,6 +69,8 @@ export function ShiftSheet({
   const t = useTranslations();
   const locale = useLocale();
   const permission = useCalendarPermission(calendarId);
+  const { calendars } = useCalendars();
+  const splitShiftsEnabled = calendars.find((c) => c.id === calendarId)?.splitShiftsEnabled ?? false;
   const [isSaving, setIsSaving] = useState(false);
 
   // Determine if sheet should be in read-only mode
@@ -113,6 +119,7 @@ export function ShiftSheet({
             color: shift.color,
             isAllDay: shift.isAllDay || false,
             signupCapacity: shift.signupCapacity ?? null,
+            segments: shift.segments ?? [],
           })
         : null,
     [shift]
@@ -143,6 +150,7 @@ export function ShiftSheet({
         ...formData,
         startTime: formData.isAllDay ? "00:00" : formData.startTime,
         endTime: formData.isAllDay ? "23:59" : formData.endTime,
+        segments: formData.isAllDay ? [] : formData.segments,
         ...(!shift ? { signupUserIds: pendingSignupUserIds } : {}),
       };
 
@@ -190,7 +198,11 @@ export function ShiftSheet({
       showCancelButton
       onSave={handleSave}
       isSaving={isSaving}
-      saveDisabled={!formData.title.trim() || (shift && !hasChanges())}
+      saveDisabled={
+        !formData.title.trim() ||
+        (shift && !hasChanges()) ||
+        (!formData.isAllDay && !!validateTimeRanges(toTimeRanges(formData)))
+      }
       saveLabel={shift ? undefined : t("shiftSheet.createAction")}
       hasUnsavedChanges={!isReadOnly && hasChanges()}
     >
@@ -215,6 +227,7 @@ export function ShiftSheet({
           onPresetNameChange={setPresetName}
           isEditing={!!shift}
           readOnly={isReadOnly}
+          splitShiftsEnabled={splitShiftsEnabled}
         />
 
         {/* Signups aren't gated by isReadOnly: a read-only member may still

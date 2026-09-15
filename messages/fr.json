@@ -1090,6 +1090,15 @@
     },
     "addOtherHint": "Vous ne trouvez pas quelqu'un ? Partagez d'abord le calendrier avec cette personne, vous pourrez ensuite la sélectionner ici."
   },
+  "timeRanges": {
+    "add": "Ajouter une plage horaire",
+    "remove": "Supprimer la plage horaire",
+    "errors": {
+      "overlap": "Les plages horaires ne doivent pas se chevaucher.",
+      "overnight_segment": "Avec plusieurs plages horaires, chacune doit se terminer le même jour.",
+      "invalid_format": "Heure invalide."
+    }
+  },
   "permissionBundles": {
     "bundle": "Groupe de permissions",
     "title": "Autorisations",
