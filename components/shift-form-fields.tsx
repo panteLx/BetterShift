@@ -13,9 +13,8 @@ import {
 import { ShiftFormData } from "@/components/shift-sheet";
 import { useAutoFocusRef } from "@/hooks/useAutoFocus";
 import { DEFAULT_COLOR } from "@/lib/constants";
-import { calculateShiftDuration } from "@/lib/date-utils";
 import { formatHours } from "@/lib/shift-display";
-import { validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
+import { sumRangeDurations, suggestNextTimeRange, validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
 import { cn } from "@/lib/utils";
 
 interface ShiftFormFieldsProps {
@@ -51,8 +50,10 @@ export function ShiftFormFields({
     !formData.isAllDay &&
     TIME_PATTERN.test(formData.startTime) &&
     TIME_PATTERN.test(formData.endTime);
+  // formatHours takes minutes (see other call sites); sumRangeDurations already
+  // returns minutes, unlike the old calculateShiftDuration(...) call this replaced.
   const duration = validTimes
-    ? formatHours(calculateShiftDuration(formData.startTime, formData.endTime), locale)
+    ? formatHours(sumRangeDurations(toTimeRanges(formData)), locale)
     : "–";
   const timesDisabled = readOnly || formData.isAllDay;
 
@@ -162,7 +163,10 @@ export function ShiftFormFields({
             onClick={() =>
               onFormDataChange({
                 ...formData,
-                segments: [...(formData.segments ?? []), { startTime: "12:00", endTime: "14:00" }],
+                segments: [
+                  ...(formData.segments ?? []),
+                  suggestNextTimeRange(toTimeRanges(formData)),
+                ],
               })
             }
           >

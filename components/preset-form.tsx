@@ -9,7 +9,7 @@ import { DEFAULT_COLOR } from "@/lib/constants";
 import type { PresetFormData } from "@/hooks/usePresets";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { cn } from "@/lib/utils";
-import { validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
+import { suggestNextTimeRange, validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
 import type { TimeRange } from "@/lib/time-ranges";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
@@ -189,7 +189,9 @@ export function PresetFormCard({
           size="sm"
           className="self-start"
           onClick={() =>
-            onChange({ segments: [...value.segments, { startTime: "12:00", endTime: "14:00" }] })
+            onChange({
+              segments: [...value.segments, suggestNextTimeRange(toTimeRanges(value))],
+            })
           }
         >
           <Plus className="size-4" />
