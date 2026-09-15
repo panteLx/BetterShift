@@ -344,7 +344,11 @@ export function MonthGrid({
       "shift-chip flex min-w-0 shrink-0 gap-1.5 rounded-[6px] py-0.5 pr-[7px] dark:[--shift-tint:14%]";
     const time = (shift: ShiftWithCalendar) => (
       <span className="shrink-0 whitespace-nowrap font-mono text-[10.5px] leading-4 opacity-75">
-        {shift.isAllDay ? t("calendarView.allDayShort") : formatTimeRange(shift)}
+        {shift.isAllDay
+          ? t("calendarView.allDayShort")
+          : shift.segments?.length
+            ? formatTimeRange(shift)
+            : shift.startTime.slice(0, 5)}
       </span>
     );
 
