@@ -5,6 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
+import { replacePresetSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
+import { toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
 
 // GET single preset
 export async function GET(
@@ -79,6 +81,7 @@ export async function PATCH(
       isAllDay,
       hideFromStats,
       defaultSignupCapacity,
+      segments: requestedSegments,
     } = body;
 
     // groupName: undefined leaves it unchanged, null explicitly clears it,
@@ -132,47 +135,102 @@ export async function PATCH(
       );
     }
 
-    const [updatedPreset] = await db
-      .update(shiftPresets)
-      .set({
-        title,
-        startTime: isAllDay ? "00:00" : startTime,
-        endTime: isAllDay ? "23:59" : endTime,
-        color,
-        notes: notes || null,
-        groupName: normalizedGroupName,
-        isSecondary: isSecondary !== undefined ? isSecondary : undefined,
-        isAllDay: isAllDay !== undefined ? isAllDay : undefined,
-        hideFromStats: hideFromStats !== undefined ? hideFromStats : undefined,
-        defaultSignupCapacity:
-          defaultSignupCapacity !== undefined
-            ? defaultSignupCapacity
-            : undefined,
-        updatedAt: new Date(),
-      })
-      .where(eq(shiftPresets.id, id))
-      .returning();
+    const nextIsAllDay = isAllDay !== undefined ? isAllDay : existingPreset.isAllDay;
+    let nextSegments: TimeRange[] | undefined;
+    if (requestedSegments !== undefined) {
+      const rawSegments: TimeRange[] = Array.isArray(requestedSegments) ? requestedSegments : [];
+      if (!nextIsAllDay) {
+        if (rawSegments.length > 0 && !calendar.splitShiftsEnabled) {
+          return NextResponse.json(
+            { error: "Split shifts are not enabled for this calendar" },
+            { status: 400 }
+          );
+        }
+        const validationError = validateTimeRanges(
+          toTimeRanges({
+            startTime: startTime ?? existingPreset.startTime,
+            endTime: endTime ?? existingPreset.endTime,
+            segments: rawSegments,
+          })
+        );
+        if (validationError) {
+          return NextResponse.json({ error: validationError }, { status: 400 });
+        }
+      }
+      nextSegments = nextIsAllDay ? [] : rawSegments;
+    }
 
-    // Update all shifts that were created from this preset
-    await db
-      .update(shifts)
-      .set({
-        title,
-        startTime: isAllDay ? "00:00" : startTime,
-        endTime: isAllDay ? "23:59" : endTime,
-        color,
-        notes: notes || null,
-        isAllDay: isAllDay !== undefined ? isAllDay : undefined,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(shifts.presetId, id),
-          eq(shifts.calendarId, existingPreset.calendarId)
+    const updatedPreset = db.transaction((tx) => {
+      const updated = tx
+        .update(shiftPresets)
+        .set({
+          title,
+          startTime: isAllDay ? "00:00" : startTime,
+          endTime: isAllDay ? "23:59" : endTime,
+          color,
+          notes: notes || null,
+          groupName: normalizedGroupName,
+          isSecondary: isSecondary !== undefined ? isSecondary : undefined,
+          isAllDay: isAllDay !== undefined ? isAllDay : undefined,
+          hideFromStats: hideFromStats !== undefined ? hideFromStats : undefined,
+          defaultSignupCapacity:
+            defaultSignupCapacity !== undefined
+              ? defaultSignupCapacity
+              : undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(shiftPresets.id, id))
+        .returning()
+        .get();
+
+      if (nextSegments !== undefined) {
+        replacePresetSegments(tx, id, nextSegments);
+      }
+
+      // Cascade to every shift created from this preset — title/time/color/
+      // notes/isAllDay are already cascaded unconditionally below; segments
+      // must follow the same rule so a preset's split-shift edit doesn't
+      // silently stop propagating to shifts already created from it.
+      const childShifts = tx
+        .select({ id: shifts.id })
+        .from(shifts)
+        .where(
+          and(
+            eq(shifts.presetId, id),
+            eq(shifts.calendarId, existingPreset.calendarId)
+          )
         )
-      );
+        .all();
 
-    return NextResponse.json(updatedPreset);
+      tx.update(shifts)
+        .set({
+          title,
+          startTime: isAllDay ? "00:00" : startTime,
+          endTime: isAllDay ? "23:59" : endTime,
+          color,
+          notes: notes || null,
+          isAllDay: isAllDay !== undefined ? isAllDay : undefined,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(shifts.presetId, id),
+            eq(shifts.calendarId, existingPreset.calendarId)
+          )
+        )
+        .run();
+
+      if (nextSegments !== undefined) {
+        for (const child of childShifts) {
+          replaceShiftSegments(tx, child.id, nextSegments);
+        }
+      }
+
+      return updated;
+    });
+
+    const [withSegments] = await withPresetSegments([updatedPreset]);
+    return NextResponse.json(withSegments);
   } catch (error) {
     console.error("Error updating preset:", error);
     return NextResponse.json(
