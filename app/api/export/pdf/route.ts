@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
           const timeTextEnd = margin + 35 + doc.getTextWidth(timeStr);
 
           // Calendar name (only for multi-calendar exports)
-          let titleX = isMultiCalendar ? margin + 105 : margin + 70;
+          let titleX: number;
           if (isMultiCalendar) {
             doc.setFont("helvetica", "italic");
             doc.setFontSize(9);
