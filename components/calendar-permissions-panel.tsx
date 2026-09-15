@@ -39,9 +39,12 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
   useReportDirty(linkForm.dirty, onDirtyChange);
 
   const [optimisticSignupsEnabled, setOptimisticSignupsEnabled] = useState<boolean | null>(null);
+  const [optimisticSplitShiftsEnabled, setOptimisticSplitShiftsEnabled] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const calendar = calendars.find((c) => c.id === calendarId);
   const signupsEnabled = optimisticSignupsEnabled ?? calendar?.signupsEnabled ?? true;
+  const splitShiftsEnabled =
+    optimisticSplitShiftsEnabled ?? calendar?.splitShiftsEnabled ?? false;
 
   const handleSignupsEnabledChange = async (value: boolean) => {
     if (value === signupsEnabled) return;
@@ -54,6 +57,20 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
     } finally {
       setSaving(false);
       setOptimisticSignupsEnabled(null);
+    }
+  };
+
+  const handleSplitShiftsEnabledChange = async (value: boolean) => {
+    if (value === splitShiftsEnabled) return;
+    setOptimisticSplitShiftsEnabled(value);
+    setSaving(true);
+    try {
+      await updateCalendar(calendarId, { splitShiftsEnabled: value });
+    } catch {
+      // updateCalendar already reported the error and rolled back the cache.
+    } finally {
+      setSaving(false);
+      setOptimisticSplitShiftsEnabled(null);
     }
   };
 
@@ -113,6 +130,20 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
                 <InfoNote icon={Lock}>{t("permissionBundles.signupsLocked")}</InfoNote>
               )}
               <InfoNote icon={Info}>{t("permissionBundles.signupsCapabilityHint")}</InfoNote>
+            </section>
+            <section className="flex flex-col gap-3 border-t border-line pt-5">
+              <SectionLabel className="mb-0">{t("permissionBundles.groups.splitShifts")}</SectionLabel>
+              <ToggleRow
+                id="split-shifts-enabled"
+                title={t("sharingSheet.splitShiftsEnabledLabel")}
+                description={t("sharingSheet.splitShiftsEnabledDesc")}
+                checked={splitShiftsEnabled}
+                onCheckedChange={handleSplitShiftsEnabledChange}
+                disabled={saving || !canManageSettings}
+              />
+              {!canManageSettings && (
+                <InfoNote icon={Lock}>{t("permissionBundles.splitShiftsLocked")}</InfoNote>
+              )}
             </section>
           </>
         )}

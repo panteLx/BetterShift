@@ -857,7 +857,9 @@
     "linkInfoGuestsOn": "El enlace abre el calendario directamente, sin iniciar sesión. Puedes revocarlo en la lista en cualquier momento; deja de funcionar al instante.",
     "linkInfoGuestsOff": "El enlace abre el calendario directamente. El acceso de invitados está desactivado en esta instancia, así que los destinatarios deben iniciar sesión. Puedes revocarlo en la lista en cualquier momento; deja de funcionar al instante.",
     "signupsEnabledLabel": "Activar inscripciones a turnos",
-    "signupsEnabledDesc": "Permite que las personas se inscriban en turnos. Al desactivarlo desaparecen las listas de inscripción, los avatares y el número máximo de personas."
+    "signupsEnabledDesc": "Permite que las personas se inscriban en turnos. Al desactivarlo desaparecen las listas de inscripción, los avatares y el número máximo de personas.",
+    "splitShiftsEnabledLabel": "Activar turnos partidos",
+    "splitShiftsEnabledDesc": "Permite varios tramos horarios en un turno o plantilla, p. ej., 06:00–10:00 y 15:00–21:00. Al desactivarlo desaparecen los tramos horarios adicionales en todas partes."
   },
   "shiftSheet": {
     "start": "Inicio",
@@ -1107,6 +1109,7 @@
     "requiredByHint": "No se puede quitar mientras «{capability}» esté activado",
     "signupsCapabilityHint": "Quién puede inscribirse a sí mismo o a otros en turnos se define por grupo en la pestaña «Grupos» (permisos «Inscribirse» / «Inscribir a otros»).",
     "signupsLocked": "Solo quien puede gestionar los ajustes del calendario puede activar o desactivar las inscripciones.",
+    "splitShiftsLocked": "Solo quien puede gestionar los ajustes del calendario puede activar o desactivar los turnos partidos.",
     "usageShares": "{count, plural, one {# compartido} other {# compartidos}}",
     "usageTokens": "{count, plural, one {# enlace} other {# enlaces}}",
     "usageGuestAccess": "el acceso de invitados",
@@ -1124,6 +1127,7 @@
       "shifts": "Turnos",
       "notesEvents": "Notas y eventos",
       "signups": "Inscripciones",
+      "splitShifts": "Turnos partidos",
       "presets": "Plantillas",
       "externalSync": "Sincronización externa",
       "administration": "Administración"

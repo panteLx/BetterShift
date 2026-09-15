@@ -857,7 +857,9 @@
     "linkInfoGuestsOn": "Der Link öffnet den Kalender direkt, ohne Anmeldung. Er lässt sich jederzeit in der Liste widerrufen — dann ist er sofort ungültig.",
     "linkInfoGuestsOff": "Der Link öffnet den Kalender direkt. Weil der Gastzugang auf dieser Instanz aus ist, müssen sich Empfänger anmelden. Er lässt sich jederzeit in der Liste widerrufen — dann ist er sofort ungültig.",
     "signupsEnabledLabel": "Schicht-Anmeldungen aktivieren",
-    "signupsEnabledDesc": "Erlaubt, dass sich Personen für Schichten eintragen. Ausgeschaltet verschwinden Anmeldelisten, Avatare und die maximale Personenanzahl aus der Ansicht."
+    "signupsEnabledDesc": "Erlaubt, dass sich Personen für Schichten eintragen. Ausgeschaltet verschwinden Anmeldelisten, Avatare und die maximale Personenanzahl aus der Ansicht.",
+    "splitShiftsEnabledLabel": "Geteilte Dienste aktivieren",
+    "splitShiftsEnabledDesc": "Erlaubt mehrere Zeitfenster in einer Schicht oder Vorlage, z. B. 06:00–10:00 und 15:00–21:00. Ausgeschaltet werden zusätzliche Zeitfenster überall ausgeblendet."
   },
   "shiftSheet": {
     "start": "Beginn",
@@ -1107,6 +1109,7 @@
     "requiredByHint": "Kann nicht entfernt werden, solange „{capability}“ aktiviert ist",
     "signupsCapabilityHint": "Wer sich selbst oder andere für Schichten eintragen darf, wird pro Gruppe im Tab „Gruppen“ festgelegt (Rechte „Sich selbst eintragen“ / „Andere eintragen“).",
     "signupsLocked": "Nur wer Kalendereinstellungen verwalten darf, kann Anmeldungen ein- oder ausschalten.",
+    "splitShiftsLocked": "Nur wer Kalendereinstellungen verwalten darf, kann geteilte Dienste ein- oder ausschalten.",
     "usageShares": "{count, plural, one {# Freigabe} other {# Freigaben}}",
     "usageTokens": "{count, plural, one {# Link} other {# Links}}",
     "usageGuestAccess": "dem Gastzugang",
@@ -1124,6 +1127,7 @@
       "shifts": "Schichten",
       "notesEvents": "Notizen & Events",
       "signups": "Anmeldungen",
+      "splitShifts": "Geteilte Dienste",
       "presets": "Presets",
       "externalSync": "Externer Sync",
       "administration": "Verwaltung"

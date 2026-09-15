@@ -857,7 +857,9 @@
     "linkInfoGuestsOn": "The link opens the calendar directly, without signing in. You can revoke it from the list at any time — it stops working immediately.",
     "linkInfoGuestsOff": "The link opens the calendar directly. Guest access is off on this instance, so recipients need to sign in. You can revoke it from the list at any time — it stops working immediately.",
     "signupsEnabledLabel": "Enable shift signups",
-    "signupsEnabledDesc": "Lets people sign up for shifts. Turning this off hides signup lists, avatars, and the maximum headcount everywhere."
+    "signupsEnabledDesc": "Lets people sign up for shifts. Turning this off hides signup lists, avatars, and the maximum headcount everywhere.",
+    "splitShiftsEnabledLabel": "Enable split shifts",
+    "splitShiftsEnabledDesc": "Allows multiple time ranges in one shift or preset, e.g. 06:00–10:00 and 15:00–21:00. Turning this off hides extra time ranges everywhere."
   },
   "shiftSheet": {
     "start": "Start",
@@ -1107,6 +1109,7 @@
     "requiredByHint": "Can't be removed while “{capability}” is enabled",
     "signupsCapabilityHint": "Who may sign themselves or others up for shifts is set per group in the “Groups” tab (the “Sign up self” / “Sign up others” capabilities).",
     "signupsLocked": "Only someone who can manage calendar settings can turn sign-ups on or off.",
+    "splitShiftsLocked": "Only someone who can manage calendar settings can turn split shifts on or off.",
     "usageShares": "{count, plural, one {# share} other {# shares}}",
     "usageTokens": "{count, plural, one {# link} other {# links}}",
     "usageGuestAccess": "guest access",
@@ -1124,6 +1127,7 @@
       "shifts": "Shifts",
       "notesEvents": "Notes & Events",
       "signups": "Signups",
+      "splitShifts": "Split shifts",
       "presets": "Presets",
       "externalSync": "External Sync",
       "administration": "Administration"

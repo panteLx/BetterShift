@@ -857,7 +857,9 @@
     "linkInfoGuestsOn": "Odkaz otevře kalendář přímo, bez přihlášení. V seznamu ho můžete kdykoli zrušit — pak okamžitě přestane platit.",
     "linkInfoGuestsOff": "Odkaz otevře kalendář přímo. Přístup pro hosty je na této instanci vypnutý, takže se příjemci musí přihlásit. V seznamu ho můžete kdykoli zrušit — pak okamžitě přestane platit.",
     "signupsEnabledLabel": "Povolit přihlašování na směny",
-    "signupsEnabledDesc": "Umožní lidem přihlásit se na směny. Po vypnutí zmizí seznamy přihlášených, avatary i maximální počet osob."
+    "signupsEnabledDesc": "Umožní lidem přihlásit se na směny. Po vypnutí zmizí seznamy přihlášených, avatary i maximální počet osob.",
+    "splitShiftsEnabledLabel": "Povolit dělené směny",
+    "splitShiftsEnabledDesc": "Umožní více časových úseků v jedné směně nebo šabloně, např. 06:00–10:00 a 15:00–21:00. Po vypnutí se všude skryjí další časové úseky."
   },
   "shiftSheet": {
     "start": "Začátek",
@@ -1107,6 +1109,7 @@
     "requiredByHint": "Nelze odebrat, dokud je aktivní „{capability}“",
     "signupsCapabilityHint": "Kdo se smí přihlásit sám nebo přihlásit ostatní na směny, se nastavuje po skupinách na kartě „Skupiny“ (práva „Přihlásit se“ / „Přihlásit ostatní“).",
     "signupsLocked": "Zapnout nebo vypnout přihlašování může jen ten, kdo smí spravovat nastavení kalendáře.",
+    "splitShiftsLocked": "Zapnout nebo vypnout dělené směny může jen ten, kdo smí spravovat nastavení kalendáře.",
     "usageShares": "{count, plural, one {# sdílení} few {# sdílení} other {# sdílení}}",
     "usageTokens": "{count, plural, one {# odkaz} few {# odkazy} other {# odkazů}}",
     "usageGuestAccess": "hostovský přístup",
@@ -1124,6 +1127,7 @@
       "shifts": "Směny",
       "notesEvents": "Poznámky a události",
       "signups": "Přihlášky",
+      "splitShifts": "Dělené směny",
       "presets": "Předvolby",
       "externalSync": "Externí synchronizace",
       "administration": "Administrace"

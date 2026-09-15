@@ -857,7 +857,9 @@
     "linkInfoGuestsOn": "Il link apre direttamente il calendario, senza accesso. Puoi revocarlo dalla lista in qualsiasi momento: smette subito di funzionare.",
     "linkInfoGuestsOff": "Il link apre direttamente il calendario. L’accesso ospite è disattivato su questa istanza, quindi i destinatari devono accedere. Puoi revocarlo dalla lista in qualsiasi momento: smette subito di funzionare.",
     "signupsEnabledLabel": "Attiva le iscrizioni ai turni",
-    "signupsEnabledDesc": "Permette alle persone di iscriversi ai turni. Disattivandolo, elenchi di iscrizione, avatar e numero massimo di persone scompaiono ovunque."
+    "signupsEnabledDesc": "Permette alle persone di iscriversi ai turni. Disattivandolo, elenchi di iscrizione, avatar e numero massimo di persone scompaiono ovunque.",
+    "splitShiftsEnabledLabel": "Attiva i turni spezzati",
+    "splitShiftsEnabledDesc": "Permette più fasce orarie in un turno o modello, ad es. 06:00–10:00 e 15:00–21:00. Disattivandolo, le fasce orarie aggiuntive vengono nascoste ovunque."
   },
   "shiftSheet": {
     "start": "Inizio",
@@ -1107,6 +1109,7 @@
     "requiredByHint": "Non può essere rimosso finché «{capability}» è attivo",
     "signupsCapabilityHint": "Chi può iscrivere sé stesso o altri ai turni si stabilisce per gruppo nella scheda «Gruppi» (diritti «Iscriversi» / «Iscrivere altri»).",
     "signupsLocked": "Solo chi può gestire le impostazioni del calendario può attivare o disattivare le iscrizioni.",
+    "splitShiftsLocked": "Solo chi può gestire le impostazioni del calendario può attivare o disattivare i turni spezzati.",
     "usageShares": "{count, plural, one {# condivisione} other {# condivisioni}}",
     "usageTokens": "{count, plural, one {# link} other {# link}}",
     "usageGuestAccess": "l'accesso ospite",
@@ -1124,6 +1127,7 @@
       "shifts": "Turni",
       "notesEvents": "Note ed eventi",
       "signups": "Iscrizioni",
+      "splitShifts": "Turni spezzati",
       "presets": "Preset",
       "externalSync": "Sync esterno",
       "administration": "Amministrazione"
