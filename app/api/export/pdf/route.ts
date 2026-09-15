@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
 import { rateLimit } from "@/lib/rate-limiter";
 import { formatDateToLocal } from "@/lib/date-utils";
+import { formatTimeRange } from "@/lib/shift-display";
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
         accessibleCalendars.map((c) => c.id)
       ),
       orderBy: (shifts, { asc }) => [asc(shifts.date)],
+      with: { segments: true },
     });
 
     // Filter by month or year if provided
@@ -233,9 +235,7 @@ export async function POST(request: NextRequest) {
 
           // Time
           doc.setFont("helvetica", "normal");
-          const timeStr = shift.isAllDay
-            ? "—" // Em dash for all-day shifts
-            : `${shift.startTime} - ${shift.endTime}`;
+          const timeStr = shift.isAllDay ? "—" : formatTimeRange(shift);
           doc.text(timeStr, margin + 35, yPosition);
 
           // Calendar name (only for multi-calendar exports)

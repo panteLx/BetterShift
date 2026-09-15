@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
 import { getServerTimezone, formatDateToLocal } from "@/lib/date-utils";
 import { rateLimit } from "@/lib/rate-limiter";
+import { toTimeRanges } from "@/lib/time-ranges";
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
         accessibleCalendars.map((c) => c.id)
       ),
       orderBy: (shifts, { asc }) => [asc(shifts.date)],
+      with: { segments: true },
     });
 
     // Create calendar name lookup
@@ -91,73 +93,58 @@ export async function POST(request: NextRequest) {
 
     // Add shifts as events
     for (const shift of allShifts) {
-      const vevent = new ICAL.Component("vevent");
-      const event = new ICAL.Event(vevent);
-
-      // Set event ID
-      event.uid = shift.id;
-
-      // Set title with calendar prefix only for multi-calendar exports
+      const shiftDate = shift.date as Date;
       const calendarName = calendarMap.get(shift.calendarId);
-      event.summary = isMultiCalendar
+      const summary = isMultiCalendar
         ? `[${calendarName}] ${shift.title}`
         : shift.title;
 
-      // Set description (notes)
-      if (shift.notes) {
-        event.description = shift.notes;
-      }
+      const ranges = shift.isAllDay ? [null] : toTimeRanges(shift);
 
-      // Set times
-      const shiftDate = shift.date as Date;
+      ranges.forEach((range, index) => {
+        const vevent = new ICAL.Component("vevent");
+        const event = new ICAL.Event(vevent);
 
-      if (shift.isAllDay) {
-        // All-day event (DTEND is exclusive per RFC 5545)
-        const dateStr = formatDateToLocal(shiftDate);
-
-        const startTime = ICAL.Time.fromDateString(dateStr);
-        event.startDate = startTime;
-
-        // DTEND must be the day after DTSTART for single-day all-day events
-        const endDate = new Date(shiftDate);
-        endDate.setDate(endDate.getDate() + 1);
-        const endYear = endDate.getFullYear();
-        const endMonth = String(endDate.getMonth() + 1).padStart(2, "0");
-        const endDay = String(endDate.getDate()).padStart(2, "0");
-        const endDateStr = `${endYear}-${endMonth}-${endDay}`;
-
-        event.endDate = ICAL.Time.fromDateString(endDateStr);
-      } else {
-        // Timed event
-        const [startHour, startMinute] = shift.startTime.split(":").map(Number);
-        const [endHour, endMinute] = shift.endTime.split(":").map(Number);
-
-        // Create date objects in server timezone
-        const startDateTime = new Date(shiftDate);
-        startDateTime.setHours(startHour, startMinute, 0, 0);
-
-        const endDateTime = new Date(shiftDate);
-        endDateTime.setHours(endHour, endMinute, 0, 0);
-
-        // Handle shifts that end after midnight
-        if (endDateTime <= startDateTime) {
-          endDateTime.setDate(endDateTime.getDate() + 1);
+        event.uid = index === 0 ? shift.id : `${shift.id}-seg-${index}`;
+        event.summary = summary;
+        if (shift.notes) {
+          event.description = shift.notes;
         }
 
-        // Convert to UTC for iCalendar standard compliance
-        const startIcalTime = ICAL.Time.fromJSDate(startDateTime, true);
-        const endIcalTime = ICAL.Time.fromJSDate(endDateTime, true);
+        if (!range) {
+          // All-day event (DTEND is exclusive per RFC 5545)
+          const dateStr = formatDateToLocal(shiftDate);
+          event.startDate = ICAL.Time.fromDateString(dateStr);
 
-        event.startDate = startIcalTime;
-        event.endDate = endIcalTime;
-      }
+          const endDate = new Date(shiftDate);
+          endDate.setDate(endDate.getDate() + 1);
+          const endYear = endDate.getFullYear();
+          const endMonth = String(endDate.getMonth() + 1).padStart(2, "0");
+          const endDay = String(endDate.getDate()).padStart(2, "0");
+          event.endDate = ICAL.Time.fromDateString(`${endYear}-${endMonth}-${endDay}`);
+        } else {
+          const [startHour, startMinute] = range.startTime.split(":").map(Number);
+          const [endHour, endMinute] = range.endTime.split(":").map(Number);
 
-      // Set color (using X-APPLE-CALENDAR-COLOR for Apple Calendar compatibility)
-      vevent.addPropertyWithValue("color", shift.color);
-      vevent.addPropertyWithValue("x-apple-calendar-color", shift.color);
+          const startDateTime = new Date(shiftDate);
+          startDateTime.setHours(startHour, startMinute, 0, 0);
 
-      // Add event to calendar
-      cal.addSubcomponent(vevent);
+          const endDateTime = new Date(shiftDate);
+          endDateTime.setHours(endHour, endMinute, 0, 0);
+
+          if (endDateTime <= startDateTime) {
+            endDateTime.setDate(endDateTime.getDate() + 1);
+          }
+
+          event.startDate = ICAL.Time.fromJSDate(startDateTime, true);
+          event.endDate = ICAL.Time.fromJSDate(endDateTime, true);
+        }
+
+        vevent.addPropertyWithValue("color", shift.color);
+        vevent.addPropertyWithValue("x-apple-calendar-color", shift.color);
+
+        cal.addSubcomponent(vevent);
+      });
     }
 
     // Generate ICS content
