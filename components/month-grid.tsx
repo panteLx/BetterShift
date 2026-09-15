@@ -13,6 +13,7 @@ import {
   DayShiftLayout,
   buildDayShiftLayout,
   formatSignupCapacityLabel,
+  formatTimeRange,
   shiftVars,
 } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
@@ -342,8 +343,8 @@ export function MonthGrid({
     const chip =
       "shift-chip flex min-w-0 shrink-0 gap-1.5 rounded-[6px] py-0.5 pr-[7px] dark:[--shift-tint:14%]";
     const time = (shift: ShiftWithCalendar) => (
-      <span className="shrink-0 font-mono text-[10.5px] leading-4 opacity-75">
-        {shift.isAllDay ? t("calendarView.allDayShort") : shift.startTime.slice(0, 5)}
+      <span className="shrink-0 whitespace-nowrap font-mono text-[10.5px] leading-4 opacity-75">
+        {shift.isAllDay ? t("calendarView.allDayShort") : formatTimeRange(shift)}
       </span>
     );
 
