@@ -135,6 +135,12 @@ export const calendars = sqliteTable(
     signupsEnabled: integer("signups_enabled", { mode: "boolean" })
       .notNull()
       .default(true),
+    // Master switch for split shifts (multiple time ranges per shift/preset)
+    // on this calendar. Owner/admin only; off hides extra ranges everywhere,
+    // same contract as signupsEnabled above.
+    splitShiftsEnabled: integer("split_shifts_enabled", { mode: "boolean" })
+      .notNull()
+      .default(false),
     // null = no own view; every user sees their personal view
     viewSettings: text("view_settings", {
       mode: "json",
@@ -393,6 +399,42 @@ export const shiftPresets = sqliteTable("shift_presets", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const shiftTimeSegments = sqliteTable(
+  "shift_time_segments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    shiftId: text("shift_id")
+      .notNull()
+      .references(() => shifts.id, { onDelete: "cascade" }),
+    startTime: text("start_time").notNull(),
+    endTime: text("end_time").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("shift_time_segments_shiftId_idx").on(table.shiftId)]
+);
+
+export const presetTimeSegments = sqliteTable(
+  "preset_time_segments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    presetId: text("preset_id")
+      .notNull()
+      .references(() => shiftPresets.id, { onDelete: "cascade" }),
+    startTime: text("start_time").notNull(),
+    endTime: text("end_time").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("preset_time_segments_presetId_idx").on(table.presetId)]
+);
+
 export const calendarNotes = sqliteTable("calendar_notes", {
   id: text("id")
     .primaryKey()
@@ -565,6 +607,10 @@ export type Shift = typeof shifts.$inferSelect;
 export type NewShift = typeof shifts.$inferInsert;
 export type ShiftPreset = typeof shiftPresets.$inferSelect;
 export type NewShiftPreset = typeof shiftPresets.$inferInsert;
+export type ShiftTimeSegment = typeof shiftTimeSegments.$inferSelect;
+export type NewShiftTimeSegment = typeof shiftTimeSegments.$inferInsert;
+export type PresetTimeSegment = typeof presetTimeSegments.$inferSelect;
+export type NewPresetTimeSegment = typeof presetTimeSegments.$inferInsert;
 export type CalendarNote = typeof calendarNotes.$inferSelect;
 export type NewCalendarNote = typeof calendarNotes.$inferInsert;
 export type SyncLog = typeof syncLogs.$inferSelect;
@@ -656,22 +702,44 @@ export const shiftsRelations = relations(shifts, ({ one, many }) => ({
     references: [shiftPresets.id],
   }),
   signups: many(shiftSignups),
+  segments: many(shiftTimeSegments),
   creator: one(user, {
     fields: [shifts.createdBy],
     references: [user.id],
   }),
 }));
 
-export const shiftPresetsRelations = relations(shiftPresets, ({ one }) => ({
+export const shiftPresetsRelations = relations(shiftPresets, ({ one, many }) => ({
   calendar: one(calendars, {
     fields: [shiftPresets.calendarId],
     references: [calendars.id],
   }),
+  segments: many(presetTimeSegments),
   creator: one(user, {
     fields: [shiftPresets.createdBy],
     references: [user.id],
   }),
 }));
+
+export const shiftTimeSegmentsRelations = relations(
+  shiftTimeSegments,
+  ({ one }) => ({
+    shift: one(shifts, {
+      fields: [shiftTimeSegments.shiftId],
+      references: [shifts.id],
+    }),
+  })
+);
+
+export const presetTimeSegmentsRelations = relations(
+  presetTimeSegments,
+  ({ one }) => ({
+    preset: one(shiftPresets, {
+      fields: [presetTimeSegments.presetId],
+      references: [shiftPresets.id],
+    }),
+  })
+);
 
 export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
   calendar: one(calendars, {

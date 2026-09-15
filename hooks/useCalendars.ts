@@ -25,6 +25,7 @@ export interface CalendarUpdateInput {
   guestBundleId?: string | null;
   viewSettings?: CalendarViewSettings | null;
   signupsEnabled?: boolean;
+  splitShiftsEnabled?: boolean;
 }
 
 // API functions

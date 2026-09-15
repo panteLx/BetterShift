@@ -14,6 +14,7 @@ export interface CalendarWithCount {
   ownerId?: string | null;
   guestBundleId?: string | null;
   signupsEnabled?: boolean;
+  splitShiftsEnabled?: boolean;
   /** The calendar's own view; null means everyone sees their personal view */
   viewSettings?: CalendarViewSettings | null;
   createdAt: Date | null;
@@ -49,6 +50,8 @@ export interface ShiftWithCalendar {
   externalSyncId?: string | null;
   signupCapacity?: number | null;
   signups?: ShiftSignupUser[];
+  /** Additional time ranges beyond startTime/endTime (split shifts). Empty/undefined for a normal shift. */
+  segments?: { startTime: string; endTime: string }[];
   // Optional (not just nullable): the create-mutation's optimistic shift in
   // useShifts.ts predates the server response and has no value for it yet.
   createdBy?: string | null;

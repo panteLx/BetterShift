@@ -183,6 +183,13 @@
       "when": 1789388420861,
       "tag": "0025_nappy_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1789470189574,
+      "tag": "0026_marvelous_firebird",
+      "breakpoints": true
     }
   ]
 }
