@@ -85,7 +85,7 @@ export async function PATCH(
     const { id } = await params;
     const user = await getSessionUser(request.headers);
     const body = await request.json();
-    const { name, color, guestBundleId, viewSettings, signupsEnabled } = body;
+    const { name, color, guestBundleId, viewSettings, signupsEnabled, splitShiftsEnabled } = body;
 
     if (
       viewSettings !== undefined &&
@@ -119,7 +119,8 @@ export async function PATCH(
       name !== undefined ||
       color !== undefined ||
       viewSettings !== undefined ||
-      typeof signupsEnabled === "boolean";
+      typeof signupsEnabled === "boolean" ||
+      typeof splitShiftsEnabled === "boolean";
 
     const access = await getCalendarAccess(user?.id, id);
     const deny = () =>
@@ -192,6 +193,13 @@ export async function PATCH(
     ) {
       updateData.signupsEnabled = signupsEnabled;
       changes.push("signupsEnabled");
+    }
+    if (
+      typeof splitShiftsEnabled === "boolean" &&
+      splitShiftsEnabled !== existingCalendar.splitShiftsEnabled
+    ) {
+      updateData.splitShiftsEnabled = splitShiftsEnabled;
+      changes.push("splitShiftsEnabled");
     }
     if (viewSettings === null && existingCalendar.viewSettings !== null) {
       updateData.viewSettings = null;

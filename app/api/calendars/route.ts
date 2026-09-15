@@ -50,6 +50,7 @@ export async function GET(request: Request) {
         ownerId: calendars.ownerId,
         guestBundleId: calendars.guestBundleId,
         signupsEnabled: calendars.signupsEnabled,
+        splitShiftsEnabled: calendars.splitShiftsEnabled,
         viewSettings: calendars.viewSettings,
         createdAt: calendars.createdAt,
         updatedAt: calendars.updatedAt,
