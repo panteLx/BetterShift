@@ -123,7 +123,9 @@ export async function GET(request: Request) {
         )
       );
 
-    const resultWithSegments = await withShiftSegments(result);
+    const resultWithSegments = calendar.splitShiftsEnabled
+      ? await withShiftSegments(result)
+      : result;
 
     // Group by title and calculate stats
     const statsMap = new Map<string, { count: number; totalMinutes: number }>();

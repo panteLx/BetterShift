@@ -100,7 +100,10 @@ export async function GET(request: Request) {
           or(isNull(shifts.externalSyncId), eq(externalSyncs.isHidden, false))
         )
       );
-      return NextResponse.json(await withShiftSegments(await withSignups(result)));
+      const withSigs = await withSignups(result);
+      return NextResponse.json(
+        calendar.splitShiftsEnabled ? await withShiftSegments(withSigs) : withSigs
+      );
     }
 
     const result = await query.where(
@@ -110,7 +113,10 @@ export async function GET(request: Request) {
         or(isNull(shifts.externalSyncId), eq(externalSyncs.isHidden, false))
       )
     );
-    return NextResponse.json(await withShiftSegments(await withSignups(result)));
+    const withSigs = await withSignups(result);
+    return NextResponse.json(
+      calendar.splitShiftsEnabled ? await withShiftSegments(withSigs) : withSigs
+    );
   } catch (error) {
     console.error("Failed to fetch shifts:", error);
     return NextResponse.json(

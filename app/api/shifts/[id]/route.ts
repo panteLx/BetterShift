@@ -36,6 +36,7 @@ export async function GET(
           id: calendars.id,
           name: calendars.name,
           color: calendars.color,
+          splitShiftsEnabled: calendars.splitShiftsEnabled,
         },
       })
       .from(shifts)
@@ -59,6 +60,9 @@ export async function GET(
       );
     }
 
+    if (!result[0].calendar?.splitShiftsEnabled) {
+      return NextResponse.json(result[0]);
+    }
     const [withSegments] = await withShiftSegments([result[0]]);
     return NextResponse.json(withSegments);
   } catch (error) {

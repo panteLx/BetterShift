@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
       .from(shiftPresets)
       .where(eq(shiftPresets.calendarId, calendarId))
       .orderBy(asc(shiftPresets.order));
-    return NextResponse.json(await withPresetSegments(presets));
+    return NextResponse.json(
+      calendar.splitShiftsEnabled ? await withPresetSegments(presets) : presets
+    );
   } catch (error) {
     console.error("Error fetching presets:", error);
     return NextResponse.json(

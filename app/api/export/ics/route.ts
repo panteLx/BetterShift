@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all shifts for accessible calendars
-    const allShifts = await db.query.shifts.findMany({
+    let allShifts = await db.query.shifts.findMany({
       where: inArray(
         shifts.calendarId,
         accessibleCalendars.map((c) => c.id)
@@ -64,6 +64,15 @@ export async function POST(request: NextRequest) {
       orderBy: (shifts, { asc }) => [asc(shifts.date)],
       with: { segments: true },
     });
+
+    // A calendar that has since turned split shifts off must fall back to
+    // showing only its shifts' primary ranges, without deleting the stored segments.
+    const splitShiftsEnabledIds = new Set(
+      accessibleCalendars.filter((c) => c.splitShiftsEnabled).map((c) => c.id)
+    );
+    allShifts = allShifts.map((shift) =>
+      splitShiftsEnabledIds.has(shift.calendarId) ? shift : { ...shift, segments: [] }
+    );
 
     // Create calendar name lookup
     const calendarMap = new Map(accessibleCalendars.map((c) => [c.id, c.name]));

@@ -70,6 +70,15 @@ export async function POST(request: NextRequest) {
       with: { segments: true },
     });
 
+    // A calendar that has since turned split shifts off must fall back to
+    // showing only its shifts' primary ranges, without deleting the stored segments.
+    const splitShiftsEnabledIds = new Set(
+      accessibleCalendars.filter((c) => c.splitShiftsEnabled).map((c) => c.id)
+    );
+    allShifts = allShifts.map((shift) =>
+      splitShiftsEnabledIds.has(shift.calendarId) ? shift : { ...shift, segments: [] }
+    );
+
     // Filter by month or year if provided
     if (month) {
       const [filterYear, filterMonth] = month.split("-").map(Number);
