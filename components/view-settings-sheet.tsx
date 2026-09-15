@@ -94,12 +94,20 @@ function ViewFields({
   onChange,
   disabled = false,
   stampBar,
+  onlyMyShifts,
 }: {
   value: CalendarViewSettings;
   onChange: (patch: Partial<CalendarViewSettings>) => void;
   disabled?: boolean;
   /** Only the personal view carries the stamp-bar toggle */
   stampBar?: { checked: boolean; onChange: (checked: boolean) => void };
+  /** Only the personal view carries this, and only for signed-in accounts */
+  onlyMyShifts?: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+    /** The selected calendar has signups turned off, so the filter would show nothing */
+    signupsDisabled?: boolean;
+  };
 }) {
   const t = useTranslations();
   const id = useId();
@@ -167,6 +175,21 @@ function ViewFields({
             onCheckedChange={stampBar.onChange}
             disabled={disabled}
           />
+        )}
+        {onlyMyShifts && (
+          <>
+            <ToggleRow
+              id={`${id}-only-mine`}
+              title={t("view.onlyMyShifts")}
+              description={t("view.onlyMyShiftsHint")}
+              checked={onlyMyShifts.checked}
+              onCheckedChange={onlyMyShifts.onChange}
+              disabled={disabled}
+            />
+            {onlyMyShifts.checked && onlyMyShifts.signupsDisabled && (
+              <InfoNote icon={Info}>{t("view.onlyMyShiftsSignupsDisabledHint")}</InfoNote>
+            )}
+          </>
         )}
       </section>
 
@@ -410,7 +433,7 @@ export function PersonalViewPanel({
   const t = useTranslations();
   const { calendars } = useCalendars();
   const calendar = calendarId ? calendars.find((c) => c.id === calendarId) : undefined;
-  const { personal, updatePersonal } = settings;
+  const { personal, updatePersonal, storedInAccount } = settings;
 
   return (
     <PanelBody>
@@ -427,6 +450,15 @@ export function PersonalViewPanel({
             checked: personal.showStampBar,
             onChange: (showStampBar) => updatePersonal({ showStampBar }),
           }}
+          onlyMyShifts={
+            storedInAccount
+              ? {
+                  checked: personal.onlyMyShifts,
+                  onChange: (onlyMyShifts) => updatePersonal({ onlyMyShifts }),
+                  signupsDisabled: calendar ? calendar.signupsEnabled === false : false,
+                }
+              : undefined
+          }
         />
       </div>
     </PanelBody>

@@ -51,6 +51,8 @@ interface CalendarWorkspaceProps {
   /** Per-shift own/any precision (deleteOwnShift/deleteAnyShift) for the delete affordance */
   canDeleteShift: (shift: ShiftWithCalendar) => boolean;
   showStampBar: boolean;
+  /** Personal-only: hides the grid and day view down to shifts the current user is signed up for */
+  onlyMyShifts: boolean;
   /** stampPreset OR createShift — mirrors the server's OR check for stamping a preset */
   canStampPreset: boolean;
   /** viewStats — hides the stats trigger entirely when absent, instead of failing on click */
@@ -86,6 +88,7 @@ export function CalendarWorkspace({
   canEditShift,
   canDeleteShift,
   showStampBar,
+  onlyMyShifts,
   canStampPreset,
   canViewStats,
   selectedPresetIds,
@@ -99,10 +102,16 @@ export function CalendarWorkspace({
   const locale = useLocale();
   const queryClient = useQueryClient();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
-  const { isGuest } = useAuth();
+  const { isGuest, user } = useAuth();
   const { isOnline } = useConnectionStatus({ toasts: false });
   const [period, setPeriod] = useState<StatsPeriod>("month");
   const [statsOpen, setStatsOpen] = useState(false);
+
+  // Grid and day view only; stats stay on the full list so totals don't look broken
+  const visibleShifts = useMemo(() => {
+    if (!onlyMyShifts || !user) return shifts;
+    return shifts.filter((shift) => shift.signups?.some((s) => s.id === user.id));
+  }, [shifts, onlyMyShifts, user]);
 
   // MobileStatsSheet is skip-mounted below when !canViewStats, so a lingering
   // `true` here would pop it open unbidden if the capability comes back later.
@@ -114,7 +123,7 @@ export function CalendarWorkspace({
     if (!canViewStats) setStatsOpen(false);
   }
 
-  const dayData = useDayData({ selectedDay, shifts, notes });
+  const dayData = useDayData({ selectedDay, shifts: visibleShifts, notes });
   const monthSummary = usePeriodSummary({
     calendarId: canViewStats ? calendarId : undefined,
     anchorDate: currentDate,
@@ -180,7 +189,7 @@ export function CalendarWorkspace({
       calendarDays={calendarDays}
       currentDate={currentDate}
       selectedDay={selectedDay}
-      shifts={shifts}
+      shifts={visibleShifts}
       notes={notes}
       externalSyncs={externalSyncs}
       togglingDates={togglingDates}

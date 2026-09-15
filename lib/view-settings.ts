@@ -15,9 +15,10 @@ export interface CalendarViewSettings {
   highlightColor: string;
 }
 
-/** A user's own view; the stamp bar is never taken over by a calendar. */
+/** A user's own view; the stamp bar and the own-shifts filter are never taken over by a calendar. */
 export interface PersonalViewSettings extends CalendarViewSettings {
   showStampBar: boolean;
+  onlyMyShifts: boolean;
 }
 
 export const SHIFTS_PER_DAY_MAX = 3;
@@ -44,6 +45,7 @@ export const DEFAULT_CALENDAR_VIEW_SETTINGS: CalendarViewSettings = {
 export const DEFAULT_PERSONAL_VIEW_SETTINGS: PersonalViewSettings = {
   ...DEFAULT_CALENDAR_VIEW_SETTINGS,
   showStampBar: true,
+  onlyMyShifts: false,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -102,6 +104,7 @@ export function sanitizePersonalViewSettings(input: unknown): PersonalViewSettin
   return {
     ...sanitizeCalendarViewSettings(src),
     showStampBar: sanitizeBoolean(src.showStampBar, DEFAULT_PERSONAL_VIEW_SETTINGS.showStampBar),
+    onlyMyShifts: sanitizeBoolean(src.onlyMyShifts, DEFAULT_PERSONAL_VIEW_SETTINGS.onlyMyShifts),
   };
 }
 
@@ -121,5 +124,9 @@ export function resolveViewSettings(
   calendarView: unknown
 ): PersonalViewSettings {
   if (!isRecord(calendarView)) return personal;
-  return { ...sanitizeCalendarViewSettings(calendarView), showStampBar: personal.showStampBar };
+  return {
+    ...sanitizeCalendarViewSettings(calendarView),
+    showStampBar: personal.showStampBar,
+    onlyMyShifts: personal.onlyMyShifts,
+  };
 }

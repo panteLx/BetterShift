@@ -507,6 +507,7 @@ function HomeContent() {
         canEditShift={canEditShift}
         canDeleteShift={canDeleteShift}
         showStampBar={calendarView.showStampBar}
+        onlyMyShifts={calendarView.onlyMyShifts}
         canStampPreset={canStampPreset}
         canViewStats={canViewStats}
         selectedPresetIds={armedPresetIds}
