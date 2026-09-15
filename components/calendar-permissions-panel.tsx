@@ -17,7 +17,7 @@ import { usePermissionLinkForm } from "@/hooks/usePermissionLinkForm";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useReportDirty } from "@/hooks/useDirtyState";
 
-type PermissionsTab = "groups" | "assignments" | "signups";
+type PermissionsTab = "groups" | "assignments";
 
 interface PermissionsPanelProps {
   calendarId: string;
@@ -25,7 +25,7 @@ interface PermissionsPanelProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-/** Central "Berechtigungen" surface (Stufe 2, 7.3): groups, assignments and signups. */
+/** Central "Berechtigungen" surface: groups (incl. signups toggle) and assignments. */
 export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: PermissionsPanelProps) {
   const t = useTranslations();
   const { calendars, updateCalendar } = useCalendars();
@@ -83,7 +83,6 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
   const tabs: { value: PermissionsTab; label: string }[] = [
     { value: "groups", label: t("permissionBundles.tabGroups") },
     { value: "assignments", label: t("permissionBundles.tabAssignments") },
-    { value: "signups", label: t("permissionBundles.tabMore") },
   ];
 
   return (
@@ -97,7 +96,26 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
           options={tabs}
         />
 
-        {tab === "groups" && <PermissionBundleEditor calendarId={calendarId} />}
+        {tab === "groups" && (
+          <>
+            <PermissionBundleEditor calendarId={calendarId} />
+            <section className="flex flex-col gap-3 border-t border-line pt-5">
+              <SectionLabel className="mb-0">{t("permissionBundles.groups.signups")}</SectionLabel>
+              <ToggleRow
+                id="signups-enabled"
+                title={t("sharingSheet.signupsEnabledLabel")}
+                description={t("sharingSheet.signupsEnabledDesc")}
+                checked={signupsEnabled}
+                onCheckedChange={handleSignupsEnabledChange}
+                disabled={saving || !canManageSettings}
+              />
+              {!canManageSettings && (
+                <InfoNote icon={Lock}>{t("permissionBundles.signupsLocked")}</InfoNote>
+              )}
+              <InfoNote icon={Info}>{t("permissionBundles.signupsCapabilityHint")}</InfoNote>
+            </section>
+          </>
+        )}
 
         {tab === "assignments" && (
           <PermissionAssignments
@@ -107,24 +125,6 @@ export function PermissionsPanel({ calendarId, onClose, onDirtyChange }: Permiss
             calendar={calendar}
             updateCalendar={updateCalendar}
           />
-        )}
-
-        {tab === "signups" && (
-          <>
-            <SectionLabel className="mb-0">{t("permissionBundles.groups.signups")}</SectionLabel>
-            <ToggleRow
-              id="signups-enabled"
-              title={t("sharingSheet.signupsEnabledLabel")}
-              description={t("sharingSheet.signupsEnabledDesc")}
-              checked={signupsEnabled}
-              onCheckedChange={handleSignupsEnabledChange}
-              disabled={saving || !canManageSettings}
-            />
-            {!canManageSettings && (
-              <InfoNote icon={Lock}>{t("permissionBundles.signupsLocked")}</InfoNote>
-            )}
-            <InfoNote icon={Info}>{t("permissionBundles.signupsCapabilityHint")}</InfoNote>
-          </>
         )}
       </PanelBody>
       <PanelFooter>

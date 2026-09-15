@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { SegmentedControl } from "@/components/segmented-control";
+import { SectionLabel } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import { PersonRow } from "@/components/person-row";
 import { CalendarShareUserSearch } from "@/components/calendar-share-user-search";
@@ -55,16 +55,6 @@ export function PermissionAssignments({
     string | null | undefined
   >(undefined);
 
-  type AssignmentSubTab = "people" | "public" | "links";
-  const [subTab, setSubTab] = useState<AssignmentSubTab>("people");
-  const subTabs: { value: AssignmentSubTab; label: string }[] = [
-    { value: "people", label: t("permissionBundles.people") },
-    { value: "public", label: t("share.publicAccess") },
-    ...(allowGuest
-      ? [{ value: "links" as const, label: t("share.links") }]
-      : []),
-  ];
-
   const effectiveInviteBundleId =
     inviteBundleId || bundles.find((b) => b.seedKey === "read")?.id || bundles[0]?.id || "";
 
@@ -103,14 +93,8 @@ export function PermissionAssignments({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <SegmentedControl
-        label={t("permissionBundles.tabAssignments")}
-        value={subTab}
-        onChange={setSubTab}
-        options={subTabs}
-      />
-
-      {subTab === "people" && (
+      <section className="flex flex-col gap-3">
+        <SectionLabel className="mb-0">{t("permissionBundles.people")}</SectionLabel>
         <section className={cardClass}>
           {canManageShares && bundlesError && (
             <StatusBanner tone="danger" icon={TriangleAlert}>
@@ -175,9 +159,10 @@ export function PermissionAssignments({
             )}
           </div>
         </section>
-      )}
+      </section>
 
-      {subTab === "public" && (
+      <section className="flex flex-col gap-3 border-t border-line pt-3.5">
+        <SectionLabel className="mb-0">{t("share.publicAccess")}</SectionLabel>
         <section className={cardClass}>
           {canManageGuestAccess && bundlesError ? (
             <StatusBanner tone="danger" icon={TriangleAlert}>
@@ -203,28 +188,31 @@ export function PermissionAssignments({
             </div>
           )}
         </section>
-      )}
+      </section>
 
-      {subTab === "links" && allowGuest && (
-        <section className={cardClass}>
-          <CalendarTokenList calendarId={calendarId} />
-          {canManageGuestAccess && linkForm.bundlesError && (
-            <StatusBanner tone="danger" icon={TriangleAlert}>
-              {t("permissionBundles.bundlesUnavailable")}
-            </StatusBanner>
-          )}
-          {canManageGuestAccess && !linkForm.bundlesError && (
-            <>
-              <AccessLinkCreateForm form={linkForm} />
-              <Button
-                onClick={linkForm.create}
-                disabled={linkForm.creating || !linkForm.bundleId}
-                className="h-10 self-start font-semibold"
-              >
-                {linkForm.creating ? t("sharingSheet.creating") : t("sharingSheet.createLink")}
-              </Button>
-            </>
-          )}
+      {allowGuest && (
+        <section className="flex flex-col gap-3 border-t border-line pt-3.5">
+          <SectionLabel className="mb-0">{t("share.links")}</SectionLabel>
+          <section className={cardClass}>
+            <CalendarTokenList calendarId={calendarId} />
+            {canManageGuestAccess && linkForm.bundlesError && (
+              <StatusBanner tone="danger" icon={TriangleAlert}>
+                {t("permissionBundles.bundlesUnavailable")}
+              </StatusBanner>
+            )}
+            {canManageGuestAccess && !linkForm.bundlesError && (
+              <>
+                <AccessLinkCreateForm form={linkForm} />
+                <Button
+                  onClick={linkForm.create}
+                  disabled={linkForm.creating || !linkForm.bundleId}
+                  className="h-10 self-start font-semibold"
+                >
+                  {linkForm.creating ? t("sharingSheet.creating") : t("sharingSheet.createLink")}
+                </Button>
+              </>
+            )}
+          </section>
         </section>
       )}
 
