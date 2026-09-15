@@ -64,3 +64,37 @@ export function sumRangeDurations(ranges: TimeRange[]): number {
     0
   );
 }
+
+/**
+ * Sorts a validated range list chronologically and splits it back into a
+ * primary range plus segments, so the persisted primary is always the
+ * earliest range regardless of the order ranges were submitted in.
+ */
+export function normalizeTimeRanges(
+  ranges: TimeRange[]
+): { startTime: string; endTime: string; segments: TimeRange[] } {
+  const sorted = [...ranges].sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime));
+  const [primary, ...rest] = sorted;
+  return { startTime: primary.startTime, endTime: primary.endTime, segments: rest };
+}
+
+/**
+ * Seeds a new segment's time range starting 2h after the latest range's end,
+ * so "add time range" never collides with the form's own current ranges.
+ * Falls back to a fixed late-evening slot when there's no room left before midnight.
+ */
+export function suggestNextTimeRange(ranges: TimeRange[]): TimeRange {
+  const FALLBACK: TimeRange = { startTime: "22:00", endTime: "23:59" };
+  const END_OF_DAY = 24 * 60 - 1; // 23:59
+  const GAP_MINUTES = 120;
+
+  const toTime = (minutes: number) =>
+    `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+  const lastEnd = ranges.reduce((max, r) => Math.max(max, toMinutes(r.endTime)), 0);
+  const start = lastEnd + GAP_MINUTES;
+  if (start >= END_OF_DAY) return FALLBACK;
+
+  const end = Math.min(start + GAP_MINUTES, END_OF_DAY);
+  return { startTime: toTime(start), endTime: toTime(end) };
+}

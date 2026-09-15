@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 import { replacePresetSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
-import { toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
 
 // GET single preset
 export async function GET(
@@ -136,6 +136,12 @@ export async function PATCH(
     }
 
     const nextIsAllDay = isAllDay !== undefined ? isAllDay : existingPreset.isAllDay;
+    // Mirrors the shift PUT handler: segments (and the normalized primary range) are only
+    // ever written when split shifts is enabled, otherwise a round-tripped `segments: []`
+    // from a client that can no longer see the stored rows would wipe them — including via
+    // the cascade below, which would silently wipe every stamped child shift too.
+    let nextStartTime = startTime;
+    let nextEndTime = endTime;
     let nextSegments: TimeRange[] | undefined;
     if (requestedSegments !== undefined) {
       const rawSegments: TimeRange[] = Array.isArray(requestedSegments) ? requestedSegments : [];
@@ -146,18 +152,25 @@ export async function PATCH(
             { status: 400 }
           );
         }
-        const validationError = validateTimeRanges(
-          toTimeRanges({
-            startTime: startTime ?? existingPreset.startTime,
-            endTime: endTime ?? existingPreset.endTime,
-            segments: rawSegments,
-          })
-        );
+        const allRanges = toTimeRanges({
+          startTime: startTime ?? existingPreset.startTime,
+          endTime: endTime ?? existingPreset.endTime,
+          segments: rawSegments,
+        });
+        const validationError = validateTimeRanges(allRanges);
         if (validationError) {
           return NextResponse.json({ error: validationError }, { status: 400 });
         }
+        if (calendar.splitShiftsEnabled) {
+          // Persisted primary is always the chronologically earliest range.
+          const normalized = normalizeTimeRanges(allRanges);
+          nextStartTime = normalized.startTime;
+          nextEndTime = normalized.endTime;
+          nextSegments = normalized.segments;
+        }
+      } else if (calendar.splitShiftsEnabled) {
+        nextSegments = [];
       }
-      nextSegments = nextIsAllDay ? [] : rawSegments;
     }
 
     const updatedPreset = db.transaction((tx) => {
@@ -165,8 +178,8 @@ export async function PATCH(
         .update(shiftPresets)
         .set({
           title,
-          startTime: isAllDay ? "00:00" : startTime,
-          endTime: isAllDay ? "23:59" : endTime,
+          startTime: isAllDay ? "00:00" : nextStartTime,
+          endTime: isAllDay ? "23:59" : nextEndTime,
           color,
           notes: notes || null,
           groupName: normalizedGroupName,
@@ -205,8 +218,8 @@ export async function PATCH(
       tx.update(shifts)
         .set({
           title,
-          startTime: isAllDay ? "00:00" : startTime,
-          endTime: isAllDay ? "23:59" : endTime,
+          startTime: isAllDay ? "00:00" : nextStartTime,
+          endTime: isAllDay ? "23:59" : nextEndTime,
           color,
           notes: notes || null,
           isAllDay: isAllDay !== undefined ? isAllDay : undefined,

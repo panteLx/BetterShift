@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 import { replaceShiftSegments, withShiftSegments } from "@/lib/shift-time-ranges";
-import { toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
 
 // GET single shift
 export async function GET(
@@ -197,18 +197,21 @@ export async function PUT(
       }
     }
 
-    const nextStartTime = body.startTime ?? existingShift.startTime;
-    const nextEndTime = body.endTime ?? existingShift.endTime;
+    let nextStartTime = body.startTime ?? existingShift.startTime;
+    let nextEndTime = body.endTime ?? existingShift.endTime;
     const nextIsAllDay = body.isAllDay ?? existingShift.isAllDay;
 
+    // Segments are only ever written when the calendar has split shifts enabled — otherwise
+    // a client that can no longer see stored segments (GET omits them while the flag is off)
+    // would round-trip `segments: []` on any unrelated edit and wipe the real stored rows.
     let nextSegments: TimeRange[] | undefined;
     if (body.segments !== undefined) {
       const rawSegments: TimeRange[] = Array.isArray(body.segments) ? body.segments : [];
+      const [calendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.id, existingShift.calendarId));
       if (!nextIsAllDay) {
-        const [calendar] = await db
-          .select()
-          .from(calendars)
-          .where(eq(calendars.id, existingShift.calendarId));
         if (rawSegments.length > 0 && !calendar?.splitShiftsEnabled) {
           return NextResponse.json(
             { error: "Split shifts are not enabled for this calendar" },
@@ -224,8 +227,16 @@ export async function PUT(
         if (validationError) {
           return NextResponse.json({ error: validationError }, { status: 400 });
         }
+        if (calendar?.splitShiftsEnabled) {
+          // Persisted primary is always the chronologically earliest range.
+          const normalized = normalizeTimeRanges(allRanges);
+          nextStartTime = normalized.startTime;
+          nextEndTime = normalized.endTime;
+          nextSegments = normalized.segments;
+        }
+      } else if (calendar?.splitShiftsEnabled) {
+        nextSegments = [];
       }
-      nextSegments = nextIsAllDay ? [] : rawSegments;
     }
 
     // Update the shift

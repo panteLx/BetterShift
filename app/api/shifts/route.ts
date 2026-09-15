@@ -8,7 +8,7 @@ import { addShiftSignup, withSignups } from "@/lib/shift-signups";
 import { parseLocalDate } from "@/lib/date-utils";
 import type { CalendarMember } from "@/lib/types";
 import { withShiftSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
-import { toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
 
 // GET shifts for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -246,7 +246,11 @@ export async function POST(request: Request) {
         if (validationError) {
           return NextResponse.json({ error: validationError }, { status: 400 });
         }
-        segmentsToPersist = rawSegments;
+        // Persisted primary is always the chronologically earliest range.
+        const normalized = normalizeTimeRanges(allRanges);
+        insertValues.startTime = normalized.startTime;
+        insertValues.endTime = normalized.endTime;
+        segmentsToPersist = normalized.segments;
       }
     } else {
       if (!presetId) {

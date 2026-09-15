@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 import { replacePresetSegments, withPresetSegments } from "@/lib/shift-time-ranges";
-import { toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
 
 // GET all presets for a calendar
 export async function GET(request: NextRequest) {
@@ -132,13 +132,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    let effectiveStartTime = startTime;
+    let effectiveEndTime = endTime;
+    let segmentsToPersist = rawSegments;
     if (!isAllDay) {
-      const validationError = validateTimeRanges(
-        toTimeRanges({ startTime, endTime, segments: rawSegments })
-      );
+      const allRanges = toTimeRanges({ startTime, endTime, segments: rawSegments });
+      const validationError = validateTimeRanges(allRanges);
       if (validationError) {
         return NextResponse.json({ error: validationError }, { status: 400 });
       }
+      // Persisted primary is always the chronologically earliest range.
+      const normalized = normalizeTimeRanges(allRanges);
+      effectiveStartTime = normalized.startTime;
+      effectiveEndTime = normalized.endTime;
+      segmentsToPersist = normalized.segments;
     }
 
     const preset = db.transaction((tx) => {
@@ -147,8 +154,8 @@ export async function POST(request: NextRequest) {
         .values({
           calendarId,
           title,
-          startTime: isAllDay ? "00:00" : startTime,
-          endTime: isAllDay ? "23:59" : endTime,
+          startTime: isAllDay ? "00:00" : effectiveStartTime,
+          endTime: isAllDay ? "23:59" : effectiveEndTime,
           color: color || "#3b82f6",
           notes: notes || null,
           groupName: groupName ? trimOrNull(groupName) : null,
@@ -164,11 +171,11 @@ export async function POST(request: NextRequest) {
         })
         .returning()
         .get();
-      replacePresetSegments(tx, inserted.id, rawSegments);
+      replacePresetSegments(tx, inserted.id, segmentsToPersist);
       return inserted;
     });
 
-    return NextResponse.json({ ...preset, segments: rawSegments });
+    return NextResponse.json({ ...preset, segments: segmentsToPersist });
   } catch (error) {
     console.error("Error creating preset:", error);
     return NextResponse.json(
