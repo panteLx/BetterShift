@@ -516,9 +516,8 @@ with:
 Add the import:
 
 ```ts
-import { withShiftSegments, replaceShiftSegments } from "@/lib/shift-time-ranges";
+import { withShiftSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
-import { withPresetSegments } from "@/lib/shift-time-ranges";
 ```
 
 (`withPresetSegments` is needed in Step 2 below, for reading a preset's own segments when stamping.)
