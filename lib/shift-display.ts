@@ -3,7 +3,7 @@ import { isSameDay } from "date-fns";
 import { useTranslations } from "next-intl";
 import { ShiftWithCalendar } from "@/lib/types";
 import { ExternalSync, ShiftPreset } from "@/lib/db/schema";
-import { calculateShiftDuration } from "@/lib/date-utils";
+import { toTimeRanges, sumRangeDurations } from "@/lib/time-ranges";
 
 export type ShiftSortType = "startTime" | "createdAt" | "title";
 export type ShiftSortOrder = "asc" | "desc";
@@ -134,9 +134,7 @@ export function buildDayShiftLayout(
 }
 
 export function getShiftMinutes(shift: ShiftWithCalendar): number {
-  return shift.isAllDay
-    ? 0
-    : calculateShiftDuration(shift.startTime, shift.endTime);
+  return shift.isAllDay ? 0 : sumRangeDurations(toTimeRanges(shift));
 }
 
 export function sumShiftMinutes(shifts: ShiftWithCalendar[]): number {
@@ -197,8 +195,11 @@ export function presetTime(
 export function formatTimeRange(times: {
   startTime: string;
   endTime: string;
+  segments?: { startTime: string; endTime: string }[];
 }): string {
-  return `${times.startTime.slice(0, 5)} – ${times.endTime.slice(0, 5)}`;
+  return toTimeRanges(times)
+    .map((range) => `${range.startTime.slice(0, 5)} – ${range.endTime.slice(0, 5)}`)
+    .join(", ");
 }
 
 export interface PresetGroup {

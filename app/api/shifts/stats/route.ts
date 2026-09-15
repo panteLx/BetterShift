@@ -9,11 +9,9 @@ import {
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
-import {
-  calculateShiftDuration,
-  formatDateToLocal,
-  parseLocalDate,
-} from "@/lib/date-utils";
+import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
+import { withShiftSegments } from "@/lib/shift-time-ranges";
+import { toTimeRanges, sumRangeDurations } from "@/lib/time-ranges";
 import {
   startOfWeek,
   endOfWeek,
@@ -125,6 +123,8 @@ export async function GET(request: Request) {
         )
       );
 
+    const resultWithSegments = await withShiftSegments(result);
+
     // Group by title and calculate stats
     const statsMap = new Map<string, { count: number; totalMinutes: number }>();
     const dailyStats = new Map<
@@ -135,15 +135,13 @@ export async function GET(request: Request) {
     let maxDuration = 0;
     let nonAllDayShiftCount = 0; // Track shifts with duration for accurate average
 
-    result.forEach((shift) => {
+    resultWithSegments.forEach((shift) => {
       const existing = statsMap.get(shift.title) || {
         count: 0,
         totalMinutes: 0,
       };
       existing.count++;
-      const duration = shift.isAllDay
-        ? 0
-        : calculateShiftDuration(shift.startTime, shift.endTime);
+      const duration = shift.isAllDay ? 0 : sumRangeDurations(toTimeRanges(shift));
       existing.totalMinutes += duration;
       statsMap.set(shift.title, existing);
 
@@ -204,7 +202,7 @@ export async function GET(request: Request) {
       0
     );
 
-    const totalShifts = result.length;
+    const totalShifts = resultWithSegments.length;
     const avgMinutesPerShift =
       nonAllDayShiftCount > 0 ? totalMinutes / nonAllDayShiftCount : 0;
 
