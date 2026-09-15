@@ -1896,10 +1896,13 @@ git commit -m "feat(ui): add split-shift time-range editor to the shift form"
 **Files:**
 - Modify: `components/preset-form.tsx`
 - Modify: `hooks/usePresets.ts`
+- Modify: `hooks/useShiftForm.ts`
 
 **Interfaces:**
 - Consumes: `TimeRange`, `validateTimeRanges` (`lib/time-ranges.ts`).
 - Produces: `PresetFormData.segments: TimeRange[]`.
+
+**Note (added after Task 10's review):** `hooks/useShiftForm.ts`'s `saveAsPresetHandler` (added/touched in Task 10) builds a `PresetFormData` literal for `createPreset(...)` without `segments` — it couldn't set it before this task, since the field didn't exist yet. Once this task makes `segments: TimeRange[]` required on `PresetFormData`, that call site must be updated explicitly to `segments: shiftData.segments ?? []` — the shift's *actual* segments, not an empty default. Saving a split shift as a preset must preserve its segments; silently defaulting to `[]` here would be a data-loss bug, not just a type-safety fix. This is called out explicitly (not left to the generic "grep for other literals" step below) because it's the one site where real data is available and dropping it would be user-visible.
 
 - [ ] **Step 1: `PresetFormData` gains `segments`**
 
@@ -2075,8 +2078,8 @@ Extend the existing `canSave` line:
 
 - [ ] **Step 5: Type-check and lint**
 
-Run: `npx tsc --noEmit && npx eslint components/preset-form.tsx hooks/usePresets.ts`
-Expected: clean. Also grep for any other direct `PresetFormData` literal construction that would now be missing the required `segments` field: `grep -rn "PresetFormData = {" components hooks` and `grep -rn ": PresetFormData\b" components hooks` — add `segments: []` (or the real value) everywhere a literal is built without it, since it's a required (non-optional) field.
+Run: `npx tsc --noEmit && npx eslint components/preset-form.tsx hooks/usePresets.ts hooks/useShiftForm.ts`
+Expected: clean once `hooks/useShiftForm.ts`'s `saveAsPresetHandler` sets `segments: shiftData.segments ?? []` (see the note at the top of this task — use the shift's real segments there, not an empty default). Also grep for any other direct `PresetFormData` literal construction that would now be missing the required `segments` field: `grep -rn "PresetFormData = {" components hooks` and `grep -rn ": PresetFormData\b" components hooks` — for any other site found this way (unlike `saveAsPresetHandler`, which has real data available), add `segments: []` since there is no better default.
 
 - [ ] **Step 6: Manual browser verification**
 
