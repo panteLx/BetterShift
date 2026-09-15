@@ -233,30 +233,35 @@ export async function POST(request: NextRequest) {
           doc.setFont("helvetica", "bold");
           doc.text(dateStr, margin + 6, yPosition);
 
-          // Time
+          // Time — a split shift's joined range (e.g. "06:00 – 10:00, 15:00 – 21:00")
+          // can be wider than the fixed column, so later columns shift right to
+          // clear it instead of overlapping; short strings keep the original offsets.
+          const columnGap = 3;
           doc.setFont("helvetica", "normal");
           const timeStr = shift.isAllDay ? "—" : formatTimeRange(shift);
           doc.text(timeStr, margin + 35, yPosition);
+          const timeTextEnd = margin + 35 + doc.getTextWidth(timeStr);
 
           // Calendar name (only for multi-calendar exports)
+          let titleX = isMultiCalendar ? margin + 105 : margin + 70;
           if (isMultiCalendar) {
             doc.setFont("helvetica", "italic");
             doc.setFontSize(9);
-            doc.text(
-              `[${calendarInfo?.name || "Unknown"}]`,
-              margin + 70,
-              yPosition
+            const calendarLabel = `[${calendarInfo?.name || "Unknown"}]`;
+            const calendarX = Math.max(margin + 70, timeTextEnd + columnGap);
+            doc.text(calendarLabel, calendarX, yPosition);
+            titleX = Math.max(
+              margin + 105,
+              calendarX + doc.getTextWidth(calendarLabel) + columnGap
             );
+          } else {
+            titleX = Math.max(margin + 70, timeTextEnd + columnGap);
           }
 
           // Shift title
           doc.setFont("helvetica", "bold");
           doc.setFontSize(10);
-          doc.text(
-            shift.title,
-            isMultiCalendar ? margin + 105 : margin + 70,
-            yPosition
-          );
+          doc.text(shift.title, titleX, yPosition);
 
           yPosition += 5;
 
