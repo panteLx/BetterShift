@@ -998,6 +998,13 @@
     "severityShort": "Schwere",
     "whatHappened": "Was passiert ist",
     "details": "Details",
+    "bundleRoutine": "Routine bündeln",
+    "bundleRoutineDescription": "Automatische Synchronisierungs-Läufe zu einer Zeile pro Synchronisierung zusammenfassen",
+    "subtitleWithRoutine": "{total, plural, one {# Eintrag} other {# Einträge}} · {nonRoutine, plural, one {# nicht routine} other {# nicht routine}}",
+    "routineBundledFooter": "{count, plural, one {# Routine-Eintrag gebündelt} other {# Routine-Einträge gebündelt}}",
+    "routineEntries": "Einzelne Läufe",
+    "routineEntriesMore": "{count, plural, one {und # weiterer} other {und # weitere}}",
+    "routineBundleSummary": "„{sync}“ ({calendar})",
     "describe": {
       "userBanned": "{user} gesperrt",
       "userBannedPermanently": "{user} dauerhaft gesperrt",

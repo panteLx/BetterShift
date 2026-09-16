@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ChevronRight, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   AdminMobileCard,
   AdminPageHeader,
@@ -18,6 +19,7 @@ import {
 import { SortHeader, nextSort, type SortState } from "@/components/admin/admin-table-controls";
 import { AuditLogDetailsDialog } from "@/components/admin/audit-log-details-dialog";
 import { AuditLogDeleteDialog } from "@/components/admin/audit-log-delete-dialog";
+import { RoutineBundleRow, RoutineBundleMobileCard } from "@/components/admin/audit-log-routine-bundle";
 import {
   AuditFilterBar,
   AuditFilterChips,
@@ -27,7 +29,12 @@ import {
   type AuditFilterValues,
 } from "@/components/admin/audit-log-filters";
 import { useAuditDescription } from "@/components/admin/audit-describe";
-import { useAdminAuditLogs, type AuditLog, type AuditLogFilters } from "@/hooks/useAdminAuditLogs";
+import {
+  useAdminAuditLogs,
+  type AuditLog,
+  type AuditLogFilters,
+  type RoutineAuditLogBundle,
+} from "@/hooks/useAdminAuditLogs";
 import { useIsSuperAdmin } from "@/hooks/useAdminAccess";
 import { useDebouncedSearch, useResettableState } from "@/hooks/useAdminList";
 import { getDateLocale } from "@/lib/locales";
@@ -39,7 +46,9 @@ const PAGE_SIZE = 25;
 // Stable identities so the resettable state falls back to the same value
 const EMPTY_ROWS: Set<string> = new Set();
 const EMPTY_IDS: string[] = [];
+const EMPTY_BUNDLE_ENTRIES: Record<string, AuditLog[] | "loading"> = {};
 const COLUMNS = "18px 160px 180px minmax(0,140px) 96px minmax(0,1fr) 118px 64px";
+const BUNDLE_PREVIEW_LIMIT = 20;
 
 const stop = (e: MouseEvent | KeyboardEvent) => e.stopPropagation();
 
@@ -53,6 +62,7 @@ export default function AdminAuditLogsPage() {
   const search = useDebouncedSearch(500);
   const [filterValues, setFilterValues] = useState<AuditFilterValues>(EMPTY_AUDIT_FILTERS);
   const [sort, setSort] = useState<SortState<SortColumn>>({ column: "timestamp", direction: "desc" });
+  const [bundleRoutine, setBundleRoutine] = useState(true);
 
   // Any change to search or filters starts over on the first page, with nothing selected
   const listKey = [search.query, filterValues.action, filterValues.severity, filterValues.startDate, filterValues.endDate].join("|");
@@ -67,6 +77,11 @@ export default function AdminAuditLogsPage() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [expandedBundles, setExpandedBundles] = useResettableState<Set<string>>(listKey, EMPTY_ROWS);
+  const [bundleEntriesById, setBundleEntriesById] = useResettableState<Record<string, AuditLog[] | "loading">>(
+    listKey,
+    EMPTY_BUNDLE_ENTRIES
+  );
 
   const filters = useMemo<AuditLogFilters>(
     () => ({
@@ -82,7 +97,15 @@ export default function AdminAuditLogsPage() {
   const sortParams = useMemo(() => ({ field: sort.column, direction: sort.direction }), [sort]);
   const pagination = useMemo(() => ({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }), [page]);
 
-  const { logs, total, isLoading } = useAdminAuditLogs(filters, sortParams, pagination);
+  const { logs, total, isLoading, routineBundles, fetchAuditLogs } = useAdminAuditLogs(
+    filters,
+    sortParams,
+    pagination,
+    { bundleRoutine }
+  );
+  // Only page 0 shows the bundle summaries; pagination otherwise iterates non-routine rows only
+  const showRoutineBundles = bundleRoutine && page === 0 && routineBundles.length > 0;
+  const routineTotal = routineBundles.reduce((sum, bundle) => sum + bundle.count, 0);
 
   const updateFilters = (patch: Partial<AuditFilterValues>) => {
     setFilterValues((prev) => ({ ...prev, ...patch }));
@@ -100,6 +123,23 @@ export default function AdminAuditLogsPage() {
       else next.add(logId);
       return next;
     });
+  };
+
+  const toggleBundle = async (bundle: RoutineAuditLogBundle) => {
+    setExpandedBundles((prev) => {
+      const next = new Set(prev);
+      if (next.has(bundle.resourceId)) next.delete(bundle.resourceId);
+      else next.add(bundle.resourceId);
+      return next;
+    });
+    if (bundleEntriesById[bundle.resourceId]) return;
+    setBundleEntriesById((prev) => ({ ...prev, [bundle.resourceId]: "loading" }));
+    const result = await fetchAuditLogs(
+      { action: "sync.executed", resourceId: bundle.resourceId, isUserVisible: false },
+      { field: "timestamp", direction: "desc" },
+      { limit: BUNDLE_PREVIEW_LIMIT, offset: 0 }
+    );
+    setBundleEntriesById((prev) => ({ ...prev, [bundle.resourceId]: result?.logs || [] }));
   };
 
   const toggleLogSelection = (logId: string) => {
@@ -168,7 +208,11 @@ export default function AdminAuditLogsPage() {
     <div className="flex flex-col gap-3 lg:gap-4">
       <AdminPageHeader
         title={t("admin.auditLogs")}
-        subtitle={t("adminAudit.subtitle", { count: total })}
+        subtitle={
+          routineTotal > 0
+            ? t("adminAudit.subtitleWithRoutine", { total: total + routineTotal, nonRoutine: total })
+            : t("adminAudit.subtitle", { count: total })
+        }
         actions={
           isSuperAdmin && (
             <Button
@@ -220,6 +264,10 @@ export default function AdminAuditLogsPage() {
         />
         <div className="hidden flex-wrap items-center gap-[9px] lg:flex">
           <AuditFilterBar filters={filterValues} onChange={updateFilters} onClear={clearFilters} />
+          <label className="flex h-9 items-center gap-2 rounded-[9px] border border-line bg-surface-card px-3 text-[13.5px] text-fg-body">
+            <Switch checked={bundleRoutine} onCheckedChange={setBundleRoutine} />
+            {t("adminAudit.bundleRoutine")}
+          </label>
         </div>
       </div>
       <AuditFilterChips filters={filterValues} onOpen={() => setShowFilterSheet(true)} />
@@ -246,9 +294,16 @@ export default function AdminAuditLogsPage() {
       <AdminTableCard
         className="hidden lg:block"
         footer={
-          total > 0 && (
+          (total > 0 || showRoutineBundles) && (
             <>
-              <span>{showing}</span>
+              <div className="flex flex-col gap-0.5">
+                <span>{showing}</span>
+                {showRoutineBundles && (
+                  <span className="text-fg-tertiary">
+                    {t("adminAudit.routineBundledFooter", { count: routineTotal })}
+                  </span>
+                )}
+              </div>
               {pager}
             </>
           )
@@ -277,98 +332,126 @@ export default function AdminAuditLogsPage() {
             "",
           ]}
         />
-        {logs.length === 0 ? (
+        {logs.length === 0 && !showRoutineBundles ? (
           <div className="px-4 py-10 text-center text-[13px] text-fg-tertiary">{emptyText}</div>
         ) : (
-          logs.map((log) => {
-            const expanded = expandedRows.has(log.id);
-            return (
-              <Fragment key={log.id}>
-                <AdminTableRow template={template} onClick={() => toggleRow(log.id)}>
-                  {isSuperAdmin && (
-                    <div onClick={stop} onKeyDown={stop} className="flex">
-                      <Checkbox
-                        checked={selectedIds.includes(log.id)}
-                        onCheckedChange={() => toggleLogSelection(log.id)}
-                        aria-label={t("adminAudit.selectEntry")}
-                      />
-                    </div>
-                  )}
-                  <ChevronRight
-                    className={cn(
-                      "size-[15px] transition-transform",
-                      expanded ? "rotate-90 text-fg-secondary" : "text-fg-faint"
-                    )}
-                  />
-                  <span className="font-mono text-[12.5px] text-fg-body">{formatTimestamp(log.timestamp)}</span>
-                  <span className="max-w-full justify-self-start truncate rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
-                    {log.action}
-                  </span>
-                  <span className={cn("truncate text-[13px]", log.userId ? "text-fg-body" : "text-fg-tertiary")}>
-                    {userLabel(log)}
-                  </span>
-                  <span className="justify-self-start">
-                    <SeverityPill severity={log.severity} />
-                  </span>
-                  <span className="truncate text-[12.5px] text-fg-tertiary">{describe(log)}</span>
-                  <span className="truncate font-mono text-[12px] text-fg-tertiary">{log.ipAddress || "—"}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDetails(log);
-                    }}
-                    onKeyDown={stop}
-                    className="justify-self-end text-[12.5px] font-semibold text-brand-ink hover:underline"
-                  >
-                    {t("adminAudit.details")}
-                  </button>
-                </AdminTableRow>
-                {expanded && (
-                  <div className="flex flex-col gap-2 border-b border-line-subtle bg-surface-panel px-4 py-3">
-                    <div className="eyebrow">{t("admin.metadata")}</div>
-                    <pre className="max-h-72 overflow-auto rounded-lg border border-line bg-background p-3 font-mono text-[12px] text-fg-body">
-                      {JSON.stringify(log.metadata, null, 2)}
-                    </pre>
-                    {log.userAgent && (
-                      <div className="text-[12px] text-fg-tertiary">
-                        <span className="font-semibold text-fg-secondary">{t("admin.userAgent")}:</span>{" "}
-                        {log.userAgent}
+          <>
+            {showRoutineBundles &&
+              routineBundles.map((bundle) => (
+                <RoutineBundleRow
+                  key={bundle.resourceId}
+                  bundle={bundle}
+                  expanded={expandedBundles.has(bundle.resourceId)}
+                  entries={bundleEntriesById[bundle.resourceId]}
+                  onToggle={() => toggleBundle(bundle)}
+                  onOpenDetails={openDetails}
+                  template={template}
+                  isSuperAdmin={isSuperAdmin}
+                />
+              ))}
+            {logs.map((log) => {
+              const expanded = expandedRows.has(log.id);
+              return (
+                <Fragment key={log.id}>
+                  <AdminTableRow template={template} onClick={() => toggleRow(log.id)}>
+                    {isSuperAdmin && (
+                      <div onClick={stop} onKeyDown={stop} className="flex">
+                        <Checkbox
+                          checked={selectedIds.includes(log.id)}
+                          onCheckedChange={() => toggleLogSelection(log.id)}
+                          aria-label={t("adminAudit.selectEntry")}
+                        />
                       </div>
                     )}
-                  </div>
-                )}
-              </Fragment>
-            );
-          })
+                    <ChevronRight
+                      className={cn(
+                        "size-[15px] transition-transform",
+                        expanded ? "rotate-90 text-fg-secondary" : "text-fg-faint"
+                      )}
+                    />
+                    <span className="font-mono text-[12.5px] text-fg-body">{formatTimestamp(log.timestamp)}</span>
+                    <span className="max-w-full justify-self-start truncate rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
+                      {log.action}
+                    </span>
+                    <span className={cn("truncate text-[13px]", log.userId ? "text-fg-body" : "text-fg-tertiary")}>
+                      {userLabel(log)}
+                    </span>
+                    <span className="justify-self-start">
+                      <SeverityPill severity={log.severity} />
+                    </span>
+                    <span className="truncate text-[12.5px] text-fg-tertiary">{describe(log)}</span>
+                    <span className="truncate font-mono text-[12px] text-fg-tertiary">{log.ipAddress || "—"}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDetails(log);
+                      }}
+                      onKeyDown={stop}
+                      className="justify-self-end text-[12.5px] font-semibold text-brand-ink hover:underline"
+                    >
+                      {t("adminAudit.details")}
+                    </button>
+                  </AdminTableRow>
+                  {expanded && (
+                    <div className="flex flex-col gap-2 border-b border-line-subtle bg-surface-panel px-4 py-3">
+                      <div className="eyebrow">{t("admin.metadata")}</div>
+                      <pre className="max-h-72 overflow-auto rounded-lg border border-line bg-background p-3 font-mono text-[12px] text-fg-body">
+                        {JSON.stringify(log.metadata, null, 2)}
+                      </pre>
+                      {log.userAgent && (
+                        <div className="text-[12px] text-fg-tertiary">
+                          <span className="font-semibold text-fg-secondary">{t("admin.userAgent")}:</span>{" "}
+                          {log.userAgent}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })}
+          </>
         )}
       </AdminTableCard>
 
       {/* Phone cards */}
       <div className="flex flex-col gap-[9px] lg:hidden">
-        {logs.length === 0 ? (
+        {logs.length === 0 && !showRoutineBundles ? (
           <div className="rounded-[11px] border border-line px-4 py-8 text-center text-[13px] text-fg-tertiary">
             {emptyText}
           </div>
         ) : (
-          logs.map((log) => (
-            <AdminMobileCard key={log.id} onClick={() => openDetails(log)}>
-              <div className="flex w-full items-center gap-2">
-                <span className="min-w-0 truncate rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
-                  {log.action}
-                </span>
-                <span className="flex-1" />
-                <SeverityPill severity={log.severity} />
-                <ChevronRight className="size-4 shrink-0 text-fg-faint" />
-              </div>
-              <div className="text-[13.5px] leading-snug text-fg-body">{describe(log)}</div>
-              <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-fg-tertiary">
-                <span className="truncate">{userLabel(log)}</span>
-                <span className="text-fg-faint">·</span>
-                <span className="shrink-0 font-mono">{formatTimestamp(log.timestamp)}</span>
-              </div>
-            </AdminMobileCard>
-          ))
+          <>
+            {showRoutineBundles &&
+              routineBundles.map((bundle) => (
+                <RoutineBundleMobileCard
+                  key={bundle.resourceId}
+                  bundle={bundle}
+                  expanded={expandedBundles.has(bundle.resourceId)}
+                  entries={bundleEntriesById[bundle.resourceId]}
+                  onToggle={() => toggleBundle(bundle)}
+                  onOpenDetails={openDetails}
+                />
+              ))}
+            {logs.map((log) => (
+              <AdminMobileCard key={log.id} onClick={() => openDetails(log)}>
+                <div className="flex w-full items-center gap-2">
+                  <span className="min-w-0 truncate rounded-[6px] bg-surface-sunken px-2 py-[3px] font-mono text-[12px] font-medium text-fg-body">
+                    {log.action}
+                  </span>
+                  <span className="flex-1" />
+                  <SeverityPill severity={log.severity} />
+                  <ChevronRight className="size-4 shrink-0 text-fg-faint" />
+                </div>
+                <div className="text-[13.5px] leading-snug text-fg-body">{describe(log)}</div>
+                <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-fg-tertiary">
+                  <span className="truncate">{userLabel(log)}</span>
+                  <span className="text-fg-faint">·</span>
+                  <span className="shrink-0 font-mono">{formatTimestamp(log.timestamp)}</span>
+                </div>
+              </AdminMobileCard>
+            ))}
+          </>
         )}
         {total > PAGE_SIZE && (
           <div className="flex items-center justify-between gap-3 pt-1 text-[12px] text-fg-tertiary">
@@ -398,6 +481,8 @@ export default function AdminAuditLogsPage() {
         filters={filterValues}
         onChange={updateFilters}
         onClear={clearFilters}
+        bundleRoutine={bundleRoutine}
+        onBundleRoutineChange={setBundleRoutine}
       />
     </div>
   );

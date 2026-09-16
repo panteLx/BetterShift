@@ -998,6 +998,13 @@
     "severityShort": "Závažnost",
     "whatHappened": "Co se stalo",
     "details": "Podrobnosti",
+    "bundleRoutine": "Sloučit rutinní",
+    "bundleRoutineDescription": "Sloučit automatické synchronizace do jednoho řádku na synchronizaci",
+    "subtitleWithRoutine": "{total, plural, one {# záznam} few {# záznamy} other {# záznamů}} · {nonRoutine, plural, one {# není rutinní} few {# nejsou rutinní} other {# není rutinní}}",
+    "routineBundledFooter": "{count, plural, one {# rutinní záznam sloučen} few {# rutinní záznamy sloučeny} other {# rutinních záznamů sloučeno}}",
+    "routineEntries": "Jednotlivé běhy",
+    "routineEntriesMore": "{count, plural, one {a # další} few {a # další} other {a # dalších}}",
+    "routineBundleSummary": "„{sync}“ ({calendar})",
     "describe": {
       "userBanned": "{user} zablokován",
       "userBannedPermanently": "{user} trvale zablokován",

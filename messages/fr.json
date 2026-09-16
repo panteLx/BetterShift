@@ -998,6 +998,13 @@
     "severityShort": "Gravité",
     "whatHappened": "Ce qui s’est passé",
     "details": "Détails",
+    "bundleRoutine": "Regrouper la routine",
+    "bundleRoutineDescription": "Regrouper les synchronisations automatiques en une seule ligne par synchronisation",
+    "subtitleWithRoutine": "{total, plural, one {# entrée} other {# entrées}} · {nonRoutine, plural, one {# non routinière} other {# non routinières}}",
+    "routineBundledFooter": "{count, plural, one {# entrée de routine regroupée} other {# entrées de routine regroupées}}",
+    "routineEntries": "Exécutions individuelles",
+    "routineEntriesMore": "{count, plural, one {et # de plus} other {et # de plus}}",
+    "routineBundleSummary": "« {sync} » ({calendar})",
     "describe": {
       "userBanned": "{user} bloqué",
       "userBannedPermanently": "{user} bloqué définitivement",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auditLogs, user } from "@/lib/db/schema";
-import { sql, eq, desc, and, or, lt, inArray } from "drizzle-orm";
+import { sql, eq, desc, and, or, lt, inArray, not } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
@@ -25,10 +25,14 @@ import { parseLocalDate } from "@/lib/date-utils";
  * - search: Search in action, resourceType, or metadata (case-insensitive)
  * - startDate: Filter logs from this local day on (YYYY-MM-DD, inclusive)
  * - endDate: Filter logs up to this local day (YYYY-MM-DD, inclusive)
+ * - isUserVisible: Filter by the isUserVisible flag ("true"/"false")
  * - sortBy: Sort field (timestamp, action, severity)
  * - sortOrder: Sort direction (asc, desc)
  * - limit: Number of logs to return (default: 50, max: 500)
  * - offset: Pagination offset
+ * - bundleRoutine: When "true", excludes routine `sync.executed` entries (the
+ *   automatic scheduler's runs, i.e. isUserVisible=false) from `logs`/`pagination.total`
+ *   and instead returns them grouped per external sync in `routineBundles`.
  *
  * Permission: Admin or Superadmin only
  */
@@ -49,6 +53,8 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get("search");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const isUserVisibleFilter = searchParams.get("isUserVisible");
+    const bundleRoutine = searchParams.get("bundleRoutine") === "true";
     const sortBy = searchParams.get("sortBy") || "timestamp";
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const limit = Math.min(
@@ -134,6 +140,24 @@ export async function GET(request: NextRequest) {
       conditions.push(sql`${auditLogs.timestamp} <= ${unixTimestamp}`);
     }
 
+    // isUserVisible filter
+    if (isUserVisibleFilter === "true" || isUserVisibleFilter === "false") {
+      conditions.push(eq(auditLogs.isUserVisible, isUserVisibleFilter === "true"));
+    }
+
+    // Snapshot before the routine-bundling exclusion below, so the bundle
+    // query can reapply the same filters intersected with the routine condition
+    const filterConditions = [...conditions];
+
+    // Routine entries: automatic-scheduler sync runs, bundled separately below
+    const routineCondition = and(
+      eq(auditLogs.action, "sync.executed"),
+      eq(auditLogs.isUserVisible, false)
+    )!;
+    if (bundleRoutine) {
+      conditions.push(not(routineCondition));
+    }
+
     // Apply sorting
     let orderByClause;
 
@@ -203,6 +227,10 @@ export async function GET(request: NextRequest) {
       timestamp: log.timestamp.toISOString(),
     }));
 
+    const routineBundles = bundleRoutine
+      ? await getRoutineBundles([...filterConditions, routineCondition])
+      : [];
+
     return NextResponse.json({
       logs: logsWithParsedMetadata,
       pagination: {
@@ -211,6 +239,7 @@ export async function GET(request: NextRequest) {
         offset,
         hasMore: offset + limit < total,
       },
+      routineBundles,
     });
   } catch (error) {
     console.error("[Admin Audit Logs] Error fetching logs:", error);
@@ -360,4 +389,50 @@ function tryParseJSON(jsonString: string): unknown {
   } catch {
     return jsonString; // Return as string if parsing fails
   }
+}
+
+function metadataField(metadata: unknown, key: string): string {
+  const value =
+    metadata && typeof metadata === "object" ? (metadata as Record<string, unknown>)[key] : undefined;
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Groups routine (auto-scheduler) sync.executed entries per external sync,
+ * one summary row each, so a busy instance's audit log isn't dominated by them.
+ */
+async function getRoutineBundles(conditions: ReturnType<typeof and>[]) {
+  const stats = await db
+    .select({
+      resourceId: auditLogs.resourceId,
+      count: sql<number>`COUNT(*)`,
+      firstTimestamp: sql<number>`MIN(${auditLogs.timestamp})`,
+      lastTimestamp: sql<number>`MAX(${auditLogs.timestamp})`,
+    })
+    .from(auditLogs)
+    .where(and(...conditions))
+    .groupBy(auditLogs.resourceId);
+
+  return Promise.all(
+    stats
+      .filter((row): row is typeof row & { resourceId: string } => !!row.resourceId)
+      .map(async (row) => {
+        const [latest] = await db
+          .select({ metadata: auditLogs.metadata })
+          .from(auditLogs)
+          .where(and(...conditions, eq(auditLogs.resourceId, row.resourceId)))
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(1);
+        const metadata = latest?.metadata ? tryParseJSON(latest.metadata) : null;
+
+        return {
+          resourceId: row.resourceId,
+          count: Number(row.count),
+          firstTimestamp: new Date(Number(row.firstTimestamp) * 1000).toISOString(),
+          lastTimestamp: new Date(Number(row.lastTimestamp) * 1000).toISOString(),
+          syncName: metadataField(metadata, "syncName"),
+          calendarName: metadataField(metadata, "calendarName"),
+        };
+      })
+  );
 }

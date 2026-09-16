@@ -998,6 +998,13 @@
     "severityShort": "Severity",
     "whatHappened": "What happened",
     "details": "Details",
+    "bundleRoutine": "Bundle routine",
+    "bundleRoutineDescription": "Collapse automatic sync runs into one row per sync",
+    "subtitleWithRoutine": "{total, plural, one {# entry} other {# entries}} · {nonRoutine, plural, one {# not routine} other {# not routine}}",
+    "routineBundledFooter": "{count, plural, one {# routine entry bundled} other {# routine entries bundled}}",
+    "routineEntries": "Individual runs",
+    "routineEntriesMore": "{count, plural, one {and # more} other {and # more}}",
+    "routineBundleSummary": "“{sync}” ({calendar})",
     "describe": {
       "userBanned": "{user} banned",
       "userBannedPermanently": "{user} banned permanently",

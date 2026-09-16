@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChoiceChips, Field, inputClass } from "@/components/form-kit";
+import { ChoiceChips, Field, inputClass, ToggleRow } from "@/components/form-kit";
 import { PanelDialog } from "@/components/panel-dialog";
 import { parseLocalDate } from "@/lib/date-utils";
 import { getDateLocale } from "@/lib/locales";
@@ -232,12 +232,16 @@ export function AuditFilterSheet({
   filters,
   onChange,
   onClear,
+  bundleRoutine,
+  onBundleRoutineChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: AuditFilterValues;
   onChange: (patch: Partial<AuditFilterValues>) => void;
   onClear: () => void;
+  bundleRoutine: boolean;
+  onBundleRoutineChange: (value: boolean) => void;
 }) {
   const t = useTranslations();
   const { actions, severities } = useFilterOptions();
@@ -281,6 +285,12 @@ export function AuditFilterSheet({
         />
       </Field>
       <DateInputs filters={filters} onChange={onChange} />
+      <ToggleRow
+        title={t("adminAudit.bundleRoutine")}
+        description={t("adminAudit.bundleRoutineDescription")}
+        checked={bundleRoutine}
+        onCheckedChange={onBundleRoutineChange}
+      />
     </PanelDialog>
   );
 }

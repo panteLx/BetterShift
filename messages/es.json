@@ -998,6 +998,13 @@
     "severityShort": "Gravedad",
     "whatHappened": "Qué ha pasado",
     "details": "Detalles",
+    "bundleRoutine": "Agrupar rutina",
+    "bundleRoutineDescription": "Agrupar las sincronizaciones automáticas en una fila por sincronización",
+    "subtitleWithRoutine": "{total, plural, one {# entrada} other {# entradas}} · {nonRoutine, plural, one {# no rutinaria} other {# no rutinarias}}",
+    "routineBundledFooter": "{count, plural, one {# entrada rutinaria agrupada} other {# entradas rutinarias agrupadas}}",
+    "routineEntries": "Ejecuciones individuales",
+    "routineEntriesMore": "{count, plural, one {y # más} other {y # más}}",
+    "routineBundleSummary": "«{sync}» ({calendar})",
     "describe": {
       "userBanned": "{user} bloqueado",
       "userBannedPermanently": "{user} bloqueado permanentemente",

@@ -35,6 +35,17 @@ export interface AuditLogFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  isUserVisible?: boolean;
+}
+
+/** One collapsed row standing in for every routine (auto-scheduler) run of one external sync. */
+export interface RoutineAuditLogBundle {
+  resourceId: string;
+  count: number;
+  firstTimestamp: Date;
+  lastTimestamp: Date;
+  syncName: string;
+  calendarName: string;
 }
 
 export interface AuditLogSort {
@@ -52,6 +63,7 @@ export interface AuditLogsResponse {
   total: number;
   limit: number;
   offset: number;
+  routineBundles: RoutineAuditLogBundle[];
 }
 
 /**
@@ -62,6 +74,7 @@ async function fetchAuditLogsApi(
   sort: AuditLogSort,
   pagination: AuditLogPagination,
   t: ReturnType<typeof useTranslations>,
+  bundleRoutine = false,
 ): Promise<AuditLogsResponse> {
   const params = new URLSearchParams();
 
@@ -73,11 +86,13 @@ async function fetchAuditLogsApi(
   if (filters.search) params.set("search", filters.search);
   if (filters.startDate) params.set("startDate", filters.startDate);
   if (filters.endDate) params.set("endDate", filters.endDate);
+  if (filters.isUserVisible !== undefined) params.set("isUserVisible", String(filters.isUserVisible));
 
   params.set("sortBy", sort.field);
   params.set("sortOrder", sort.direction);
   params.set("limit", pagination.limit.toString());
   params.set("offset", pagination.offset.toString());
+  if (bundleRoutine) params.set("bundleRoutine", "true");
 
   const response = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
     method: "GET",
@@ -100,12 +115,18 @@ async function fetchAuditLogsApi(
     ...log,
     timestamp: new Date(log.timestamp as string),
   }));
+  const routineBundles = (data.routineBundles ?? []).map((bundle: Record<string, unknown>) => ({
+    ...bundle,
+    firstTimestamp: new Date(bundle.firstTimestamp as string),
+    lastTimestamp: new Date(bundle.lastTimestamp as string),
+  }));
 
   return {
     logs,
     total: data.pagination.total,
     limit: data.pagination.limit,
     offset: data.pagination.offset,
+    routineBundles,
   };
 }
 
@@ -180,7 +201,7 @@ export function useAdminAuditLogs(
   sort: AuditLogSort = { field: "timestamp", direction: "desc" },
   pagination: AuditLogPagination = { limit: 25, offset: 0 },
   /** Callers that only need the delete actions skip the polling list query */
-  { listEnabled = true }: { listEnabled?: boolean } = {},
+  { listEnabled = true, bundleRoutine = false }: { listEnabled?: boolean; bundleRoutine?: boolean } = {},
 ) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -192,8 +213,8 @@ export function useAdminAuditLogs(
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination, t }),
-    queryFn: () => fetchAuditLogsApi(filters, sort, pagination, t),
+    queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination, bundleRoutine, t }),
+    queryFn: () => fetchAuditLogsApi(filters, sort, pagination, t, bundleRoutine),
     enabled: listEnabled,
     refetchInterval: BACKGROUND_REFETCH_INTERVAL,
   });
@@ -203,15 +224,15 @@ export function useAdminAuditLogs(
     mutationFn: (logIds: string[]) => deleteLogsByIdsApi(logIds, t),
     onMutate: async (logIds) => {
       await queryClient.cancelQueries({
-        queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination }),
+        queryKey: queryKeys.admin.auditLogs({ filters, sort, pagination, bundleRoutine }),
       });
       const previous = queryClient.getQueryData(
-        queryKeys.admin.auditLogs({ filters, sort, pagination }),
+        queryKeys.admin.auditLogs({ filters, sort, pagination, bundleRoutine }),
       );
 
       // Optimistic update
       queryClient.setQueryData(
-        queryKeys.admin.auditLogs({ filters, sort, pagination }),
+        queryKeys.admin.auditLogs({ filters, sort, pagination, bundleRoutine }),
         (old: AuditLogsResponse | undefined) => {
           if (!old) return old;
           return {
@@ -226,7 +247,7 @@ export function useAdminAuditLogs(
     },
     onError: (err, logIds, context) => {
       queryClient.setQueryData(
-        queryKeys.admin.auditLogs({ filters, sort, pagination }),
+        queryKeys.admin.auditLogs({ filters, sort, pagination, bundleRoutine }),
         context?.previous,
       );
       toast.error(
@@ -269,6 +290,7 @@ export function useAdminAuditLogs(
     total: logsData?.total || 0,
     limit: logsData?.limit || pagination.limit,
     offset: logsData?.offset || pagination.offset,
+    routineBundles: logsData?.routineBundles || [],
     isLoading: isLoading || deleteByIdsMutation.isPending || deleteByDateMutation.isPending,
     error,
 
