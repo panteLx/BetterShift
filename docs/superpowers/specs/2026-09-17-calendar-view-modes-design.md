@@ -95,7 +95,7 @@ Extracted from `MonthGrid` without behaviour change:
 
 ### `components/week-grid.tsx`
 
-Props mirror `MonthGrid` minus `variant`/`currentDate`, plus `variant: "desktop" | "phone"`. Content is built with `maxShifts: null, maxExternalShifts: null` — the per-day cap exists to fit month cells and does not apply here — while `sortType` / `sortOrder` / `combinedSort` are honoured.
+Props mirror `MonthGrid` minus `variant`/`currentDate`, plus `variant: "desktop" | "phone"`. Content is built without `maxShifts` / `maxExternalShifts` (`undefined` = uncapped in `buildDayShiftLayout`) — the per-day cap exists to fit month cells and does not apply here — while `sortType` / `sortOrder` / `combinedSort` are honoured.
 
 - **Desktop**: one row of seven columns filling the main area. Column header: long weekday name plus day number (today badge, muted month abbreviation when the week straddles two months). The column itself is the day button (`useDayPress`), scrolls vertically on overflow, and stacks all entries with wrapping titles, full time range (`formatTimeRange`), signup badge and — when `showShiftNotes` is on — the shift note in full. Weekend tint, weekday highlight, selection ring, `togglingDates` disabled state and focus ring match the month cell.
 - **Phone**: seven full-width rows. Left: short weekday + day number (today/selected styling as in the phone month cell). Right: entries as full-width fields with title and time, events and notes below. Rows grow with their content; the page scrolls. A highlighted weekday tints the row.
