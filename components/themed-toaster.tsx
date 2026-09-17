@@ -2,13 +2,16 @@
 
 import { Toaster } from "sonner";
 import { useTheme } from "next-themes";
+import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 
 export function ThemedToaster() {
   const { theme } = useTheme();
+  const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
   return (
     <Toaster
-      position="top-center"
+      // On mobile the view-mode switcher and month/week arrows sit in the top row too
+      position={desktop ? "top-center" : "bottom-center"}
       closeButton
       theme={theme as "light" | "dark" | "system"}
       toastOptions={{
