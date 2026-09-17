@@ -371,7 +371,7 @@ export function CalendarWorkspace({
             setPeriod("month");
             setStatsOpen(true);
           }}
-          onOpenMonthShifts={actions.onOpenMonthShifts}
+          onShowList={actions.onShowList}
           onAddShift={model.canAddShift ? actions.onAddShift : undefined}
           list={
             viewMode === "list"

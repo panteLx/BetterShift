@@ -25,7 +25,8 @@ export interface DayActions {
   onAddNote: () => void;
   onOpenNote: (note: CalendarNote) => void;
   onOpenStats: () => void;
-  onOpenMonthShifts: () => void;
+  /** Switches to the list view; absent while it is already showing */
+  onShowList?: () => void;
 }
 
 export interface DayViewModel {
@@ -157,38 +158,42 @@ export function DayInspector({
         )}
       </div>
 
-      <div className="border-t border-line px-[18px] py-3.5">
-        <div className={cn("flex items-center justify-between", canViewStats && "mb-2.5")}>
-          <span className="eyebrow">
-            {canViewStats
-              ? t("calendarView.monthTotal", { month: monthName })
-              : t("calendarView.allShiftsIn", { month: monthName })}
-          </span>
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={actions.onOpenMonthShifts}
-              title={t("calendarView.allShiftsIn", { month: monthName })}
-              aria-label={t("calendarView.allShiftsIn", { month: monthName })}
-              className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
-            >
-              <List className="size-[15px]" />
-            </button>
-            {canViewStats && (
-              <button
-                type="button"
-                onClick={actions.onOpenStats}
-                title={t("calendarView.openStats")}
-                aria-label={t("calendarView.openStats")}
-                className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
-              >
-                <ArrowUpRight className="size-[15px]" />
-              </button>
-            )}
+      {(canViewStats || actions.onShowList) && (
+        <div className="border-t border-line px-[18px] py-3.5">
+          <div className={cn("flex items-center justify-between", canViewStats && "mb-2.5")}>
+            <span className="eyebrow">
+              {canViewStats
+                ? t("calendarView.monthTotal", { month: monthName })
+                : t("calendarView.allShiftsIn", { month: monthName })}
+            </span>
+            <div className="flex items-center gap-0.5">
+              {actions.onShowList && (
+                <button
+                  type="button"
+                  onClick={actions.onShowList}
+                  title={t("calendarView.allShiftsIn", { month: monthName })}
+                  aria-label={t("calendarView.allShiftsIn", { month: monthName })}
+                  className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
+                >
+                  <List className="size-[15px]" />
+                </button>
+              )}
+              {canViewStats && (
+                <button
+                  type="button"
+                  onClick={actions.onOpenStats}
+                  title={t("calendarView.openStats")}
+                  aria-label={t("calendarView.openStats")}
+                  className="flex size-7 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken"
+                >
+                  <ArrowUpRight className="size-[15px]" />
+                </button>
+              )}
+            </div>
           </div>
+          {canViewStats && <PeriodSummaryView summary={summary} />}
         </div>
-        {canViewStats && <PeriodSummaryView summary={summary} />}
-      </div>
+      )}
     </aside>
   );
 }

@@ -8,7 +8,7 @@ import { ViewSettingsSheet, ViewSettingsState } from "@/components/view-settings
 import { NoteSheet } from "@/components/note-sheet";
 import { NotesListDialog } from "@/components/notes-list-dialog";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
-import { MonthShiftsDialog, MonthStatsDialog } from "@/components/month-dialogs";
+import { MonthStatsDialog } from "@/components/month-dialogs";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
@@ -74,18 +74,14 @@ interface DialogManagerProps {
   onDeleteNoteFromList: (noteId: string) => void;
   onAddNewNote: () => void;
 
-  // Month summary dialogs opened from the day inspector
+  // Month summary dialog opened from the day inspector
   currentDate: Date;
-  shifts: ShiftWithCalendar[];
   /** Per-shift own/any precision (editOwnShift/editAnyShift) — a calendar-wide boolean can't tell own from another's entry. */
   canEditShift: (shift: ShiftWithCalendar) => boolean;
   /** Per-shift own/any precision (deleteOwnShift/deleteAnyShift) — independent from canEditShift. */
   canDeleteShift: (shift: ShiftWithCalendar) => boolean;
   showMonthStatsDialog: boolean;
   onMonthStatsDialogChange: (open: boolean) => void;
-  showMonthShiftsDialog: boolean;
-  onMonthShiftsDialogChange: (open: boolean) => void;
-  onDeleteShift: (shift: ShiftWithCalendar) => void;
 
   // Preset management opened from the stamp dock
   showPresetManageDialog: boolean;
@@ -177,16 +173,6 @@ export function DialogManager(props: DialogManagerProps) {
         onOpenChange={props.onMonthStatsDialogChange}
         currentDate={props.currentDate}
         calendarId={props.selectedCalendar || undefined}
-      />
-      <MonthShiftsDialog
-        open={props.showMonthShiftsDialog}
-        onOpenChange={props.onMonthShiftsDialogChange}
-        currentDate={props.currentDate}
-        shifts={props.shifts}
-        canEditShift={props.canEditShift}
-        canDeleteShift={props.canDeleteShift}
-        onEditShift={(shift) => props.onEditShiftFromDayDialog?.(shift)}
-        onDeleteShift={props.onDeleteShift}
       />
       {props.selectedCalendar && (
         <PresetManageSheet

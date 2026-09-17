@@ -388,14 +388,10 @@ function HomeContent() {
       onDeleteNoteFromList={handleDeleteNoteFromList}
       onAddNewNote={handleAddNewNoteFromList}
       currentDate={currentDate}
-      shifts={shifts}
       canEditShift={canEditShift}
       canDeleteShift={canDeleteShift}
       showMonthStatsDialog={dialogStates.showMonthStatsDialog}
       onMonthStatsDialogChange={dialogStates.setShowMonthStatsDialog}
-      showMonthShiftsDialog={dialogStates.showMonthShiftsDialog}
-      onMonthShiftsDialogChange={dialogStates.setShowMonthShiftsDialog}
-      onDeleteShift={(shift) => shiftActions.handleDeleteShift(shift.id)}
       showPresetManageDialog={dialogStates.showPresetManageDialog}
       onPresetManageDialogChange={dialogStates.setShowPresetManageDialog}
     />
@@ -568,7 +564,13 @@ function HomeContent() {
           onAddNote: () => noteActions.openNoteDialog(selectedDay, undefined),
           onOpenNote: (note) => noteActions.openNoteDialog(selectedDay, note),
           onOpenStats: () => dialogStates.setShowMonthStatsDialog(true),
-          onOpenMonthShifts: () => dialogStates.setShowMonthShiftsDialog(true),
+          onShowList:
+            viewMode === "list"
+              ? undefined
+              : () => {
+                  setDaySheetOpen(false);
+                  handleViewModeChange("list");
+                },
         }}
       />
 

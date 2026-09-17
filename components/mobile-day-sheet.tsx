@@ -42,7 +42,7 @@ export function MobileDayFooter({
   summary,
   currentDate,
   onOpenStats,
-  onOpenMonthShifts,
+  onShowList,
   onAddShift,
   canViewStats,
   list,
@@ -51,7 +51,8 @@ export function MobileDayFooter({
   /** Only needed for the "all shifts in <month>" fallback label when stats are hidden */
   currentDate: Date;
   onOpenStats: () => void;
-  onOpenMonthShifts: () => void;
+  /** Switches to the list view; absent while it is already showing */
+  onShowList?: () => void;
   /** Hidden when the calendar can't be edited */
   onAddShift?: () => void;
   canViewStats: boolean;
@@ -140,10 +141,10 @@ export function MobileDayFooter({
           </span>
           <ChevronUp className="size-4 shrink-0 text-fg-tertiary" />
         </button>
-      ) : (
+      ) : onShowList ? (
         <button
           type="button"
-          onClick={onOpenMonthShifts}
+          onClick={onShowList}
           className="flex min-w-0 flex-1 items-center gap-2.5 py-0.5 text-left"
         >
           <List className="size-4 shrink-0 text-fg-tertiary" />
@@ -154,6 +155,8 @@ export function MobileDayFooter({
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-tertiary" />
         </button>
+      ) : (
+        <span className="flex-1" />
       )}
       {onAddShift && (
         <button
@@ -443,10 +446,10 @@ export function MobileStatsSheet({
             ]}
           />
           <PeriodSummaryView summary={summary} columns="cards" />
-          {period === "month" && (
+          {period === "month" && actions.onShowList && (
             <button
               type="button"
-              onClick={run(actions.onOpenMonthShifts)}
+              onClick={run(actions.onShowList)}
               className="flex items-center gap-2.5 rounded-lg border border-line bg-surface-card px-3 py-3 text-left"
             >
               <List className="size-4 text-fg-secondary" />
