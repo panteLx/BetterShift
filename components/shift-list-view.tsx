@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { endOfWeek, getISOWeek, isSameDay, isSameWeek, isToday, startOfWeek } from "date-fns";
-import { ArrowDownUp, Lock, Plus, RefreshCw, Search, X } from "lucide-react";
+import { ArrowDownUp, Lock, RefreshCw, Search, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync, ShiftPreset } from "@/lib/db/schema";
 import { formatDateToLocal, formatWeekRange } from "@/lib/date-utils";
@@ -58,8 +57,6 @@ interface ShiftListViewProps {
   highlightColor?: string;
   /** A preset is armed: clicking a shift row stamps the day instead of opening the shift */
   stampArmed: boolean;
-  canAddShift: boolean;
-  onAddShift: () => void;
   canEditShift: (shift: ShiftWithCalendar) => boolean;
   canDeleteShift: (shift: ShiftWithCalendar) => boolean;
   onEditShift: (shift: ShiftWithCalendar) => void;
@@ -96,8 +93,6 @@ export function ShiftListView({
   highlightedWeekdays = [],
   highlightColor,
   stampArmed,
-  canAddShift,
-  onAddShift,
   canEditShift,
   canDeleteShift,
   onEditShift,
@@ -312,16 +307,6 @@ export function ShiftListView({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          {desktop && canAddShift && (
-            <Button
-              size="sm"
-              onClick={onAddShift}
-              className="h-9 shrink-0 gap-1.5 rounded-lg px-3 text-[13px] font-semibold"
-            >
-              <Plus className="size-[15px]" />
-              {t("calendarView.addShiftManually")}
-            </Button>
-          )}
         </div>
         {chips.length > 0 && (
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">

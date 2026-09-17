@@ -249,8 +249,6 @@ export function CalendarWorkspace({
         highlightedWeekdays={highlightedWeekdays}
         highlightColor={highlightColor}
         stampArmed={selectedPresetIds.length > 0}
-        canAddShift={model.canAddShift}
-        onAddShift={actions.onAddShift}
         canEditShift={model.canEditShift}
         canDeleteShift={model.canDeleteShift}
         onEditShift={actions.onEditShift}
