@@ -11,7 +11,7 @@ Source: GitHub issues [#184](https://github.com/panteLx/BetterShift/issues/184) 
 
 ## Non-goals
 
-- No schema, API or fetching change. Shifts, notes, presets and external syncs are already loaded per calendar without a date scope; week and list filter the arrays that are in memory.
+- No schema or fetching change. Shifts, notes, presets and external syncs are already loaded per calendar without a date scope; week and list filter the arrays that are in memory. The one API change: `GET /api/shifts` now returns `presetId`, which the list's preset filter chips need.
 - The mode is not an account-synced preference and cannot be pinned by a calendar (`calendars.viewSettings`). `lib/view-settings.ts` is untouched.
 - Compare mode stays a month view; the switcher is not shown there.
 - Week start stays hardcoded to Monday, as everywhere else in the app.
@@ -109,7 +109,7 @@ Props mirror `MonthGrid` minus `variant`/`currentDate`, plus `variant: "desktop"
 
 Replaces the grid in list mode; the stamp bar and inspector stay where they are.
 
-**Rows.** One row per calendar day of the month — every day must be present so stamping by day click keeps working. The row is the day button (`useDayPress`: select, stamp, note context menu). Left: weekday + day number. Right: that day's shifts as `ShiftDetailRow` (`components/day-detail.tsx`, `actions="menu"`, per-shift `canEditShift`/`canDeleteShift`, read-only for `syncedFromExternal`), which already shows color rail, full title, time range and duration; then events and notes as compact one-line entries. Empty days render a slim row with the existing `calendarView.dayEmpty` text. Buttons must not nest, so the row is a `div`: the left date gutter is the actual `<button>` (`useDayPress`, `aria-pressed`, disabled while toggling) and stretches over the row's height; the row container additionally forwards plain mouse clicks and the context menu on its free area to the same handlers, while `ShiftDetailRow`'s menu stops propagation.
+**Rows.** One row per calendar day of the month — every day must be present so stamping by day click keeps working. The row is the day button (`useDayPress`: select, stamp, note context menu). Left: weekday + day number. Right: that day's shifts as `ShiftDetailRow` (`components/day-detail.tsx`, `actions="menu"`, per-shift `canEditShift`/`canDeleteShift`, read-only for `syncedFromExternal`), which already shows color rail, full title, time range and duration; then events and notes as compact one-line entries. Empty days render a slim row with the existing `calendarView.dayFree` text. Buttons must not nest, so the row is a `div`: the left date gutter is the actual `<button>` (`useDayPress`, `aria-pressed`, disabled while toggling) and stretches over the row's height; the row container additionally forwards plain mouse clicks and the context menu on its free area to the same handlers, while `ShiftDetailRow`'s menu stops propagation. A click on a shift row opens the shift and selects its day without bubbling to the day row, via a separate `onOpen` on `ShiftDetailRow`; with a preset armed, the click bubbles up and stamps the day instead.
 
 **Grouping.** Rows sit under sticky week headers: "Diese Woche" (`calendarView.thisWeek`) for the current week, otherwise `KW n · <range>` via `formatPeriodCaption`. Day header meta shows shift count and hours like the old dialog (`calendarView.shiftCount`, `formatHours`).
 
@@ -136,7 +136,7 @@ Search and filter are component state and reset on calendar switch.
 
 ## i18n
 
-New keys under `calendarView` in `messages/de.json` first, then mirrored to `en`, `es`, `fr`, `it`, `cs`: `viewMode`, `viewMonth`, `viewWeek`, `viewList`, `previousWeek`, `nextWeek`, `thisWeek`, `listSearchPlaceholder`, `listNoMatches`, `listWithoutPreset`, `listSort`, `listSortPinnedHint`, `nextShift`, `noUpcomingShift`, `addShiftManually` (final names settle during implementation; reuse existing keys where one fits). Keys left unused by the dialog removal are deleted so `npm run i18n` stays green.
+New keys under `calendarView` in `messages/de.json` first, then mirrored to `en`, `es`, `fr`, `it`, `cs`: `viewMode`, `viewMonth`, `viewWeek`, `viewList`, `previousWeek`, `nextWeek`, `thisWeek`, `listSearchPlaceholder`, `listClearSearch`, `listNoMatches`, `listWithoutPreset`, `listSort`, `listSortPinnedHint`, `nextShift`, `noUpcomingShift`, `addShiftManually` (final names settle during implementation; reuse existing keys where one fits). Keys left unused by the dialog removal are deleted so `npm run i18n` stays green.
 
 ## Files
 
@@ -152,9 +152,11 @@ Changed: `app/page.tsx`, `components/app-header.tsx`, `components/calendar-works
 
 ## Commits
 
-1. `feat(ui): add month/week/list switcher to the header (#186)` — mode hook, switcher, week-aware stepper/caption, mode-aware date handlers. The switcher lists only modes that exist, so it appears with commit 2.
-2. `feat(ui): add week view (#184)` — shared renderers extraction, `WeekGrid`, `"week"` enabled.
-3. `feat(ui): add list view and retire the month shifts dialog (#185)` — `ShiftListView`, footer change, dialog removal, `"list"` enabled.
+1. `feat(ui): add month/week/list view mode state and switcher (#186)` — mode hook, switcher, week-aware stepper/caption, mode-aware date handlers.
+2. `refactor(ui): share the day-cell renderers between calendar views` — extracts `day-cell-entries.tsx` from `MonthGrid` ahead of the week view.
+3. `feat(ui): add week view (#184)` — `WeekGrid`, `"week"` enabled.
+4. `feat(ui): add list view with search, preset filter and sorting (#185)` — `ShiftListView`, footer change, `"list"` enabled.
+5. `feat(ui): open the list view instead of the month shifts dialog` — retires `MonthShiftsDialog`, rewires its three entry points to `onShowList`.
 
 ## Verification
 
