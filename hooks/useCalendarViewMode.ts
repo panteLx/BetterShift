@@ -5,7 +5,7 @@ import { useCallback, useSyncExternalStore } from "react";
 export type CalendarViewMode = "month" | "week" | "list";
 
 /** Modes that have a surface; the switcher offers exactly these. */
-export const AVAILABLE_VIEW_MODES: readonly CalendarViewMode[] = ["month"];
+export const AVAILABLE_VIEW_MODES: readonly CalendarViewMode[] = ["month", "week"];
 
 // Per-device like the view-setting keys in useViewSettings.ts, never synced to the account
 const STORAGE_KEY = "calendar-view-mode";

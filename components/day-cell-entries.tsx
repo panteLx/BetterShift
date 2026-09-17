@@ -152,10 +152,25 @@ const CHIP =
 // Month cells cut titles to one line; week and list let them wrap
 const lineClass = (wrap: boolean) => (wrap ? "block break-words" : "block truncate");
 
-function ChipTime({ shift, full }: { shift: ShiftWithCalendar; full: boolean }) {
+function ChipTime({
+  shift,
+  full,
+  stacked = false,
+}: {
+  shift: ShiftWithCalendar;
+  full: boolean;
+  /** Below the title instead of beside it, for wrap mode where the range no longer fits on one line */
+  stacked?: boolean;
+}) {
   const t = useTranslations();
   return (
-    <span className="shrink-0 whitespace-nowrap font-mono text-[10.5px] leading-4 opacity-75">
+    <span
+      className={
+        stacked
+          ? "mt-0.5 block whitespace-normal break-words font-mono text-[10.5px] leading-4 opacity-75"
+          : "shrink-0 whitespace-nowrap font-mono text-[10.5px] leading-4 opacity-75"
+      }
+    >
       {shift.isAllDay
         ? t("calendarView.allDayShort")
         : full || shift.segments?.length
@@ -176,12 +191,34 @@ export function ShiftChip({
   signupsEnabled: boolean;
   wrap?: boolean;
 }) {
+  const title = `${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`;
+
+  // Wrap mode: the time no longer fits beside the title without breaking it per syllable,
+  // so it moves below the title/note; only the signup badge stays on the title's row.
+  if (wrap) {
+    return (
+      <span className={cn(CHIP, "pl-[5px]")} style={shiftVars(shift.color)} title={title}>
+        <span className="shift-rail w-[3px] shrink-0 self-stretch rounded-full" />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-start gap-1.5">
+            <span className={cn(lineClass(wrap), "min-w-0 flex-1 text-[11.5px] font-medium leading-4")}>
+              {shift.title}
+            </span>
+            <SignupBadge shift={shift} enabled={signupsEnabled} />
+          </span>
+          {showNote && shift.notes && (
+            <span className={cn(lineClass(wrap), "text-[10.5px] leading-[14px] opacity-75")}>
+              {shift.notes}
+            </span>
+          )}
+          <ChipTime shift={shift} full={wrap} stacked />
+        </span>
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={cn(CHIP, "pl-[5px]")}
-      style={shiftVars(shift.color)}
-      title={`${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`}
-    >
+    <span className={cn(CHIP, "pl-[5px]")} style={shiftVars(shift.color)} title={title}>
       <span className="shift-rail w-[3px] shrink-0 self-stretch rounded-full" />
       <span className="min-w-0 flex-1">
         <span className={cn(lineClass(wrap), "text-[11.5px] font-medium leading-4")}>
@@ -207,13 +244,24 @@ export function ExternalShiftChip({
   shift: ShiftWithCalendar;
   wrap?: boolean;
 }) {
+  // Wrap mode: title column stacks the time below itself instead of beside it
+  if (wrap) {
+    return (
+      <span className={cn(CHIP, "pl-[5px] items-start")} style={shiftVars(shift.color)} title={shift.title}>
+        <RefreshCw className="mt-0.5 size-3 shrink-0" />
+        <span className="min-w-0 flex-1">
+          <span className={cn(lineClass(wrap), "text-[11.5px] font-medium leading-4")}>
+            {shift.title}
+          </span>
+          <ChipTime shift={shift} full={wrap} stacked />
+        </span>
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={cn(CHIP, "pl-[5px]", wrap ? "items-start" : "items-center")}
-      style={shiftVars(shift.color)}
-      title={shift.title}
-    >
-      <RefreshCw className={cn("size-3 shrink-0", wrap && "mt-0.5")} />
+    <span className={cn(CHIP, "pl-[5px] items-center")} style={shiftVars(shift.color)} title={shift.title}>
+      <RefreshCw className="size-3 shrink-0" />
       <span className={cn("min-w-0 flex-1 text-[11.5px] font-medium leading-4", lineClass(wrap))}>
         {shift.title}
       </span>

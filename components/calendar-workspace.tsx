@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MonthArrows } from "@/components/app-header";
 import { MonthGrid } from "@/components/month-grid";
+import { WeekGrid } from "@/components/week-grid";
 import { DayInspector, DayActions, DayViewModel } from "@/components/day-inspector";
 import { MobileDayFooter, MobileDaySheet, MobileStatsSheet } from "@/components/mobile-day-sheet";
 import { MobilePresetBar, StampDock, orderStampPresets } from "@/components/stamp-dock";
@@ -196,24 +197,42 @@ export function CalendarWorkspace({
   );
   const hasBanner = !isOnline || isGuest || (!canCreateShift && !!calendarId);
 
-  const grid = (
-    <MonthGrid
-      variant={desktop ? "desktop" : "phone"}
-      calendarDays={calendarDays}
-      currentDate={currentDate}
-      selectedDay={selectedDay}
-      shifts={visibleShifts}
-      notes={notes}
-      externalSyncs={externalSyncs}
-      togglingDates={togglingDates}
-      layout={layout}
-      showShiftNotes={showShiftNotes}
-      highlightedWeekdays={highlightedWeekdays}
-      highlightColor={highlightColor}
-      onDayClick={onDayClick}
-      onDayContextMenu={canAddNote ? onDayContextMenu : undefined}
-    />
-  );
+  const variant = desktop ? "desktop" : "phone";
+  const surface =
+    viewMode === "week" ? (
+      <WeekGrid
+        variant={variant}
+        days={calendarDays}
+        selectedDay={selectedDay}
+        shifts={visibleShifts}
+        notes={notes}
+        externalSyncs={externalSyncs}
+        togglingDates={togglingDates}
+        layout={layout}
+        showShiftNotes={showShiftNotes}
+        highlightedWeekdays={highlightedWeekdays}
+        highlightColor={highlightColor}
+        onDayClick={onDayClick}
+        onDayContextMenu={canAddNote ? onDayContextMenu : undefined}
+      />
+    ) : (
+      <MonthGrid
+        variant={variant}
+        calendarDays={calendarDays}
+        currentDate={currentDate}
+        selectedDay={selectedDay}
+        shifts={visibleShifts}
+        notes={notes}
+        externalSyncs={externalSyncs}
+        togglingDates={togglingDates}
+        layout={layout}
+        showShiftNotes={showShiftNotes}
+        highlightedWeekdays={highlightedWeekdays}
+        highlightColor={highlightColor}
+        onDayClick={onDayClick}
+        onDayContextMenu={canAddNote ? onDayContextMenu : undefined}
+      />
+    );
 
   if (desktop) {
     return (
@@ -222,7 +241,7 @@ export function CalendarWorkspace({
         <div className="flex min-h-0 flex-1">
           <main className="relative flex min-w-0 flex-1 flex-col pb-[18px]">
             {hasBanner && <div className="flex flex-col gap-2 px-[18px] pt-3.5">{banners}</div>}
-            <div className={isOnline ? "contents" : "contents [&>div]:opacity-60"}>{grid}</div>
+            <div className={isOnline ? "contents" : "contents [&>div]:opacity-60"}>{surface}</div>
             {stampingEnabled && (
               <StampDock
                 presets={presets}
@@ -262,7 +281,7 @@ export function CalendarWorkspace({
             </Button>
           )}
         </div>
-        <div className={`flex flex-1 flex-col pb-1${isOnline ? "" : " opacity-60"}`}>{grid}</div>
+        <div className={`flex flex-1 flex-col pb-1${isOnline ? "" : " opacity-60"}`}>{surface}</div>
       </main>
       <div className="shrink-0">
         {stampingEnabled && (

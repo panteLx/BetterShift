@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { CalendarDays, CalendarRange, List } from "lucide-react";
+import { CalendarDays, Columns3, List } from "lucide-react";
 import { SegmentedControl } from "@/components/segmented-control";
 import { AVAILABLE_VIEW_MODES, CalendarViewMode } from "@/hooks/useCalendarViewMode";
 
-const ICONS = { month: CalendarDays, week: CalendarRange, list: List } as const;
+const ICONS = { month: CalendarDays, week: Columns3, list: List } as const;
 
 export function ViewModeSwitcher({
   value,
