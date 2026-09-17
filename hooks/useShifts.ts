@@ -264,7 +264,8 @@ export function useShifts(calendarId: string | undefined) {
                 color: formData.color || s.color,
                 notes: formData.notes || null,
                 isAllDay: formData.isAllDay || false,
-                presetId: formData.presetId || null,
+                // The edit form never carries presetId — keep the shift's existing value
+                presetId: formData.presetId ?? s.presetId,
                 updatedAt: new Date(),
               }
               : s

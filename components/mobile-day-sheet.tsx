@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { format, getISOWeek } from "date-fns";
-import { ChevronDown, ChevronRight, ChevronUp, List, Plus, StickyNote } from "lucide-react";
+import { format, getISOWeek, isToday, isTomorrow } from "date-fns";
+import {
+  ChartColumn,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  List,
+  Plus,
+  StickyNote,
+} from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -19,6 +27,9 @@ import {
 } from "@/components/day-detail";
 import { DayActions, DayViewModel, useDayLabels } from "@/components/day-inspector";
 import { PeriodSummary, StatsPeriod } from "@/hooks/useDaySummary";
+import { ShiftWithCalendar } from "@/lib/types";
+import { formatLongDate } from "@/lib/date-utils";
+import { formatTimeRange, shiftVars } from "@/lib/shift-display";
 import { getDateLocale } from "@/lib/locales";
 
 const TALL = 0.92;
@@ -34,6 +45,7 @@ export function MobileDayFooter({
   onOpenMonthShifts,
   onAddShift,
   canViewStats,
+  list,
 }: {
   summary: PeriodSummary;
   /** Only needed for the "all shifts in <month>" fallback label when stats are hidden */
@@ -43,6 +55,8 @@ export function MobileDayFooter({
   /** Hidden when the calendar can't be edited */
   onAddShift?: () => void;
   canViewStats: boolean;
+  /** List view replaces the month figures with the next shift and a jump to it */
+  list?: { nextShift: ShiftWithCalendar | null; onJump: () => void };
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -62,9 +76,51 @@ export function MobileDayFooter({
       ]
     : [];
 
+  const next = list?.nextShift ?? null;
+  const nextDay = next?.date
+    ? isToday(next.date)
+      ? t("calendarView.today")
+      : isTomorrow(next.date)
+        ? t("calendarView.tomorrow")
+        : formatLongDate(next.date, locale, { month: "short" })
+    : null;
+
   return (
     <div className="flex items-center gap-2.5 border-t border-line bg-surface-panel px-3.5 pb-[max(9px,env(safe-area-inset-bottom))] pt-[9px]">
-      {canViewStats ? (
+      {list ? (
+        <>
+          <button
+            type="button"
+            onClick={list.onJump}
+            disabled={!next}
+            className="flex min-w-0 flex-1 items-center gap-2.5 py-0.5 text-left"
+          >
+            {next && (
+              <span className="shift-rail h-[30px] w-1 shrink-0 rounded-full" style={shiftVars(next.color)} />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[10.5px] leading-[14px] text-fg-tertiary">
+                {t("calendarView.nextShift")}
+              </span>
+              <span className="block truncate text-[13px] font-semibold leading-5 text-fg-strong">
+                {next
+                  ? `${next.title} · ${nextDay}${next.isAllDay ? "" : ` · ${formatTimeRange(next)}`}`
+                  : t("calendarView.noUpcomingShift")}
+              </span>
+            </span>
+          </button>
+          {canViewStats && (
+            <button
+              type="button"
+              onClick={onOpenStats}
+              aria-label={t("calendarView.openStats")}
+              className="flex size-10 shrink-0 items-center justify-center rounded-[11px] border border-line text-fg-secondary"
+            >
+              <ChartColumn className="size-[18px]" />
+            </button>
+          )}
+        </>
+      ) : canViewStats ? (
         <button
           type="button"
           onClick={onOpenStats}

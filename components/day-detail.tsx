@@ -109,7 +109,11 @@ interface ShiftDetailRowProps {
   canEdit: boolean;
   canDelete: boolean;
   actions: "menu" | "inline";
+  /** List view: title and note wrap instead of truncating */
+  fullTitle?: boolean;
   onEdit: (shift: ShiftWithCalendar) => void;
+  /** What a click on the row itself does; defaults to `onEdit`, which the menu always keeps */
+  onOpen?: (shift: ShiftWithCalendar) => void;
   onDelete: (shift: ShiftWithCalendar) => void;
 }
 
@@ -118,7 +122,9 @@ export function ShiftDetailRow({
   canEdit,
   canDelete,
   actions,
+  fullTitle = false,
   onEdit,
+  onOpen,
   onDelete,
 }: ShiftDetailRowProps) {
   const t = useTranslations();
@@ -141,7 +147,7 @@ export function ShiftDetailRow({
 
   return (
     <div
-      onClick={() => onEdit(shift)}
+      onClick={() => (onOpen ?? onEdit)(shift)}
       className="flex cursor-pointer items-center gap-[11px] rounded-lg border border-line bg-surface-card px-3 py-[11px] transition-colors hover:bg-surface-panel"
     >
       <span
@@ -149,14 +155,16 @@ export function ShiftDetailRow({
         style={shiftVars(shift.color)}
       />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13.5px] font-semibold text-fg-strong">
+        <div className={cn("text-[13.5px] font-semibold text-fg-strong", fullTitle ? "break-words" : "truncate")}>
           {shift.title}
         </div>
         <div className="mt-0.5 font-mono text-xs text-fg-tertiary">
           {shift.isAllDay ? t("shift.allDayShift") : formatTimeRange(shift)}
         </div>
         {shift.notes && (
-          <div className="mt-1 line-clamp-2 text-xs text-fg-secondary">{shift.notes}</div>
+          <div className={cn("mt-1 text-xs text-fg-secondary", fullTitle ? "whitespace-pre-line break-words" : "line-clamp-2")}>
+            {shift.notes}
+          </div>
         )}
       </div>
       <ShiftSignupBadge shift={shift} signupsEnabled={signupsEnabled} />
@@ -199,7 +207,12 @@ export function ShiftDetailRow({
             >
               <Ellipsis className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              // Portal content bubbles into the row below; keep menu clicks/holds from stamping it
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
               {editable && (
                 <DropdownMenuItem
                   onClick={(e) => {

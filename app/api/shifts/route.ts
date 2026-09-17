@@ -63,6 +63,8 @@ export async function GET(request: Request) {
         signupCapacity: shifts.signupCapacity,
         syncedFromExternal: shifts.syncedFromExternal,
         externalSyncId: shifts.externalSyncId,
+        // The list view's preset filter groups by this
+        presetId: shifts.presetId,
         createdBy: shifts.createdBy,
         createdAt: shifts.createdAt,
         updatedAt: shifts.updatedAt,

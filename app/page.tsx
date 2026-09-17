@@ -526,6 +526,11 @@ function HomeContent() {
         onViewModeChange={handleViewModeChange}
         selectedDay={selectedDay}
         onDayClick={handleDayClick}
+        onSelectDay={(day) => {
+          // currentDate keys the month stats query, so only move it across months
+          if (!isSameMonth(day, currentDate)) setCurrentDate(day);
+          selectDay(day);
+        }}
         onDayContextMenu={(date) => openNotesForDay(notes, date)}
         shifts={shifts}
         notes={notes}
@@ -533,6 +538,13 @@ function HomeContent() {
         externalSyncs={externalSyncs}
         togglingDates={shiftActions.togglingDates}
         layout={toDayLayout(calendarView)}
+        listSort={{
+          type: calendarView.sortType,
+          order: calendarView.sortOrder,
+          // A calendar-pinned view replaces the personal one, so the personal sort is moot
+          locked: !!calendars.find((c) => c.id === selectedCalendar)?.viewSettings,
+          onChange: viewSettings.updatePersonal,
+        }}
         showShiftNotes={calendarView.showShiftNotes}
         highlightedWeekdays={calendarView.highlightedWeekdays}
         highlightColor={calendarView.highlightColor}

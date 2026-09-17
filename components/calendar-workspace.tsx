@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { MonthArrows } from "@/components/app-header";
 import { MonthGrid } from "@/components/month-grid";
 import { WeekGrid } from "@/components/week-grid";
+import { ListSort, ShiftListView } from "@/components/shift-list-view";
 import { DayInspector, DayActions, DayViewModel } from "@/components/day-inspector";
 import { MobileDayFooter, MobileDaySheet, MobileStatsSheet } from "@/components/mobile-day-sheet";
 import { MobilePresetBar, StampDock, orderStampPresets } from "@/components/stamp-dock";
@@ -19,7 +20,8 @@ import { ViewModeSwitcher } from "@/components/view-mode-switcher";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync, ShiftPreset } from "@/lib/db/schema";
 import { DayLayoutOptions } from "@/lib/shift-display";
-import { formatPeriodCaption } from "@/lib/date-utils";
+import { formatDateToLocal, formatPeriodCaption } from "@/lib/date-utils";
+import { cn } from "@/lib/utils";
 import { useDayData, usePeriodSummary, StatsPeriod } from "@/hooks/useDaySummary";
 import { useStampShortcuts } from "@/hooks/useStampShortcuts";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
@@ -37,6 +39,8 @@ interface CalendarWorkspaceProps {
   onViewModeChange: (mode: CalendarViewMode) => void;
   selectedDay: Date;
   onDayClick: (date: Date) => void;
+  /** Pure navigation: shows the day's month and selects it, never stamps */
+  onSelectDay: (day: Date) => void;
   onDayContextMenu: (date: Date) => void;
   shifts: ShiftWithCalendar[];
   notes: CalendarNote[];
@@ -44,6 +48,8 @@ interface CalendarWorkspaceProps {
   externalSyncs: ExternalSync[];
   togglingDates: Set<string>;
   layout: DayLayoutOptions;
+  /** List view only: the personal sort, plus whether a calendar-pinned view locks it */
+  listSort: ListSort;
   showShiftNotes: boolean;
   highlightedWeekdays: number[];
   highlightColor: string;
@@ -80,6 +86,7 @@ export function CalendarWorkspace({
   onViewModeChange,
   selectedDay,
   onDayClick,
+  onSelectDay,
   onDayContextMenu,
   shifts,
   notes,
@@ -87,6 +94,7 @@ export function CalendarWorkspace({
   externalSyncs,
   togglingDates,
   layout,
+  listSort,
   showShiftNotes,
   highlightedWeekdays,
   highlightColor,
@@ -113,12 +121,37 @@ export function CalendarWorkspace({
   const { isOnline } = useConnectionStatus({ toasts: false });
   const [period, setPeriod] = useState<StatsPeriod>("month");
   const [statsOpen, setStatsOpen] = useState(false);
+  const [scrollTarget, setScrollTarget] = useState<{ key: string; nonce: number } | null>(null);
 
   // Grid and day view only; stats stay on the full list so totals don't look broken
   const visibleShifts = useMemo(() => {
     if (!onlyMyShifts || !user) return shifts;
     return shifts.filter((shift) => shift.signups?.some((s) => s.id === user.id));
   }, [shifts, onlyMyShifts, user]);
+
+  // Own shifts only: imported calendars (holidays, colleagues) are not "my next shift"
+  const nextShift = useMemo(() => {
+    if (viewMode !== "list" || desktop) return null;
+    const now = new Date();
+    const todayKey = formatDateToLocal(now);
+    const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    let best: { shift: ShiftWithCalendar; sortKey: string } | null = null;
+    for (const shift of visibleShifts) {
+      if (!shift.date || shift.syncedFromExternal) continue;
+      const dayKey = formatDateToLocal(shift.date as Date);
+      if (dayKey < todayKey) continue;
+      // Today's shifts that already ended are over; overnight ones (end < start) still count
+      const ended =
+        dayKey === todayKey &&
+        !shift.isAllDay &&
+        shift.endTime > shift.startTime &&
+        shift.endTime.slice(0, 5) <= nowTime;
+      if (ended) continue;
+      const sortKey = `${dayKey} ${shift.isAllDay ? "00:00" : shift.startTime}`;
+      if (!best || sortKey < best.sortKey) best = { shift, sortKey };
+    }
+    return best?.shift ?? null;
+  }, [viewMode, visibleShifts, desktop]);
 
   // MobileStatsSheet is skip-mounted below when !canViewStats, so a lingering
   // `true` here would pop it open unbidden if the capability comes back later.
@@ -199,7 +232,35 @@ export function CalendarWorkspace({
 
   const variant = desktop ? "desktop" : "phone";
   const surface =
-    viewMode === "week" ? (
+    viewMode === "list" ? (
+      // Search and filter are per calendar, so the key drops them on a switch
+      <ShiftListView
+        key={calendarId ?? "none"}
+        variant={variant}
+        days={calendarDays}
+        selectedDay={selectedDay}
+        shifts={visibleShifts}
+        notes={notes}
+        presets={presets}
+        externalSyncs={externalSyncs}
+        togglingDates={togglingDates}
+        sort={listSort}
+        combinedSort={layout.combinedSort ?? false}
+        highlightedWeekdays={highlightedWeekdays}
+        highlightColor={highlightColor}
+        stampArmed={selectedPresetIds.length > 0}
+        canAddShift={model.canAddShift}
+        onAddShift={actions.onAddShift}
+        canEditShift={model.canEditShift}
+        canDeleteShift={model.canDeleteShift}
+        onEditShift={actions.onEditShift}
+        onDeleteShift={actions.onDeleteShift}
+        onDayClick={onDayClick}
+        onSelectDay={onSelectDay}
+        onDayContextMenu={canAddNote ? onDayContextMenu : undefined}
+        scrollTarget={scrollTarget}
+      />
+    ) : viewMode === "week" ? (
       <WeekGrid
         variant={variant}
         days={calendarDays}
@@ -260,7 +321,8 @@ export function CalendarWorkspace({
   return (
     <div className="flex h-dvh flex-col bg-background">
       {header}
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* In list mode the list brings its own scroller, so <main> must not scroll too */}
+      <main className={cn("flex min-h-0 flex-1 flex-col", viewMode !== "list" && "overflow-y-auto")}>
         {hasBanner && <div className="flex flex-col gap-2 px-3 pt-3">{banners}</div>}
         <div className="flex items-center gap-2 px-3.5 pb-[9px] pt-3">
           <h1 className="min-w-0 flex-1 truncate text-[19px] font-semibold tracking-[-0.015em] text-fg-strong">
@@ -281,7 +343,15 @@ export function CalendarWorkspace({
             </Button>
           )}
         </div>
-        <div className={`flex flex-1 flex-col pb-1${isOnline ? "" : " opacity-60"}`}>{surface}</div>
+        <div
+          className={cn(
+            "flex flex-1 flex-col pb-1",
+            viewMode === "list" && "min-h-0",
+            !isOnline && "opacity-60"
+          )}
+        >
+          {surface}
+        </div>
       </main>
       <div className="shrink-0">
         {stampingEnabled && (
@@ -303,6 +373,22 @@ export function CalendarWorkspace({
           }}
           onOpenMonthShifts={actions.onOpenMonthShifts}
           onAddShift={model.canAddShift ? actions.onAddShift : undefined}
+          list={
+            viewMode === "list"
+              ? {
+                  nextShift,
+                  onJump: () => {
+                    if (!nextShift?.date) return;
+                    const day = nextShift.date as Date;
+                    onSelectDay(day);
+                    setScrollTarget((prev) => ({
+                      key: formatDateToLocal(day),
+                      nonce: (prev?.nonce ?? 0) + 1,
+                    }));
+                  },
+                }
+              : undefined
+          }
         />
       </div>
       <MobileDaySheet
