@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
-  options: { value: T; label: string; badge?: React.ReactNode }[];
+  options: { value: T; label: React.ReactNode; ariaLabel?: string; badge?: React.ReactNode }[];
   label: string;
   size?: "md" | "lg";
   className?: string;
@@ -34,6 +34,8 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="tab"
             aria-selected={active}
+            aria-label={option.ariaLabel}
+            title={option.ariaLabel}
             onClick={() => onChange(option.value)}
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-lg font-medium transition-colors",

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { format, startOfWeek } from "date-fns";
+import { startOfMonth, startOfWeek } from "date-fns";
 import { RefreshCw, WifiOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,17 @@ import { MobilePresetBar, StampDock, orderStampPresets } from "@/components/stam
 import { GuestBanner } from "@/components/guest-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { StatusBanner } from "@/components/status-banner";
+import { ViewModeSwitcher } from "@/components/view-mode-switcher";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync, ShiftPreset } from "@/lib/db/schema";
 import { DayLayoutOptions } from "@/lib/shift-display";
-import { getDateLocale } from "@/lib/locales";
+import { formatPeriodCaption } from "@/lib/date-utils";
 import { useDayData, usePeriodSummary, StatsPeriod } from "@/hooks/useDaySummary";
 import { useStampShortcuts } from "@/hooks/useStampShortcuts";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useAuth } from "@/hooks/useAuth";
+import { CalendarViewMode } from "@/hooks/useCalendarViewMode";
 
 interface CalendarWorkspaceProps {
   header: React.ReactNode;
@@ -30,6 +32,8 @@ interface CalendarWorkspaceProps {
   calendarDays: Date[];
   currentDate: Date;
   onDateChange: (date: Date) => void;
+  viewMode: CalendarViewMode;
+  onViewModeChange: (mode: CalendarViewMode) => void;
   selectedDay: Date;
   onDayClick: (date: Date) => void;
   onDayContextMenu: (date: Date) => void;
@@ -71,6 +75,8 @@ export function CalendarWorkspace({
   calendarDays,
   currentDate,
   onDateChange,
+  viewMode,
+  onViewModeChange,
   selectedDay,
   onDayClick,
   onDayContextMenu,
@@ -124,21 +130,28 @@ export function CalendarWorkspace({
   }
 
   const dayData = useDayData({ selectedDay, shifts: visibleShifts, notes });
+  // First-of-month, not the exact day, so stepping through the month reuses one cache entry
+  const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+  const monthAnchor = useMemo(() => {
+    const [year, month] = monthKey.split("-").map(Number);
+    return startOfMonth(new Date(year, month, 1));
+  }, [monthKey]);
   const monthSummary = usePeriodSummary({
     calendarId: canViewStats ? calendarId : undefined,
-    anchorDate: currentDate,
+    anchorDate: monthAnchor,
     period: "month",
     shifts,
   });
   // Anchored on the week, not the day, so tapping around inside a week reuses one cache entry
   const sheetSummary = usePeriodSummary({
     calendarId: statsOpen && canViewStats ? calendarId : undefined,
-    anchorDate: period === "week" ? startOfWeek(selectedDay, { weekStartsOn: 1 }) : currentDate,
+    anchorDate: period === "week" ? startOfWeek(selectedDay, { weekStartsOn: 1 }) : monthAnchor,
     period,
     shifts,
   });
 
   const stampingEnabled = canStampPreset && isOnline && showStampBar;
+  const step = viewMode === "week" ? "week" : "month";
   const stampPresetIds = useMemo(
     () => orderStampPresets(presets).map((p) => p.id),
     [presets]
@@ -225,19 +238,18 @@ export function CalendarWorkspace({
     );
   }
 
-  const dateLocale = getDateLocale(locale);
-
   return (
     <div className="flex h-dvh flex-col bg-background">
       {header}
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {hasBanner && <div className="flex flex-col gap-2 px-3 pt-3">{banners}</div>}
-        <div className="flex items-center justify-between gap-2 px-3.5 pb-[9px] pt-3">
-          <h1 className="text-[19px] font-semibold tracking-[-0.015em] text-fg-strong">
-            {format(currentDate, "LLLL yyyy", { locale: dateLocale })}
+        <div className="flex items-center gap-2 px-3.5 pb-[9px] pt-3">
+          <h1 className="min-w-0 flex-1 truncate text-[19px] font-semibold tracking-[-0.015em] text-fg-strong">
+            {formatPeriodCaption(currentDate, step, locale, { compact: true })}
           </h1>
+          <ViewModeSwitcher value={viewMode} onChange={onViewModeChange} variant="icon" />
           {isOnline ? (
-            <MonthArrows currentDate={currentDate} onDateChange={onDateChange} />
+            <MonthArrows currentDate={currentDate} onDateChange={onDateChange} step={step} />
           ) : (
             <Button
               variant="outline"

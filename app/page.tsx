@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { isSameMonth } from "date-fns";
+import { addDays, isSameMonth, isSameWeek, startOfWeek } from "date-fns";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
 import { useCalendars } from "@/hooks/useCalendars";
@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
+import { CalendarViewMode, useCalendarViewMode } from "@/hooks/useCalendarViewMode";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { GuestEmptyState } from "@/components/guest-empty-state";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
@@ -31,7 +32,7 @@ import { CalendarWorkspace } from "@/components/calendar-workspace";
 import { AppHeader } from "@/components/app-header";
 import { DialogManager } from "@/components/dialog-manager";
 import { ShiftFormData } from "@/components/shift-sheet";
-import { getCalendarDays } from "@/lib/calendar-utils";
+import { getCalendarDays, getMonthDays, getWeekDays } from "@/lib/calendar-utils";
 import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
 import { DayLayoutOptions } from "@/lib/shift-display";
@@ -155,6 +156,10 @@ function HomeContent() {
     selectDay,
     selectedPresetIds,
   });
+
+  const [storedViewMode, setViewMode] = useCalendarViewMode();
+  // Compare mode shares one month grid, whatever this device last used
+  const viewMode: CalendarViewMode = isCompareMode ? "month" : storedViewMode;
 
   const {
     notes,
@@ -288,12 +293,29 @@ function HomeContent() {
     refetchShifts();
   };
 
-  // Month navigation keeps the selection inside the visible month
+  // Navigation keeps the selection inside the visible period
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
+    if (viewMode === "week") {
+      if (!isSameWeek(selectedDay, date, { weekStartsOn: 1 })) {
+        const now = new Date();
+        selectDay(
+          isSameWeek(now, date, { weekStartsOn: 1 })
+            ? now
+            : addDays(startOfWeek(date, { weekStartsOn: 1 }), (selectedDay.getDay() + 6) % 7)
+        );
+      }
+      return;
+    }
     if (!isSameMonth(selectedDay, date)) {
       selectDay(isSameMonth(new Date(), date) ? new Date() : new Date(date.getFullYear(), date.getMonth(), 1));
     }
+  };
+
+  const handleViewModeChange = (mode: CalendarViewMode) => {
+    // Week anchors on the focused day; leaving week re-anchors on it when the two drifted apart
+    if (!isSameMonth(selectedDay, currentDate) || mode === "week") setCurrentDate(selectedDay);
+    setViewMode(mode);
   };
 
   // Compare mode shares one grid, so it always uses the personal view
@@ -390,7 +412,15 @@ function HomeContent() {
     />
   );
 
-  const calendarDays = useMemo(() => getCalendarDays(currentDate), [currentDate]);
+  const calendarDays = useMemo(
+    () =>
+      viewMode === "week"
+        ? getWeekDays(currentDate)
+        : viewMode === "list"
+          ? getMonthDays(currentDate)
+          : getCalendarDays(currentDate),
+    [currentDate, viewMode]
+  );
 
   if (
     (!hasLoadedOnce && loading) ||
@@ -477,6 +507,8 @@ function HomeContent() {
       onSyncNotifications={() => dialogStates.setShowSyncNotificationDialog(true)}
       onCompare={openComparePicker}
       onViewSettings={() => dialogStates.setShowViewSettingsDialog(true)}
+      viewMode={viewMode}
+      onViewModeChange={handleViewModeChange}
     />
   );
 
@@ -490,6 +522,8 @@ function HomeContent() {
         calendarDays={calendarDays}
         currentDate={currentDate}
         onDateChange={handleDateChange}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
         selectedDay={selectedDay}
         onDayClick={handleDayClick}
         onDayContextMenu={(date) => openNotesForDay(notes, date)}

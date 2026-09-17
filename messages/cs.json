@@ -684,6 +684,12 @@
   "calendarView": {
     "previousMonth": "Předchozí měsíc",
     "nextMonth": "Další měsíc",
+    "previousWeek": "Předchozí týden",
+    "nextWeek": "Další týden",
+    "viewMode": "Zobrazení",
+    "viewMonth": "Měsíc",
+    "viewWeek": "Týden",
+    "viewList": "Seznam",
     "today": "Dnes",
     "tomorrow": "Zítra",
     "yesterday": "Včera",

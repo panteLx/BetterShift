@@ -1,3 +1,6 @@
+import { endOfWeek, format, startOfWeek } from "date-fns";
+import { getDateLocale } from "@/lib/locales";
+
 /**
  * Converts a Date object to a local date string in YYYY-MM-DD format
  * without timezone conversion issues
@@ -32,6 +35,42 @@ export function formatLongDate(
     longDateFormatters.set(key, formatter);
   }
   return formatter.format(date);
+}
+
+export type PeriodStep = "month" | "week";
+
+const weekRangeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** "8.–14. Sep. 2026"; formatRange collapses the parts both ends share. */
+export function formatWeekRange(start: Date, end: Date, locale: string, withYear = true): string {
+  const key = `${locale}|${withYear}`;
+  let formatter = weekRangeFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      day: "numeric",
+      month: "short",
+      ...(withYear ? { year: "numeric" as const } : {}),
+    });
+    weekRangeFormatters.set(key, formatter);
+  }
+  return formatter.formatRange(start, end);
+}
+
+/** Stepper and title caption: the month name, or the Monday–Sunday range around `date`. */
+export function formatPeriodCaption(
+  date: Date,
+  step: PeriodStep,
+  locale: string,
+  { compact = false }: { compact?: boolean } = {}
+): string {
+  if (step === "month") return format(date, "LLLL yyyy", { locale: getDateLocale(locale) });
+  const start = startOfWeek(date, { weekStartsOn: 1 });
+  const end = endOfWeek(date, { weekStartsOn: 1 });
+  // Compact drops the year while the whole week lies in the current one
+  const thisYear = new Date().getFullYear();
+  const withYear =
+    !compact || start.getFullYear() !== thisYear || end.getFullYear() !== thisYear;
+  return formatWeekRange(start, end, locale, withYear);
 }
 
 const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

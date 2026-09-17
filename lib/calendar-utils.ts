@@ -17,3 +17,14 @@ export function getCalendarDays(date: Date): Date[] {
     end: calendarEnd,
   });
 }
+
+export function getWeekDays(date: Date): Date[] {
+  return eachDayOfInterval({
+    start: startOfWeek(date, { weekStartsOn: 1 }),
+    end: endOfWeek(date, { weekStartsOn: 1 }),
+  });
+}
+
+export function getMonthDays(date: Date): Date[] {
+  return eachDayOfInterval({ start: startOfMonth(date), end: endOfMonth(date) });
+}

@@ -684,6 +684,12 @@
   "calendarView": {
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
+    "previousWeek": "Semana anterior",
+    "nextWeek": "Semana siguiente",
+    "viewMode": "Vista",
+    "viewMonth": "Mes",
+    "viewWeek": "Semana",
+    "viewList": "Lista",
     "today": "Hoy",
     "tomorrow": "Mañana",
     "yesterday": "Ayer",

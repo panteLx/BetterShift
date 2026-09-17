@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { addMonths, format, subMonths } from "date-fns";
+import { addMonths, addWeeks, getISOWeek } from "date-fns";
 import {
   Bell,
   CalendarDays,
@@ -17,10 +17,12 @@ import { CalendarWithCount } from "@/lib/types";
 import { CalendarSwitcher } from "@/components/calendar-switcher";
 import { GuestMenu, UserMenu } from "@/components/user-menu";
 import { InfoDialog } from "@/components/info-dialog";
+import { ViewModeSwitcher } from "@/components/view-mode-switcher";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
-import { getDateLocale } from "@/lib/locales";
+import { CalendarViewMode } from "@/hooks/useCalendarViewMode";
+import { formatPeriodCaption, PeriodStep } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 
 interface AppHeaderProps {
@@ -37,6 +39,13 @@ interface AppHeaderProps {
   onSyncNotifications: () => void;
   onCompare?: () => void;
   onViewSettings?: () => void;
+  /** Absent in contexts without view modes; the switcher is then not rendered */
+  viewMode?: CalendarViewMode;
+  onViewModeChange?: (mode: CalendarViewMode) => void;
+}
+
+function stepDate(date: Date, step: PeriodStep, direction: 1 | -1): Date {
+  return step === "week" ? addWeeks(date, direction) : addMonths(date, direction);
 }
 
 export function HeaderIconButton({
@@ -70,9 +79,11 @@ export function HeaderIconButton({
 export function MonthArrows({
   currentDate,
   onDateChange,
+  step = "month",
 }: {
   currentDate: Date;
   onDateChange: (date: Date) => void;
+  step?: PeriodStep;
 }) {
   const t = useTranslations();
   const stepClass =
@@ -83,8 +94,8 @@ export function MonthArrows({
       <button
         type="button"
         className={stepClass}
-        onClick={() => onDateChange(subMonths(currentDate, 1))}
-        aria-label={t("calendarView.previousMonth")}
+        onClick={() => onDateChange(stepDate(currentDate, step, -1))}
+        aria-label={step === "week" ? t("calendarView.previousWeek") : t("calendarView.previousMonth")}
       >
         <ChevronLeft className="size-[18px]" />
       </button>
@@ -92,8 +103,8 @@ export function MonthArrows({
       <button
         type="button"
         className={stepClass}
-        onClick={() => onDateChange(addMonths(currentDate, 1))}
-        aria-label={t("calendarView.nextMonth")}
+        onClick={() => onDateChange(stepDate(currentDate, step, 1))}
+        aria-label={step === "week" ? t("calendarView.nextWeek") : t("calendarView.nextMonth")}
       >
         <ChevronRight className="size-[18px]" />
       </button>
@@ -158,10 +169,12 @@ export function MonthStepper({
   currentDate,
   onDateChange,
   className,
+  step = "month",
 }: {
   currentDate: Date;
   onDateChange: (date: Date) => void;
   className?: string;
+  step?: PeriodStep;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -173,19 +186,29 @@ export function MonthStepper({
       <button
         type="button"
         className={stepClass}
-        onClick={() => onDateChange(subMonths(currentDate, 1))}
-        aria-label={t("calendarView.previousMonth")}
+        onClick={() => onDateChange(stepDate(currentDate, step, -1))}
+        aria-label={step === "week" ? t("calendarView.previousWeek") : t("calendarView.previousMonth")}
       >
         <ChevronLeft className="size-4" />
       </button>
-      <span className="min-w-[150px] text-center text-[15px] font-semibold text-fg-strong">
-        {format(currentDate, "LLLL yyyy", { locale: getDateLocale(locale) })}
+      <span
+        className={cn(
+          "text-center text-[15px] font-semibold text-fg-strong",
+          step === "week" ? "min-w-[232px]" : "min-w-[150px]"
+        )}
+      >
+        {formatPeriodCaption(currentDate, step, locale)}
+        {step === "week" && (
+          <span className="ml-2 font-mono text-[12px] font-medium text-fg-tertiary">
+            {t("calendarView.calendarWeek", { week: getISOWeek(currentDate) })}
+          </span>
+        )}
       </span>
       <button
         type="button"
         className={stepClass}
-        onClick={() => onDateChange(addMonths(currentDate, 1))}
-        aria-label={t("calendarView.nextMonth")}
+        onClick={() => onDateChange(stepDate(currentDate, step, 1))}
+        aria-label={step === "week" ? t("calendarView.nextWeek") : t("calendarView.nextMonth")}
       >
         <ChevronRight className="size-4" />
       </button>
@@ -206,6 +229,8 @@ export function AppHeader({
   onSyncNotifications,
   onCompare,
   onViewSettings,
+  viewMode,
+  onViewModeChange,
 }: AppHeaderProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -292,7 +317,14 @@ export function AppHeader({
             onCompare={onCompare}
           />
           <div className="h-6 w-px bg-line" />
-          <MonthStepper currentDate={currentDate} onDateChange={onDateChange} />
+          <MonthStepper
+            currentDate={currentDate}
+            onDateChange={onDateChange}
+            step={viewMode === "week" ? "week" : "month"}
+          />
+          {viewMode && onViewModeChange && (
+            <ViewModeSwitcher value={viewMode} onChange={onViewModeChange} variant="text" />
+          )}
           <div className="flex-1" />
           {showUpdate && (
             <UpdatePill
