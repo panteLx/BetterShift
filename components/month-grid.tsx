@@ -7,18 +7,21 @@ import { CalendarClock, RefreshCw, StickyNote } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
-import { findNotesForDate } from "@/lib/event-utils";
-import {
-  DayLayoutOptions,
-  DayShiftLayout,
-  buildDayShiftLayout,
-  formatSignupCapacityLabel,
-  formatTimeRange,
-  shiftVars,
-} from "@/lib/shift-display";
+import { DayLayoutOptions, shiftVars } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
-import { useCalendars } from "@/hooks/useCalendars";
-import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import {
+  DayContent,
+  EventChip,
+  ExternalShiftChip,
+  MinimalSyncCounter,
+  NoteLine,
+  ShiftChip,
+  SignupBadge,
+  TODAY_BADGE,
+  buildDayContents,
+  useDayPress,
+  useSignupsEnabled,
+} from "@/components/day-cell-entries";
 
 const WEEKDAY_KEYS = [
   "monday",
@@ -29,11 +32,6 @@ const WEEKDAY_KEYS = [
   "saturday",
   "sunday",
 ] as const;
-
-const LONG_PRESS_MS = 500;
-
-// The filled day number of "today", shared by the desktop, phone and compare cells
-const TODAY_BADGE = "bg-brand font-semibold text-white dark:bg-brand-dot dark:text-[#0a1020]";
 
 // Cell geometry in px. These mirror the Tailwind sizes of the cell markup below;
 // change both together or the fitting clips rows.
@@ -119,12 +117,6 @@ function useGridSize(enabled: boolean) {
   return [ref, size] as const;
 }
 
-interface DayContent {
-  layout: DayShiftLayout;
-  events: CalendarNote[];
-  notes: CalendarNote[];
-}
-
 interface MonthGridProps {
   calendarDays: Date[];
   currentDate: Date;
@@ -162,12 +154,8 @@ export function MonthGrid({
 }: MonthGridProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const { calendars } = useCalendars();
-  const { isAuthEnabled } = useAuthFeatures();
-  const signupsEnabledById = useMemo(
-    () => new Map(calendars.map((c) => [c.id, isAuthEnabled && (c.signupsEnabled ?? true)])),
-    [calendars, isAuthEnabled]
-  );
+  const signupsEnabled = useSignupsEnabled();
+  const dayPress = useDayPress(onDayClick, onDayContextMenu);
   const phone = variant === "phone";
   const desktop = variant === "desktop";
   // 2024-01-01 was a Monday
@@ -175,8 +163,6 @@ export function MonthGrid({
     const formatter = new Intl.DateTimeFormat(locale, { weekday: "long" });
     return WEEKDAY_KEYS.map((_, i) => formatter.format(new Date(2024, 0, 1 + i)));
   }, [locale]);
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressed = useRef(false);
   const [gridRef, gridSize] = useGridSize(variant !== "compare");
   const rows = Math.max(1, Math.ceil(calendarDays.length / 7));
   const measured = gridSize.height > 0;
@@ -184,62 +170,20 @@ export function MonthGrid({
     ? Math.max(PHONE_MIN_ROW, (gridSize.height - (rows - 1) * PHONE_GAP) / rows)
     : (gridSize.height - (rows - 1)) / rows;
   const colWidth = gridSize.width > 0 ? (gridSize.width - 8) / 7 : PHONE_FALLBACK_COL;
-  // Compact "N" / "N/capacity" badge shared by the desktop chip and the compare row
-  const signupBadge = (shift: ShiftWithCalendar) => {
-    if (!(signupsEnabledById.get(shift.calendarId) ?? true)) return null;
-    const count = shift.signups?.length ?? 0;
-    const capacity = shift.signupCapacity ?? null;
-    if (count === 0 && capacity == null) return null;
-    const label = capacity != null ? formatSignupCapacityLabel(t, count, capacity) : null;
-    return (
-      <span
-        className={cn(
-          "shrink-0 rounded-[4px] px-1 font-mono text-[10px] leading-4",
-          label?.isFull ? "bg-brand-soft text-brand-ink" : "bg-surface-sunken/70 text-fg-tertiary"
-        )}
-        title={label?.text}
-      >
-        {capacity != null ? `${count}/${capacity}` : count}
-      </span>
-    );
-  };
-
-  useEffect(
-    () => () => {
-      if (pressTimer.current) clearTimeout(pressTimer.current);
-    },
-    []
-  );
 
   // One pass over the month instead of scanning every shift and note per cell
   const { maxShifts, maxExternalShifts, sortType, sortOrder, combinedSort } = layout;
   const dayContents = useMemo(() => {
     const month = currentDate.getMonth();
-    const shiftsByDay = new Map<string, ShiftWithCalendar[]>();
-    for (const shift of shifts) {
-      if (!shift.date) continue;
-      const key = formatDateToLocal(shift.date as Date);
-      const list = shiftsByDay.get(key);
-      if (list) list.push(shift);
-      else shiftsByDay.set(key, [shift]);
-    }
-
-    const contents = new Map<string, DayContent>();
-    for (const day of calendarDays) {
-      const key = formatDateToLocal(day);
-      const inMonth = day.getMonth() === month;
-      const dayNotes = inMonth ? findNotesForDate(notes, day) : [];
-      contents.set(key, {
-        layout: buildDayShiftLayout(
-          inMonth ? (shiftsByDay.get(key) ?? []) : [],
-          externalSyncs,
-          { maxShifts, maxExternalShifts, sortType, sortOrder, combinedSort }
-        ),
-        events: dayNotes.filter((n) => n.type === "event"),
-        notes: dayNotes.filter((n) => n.type !== "event"),
-      });
-    }
-    return contents;
+    return buildDayContents(
+      calendarDays,
+      shifts,
+      notes,
+      externalSyncs,
+      { maxShifts, maxExternalShifts, sortType, sortOrder, combinedSort },
+      // Leading and trailing days of other months stay empty
+      (day) => day.getMonth() === month
+    );
   }, [
     calendarDays,
     currentDate,
@@ -252,11 +196,6 @@ export function MonthGrid({
     sortOrder,
     combinedSort,
   ]);
-
-  const cancelPress = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = null;
-  };
 
   /**
    * Day number, plus one counter per minimal-mode sync. Those carry no text, so
@@ -280,17 +219,7 @@ export function MonthGrid({
       {content.layout.minimalGroups.length > 0 && (
         <span className="ml-auto flex shrink-0 items-center gap-1">
           {content.layout.minimalGroups.map(({ sync, shifts: synced }) => (
-            <span
-              key={sync.id}
-              className="shift-chip flex shrink-0 items-center gap-1 rounded-[6px] px-[5px] py-0.5 dark:[--shift-tint:14%]"
-              style={shiftVars(sync.color)}
-              title={sync.name}
-            >
-              <RefreshCw className="size-3 shrink-0" />
-              <span className="font-mono text-[11px] font-semibold leading-4">
-                {synced.length}
-              </span>
-            </span>
+            <MinimalSyncCounter key={sync.id} sync={sync} count={synced.length} />
           ))}
         </span>
       )}
@@ -340,92 +269,25 @@ export function MonthGrid({
       hiddenExternal > 0 && t("calendarView.externalCount", { count: hiddenExternal }),
     ].filter(Boolean);
 
-    const chip =
-      "shift-chip flex min-w-0 shrink-0 gap-1.5 rounded-[6px] py-0.5 pr-[7px] dark:[--shift-tint:14%]";
-    const time = (shift: ShiftWithCalendar) => (
-      <span className="shrink-0 whitespace-nowrap font-mono text-[10.5px] leading-4 opacity-75">
-        {shift.isAllDay
-          ? t("calendarView.allDayShort")
-          : shift.segments?.length
-            ? formatTimeRange(shift)
-            : shift.startTime.slice(0, 5)}
-      </span>
-    );
-
     return (
       <>
         {entries.slice(0, shown).map((entry) => {
           switch (entry.kind) {
-            case "shift": {
-              const { shift } = entry;
+            case "shift":
               return (
-                <span
+                <ShiftChip
                   key={entry.key}
-                  className={cn(chip, "pl-[5px]")}
-                  style={shiftVars(shift.color)}
-                  title={`${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`}
-                >
-                  <span className="shift-rail w-[3px] shrink-0 self-stretch rounded-full" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[11.5px] font-medium leading-4">
-                      {shift.title}
-                    </span>
-                    {showShiftNotes && shift.notes && (
-                      <span className="block truncate text-[10.5px] leading-[14px] opacity-75">
-                        {shift.notes}
-                      </span>
-                    )}
-                  </span>
-                  {signupBadge(shift)}
-                  {time(shift)}
-                </span>
+                  shift={entry.shift}
+                  showNote={showShiftNotes}
+                  signupsEnabled={signupsEnabled(entry.shift.calendarId)}
+                />
               );
-            }
             case "external":
-              // The sync icon takes the rail's place so imported entries stay recognisable
-              return (
-                <span
-                  key={entry.key}
-                  className={cn(chip, "items-center pl-[5px]")}
-                  style={shiftVars(entry.shift.color)}
-                  title={entry.shift.title}
-                >
-                  <RefreshCw className="size-3 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium leading-4">
-                    {entry.shift.title}
-                  </span>
-                  {time(entry.shift)}
-                </span>
-              );
+              return <ExternalShiftChip key={entry.key} shift={entry.shift} />;
             case "event":
-              return (
-                <span
-                  key={entry.key}
-                  className="flex h-5 min-w-0 shrink-0 items-center gap-1.5 rounded-[6px] bg-cell-event px-[7px] shadow-[inset_0_0_0_1px_var(--cell-event-line)]"
-                  title={entry.note.note}
-                >
-                  <CalendarClock
-                    className="shift-icon size-3 shrink-0"
-                    style={shiftVars(entry.note.color || undefined)}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-cell-event-ink">
-                    {entry.note.note}
-                  </span>
-                </span>
-              );
+              return <EventChip key={entry.key} note={entry.note} />;
             case "note":
-              return (
-                <span
-                  key={entry.key}
-                  className="flex h-[18px] min-w-0 shrink-0 items-center gap-1.5 px-1"
-                  title={entry.note.note}
-                >
-                  <StickyNote className="size-3 shrink-0 text-cell-note" />
-                  <span className="min-w-0 flex-1 truncate text-[11.5px] text-fg-body dark:text-fg-secondary">
-                    {entry.note.note}
-                  </span>
-                </span>
-              );
+              return <NoteLine key={entry.key} note={entry.note} />;
           }
         })}
         {overflow.length > 0 && (
@@ -570,7 +432,7 @@ export function MonthGrid({
                 style={shiftVars(shift.color)}
               />
               <span className="min-w-0 flex-1 truncate">{shift.title}</span>
-              {signupBadge(shift)}
+              <SignupBadge shift={shift} enabled={signupsEnabled(shift.calendarId)} />
             </span>
           ))}
           {minimalGroups.map(({ sync, shifts: syncShifts }) => (
@@ -671,27 +533,7 @@ export function MonthGrid({
               disabled={toggling}
               aria-pressed={selected}
               aria-label={day.toLocaleDateString()}
-              onClick={() => {
-                if (longPressed.current) {
-                  longPressed.current = false;
-                  return;
-                }
-                onDayClick(day);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                onDayContextMenu?.(day);
-              }}
-              onTouchStart={() => {
-                longPressed.current = false;
-                if (!onDayContextMenu) return;
-                pressTimer.current = setTimeout(() => {
-                  longPressed.current = true;
-                  onDayContextMenu(day);
-                }, LONG_PRESS_MS);
-              }}
-              onTouchEnd={cancelPress}
-              onTouchMove={cancelPress}
+              {...dayPress(day)}
               style={
                 highlighted ? ({ "--highlight": highlightColor } as React.CSSProperties) : undefined
               }
