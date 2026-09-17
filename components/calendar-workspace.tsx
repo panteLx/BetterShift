@@ -6,7 +6,7 @@ import { startOfMonth, startOfWeek } from "date-fns";
 import { RefreshCw, WifiOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { MonthArrows } from "@/components/app-header";
+import { MonthArrows, stepDate } from "@/components/app-header";
 import { MonthGrid } from "@/components/month-grid";
 import { WeekGrid } from "@/components/week-grid";
 import { ListSort, ShiftListView } from "@/components/shift-list-view";
@@ -24,6 +24,7 @@ import { formatDateToLocal, formatPeriodCaption } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 import { useDayData, usePeriodSummary, StatsPeriod } from "@/hooks/useDaySummary";
 import { useStampShortcuts } from "@/hooks/useStampShortcuts";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useAuth } from "@/hooks/useAuth";
@@ -186,6 +187,12 @@ export function CalendarWorkspace({
 
   const stampingEnabled = canStampPreset && isOnline && showStampBar;
   const step = viewMode === "week" ? "week" : "month";
+  // Month and week grids only: the list already scrolls horizontally for its preset filter chips
+  const swipe = useSwipeNavigation(
+    () => onDateChange(stepDate(currentDate, step, 1)),
+    () => onDateChange(stepDate(currentDate, step, -1))
+  );
+  const swipeHandlers = !desktop && viewMode !== "list" ? swipe : undefined;
   const stampPresetIds = useMemo(
     () => orderStampPresets(presets).map((p) => p.id),
     [presets]
@@ -273,6 +280,7 @@ export function CalendarWorkspace({
         highlightColor={highlightColor}
         onDayClick={onDayClick}
         onDayContextMenu={canAddNote ? onDayContextMenu : undefined}
+        swipeHandlers={swipeHandlers}
       />
     ) : (
       <MonthGrid
@@ -290,6 +298,7 @@ export function CalendarWorkspace({
         highlightColor={highlightColor}
         onDayClick={onDayClick}
         onDayContextMenu={canAddNote ? onDayContextMenu : undefined}
+        swipeHandlers={swipeHandlers}
       />
     );
 

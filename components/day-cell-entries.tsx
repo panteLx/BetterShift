@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { CalendarClock, RefreshCw, StickyNote } from "lucide-react";
+import { CalendarClock, RefreshCw, StickyNote, UserPlus } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuickSelfSignup, useShiftSignupPermission } from "@/hooks/useShiftSignups";
 
 const LONG_PRESS_MS = 500;
 
@@ -147,6 +149,45 @@ export function SignupBadge({ shift, enabled }: { shift: ShiftWithCalendar; enab
   );
 }
 
+/** Quick self-assign; renders nothing when the viewer can't or already did. Shared with ShiftDetailRow. */
+export function QuickSignupButton({
+  shift,
+  size = "md",
+}: {
+  shift: ShiftWithCalendar;
+  /** "sm" fits a shift chip, "md" a full-height row like ShiftDetailRow */
+  size?: "sm" | "md";
+}) {
+  const t = useTranslations();
+  const { user: currentUser } = useAuth();
+  const { canManageOwn } = useShiftSignupPermission(shift.calendarId);
+  const { signUpForShift, isPending: signingUp } = useQuickSelfSignup();
+  const signups = shift.signups ?? [];
+  const capacity = shift.signupCapacity ?? null;
+  const alreadySignedUp = !!currentUser && signups.some((s) => s.id === currentUser.id);
+  const isFull = capacity != null && signups.length >= capacity;
+  if (!canManageOwn || alreadySignedUp || isFull) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        signUpForShift(shift.id);
+      }}
+      disabled={signingUp}
+      aria-label={t("shiftSignup.addSelf")}
+      title={t("shiftSignup.addSelf")}
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken disabled:opacity-40",
+        size === "sm" ? "size-5" : "size-7"
+      )}
+    >
+      <UserPlus className={size === "sm" ? "size-3.5" : "size-4"} />
+    </button>
+  );
+}
+
 const CHIP =
   "shift-chip flex min-w-0 shrink-0 gap-1.5 rounded-[6px] py-0.5 pr-[7px] dark:[--shift-tint:14%]";
 // Month cells cut titles to one line; week and list let them wrap
@@ -185,11 +226,14 @@ export function ShiftChip({
   showNote,
   signupsEnabled,
   wrap = false,
+  interactive = false,
 }: {
   shift: ShiftWithCalendar;
   showNote: boolean;
   signupsEnabled: boolean;
   wrap?: boolean;
+  /** Week view only: the cell is a div, not a button, so a nested signup button is valid here */
+  interactive?: boolean;
 }) {
   const title = `${shift.title}${shift.notes ? `\n${shift.notes}` : ""}`;
 
@@ -205,6 +249,7 @@ export function ShiftChip({
               {shift.title}
             </span>
             <SignupBadge shift={shift} enabled={signupsEnabled} />
+            {interactive && <QuickSignupButton shift={shift} />}
           </span>
           {showNote && shift.notes && (
             <span className={cn(lineClass(wrap), "text-[10.5px] leading-[14px] opacity-75")}>
@@ -231,6 +276,7 @@ export function ShiftChip({
         )}
       </span>
       <SignupBadge shift={shift} enabled={signupsEnabled} />
+      {interactive && <QuickSignupButton shift={shift} />}
       <ChipTime shift={shift} full={wrap} />
     </span>
   );

@@ -9,7 +9,6 @@ import {
   RefreshCw,
   StickyNote,
   Trash2,
-  UserPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,8 +29,8 @@ import {
 import { PeriodSummary } from "@/hooks/useDaySummary";
 import { cn, getUserInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/hooks/useAuth";
-import { useQuickSelfSignup, useShiftSignupPermission } from "@/hooks/useShiftSignups";
+import { useShiftSignupPermission } from "@/hooks/useShiftSignups";
+import { QuickSignupButton } from "@/components/day-cell-entries";
 
 /** Compact avatar stack for who signed up; renders nothing when unused. */
 function ShiftSignupBadge({
@@ -136,14 +135,7 @@ export function ShiftDetailRow({
   const deletable = canDelete && !synced;
   const minutes = getShiftMinutes(shift);
 
-  const { user: currentUser } = useAuth();
-  const { canManageOwn, signupsEnabled } = useShiftSignupPermission(shift.calendarId);
-  const { signUpForShift, isPending: signingUp } = useQuickSelfSignup();
-  const signups = shift.signups ?? [];
-  const capacity = shift.signupCapacity ?? null;
-  const alreadySignedUp = !!currentUser && signups.some((s) => s.id === currentUser.id);
-  const isFull = capacity != null && signups.length >= capacity;
-  const showQuickSignup = canManageOwn && !alreadySignedUp && !isFull;
+  const { signupsEnabled } = useShiftSignupPermission(shift.calendarId);
 
   return (
     <div
@@ -168,21 +160,7 @@ export function ShiftDetailRow({
         )}
       </div>
       <ShiftSignupBadge shift={shift} signupsEnabled={signupsEnabled} />
-      {showQuickSignup && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            signUpForShift(shift.id);
-          }}
-          disabled={signingUp}
-          aria-label={t("shiftSignup.addSelf")}
-          title={t("shiftSignup.addSelf")}
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken disabled:opacity-40"
-        >
-          <UserPlus className="size-4" />
-        </button>
-      )}
+      <QuickSignupButton shift={shift} />
       {synced && (
         <span
           className="flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-semibold text-fg-secondary"

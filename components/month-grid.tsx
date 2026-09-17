@@ -134,6 +134,11 @@ interface MonthGridProps {
   onDayContextMenu?: (date: Date) => void;
   /** "compare" is the narrow desktop column used side by side in compare mode */
   variant?: Variant;
+  /** Phone only: swipe left/right across the grid to step the month */
+  swipeHandlers?: {
+    onTouchStart: (e: React.TouchEvent) => void;
+    onTouchEnd: (e: React.TouchEvent) => void;
+  };
 }
 
 export function MonthGrid({
@@ -151,6 +156,7 @@ export function MonthGrid({
   onDayClick,
   onDayContextMenu,
   variant = "desktop",
+  swipeHandlers,
 }: MonthGridProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -505,6 +511,8 @@ export function MonthGrid({
 
       <div
         ref={gridRef}
+        onTouchStart={swipeHandlers?.onTouchStart}
+        onTouchEnd={swipeHandlers?.onTouchEnd}
         className={cn(
           "grid flex-1 grid-cols-7",
           phone

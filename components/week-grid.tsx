@@ -36,6 +36,11 @@ interface WeekGridProps {
   highlightColor?: string;
   onDayClick: (date: Date) => void;
   onDayContextMenu?: (date: Date) => void;
+  /** Phone only: swipe left/right across the grid to step the week */
+  swipeHandlers?: {
+    onTouchStart: (e: React.TouchEvent) => void;
+    onTouchEnd: (e: React.TouchEvent) => void;
+  };
 }
 
 export function WeekGrid({
@@ -52,6 +57,7 @@ export function WeekGrid({
   highlightColor,
   onDayClick,
   onDayContextMenu,
+  swipeHandlers,
 }: WeekGridProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -94,6 +100,7 @@ export function WeekGrid({
             shift={shift}
             showNote={showShiftNotes}
             signupsEnabled={signupsEnabled(shift.calendarId)}
+            interactive
             wrap
           />
         )
@@ -115,6 +122,8 @@ export function WeekGrid({
 
   return (
     <div
+      onTouchStart={swipeHandlers?.onTouchStart}
+      onTouchEnd={swipeHandlers?.onTouchEnd}
       className={cn(
         desktop
           ? "mx-[18px] mt-3.5 grid min-h-0 flex-1 grid-cols-7 gap-px border-y border-line bg-line-grid"
@@ -134,18 +143,21 @@ export function WeekGrid({
           <MinimalSyncCounter key={sync.id} sync={sync} count={synced.length} />
         ));
 
+        const press = dayPress(day);
+
         return (
-          <button
+          // A shift chip's own self-assign button must not nest inside another button,
+          // so the cell forwards clicks itself and only the day badge stays focusable.
+          <div
             key={key}
-            type="button"
-            disabled={toggling}
-            aria-pressed={selected}
-            aria-label={day.toLocaleDateString()}
-            {...dayPress(day)}
+            onClick={toggling ? undefined : press.onClick}
+            onContextMenu={press.onContextMenu}
+            onTouchStart={press.onTouchStart}
+            onTouchEnd={press.onTouchEnd}
+            onTouchMove={press.onTouchMove}
             style={highlighted ? ({ "--highlight": highlightColor } as React.CSSProperties) : undefined}
             className={cn(
-              "relative min-w-0 select-none text-left outline-none transition-colors [-webkit-touch-callout:none]",
-              "focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]",
+              "relative min-w-0 select-none text-left transition-colors [-webkit-touch-callout:none]",
               desktop
                 ? cn(
                     // pb-16: the floating StampDock overlays the bottom of the column, each of which scrolls on its own
@@ -166,14 +178,18 @@ export function WeekGrid({
               <>
                 {/* Not sticky: day-highlight paints a background-image, which bg-inherit can't carry */}
                 <span className="-mx-2 flex shrink-0 items-center gap-1.5 px-2 pb-1.5 pt-2">
-                  <span
+                  <button
+                    type="button"
+                    disabled={toggling}
+                    aria-pressed={selected}
+                    aria-label={day.toLocaleDateString()}
                     className={cn(
-                      "inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full px-1 font-mono text-[12.5px] font-medium leading-none",
+                      "inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full px-1 font-mono text-[12.5px] font-medium leading-none outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]",
                       today ? TODAY_BADGE : "text-fg-body dark:text-fg-secondary"
                     )}
                   >
                     {day.getDate()}
-                  </span>
+                  </button>
                   <span className="min-w-0 truncate text-[11.5px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary">
                     {formatters.weekday.format(day)}
                     {straddlesMonths && ` · ${formatters.month.format(day)}`}
@@ -186,7 +202,13 @@ export function WeekGrid({
               </>
             ) : (
               <>
-                <span className="flex w-10 shrink-0 flex-col items-center gap-0.5 pt-0.5">
+                <button
+                  type="button"
+                  disabled={toggling}
+                  aria-pressed={selected}
+                  aria-label={day.toLocaleDateString()}
+                  className="flex w-10 shrink-0 flex-col items-center gap-0.5 rounded-md pt-0.5 outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]"
+                >
                   <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-cell-muted">
                     {formatters.weekday.format(day)}
                   </span>
@@ -202,7 +224,7 @@ export function WeekGrid({
                   >
                     {day.getDate()}
                   </span>
-                </span>
+                </button>
                 <span className="flex min-w-0 flex-1 flex-col gap-1 border-b border-line pb-2.5">
                   {counters.length > 0 && <span className="flex flex-wrap gap-1">{counters}</span>}
                   {renderEntries(content)}
@@ -212,7 +234,7 @@ export function WeekGrid({
                 </span>
               </>
             )}
-          </button>
+          </div>
         );
       })}
     </div>

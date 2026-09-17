@@ -44,7 +44,7 @@ interface AppHeaderProps {
   onViewModeChange?: (mode: CalendarViewMode) => void;
 }
 
-function stepDate(date: Date, step: PeriodStep, direction: 1 | -1): Date {
+export function stepDate(date: Date, step: PeriodStep, direction: 1 | -1): Date {
   return step === "week" ? addWeeks(date, direction) : addMonths(date, direction);
 }
 
