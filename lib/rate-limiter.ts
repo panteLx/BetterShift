@@ -191,6 +191,17 @@ const config = {
       parseInt(process.env.RATE_LIMIT_BUNDLE_MUTATIONS_WINDOW || "3600", 10) *
       1000, // 1 hour
   },
+  // Custom field definition create/update/delete/reorder, keyed per calendar
+  // like bundleMutations — catalog edits are bursty but bounded.
+  customFieldMutations: {
+    requests: parseInt(
+      process.env.RATE_LIMIT_CUSTOM_FIELD_MUTATIONS_REQUESTS || "30",
+      10
+    ),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_CUSTOM_FIELD_MUTATIONS_WINDOW || "3600", 10) *
+      1000, // 1 hour
+  },
 };
 
 /**
@@ -218,6 +229,7 @@ const limitsByType = {
   "admin-bulk-operations": config.adminBulkOperations,
   "admin-calendar-mutations": config.adminCalendarMutations,
   "bundle-mutations": config.bundleMutations,
+  "custom-field-mutations": config.customFieldMutations,
 } as const;
 
 export type RateLimitType = keyof typeof limitsByType;
@@ -423,7 +435,8 @@ export function rateLimit(
   if (
     (type === "token-creation" ||
       type === "external-sync" ||
-      type === "bundle-mutations") &&
+      type === "bundle-mutations" ||
+      type === "custom-field-mutations") &&
     resourceId
   ) {
     identifier = `calendar:${resourceId}`;
