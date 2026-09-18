@@ -122,167 +122,180 @@ function ViewFields({
     { day: 0, label: t("view.sunday") },
   ];
   const days = value.highlightedWeekdays;
+  // Neither is part of CalendarViewSettings, so a calendar's own view can never take them over
+  const hasPersonalSection = !!stampBar || !!onlyMyShifts;
 
   return (
-    <div className={cn("flex flex-col gap-6", disabled && LOCKED_FIELDS)}>
-      <section className="flex flex-col gap-3">
-        <SectionLabel className="mb-0">{t("view.density")}</SectionLabel>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-[14px] font-semibold text-fg-strong">{t("view.shiftsPerDay")}</div>
-            <div className="text-[12.5px] text-fg-secondary">{t("view.shiftsPerDayHint")}</div>
-          </div>
-          <LimitControl
-            label={t("view.shiftsPerDay")}
-            value={value.shiftsPerDay}
-            onChange={(shiftsPerDay) => onChange({ shiftsPerDay })}
-            disabled={disabled}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-[14px] font-semibold text-fg-strong">
-              {t("view.externalShiftsPerDay")}
-            </div>
-            <div className="text-[12.5px] text-fg-secondary">
-              {t("view.externalShiftsPerDayHint")}
-            </div>
-          </div>
-          <LimitControl
-            label={t("view.externalShiftsPerDay")}
-            value={value.externalShiftsPerDay}
-            onChange={(externalShiftsPerDay) => onChange({ externalShiftsPerDay })}
-            disabled={disabled}
-          />
-        </div>
-        {/* Phone cells have no room for a second line, so the toggle would do nothing there */}
-        {desktop && (
-          <ToggleRow
-            id={`${id}-notes`}
-            title={t("view.showNotes")}
-            description={t("view.showNotesHint")}
-            checked={value.showShiftNotes}
-            onCheckedChange={(showShiftNotes) => onChange({ showShiftNotes })}
-            disabled={disabled}
-          />
-        )}
-        {stampBar && (
-          <ToggleRow
-            id={`${id}-dock`}
-            title={t("view.showPresetBar")}
-            description={t("view.showPresetBarHint")}
-            checked={stampBar.checked}
-            onCheckedChange={stampBar.onChange}
-            disabled={disabled}
-          />
-        )}
-        {onlyMyShifts && (
-          <>
+    <div className="flex flex-col gap-6">
+      {hasPersonalSection && (
+        <section className="flex flex-col gap-3">
+          <SectionLabel className="mb-0">{t("view.personalSection")}</SectionLabel>
+          {stampBar && (
             <ToggleRow
-              id={`${id}-only-mine`}
-              title={t("view.onlyMyShifts")}
-              description={t("view.onlyMyShiftsHint")}
-              checked={onlyMyShifts.checked}
-              onCheckedChange={onlyMyShifts.onChange}
+              id={`${id}-dock`}
+              title={t("view.showPresetBar")}
+              description={t("view.showPresetBarHint")}
+              checked={stampBar.checked}
+              onCheckedChange={stampBar.onChange}
+            />
+          )}
+          {onlyMyShifts && (
+            <>
+              <ToggleRow
+                id={`${id}-only-mine`}
+                title={t("view.onlyMyShifts")}
+                description={t("view.onlyMyShiftsHint")}
+                checked={onlyMyShifts.checked}
+                onCheckedChange={onlyMyShifts.onChange}
+              />
+              {onlyMyShifts.checked && onlyMyShifts.signupsDisabled && (
+                <InfoNote icon={Info}>{t("view.onlyMyShiftsSignupsDisabledHint")}</InfoNote>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      <div className={cn("flex flex-col gap-6", disabled && LOCKED_FIELDS)}>
+        <section
+          className={cn(
+            "flex flex-col gap-3",
+            hasPersonalSection && "border-t border-line pt-5"
+          )}
+        >
+          <SectionLabel className="mb-0">{t("view.density")}</SectionLabel>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold text-fg-strong">{t("view.shiftsPerDay")}</div>
+              <div className="text-[12.5px] text-fg-secondary">{t("view.shiftsPerDayHint")}</div>
+            </div>
+            <LimitControl
+              label={t("view.shiftsPerDay")}
+              value={value.shiftsPerDay}
+              onChange={(shiftsPerDay) => onChange({ shiftsPerDay })}
               disabled={disabled}
             />
-            {onlyMyShifts.checked && onlyMyShifts.signupsDisabled && (
-              <InfoNote icon={Info}>{t("view.onlyMyShiftsSignupsDisabledHint")}</InfoNote>
-            )}
-          </>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3 border-t border-line pt-5">
-        <SectionLabel className="mb-0">{t("view.sortOptions")}</SectionLabel>
-        <Field label={t("view.sortBy")}>
-          <ChoiceChips
-            value={value.sortType}
-            onChange={(sortType) => onChange({ sortType })}
-            disabled={disabled}
-            options={[
-              { value: "startTime", label: t("view.sortByStartTime") },
-              { value: "createdAt", label: t("view.sortByCreatedAt") },
-              { value: "title", label: t("view.sortByTitle") },
-            ]}
-          />
-        </Field>
-        <Field label={t("view.sortOrder")}>
-          <ChoiceChips
-            value={value.sortOrder}
-            onChange={(sortOrder) => onChange({ sortOrder })}
-            disabled={disabled}
-            options={[
-              { value: "asc", label: t("view.sortOrderAsc") },
-              { value: "desc", label: t("view.sortOrderDesc") },
-            ]}
-          />
-        </Field>
-        <ToggleRow
-          id={`${id}-combined`}
-          title={t("view.combinedSort")}
-          description={t("view.combinedSortHint")}
-          checked={value.combinedSort}
-          onCheckedChange={(combinedSort) => onChange({ combinedSort })}
-          disabled={disabled}
-        />
-      </section>
-
-      <section className="flex flex-col gap-3 border-t border-line pt-5">
-        <SectionLabel className="mb-0">{t("view.dayHighlighting")}</SectionLabel>
-        <ToggleRow
-          id={`${id}-weekends`}
-          title={t("view.highlightWeekends")}
-          description={t("view.highlightWeekendsHint")}
-          checked={days.includes(0) && days.includes(6)}
-          onCheckedChange={(checked) =>
-            onChange({
-              highlightedWeekdays: checked
-                ? Array.from(new Set([...days, 0, 6]))
-                : days.filter((d) => d !== 0 && d !== 6),
-            })
-          }
-          disabled={disabled}
-        />
-        <Field label={t("view.customWeekdays")} hint={t("view.customWeekdaysHint")}>
-          <div className="grid grid-cols-7 gap-1.5">
-            {weekdays.map(({ day, label }) => {
-              const selected = days.includes(day);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  aria-pressed={selected}
-                  title={label}
-                  disabled={disabled}
-                  onClick={() =>
-                    onChange({
-                      highlightedWeekdays: selected
-                        ? days.filter((d) => d !== day)
-                        : [...days, day],
-                    })
-                  }
-                  className={cn(
-                    "h-9 rounded-lg border text-[12.5px] font-semibold",
-                    selected ? "border-brand text-brand-ink" : "border-line text-fg-secondary",
-                    !disabled && (selected ? "bg-brand-soft" : "bg-surface-card")
-                  )}
-                >
-                  {label.slice(0, 2)}
-                </button>
-              );
-            })}
           </div>
-        </Field>
-        <Field label={t("view.highlightColor")}>
-          <ColorSwatches
-            size="sm"
-            value={value.highlightColor}
-            onChange={(highlightColor) => onChange({ highlightColor })}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold text-fg-strong">
+                {t("view.externalShiftsPerDay")}
+              </div>
+              <div className="text-[12.5px] text-fg-secondary">
+                {t("view.externalShiftsPerDayHint")}
+              </div>
+            </div>
+            <LimitControl
+              label={t("view.externalShiftsPerDay")}
+              value={value.externalShiftsPerDay}
+              onChange={(externalShiftsPerDay) => onChange({ externalShiftsPerDay })}
+              disabled={disabled}
+            />
+          </div>
+          {/* Phone cells have no room for a second line, so the toggle would do nothing there */}
+          {desktop && (
+            <ToggleRow
+              id={`${id}-notes`}
+              title={t("view.showNotes")}
+              description={t("view.showNotesHint")}
+              checked={value.showShiftNotes}
+              onCheckedChange={(showShiftNotes) => onChange({ showShiftNotes })}
+              disabled={disabled}
+            />
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3 border-t border-line pt-5">
+          <SectionLabel className="mb-0">{t("view.sortOptions")}</SectionLabel>
+          <Field label={t("view.sortBy")}>
+            <ChoiceChips
+              value={value.sortType}
+              onChange={(sortType) => onChange({ sortType })}
+              disabled={disabled}
+              options={[
+                { value: "startTime", label: t("view.sortByStartTime") },
+                { value: "createdAt", label: t("view.sortByCreatedAt") },
+                { value: "title", label: t("view.sortByTitle") },
+              ]}
+            />
+          </Field>
+          <Field label={t("view.sortOrder")}>
+            <ChoiceChips
+              value={value.sortOrder}
+              onChange={(sortOrder) => onChange({ sortOrder })}
+              disabled={disabled}
+              options={[
+                { value: "asc", label: t("view.sortOrderAsc") },
+                { value: "desc", label: t("view.sortOrderDesc") },
+              ]}
+            />
+          </Field>
+          <ToggleRow
+            id={`${id}-combined`}
+            title={t("view.combinedSort")}
+            description={t("view.combinedSortHint")}
+            checked={value.combinedSort}
+            onCheckedChange={(combinedSort) => onChange({ combinedSort })}
             disabled={disabled}
           />
-        </Field>
-      </section>
+        </section>
+
+        <section className="flex flex-col gap-3 border-t border-line pt-5">
+          <SectionLabel className="mb-0">{t("view.dayHighlighting")}</SectionLabel>
+          <ToggleRow
+            id={`${id}-weekends`}
+            title={t("view.highlightWeekends")}
+            description={t("view.highlightWeekendsHint")}
+            checked={days.includes(0) && days.includes(6)}
+            onCheckedChange={(checked) =>
+              onChange({
+                highlightedWeekdays: checked
+                  ? Array.from(new Set([...days, 0, 6]))
+                  : days.filter((d) => d !== 0 && d !== 6),
+              })
+            }
+            disabled={disabled}
+          />
+          <Field label={t("view.customWeekdays")} hint={t("view.customWeekdaysHint")}>
+            <div className="grid grid-cols-7 gap-1.5">
+              {weekdays.map(({ day, label }) => {
+                const selected = days.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    aria-pressed={selected}
+                    title={label}
+                    disabled={disabled}
+                    onClick={() =>
+                      onChange({
+                        highlightedWeekdays: selected
+                          ? days.filter((d) => d !== day)
+                          : [...days, day],
+                      })
+                    }
+                    className={cn(
+                      "h-9 rounded-lg border text-[12.5px] font-semibold",
+                      selected ? "border-brand text-brand-ink" : "border-line text-fg-secondary",
+                      !disabled && (selected ? "bg-brand-soft" : "bg-surface-card")
+                    )}
+                  >
+                    {label.slice(0, 2)}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          <Field label={t("view.highlightColor")}>
+            <ColorSwatches
+              size="sm"
+              value={value.highlightColor}
+              onChange={(highlightColor) => onChange({ highlightColor })}
+              disabled={disabled}
+            />
+          </Field>
+        </section>
+      </div>
     </div>
   );
 }
@@ -434,18 +447,22 @@ export function PersonalViewPanel({
   const { calendars } = useCalendars();
   const calendar = calendarId ? calendars.find((c) => c.id === calendarId) : undefined;
   const { personal, updatePersonal, storedInAccount } = settings;
+  // The calendar's own view replaces these fields as a whole; the stamp bar and
+  // the own-shifts filter never come from it (see resolveViewSettings), so they stay editable
+  const overridden = !!calendar?.viewSettings;
 
   return (
     <PanelBody>
       <div className="flex flex-col gap-5">
-        {calendar?.viewSettings && (
+        {overridden && (
           <InfoNote icon={Info}>
-            {t("view.overriddenByCalendar", { calendar: calendar.name })}
+            {t("view.overriddenByCalendar", { calendar: calendar!.name })}
           </InfoNote>
         )}
         <ViewFields
           value={personal}
           onChange={updatePersonal}
+          disabled={overridden}
           stampBar={{
             checked: personal.showStampBar,
             onChange: (showStampBar) => updatePersonal({ showStampBar }),
