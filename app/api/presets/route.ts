@@ -7,6 +7,12 @@ import { hasCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 import { replacePresetSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import {
+  getCalendarCustomFields,
+  withPresetCustomFields,
+  resolveCustomFieldValues,
+  replacePresetCustomFieldValues,
+} from "@/lib/shift-custom-fields";
 
 // GET all presets for a calendar
 export async function GET(request: NextRequest) {
@@ -50,9 +56,11 @@ export async function GET(request: NextRequest) {
       .from(shiftPresets)
       .where(eq(shiftPresets.calendarId, calendarId))
       .orderBy(asc(shiftPresets.order));
-    return NextResponse.json(
-      calendar.splitShiftsEnabled ? await withPresetSegments(presets) : presets
-    );
+    const withSegs = calendar.splitShiftsEnabled
+      ? await withPresetSegments(presets)
+      : presets;
+    const definitions = await getCalendarCustomFields(calendarId);
+    return NextResponse.json(await withPresetCustomFields(withSegs, definitions));
   } catch (error) {
     console.error("Error fetching presets:", error);
     return NextResponse.json(
@@ -79,6 +87,7 @@ export async function POST(request: NextRequest) {
       hideFromStats,
       defaultSignupCapacity,
       segments: requestedSegments,
+      customFields,
     } = body;
 
     if (!calendarId || !title) {
@@ -148,6 +157,15 @@ export async function POST(request: NextRequest) {
       segmentsToPersist = normalized.segments;
     }
 
+    const customFieldDefinitions = await getCalendarCustomFields(calendarId);
+    const resolvedCustomFields = resolveCustomFieldValues(
+      customFieldDefinitions,
+      customFields
+    );
+    if ("error" in resolvedCustomFields) {
+      return NextResponse.json({ error: resolvedCustomFields.error }, { status: 400 });
+    }
+
     const preset = db.transaction((tx) => {
       const inserted = tx
         .insert(shiftPresets)
@@ -172,10 +190,12 @@ export async function POST(request: NextRequest) {
         .returning()
         .get();
       replacePresetSegments(tx, inserted.id, segmentsToPersist);
+      replacePresetCustomFieldValues(tx, inserted.id, resolvedCustomFields.values);
       return inserted;
     });
 
-    return NextResponse.json({ ...preset, segments: segmentsToPersist });
+    const [withFields] = await withPresetCustomFields([preset], customFieldDefinitions);
+    return NextResponse.json({ ...withFields, segments: segmentsToPersist });
   } catch (error) {
     console.error("Error creating preset:", error);
     return NextResponse.json(

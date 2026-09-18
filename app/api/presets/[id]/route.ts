@@ -7,6 +7,13 @@ import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 import { replacePresetSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import {
+  getCalendarCustomFields,
+  withPresetCustomFields,
+  resolveCustomFieldValues,
+  replacePresetCustomFieldValues,
+  type CustomFieldValueRow,
+} from "@/lib/shift-custom-fields";
 
 // GET single preset
 export async function GET(
@@ -82,6 +89,7 @@ export async function PATCH(
       hideFromStats,
       defaultSignupCapacity,
       segments: requestedSegments,
+      customFields,
     } = body;
 
     // groupName: undefined leaves it unchanged, null explicitly clears it,
@@ -173,6 +181,18 @@ export async function PATCH(
       }
     }
 
+    const customFieldDefinitions = await getCalendarCustomFields(existingPreset.calendarId);
+    // null means "not mentioned in the request" — leave existing values untouched;
+    // an empty object still resolves to [] and clears them.
+    let customFieldValuesToPersist: CustomFieldValueRow[] | null = null;
+    if (customFields !== undefined) {
+      const resolved = resolveCustomFieldValues(customFieldDefinitions, customFields);
+      if ("error" in resolved) {
+        return NextResponse.json({ error: resolved.error }, { status: 400 });
+      }
+      customFieldValuesToPersist = resolved.values;
+    }
+
     const updatedPreset = db.transaction((tx) => {
       const updated = tx
         .update(shiftPresets)
@@ -198,6 +218,10 @@ export async function PATCH(
 
       if (nextSegments !== undefined) {
         replacePresetSegments(tx, id, nextSegments);
+      }
+
+      if (customFieldValuesToPersist !== null) {
+        replacePresetCustomFieldValues(tx, id, customFieldValuesToPersist);
       }
 
       // Cascade to every shift created from this preset — title/time/color/
@@ -243,7 +267,8 @@ export async function PATCH(
     });
 
     const [withSegments] = await withPresetSegments([updatedPreset]);
-    return NextResponse.json(withSegments);
+    const [withCustomFields] = await withPresetCustomFields([withSegments], customFieldDefinitions);
+    return NextResponse.json(withCustomFields);
   } catch (error) {
     console.error("Error updating preset:", error);
     return NextResponse.json(
