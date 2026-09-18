@@ -245,14 +245,16 @@ export function useCustomFieldActions(calendarId: string) {
   });
 
   return {
-    /** The create mutation's last error, so a caller can run isKeyInUse() on it — createField itself only returns a boolean. */
-    createFieldError: createMutation.error,
-    createField: async (input: CreateCustomFieldInput) => {
+    // "key-in-use" is distinguished so the form can mark the key field inline without
+    // relying on state from a later render — see the fix-round-1 note in the task report.
+    createField: async (
+      input: CreateCustomFieldInput
+    ): Promise<"ok" | "key-in-use" | "error"> => {
       try {
         await createMutation.mutateAsync(input);
-        return true;
-      } catch {
-        return false;
+        return "ok";
+      } catch (err) {
+        return isKeyInUse(err) ? "key-in-use" : "error";
       }
     },
     updateField: async (fieldId: string, input: UpdateCustomFieldInput) => {
