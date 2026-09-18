@@ -7,6 +7,13 @@ import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
 import { parseLocalDate } from "@/lib/date-utils";
 import { replaceShiftSegments, withShiftSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import {
+  getCalendarCustomFields,
+  withShiftCustomFields,
+  resolveCustomFieldValues,
+  replaceShiftCustomFieldValues,
+  type CustomFieldValueRow,
+} from "@/lib/shift-custom-fields";
 
 // GET single shift
 export async function GET(
@@ -239,6 +246,18 @@ export async function PUT(
       }
     }
 
+    const customFieldDefinitions = await getCalendarCustomFields(existingShift.calendarId);
+    // null means "not mentioned in the request" — leave existing values untouched;
+    // an empty object still resolves to [] and clears them.
+    let customFieldValuesToPersist: CustomFieldValueRow[] | null = null;
+    if (body.customFields !== undefined) {
+      const resolved = resolveCustomFieldValues(customFieldDefinitions, body.customFields);
+      if ("error" in resolved) {
+        return NextResponse.json({ error: resolved.error }, { status: 400 });
+      }
+      customFieldValuesToPersist = resolved.values;
+    }
+
     // Update the shift
     const updatedShift = db.transaction((tx) => {
       const updated = tx
@@ -266,11 +285,15 @@ export async function PUT(
       if (nextSegments !== undefined) {
         replaceShiftSegments(tx, id, nextSegments);
       }
+      if (customFieldValuesToPersist !== null) {
+        replaceShiftCustomFieldValues(tx, id, customFieldValuesToPersist);
+      }
       return updated;
     });
 
     const [withSegments] = await withShiftSegments([updatedShift]);
-    return NextResponse.json(withSegments);
+    const [withCustomFields] = await withShiftCustomFields([withSegments], customFieldDefinitions);
+    return NextResponse.json(withCustomFields);
   } catch (error) {
     console.error("Failed to update shift:", error);
     return NextResponse.json(

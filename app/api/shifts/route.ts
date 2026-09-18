@@ -9,6 +9,14 @@ import { parseLocalDate } from "@/lib/date-utils";
 import type { CalendarMember } from "@/lib/types";
 import { withShiftSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import {
+  getCalendarCustomFields,
+  withShiftCustomFields,
+  resolveCustomFieldValues,
+  replaceShiftCustomFieldValues,
+  readPresetCustomFieldValues,
+  type CustomFieldValueRow,
+} from "@/lib/shift-custom-fields";
 
 // GET shifts for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -103,9 +111,11 @@ export async function GET(request: Request) {
         )
       );
       const withSigs = await withSignups(result);
-      return NextResponse.json(
-        calendar.splitShiftsEnabled ? await withShiftSegments(withSigs) : withSigs
-      );
+      const withSegs = calendar.splitShiftsEnabled
+        ? await withShiftSegments(withSigs)
+        : withSigs;
+      const definitions = await getCalendarCustomFields(calendarId);
+      return NextResponse.json(await withShiftCustomFields(withSegs, definitions));
     }
 
     const result = await query.where(
@@ -116,9 +126,11 @@ export async function GET(request: Request) {
       )
     );
     const withSigs = await withSignups(result);
-    return NextResponse.json(
-      calendar.splitShiftsEnabled ? await withShiftSegments(withSigs) : withSigs
-    );
+    const withSegs = calendar.splitShiftsEnabled
+      ? await withShiftSegments(withSigs)
+      : withSigs;
+    const definitions = await getCalendarCustomFields(calendarId);
+    return NextResponse.json(await withShiftCustomFields(withSegs, definitions));
   } catch (error) {
     console.error("Failed to fetch shifts:", error);
     return NextResponse.json(
@@ -146,6 +158,7 @@ export async function POST(request: Request) {
       signupCapacity,
       signupUserIds,
       segments: requestedSegments,
+      customFields,
     } = body;
 
     if (!calendarId || !date || !title) {
@@ -206,6 +219,8 @@ export async function POST(request: Request) {
       isAllDay: boolean;
     };
     let segmentsToPersist: TimeRange[] = [];
+    let customFieldValuesToPersist: CustomFieldValueRow[] = [];
+    const customFieldDefinitions = await getCalendarCustomFields(calendarId);
     if (access.can("createShift")) {
       if (presetId) {
         const [preset] = await db
@@ -232,6 +247,11 @@ export async function POST(request: Request) {
         notes: notes || null,
         isAllDay: isAllDay || false,
       };
+      const resolved = resolveCustomFieldValues(customFieldDefinitions, customFields);
+      if ("error" in resolved) {
+        return NextResponse.json({ error: resolved.error }, { status: 400 });
+      }
+      customFieldValuesToPersist = resolved.values;
 
       if (!isAllDay) {
         const rawSegments: TimeRange[] = Array.isArray(requestedSegments)
@@ -284,6 +304,9 @@ export async function POST(request: Request) {
         notes: preset.notes,
         isAllDay: preset.isAllDay,
       };
+      // Ignore any customFields in the body — stampPreset must not let
+      // "presets only" access set arbitrary values via a stamped preset.
+      customFieldValuesToPersist = await readPresetCustomFieldValues(preset.id);
       if (!preset.isAllDay && calendar.splitShiftsEnabled) {
         const [presetWithSegments] = await withPresetSegments([preset]);
         segmentsToPersist = presetWithSegments.segments;
@@ -308,6 +331,7 @@ export async function POST(request: Request) {
         .returning()
         .get();
       replaceShiftSegments(tx, inserted.id, segmentsToPersist);
+      replaceShiftCustomFieldValues(tx, inserted.id, customFieldValuesToPersist);
       return inserted;
     });
 
@@ -333,8 +357,14 @@ export async function POST(request: Request) {
       }
     }
 
+    const [withCustomFields] = await withShiftCustomFields([shift], customFieldDefinitions);
     return NextResponse.json(
-      { ...shift, calendar, signups, segments: segmentsToPersist },
+      {
+        ...withCustomFields,
+        calendar,
+        signups,
+        segments: segmentsToPersist,
+      },
       { status: 201 }
     );
   } catch (error) {
