@@ -712,6 +712,7 @@
       "sunday": "Su"
     },
     "allDayShort": "all day",
+    "splitShiftIndicator": "Split shift",
     "externalCount": "{count} external",
     "hasNotes": "{count, plural, one {# note} other {# notes}}",
     "shift": "Shift",

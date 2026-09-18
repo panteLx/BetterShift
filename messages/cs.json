@@ -712,6 +712,7 @@
       "sunday": "Ne"
     },
     "allDayShort": "celý den",
+    "splitShiftIndicator": "Dělená směna",
     "externalCount": "{count} externí",
     "hasNotes": "{count, plural, one {# poznámka} few {# poznámky} other {# poznámek}}",
     "shift": "Směna",

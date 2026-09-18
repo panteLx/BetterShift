@@ -712,6 +712,7 @@
       "sunday": "Do"
     },
     "allDayShort": "todo el día",
+    "splitShiftIndicator": "Turno partido",
     "externalCount": "{count} externos",
     "hasNotes": "{count, plural, one {# nota} other {# notas}}",
     "shift": "Turno",

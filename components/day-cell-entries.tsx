@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { CalendarClock, RefreshCw, StickyNote, UserPlus } from "lucide-react";
+import { CalendarClock, RefreshCw, Split, StickyNote, UserPlus } from "lucide-react";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
@@ -204,19 +204,36 @@ function ChipTime({
   stacked?: boolean;
 }) {
   const t = useTranslations();
+  const text = shift.isAllDay
+    ? t("calendarView.allDayShort")
+    : full
+      ? formatTimeRange(shift)
+      : shift.startTime.slice(0, 5);
+
+  if (stacked) {
+    return (
+      <span className="mt-0.5 block whitespace-normal break-words font-mono text-[10.5px] leading-4 opacity-75">
+        {text}
+      </span>
+    );
+  }
+
+  // Compact mode only shows the start time, same as any other shift; the icon is what signals "split"
+  const isSplit = !full && !shift.isAllDay && (shift.segments?.length ?? 0) > 0;
   return (
-    <span
-      className={
-        stacked
-          ? "mt-0.5 block whitespace-normal break-words font-mono text-[10.5px] leading-4 opacity-75"
-          : "shrink-0 whitespace-nowrap font-mono text-[10.5px] leading-4 opacity-75"
-      }
-    >
-      {shift.isAllDay
-        ? t("calendarView.allDayShort")
-        : full || shift.segments?.length
-          ? formatTimeRange(shift)
-          : shift.startTime.slice(0, 5)}
+    <span className="flex min-w-0 max-w-[45%] shrink items-center gap-0.5">
+      {isSplit && (
+        <Split
+          className="size-[9px] shrink-0 opacity-70"
+          aria-hidden="true"
+        />
+      )}
+      <span
+        className="truncate font-mono text-[10.5px] leading-4 opacity-75"
+        title={isSplit ? t("calendarView.splitShiftIndicator") : undefined}
+      >
+        {text}
+      </span>
     </span>
   );
 }

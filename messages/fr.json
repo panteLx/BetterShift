@@ -712,6 +712,7 @@
       "sunday": "Di"
     },
     "allDayShort": "journée",
+    "splitShiftIndicator": "Garde fractionnée",
     "externalCount": "{count} externes",
     "hasNotes": "{count, plural, one {# note} other {# notes}}",
     "shift": "Service",

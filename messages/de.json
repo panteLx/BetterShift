@@ -712,6 +712,7 @@
       "sunday": "So"
     },
     "allDayShort": "ganztg.",
+    "splitShiftIndicator": "Geteilte Schicht",
     "externalCount": "{count} extern",
     "hasNotes": "{count, plural, one {# Notiz} other {# Notizen}}",
     "shift": "Schicht",

@@ -712,6 +712,7 @@
       "sunday": "Do"
     },
     "allDayShort": "giornata",
+    "splitShiftIndicator": "Turno spezzato",
     "externalCount": "{count} esterni",
     "hasNotes": "{count, plural, one {# nota} other {# note}}",
     "shift": "Turno",
