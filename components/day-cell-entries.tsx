@@ -7,6 +7,8 @@ import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote, ExternalSync } from "@/lib/db/schema";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
+import { CustomFieldSummary } from "@/components/custom-field-summary";
+import type { CustomFieldDefinition } from "@/lib/custom-fields";
 import {
   DayLayoutOptions,
   DayShiftLayout,
@@ -242,12 +244,14 @@ export function ShiftChip({
   shift,
   showNote,
   signupsEnabled,
+  customFieldDefinitions = [],
   wrap = false,
   interactive = false,
 }: {
   shift: ShiftWithCalendar;
   showNote: boolean;
   signupsEnabled: boolean;
+  customFieldDefinitions?: CustomFieldDefinition[];
   wrap?: boolean;
   /** Week view only: the cell is a div, not a button, so a nested signup button is valid here */
   interactive?: boolean;
@@ -273,6 +277,11 @@ export function ShiftChip({
               {shift.notes}
             </span>
           )}
+          <CustomFieldSummary
+            values={shift.customFields}
+            definitions={customFieldDefinitions}
+            variant="compact"
+          />
           <ChipTime shift={shift} full={wrap} stacked />
         </span>
       </span>
@@ -291,6 +300,11 @@ export function ShiftChip({
             {shift.notes}
           </span>
         )}
+        <CustomFieldSummary
+          values={shift.customFields}
+          definitions={customFieldDefinitions}
+          variant="compact"
+        />
       </span>
       <SignupBadge shift={shift} enabled={signupsEnabled} />
       {interactive && <QuickSignupButton shift={shift} />}

@@ -22,6 +22,8 @@ import {
   useDayPress,
   useSignupsEnabled,
 } from "@/components/day-cell-entries";
+import { hasVisibleCustomFields } from "@/components/custom-field-summary";
+import { useCustomFields } from "@/hooks/useCustomFields";
 
 const WEEKDAY_KEYS = [
   "monday",
@@ -162,6 +164,8 @@ export function MonthGrid({
   const locale = useLocale();
   const signupsEnabled = useSignupsEnabled();
   const dayPress = useDayPress(onDayClick, onDayContextMenu);
+  // All shifts in one grid instance share a calendar; falls back to none while shifts are still loading.
+  const { customFields: customFieldDefinitions } = useCustomFields(shifts[0]?.calendarId ?? null);
   const phone = variant === "phone";
   const desktop = variant === "desktop";
   // 2024-01-01 was a Monday
@@ -245,7 +249,11 @@ export function MonthGrid({
     ];
     const heights = entries.map((entry) => {
       if (entry.kind === "shift") {
-        return DESKTOP_ROW + (showShiftNotes && entry.shift.notes ? DESKTOP_SUB_LINE : 0);
+        const noteLine = showShiftNotes && entry.shift.notes ? DESKTOP_SUB_LINE : 0;
+        const fieldLine = hasVisibleCustomFields(entry.shift.customFields, customFieldDefinitions)
+          ? DESKTOP_SUB_LINE
+          : 0;
+        return DESKTOP_ROW + noteLine + fieldLine;
       }
       return entry.kind === "note" ? DESKTOP_PLAIN_ROW : DESKTOP_ROW;
     });
@@ -286,6 +294,7 @@ export function MonthGrid({
                   shift={entry.shift}
                   showNote={showShiftNotes}
                   signupsEnabled={signupsEnabled(entry.shift.calendarId)}
+                  customFieldDefinitions={customFieldDefinitions}
                 />
               );
             case "external":

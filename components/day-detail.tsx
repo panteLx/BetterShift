@@ -31,6 +31,8 @@ import { cn, getUserInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useShiftSignupPermission } from "@/hooks/useShiftSignups";
 import { QuickSignupButton } from "@/components/day-cell-entries";
+import { CustomFieldSummary } from "@/components/custom-field-summary";
+import { useCustomFields } from "@/hooks/useCustomFields";
 
 /** Compact avatar stack for who signed up; renders nothing when unused. */
 function ShiftSignupBadge({
@@ -136,6 +138,7 @@ export function ShiftDetailRow({
   const minutes = getShiftMinutes(shift);
 
   const { signupsEnabled } = useShiftSignupPermission(shift.calendarId);
+  const { customFields: customFieldDefinitions } = useCustomFields(shift.calendarId);
 
   return (
     <div
@@ -158,6 +161,11 @@ export function ShiftDetailRow({
             {shift.notes}
           </div>
         )}
+        <CustomFieldSummary
+          values={shift.customFields}
+          definitions={customFieldDefinitions}
+          variant="detail"
+        />
       </div>
       <ShiftSignupBadge shift={shift} signupsEnabled={signupsEnabled} />
       <QuickSignupButton shift={shift} />

@@ -20,6 +20,7 @@ import {
   useDayPress,
   useSignupsEnabled,
 } from "@/components/day-cell-entries";
+import { useCustomFields } from "@/hooks/useCustomFields";
 
 interface WeekGridProps {
   variant: "desktop" | "phone";
@@ -63,6 +64,8 @@ export function WeekGrid({
   const locale = useLocale();
   const signupsEnabled = useSignupsEnabled();
   const dayPress = useDayPress(onDayClick, onDayContextMenu);
+  // All shifts in one grid instance share a calendar; falls back to none while shifts are still loading.
+  const { customFields: customFieldDefinitions } = useCustomFields(shifts[0]?.calendarId ?? null);
   const desktop = variant === "desktop";
 
   const { sortType, sortOrder, combinedSort } = layout;
@@ -100,6 +103,7 @@ export function WeekGrid({
             shift={shift}
             showNote={showShiftNotes}
             signupsEnabled={signupsEnabled(shift.calendarId)}
+            customFieldDefinitions={customFieldDefinitions}
             interactive
             wrap
           />
