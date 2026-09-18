@@ -27,6 +27,10 @@ export const queryKeys = {
     all: ["presets"] as const,
     byCalendar: (calendarId: string) => ["presets", calendarId] as const,
   },
+  customFields: {
+    all: ["custom-fields"] as const,
+    byCalendar: (calendarId: string) => ["custom-fields", calendarId] as const,
+  },
   notes: {
     all: ["notes"] as const,
     byCalendar: (calendarId: string) => ["notes", calendarId] as const,
