@@ -362,6 +362,7 @@ function HomeContent() {
       onSettingsDialogChange={dialogStates.setShowCalendarSettingsDialog}
       onDeleteCalendar={handleDeleteCalendar}
       onSyncComplete={handleSyncComplete}
+      onManageCustomFields={() => dialogStates.setShowCustomFieldManageDialog(true)}
       showSyncNotificationDialog={dialogStates.showSyncNotificationDialog}
       onSyncNotificationDialogChange={dialogStates.setShowSyncNotificationDialog}
       showDayShiftsDialog={dialogStates.showDayShiftsDialog}
@@ -394,6 +395,8 @@ function HomeContent() {
       onMonthStatsDialogChange={dialogStates.setShowMonthStatsDialog}
       showPresetManageDialog={dialogStates.showPresetManageDialog}
       onPresetManageDialogChange={dialogStates.setShowPresetManageDialog}
+      showCustomFieldManageDialog={dialogStates.showCustomFieldManageDialog}
+      onCustomFieldManageDialogChange={dialogStates.setShowCustomFieldManageDialog}
     />
   );
 

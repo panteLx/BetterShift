@@ -1212,5 +1212,32 @@
       "manageCalendarSettings": "Modifier le nom, la couleur et d'autres paramètres",
       "manageCustomFields": "Créer et modifier des champs supplémentaires pour les services et les préréglages"
     }
+  },
+  "customFields": {
+    "title": "Champs personnalisés",
+    "description": "Champs supplémentaires pour les créneaux et modèles de ce calendrier",
+    "empty": "Aucun champ personnalisé pour l'instant",
+    "addButton": "Ajouter un champ",
+    "labelLabel": "Libellé",
+    "keyLabel": "Clé",
+    "keyHint": "Utilisée dans l'API et ne peut plus être modifiée par la suite",
+    "keyInUse": "Cette clé est déjà utilisée",
+    "typeLabel": "Type",
+    "typeImmutableHint": "Le type ne peut plus être modifié une fois le champ créé",
+    "typeText": "Texte",
+    "typeNumber": "Nombre",
+    "typeDate": "Date",
+    "typeCheckbox": "Oui/Non",
+    "typeSelect": "Choix",
+    "optionsLabel": "Options",
+    "optionsHint": "Indiquez au moins une option",
+    "addOption": "Ajouter une option",
+    "requiredLabel": "Champ obligatoire",
+    "requiredHint": "Doit être rempli lors de l'enregistrement d'un créneau",
+    "showInCalendarLabel": "Afficher dans la vue du calendrier",
+    "showInCalendarHint": "Apparaît dans la colonne du jour et de façon compacte dans les cellules du mois et de la semaine",
+    "deleteConfirm": "Ce champ va être supprimé. Les valeurs de {shifts} créneaux et {presets} modèles seront perdues.",
+    "saveFailed": "Impossible d'enregistrer le champ",
+    "deleteFailed": "Impossible de supprimer le champ"
   }
 }

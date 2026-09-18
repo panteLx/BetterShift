@@ -8,6 +8,7 @@ import { ViewSettingsSheet, ViewSettingsState } from "@/components/view-settings
 import { NoteSheet } from "@/components/note-sheet";
 import { NotesListDialog } from "@/components/notes-list-dialog";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
+import { CustomFieldManageSheet } from "@/components/custom-field-manage-sheet";
 import { MonthStatsDialog } from "@/components/month-dialogs";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { ShiftWithCalendar } from "@/lib/types";
@@ -32,6 +33,8 @@ interface DialogManagerProps {
   onSettingsDialogChange: (open: boolean) => void;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
+  /** Opens the custom field catalog sheet from the settings row (manageCustomFields only) */
+  onManageCustomFields: () => void;
   viewSettings: ViewSettingsState;
 
   // Personal view ("Meine Ansicht") from the user menu, header and compare mode
@@ -86,6 +89,10 @@ interface DialogManagerProps {
   // Preset management opened from the stamp dock
   showPresetManageDialog: boolean;
   onPresetManageDialogChange: (open: boolean) => void;
+
+  // Custom field catalog opened from the calendar settings sheet
+  showCustomFieldManageDialog: boolean;
+  onCustomFieldManageDialogChange: (open: boolean) => void;
 }
 
 export function DialogManager(props: DialogManagerProps) {
@@ -116,6 +123,7 @@ export function DialogManager(props: DialogManagerProps) {
           viewSettings={props.viewSettings}
           onDeleteCalendar={props.onDeleteCalendar}
           onSyncComplete={props.onSyncComplete}
+          onManageCustomFields={props.onManageCustomFields}
         />
       ) : (
         <PhoneMenu
@@ -126,6 +134,7 @@ export function DialogManager(props: DialogManagerProps) {
             viewSettings: props.viewSettings,
             onDeleteCalendar: props.onDeleteCalendar,
             onSyncComplete: props.onSyncComplete,
+            onManageCustomFields: props.onManageCustomFields,
           }}
         />
       )}
@@ -178,6 +187,13 @@ export function DialogManager(props: DialogManagerProps) {
         <PresetManageSheet
           open={props.showPresetManageDialog}
           onOpenChange={props.onPresetManageDialogChange}
+          calendarId={props.selectedCalendar}
+        />
+      )}
+      {props.selectedCalendar && (
+        <CustomFieldManageSheet
+          open={props.showCustomFieldManageDialog}
+          onOpenChange={props.onCustomFieldManageDialogChange}
           calendarId={props.selectedCalendar}
         />
       )}

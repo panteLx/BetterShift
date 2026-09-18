@@ -1212,5 +1212,32 @@
       "manageCalendarSettings": "Name, Farbe und weitere Einstellungen ändern",
       "manageCustomFields": "Zusätzliche Felder für Schichten und Presets anlegen und ändern"
     }
+  },
+  "customFields": {
+    "title": "Eigene Felder",
+    "description": "Zusätzliche Felder für Schichten und Presets dieses Kalenders",
+    "empty": "Noch keine eigenen Felder angelegt",
+    "addButton": "Feld hinzufügen",
+    "labelLabel": "Bezeichnung",
+    "keyLabel": "Schlüssel",
+    "keyHint": "Wird in der API verwendet und kann später nicht geändert werden",
+    "keyInUse": "Dieser Schlüssel wird bereits verwendet",
+    "typeLabel": "Typ",
+    "typeImmutableHint": "Der Typ kann nach dem Anlegen nicht mehr geändert werden",
+    "typeText": "Text",
+    "typeNumber": "Zahl",
+    "typeDate": "Datum",
+    "typeCheckbox": "Ja/Nein",
+    "typeSelect": "Auswahl",
+    "optionsLabel": "Optionen",
+    "optionsHint": "Mindestens eine Option angeben",
+    "addOption": "Option hinzufügen",
+    "requiredLabel": "Pflichtfeld",
+    "requiredHint": "Muss beim Speichern einer Schicht ausgefüllt sein",
+    "showInCalendarLabel": "In der Kalenderansicht anzeigen",
+    "showInCalendarHint": "Erscheint in der Tagesspalte und kompakt in den Monats- und Wochenzellen",
+    "deleteConfirm": "Dieses Feld wird gelöscht. Werte in {shifts} Schichten und {presets} Presets gehen dabei verloren.",
+    "saveFailed": "Feld konnte nicht gespeichert werden",
+    "deleteFailed": "Feld konnte nicht gelöscht werden"
   }
 }

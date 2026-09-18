@@ -1212,5 +1212,32 @@
       "manageCalendarSettings": "Cambiar el nombre, color y otros ajustes",
       "manageCustomFields": "Crear y modificar campos adicionales para turnos y ajustes preestablecidos"
     }
+  },
+  "customFields": {
+    "title": "Campos personalizados",
+    "description": "Campos adicionales para turnos y plantillas de este calendario",
+    "empty": "Aún no hay campos personalizados",
+    "addButton": "Añadir campo",
+    "labelLabel": "Etiqueta",
+    "keyLabel": "Clave",
+    "keyHint": "Se usa en la API y no se puede cambiar más tarde",
+    "keyInUse": "Esta clave ya está en uso",
+    "typeLabel": "Tipo",
+    "typeImmutableHint": "El tipo no se puede cambiar una vez creado el campo",
+    "typeText": "Texto",
+    "typeNumber": "Número",
+    "typeDate": "Fecha",
+    "typeCheckbox": "Sí/No",
+    "typeSelect": "Selección",
+    "optionsLabel": "Opciones",
+    "optionsHint": "Introduce al menos una opción",
+    "addOption": "Añadir opción",
+    "requiredLabel": "Campo obligatorio",
+    "requiredHint": "Debe completarse al guardar un turno",
+    "showInCalendarLabel": "Mostrar en la vista del calendario",
+    "showInCalendarHint": "Aparece en la columna del día y de forma compacta en las celdas de mes y semana",
+    "deleteConfirm": "Este campo se eliminará. Se perderán los valores en {shifts} turnos y {presets} plantillas.",
+    "saveFailed": "No se pudo guardar el campo",
+    "deleteFailed": "No se pudo eliminar el campo"
   }
 }

@@ -1212,5 +1212,32 @@
       "manageCalendarSettings": "Change the name, color and other settings",
       "manageCustomFields": "Create and change extra fields for shifts and presets"
     }
+  },
+  "customFields": {
+    "title": "Custom fields",
+    "description": "Additional fields for shifts and presets in this calendar",
+    "empty": "No custom fields yet",
+    "addButton": "Add field",
+    "labelLabel": "Label",
+    "keyLabel": "Key",
+    "keyHint": "Used in the API and cannot be changed later",
+    "keyInUse": "This key is already in use",
+    "typeLabel": "Type",
+    "typeImmutableHint": "The type cannot be changed once the field is created",
+    "typeText": "Text",
+    "typeNumber": "Number",
+    "typeDate": "Date",
+    "typeCheckbox": "Yes/No",
+    "typeSelect": "Choice",
+    "optionsLabel": "Options",
+    "optionsHint": "Enter at least one option",
+    "addOption": "Add option",
+    "requiredLabel": "Required field",
+    "requiredHint": "Must be filled in when saving a shift",
+    "showInCalendarLabel": "Show in calendar view",
+    "showInCalendarHint": "Appears in the day column and compactly in month and week cells",
+    "deleteConfirm": "This field will be deleted. Values in {shifts} shifts and {presets} presets will be lost.",
+    "saveFailed": "Failed to save field",
+    "deleteFailed": "Failed to delete field"
   }
 }

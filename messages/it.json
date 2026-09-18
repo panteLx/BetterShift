@@ -1212,5 +1212,32 @@
       "manageCalendarSettings": "Modificare nome, colore e altre impostazioni",
       "manageCustomFields": "Creare e modificare campi aggiuntivi per turni e preset"
     }
+  },
+  "customFields": {
+    "title": "Campi personalizzati",
+    "description": "Campi aggiuntivi per turni e modelli di questo calendario",
+    "empty": "Nessun campo personalizzato ancora",
+    "addButton": "Aggiungi campo",
+    "labelLabel": "Etichetta",
+    "keyLabel": "Chiave",
+    "keyHint": "Usata nell'API e non può essere modificata in seguito",
+    "keyInUse": "Questa chiave è già in uso",
+    "typeLabel": "Tipo",
+    "typeImmutableHint": "Il tipo non può più essere modificato dopo la creazione del campo",
+    "typeText": "Testo",
+    "typeNumber": "Numero",
+    "typeDate": "Data",
+    "typeCheckbox": "Sì/No",
+    "typeSelect": "Selezione",
+    "optionsLabel": "Opzioni",
+    "optionsHint": "Inserisci almeno un'opzione",
+    "addOption": "Aggiungi opzione",
+    "requiredLabel": "Campo obbligatorio",
+    "requiredHint": "Deve essere compilato al salvataggio di un turno",
+    "showInCalendarLabel": "Mostra nella vista calendario",
+    "showInCalendarHint": "Compare nella colonna del giorno e in forma compatta nelle celle di mese e settimana",
+    "deleteConfirm": "Questo campo verrà eliminato. I valori in {shifts} turni e {presets} modelli andranno persi.",
+    "saveFailed": "Impossibile salvare il campo",
+    "deleteFailed": "Impossibile eliminare il campo"
   }
 }

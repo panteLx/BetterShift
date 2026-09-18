@@ -1212,5 +1212,32 @@
       "manageCalendarSettings": "Měnit název, barvu a další nastavení",
       "manageCustomFields": "Vytvářet a upravovat další pole pro směny a předvolby"
     }
+  },
+  "customFields": {
+    "title": "Vlastní pole",
+    "description": "Další pole pro směny a předlohy tohoto kalendáře",
+    "empty": "Zatím nejsou vytvořena žádná vlastní pole",
+    "addButton": "Přidat pole",
+    "labelLabel": "Popisek",
+    "keyLabel": "Klíč",
+    "keyHint": "Používá se v API a později jej nelze změnit",
+    "keyInUse": "Tento klíč se již používá",
+    "typeLabel": "Typ",
+    "typeImmutableHint": "Typ nelze po vytvoření pole změnit",
+    "typeText": "Text",
+    "typeNumber": "Číslo",
+    "typeDate": "Datum",
+    "typeCheckbox": "Ano/Ne",
+    "typeSelect": "Výběr",
+    "optionsLabel": "Možnosti",
+    "optionsHint": "Zadejte alespoň jednu možnost",
+    "addOption": "Přidat možnost",
+    "requiredLabel": "Povinné pole",
+    "requiredHint": "Musí být vyplněno při ukládání směny",
+    "showInCalendarLabel": "Zobrazit v zobrazení kalendáře",
+    "showInCalendarHint": "Zobrazí se ve sloupci dne a kompaktně v buňkách měsíce a týdne",
+    "deleteConfirm": "Toto pole bude smazáno. Hodnoty v {shifts} směnách a {presets} předlohách budou ztraceny.",
+    "saveFailed": "Pole se nepodařilo uložit",
+    "deleteFailed": "Pole se nepodařilo smazat"
   }
 }

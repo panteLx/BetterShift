@@ -6,6 +6,7 @@ import {
   Bell,
   Download,
   Layers,
+  ListChecks,
   Palette,
   RefreshCw,
   SlidersHorizontal,
@@ -42,7 +43,10 @@ export type SettingsSection =
   | "permissions"
   | "export"
   | "view"
-  | "notifications";
+  | "notifications"
+  // Opens CustomFieldManageSheet as its own dialog instead of switching to an
+  // inline panel — see CalendarSettingsPanel's case for this section.
+  | "customFields";
 
 export interface SettingsItem {
   id: SettingsSection;
@@ -61,6 +65,7 @@ interface SettingsDialogProps {
   viewSettings: ViewSettingsState;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
+  onManageCustomFields: () => void;
 }
 
 function GeneralPanel({
@@ -216,6 +221,13 @@ export function useCalendarSettings(calendarId: string | null) {
       description: t("settings.externalHint", { count: externalSyncs.length }),
       meta: externalSyncs.length,
     });
+  if (permission.can("manageCustomFields"))
+    items.push({
+      id: "customFields",
+      icon: ListChecks,
+      title: t("customFields.title"),
+      description: t("customFields.description"),
+    });
   // S2: the panel is worth opening with either capability — it self-gates each
   // section (manageShares for people, manageGuestAccess for guest/links).
   if (isAuthEnabled && canOpenPermissions)
@@ -265,6 +277,7 @@ export interface CalendarSettingsPanelProps {
   onDirtyChange: (dirty: boolean) => void;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
+  onManageCustomFields: () => void;
 }
 
 /** One calendar settings section, shared by the desktop dialog and the phone menu. */
@@ -318,6 +331,9 @@ export function CalendarSettingsPanel({
       );
     case "notifications":
       return <SyncNotificationsPanel calendarId={calendarId} onClose={onClose} />;
+    case "customFields":
+      // Never reached: openSection() intercepts this id and opens CustomFieldManageSheet instead.
+      return null;
   }
 }
 
@@ -329,6 +345,7 @@ export function SettingsDialog({
   viewSettings,
   onDeleteCalendar,
   onSyncComplete,
+  onManageCustomFields,
 }: SettingsDialogProps) {
   const t = useTranslations();
   const { calendar, items } = useCalendarSettings(calendarId);
@@ -343,6 +360,11 @@ export function SettingsDialog({
   const { guarded, confirmProps } = useGuardedAction(dirty, () => setDirty(false));
   const openSection = (id: SettingsSection) =>
     guarded(() => {
+      // This section is its own dialog (CustomFieldManageSheet), not an inline panel.
+      if (id === "customFields") {
+        onManageCustomFields();
+        return;
+      }
       setDirty(false);
       setSection(id);
     });
@@ -351,7 +373,11 @@ export function SettingsDialog({
     else guarded(close);
   };
 
-  const active = items.some((i) => i.id === section) ? section : items[0]?.id;
+  // customFields never becomes the active inline section — it opens its own dialog —
+  // so the default selection skips it in favor of the first real section.
+  const active = items.some((i) => i.id === section)
+    ? section
+    : items.find((i) => i.id !== "customFields")?.id;
 
   return (
     <>
@@ -426,6 +452,7 @@ export function SettingsDialog({
                 onDirtyChange={setDirty}
                 onDeleteCalendar={onDeleteCalendar}
                 onSyncComplete={onSyncComplete}
+                onManageCustomFields={onManageCustomFields}
               />
             )}
           </div>
