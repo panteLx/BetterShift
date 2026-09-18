@@ -86,3 +86,4 @@ public/workbox-*.js.map
 
 # Superpowers specs and plans (local planning artifacts, not part of the product docs)
 docs/superpowers/
+.superpowers/
