@@ -194,6 +194,7 @@ export interface CalendarBundleDeletedMetadata {
 }
 
 export interface CustomFieldCreatedMetadata {
+  calendarId: string;
   calendarName: string;
   fieldKey: string;
   fieldLabel: string;
@@ -201,12 +202,14 @@ export interface CustomFieldCreatedMetadata {
 }
 
 export interface CustomFieldUpdatedMetadata {
+  calendarId: string;
   calendarName: string;
   fieldKey: string;
   fieldLabel: string;
 }
 
 export interface CustomFieldDeletedMetadata {
+  calendarId: string;
   calendarName: string;
   fieldKey: string;
   fieldLabel: string;

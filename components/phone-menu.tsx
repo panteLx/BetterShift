@@ -297,7 +297,6 @@ function PhoneMenuSheet({
         onDirtyChange={setDirty}
         onDeleteCalendar={calendarGroup.onDeleteCalendar}
         onSyncComplete={calendarGroup.onSyncComplete}
-        onManageCustomFields={calendarGroup.onManageCustomFields}
       />
     );
   }

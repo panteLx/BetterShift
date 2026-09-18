@@ -240,7 +240,7 @@ export function ShiftSheet({
           readOnly={isReadOnly}
           splitShiftsEnabled={splitShiftsEnabled}
           calendarId={calendarId}
-          syncedFromExternal={shift?.syncedFromExternal}
+          syncedFromExternal={shift?.syncedFromExternal || !!shift?.externalSyncId}
         />
 
         {/* Signups aren't gated by isReadOnly: a read-only member may still

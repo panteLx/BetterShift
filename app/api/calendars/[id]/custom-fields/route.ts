@@ -88,6 +88,7 @@ export async function POST(
       action: "calendar.customField.created",
       request,
       metadata: {
+        calendarId,
         calendarName: await getCalendarName(calendarId),
         fieldKey: created.key,
         fieldLabel: created.label,

@@ -162,7 +162,8 @@ export interface CalendarAccess {
 /**
  * Applies the hard ceiling that keeps guest/link access from ever reaching
  * administrative capabilities (manageShares, manageGuestAccess,
- * manageCalendarSettings, manageExternalSync, deleteSyncLogs), even if a
+ * manageCalendarSettings, manageExternalSync, deleteSyncLogs,
+ * manageCustomFields), even if a
  * bundle was somehow misconfigured to include them — the actual security
  * boundary behind GUEST_INELIGIBLE in lib/permission-bundles.ts. Owners get
  * every capability; a "share" source is never ceilinged (invited users may

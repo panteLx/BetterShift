@@ -55,6 +55,7 @@ export function useShiftForm({
       isSecondary: false,
       hideFromStats: false,
       segments: shiftData.segments ?? [],
+      customFields: shiftData.customFields ?? {},
     });
 
     return success;

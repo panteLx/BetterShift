@@ -277,7 +277,6 @@ export interface CalendarSettingsPanelProps {
   onDirtyChange: (dirty: boolean) => void;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
-  onManageCustomFields: () => void;
 }
 
 /** One calendar settings section, shared by the desktop dialog and the phone menu. */
@@ -452,7 +451,6 @@ export function SettingsDialog({
                 onDirtyChange={setDirty}
                 onDeleteCalendar={onDeleteCalendar}
                 onSyncComplete={onSyncComplete}
-                onManageCustomFields={onManageCustomFields}
               />
             )}
           </div>

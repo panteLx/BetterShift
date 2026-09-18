@@ -74,6 +74,7 @@ export async function PATCH(
       action: "calendar.customField.updated",
       request,
       metadata: {
+        calendarId,
         calendarName: await getCalendarName(calendarId),
         fieldKey: updated.key,
         fieldLabel: updated.label,
@@ -124,6 +125,7 @@ export async function DELETE(
       action: "calendar.customField.deleted",
       request,
       metadata: {
+        calendarId,
         calendarName: await getCalendarName(calendarId),
         fieldKey: field.key,
         fieldLabel: field.label,

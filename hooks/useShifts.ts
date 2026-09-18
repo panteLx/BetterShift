@@ -156,6 +156,7 @@ export function useShifts(calendarId: string | undefined) {
         notes: formData.notes || null,
         isAllDay: formData.isAllDay || false,
         presetId: formData.presetId || null,
+        customFields: formData.customFields ?? {},
         calendarId: calendarId!,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -266,6 +267,7 @@ export function useShifts(calendarId: string | undefined) {
                 isAllDay: formData.isAllDay || false,
                 // The edit form never carries presetId — keep the shift's existing value
                 presetId: formData.presetId ?? s.presetId,
+                customFields: formData.customFields ?? s.customFields,
                 updatedAt: new Date(),
               }
               : s

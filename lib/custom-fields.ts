@@ -55,9 +55,14 @@ export function serializeValue(type: CustomFieldType, input: unknown): string | 
       return text === "" ? null : text;
     }
     case "number": {
-      const n = typeof input === "number" ? input : Number(String(input).trim());
-      if (!Number.isFinite(n)) return null;
-      return String(n);
+      if (typeof input === "number") {
+        return Number.isFinite(input) ? String(input) : null;
+      }
+      const trimmed = String(input).trim();
+      // Number("") is 0, which would silently satisfy a required field — treat blank as absent.
+      if (trimmed === "") return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? String(n) : null;
     }
     case "date": {
       if (input instanceof Date) return formatDateToLocal(input);
@@ -106,8 +111,8 @@ export function validateFieldValue(
   const value = serializeValue(definition.type, input);
 
   if (value === null) {
-    // A checkbox is never "missing": an absent value is simply false.
-    if (definition.type === "checkbox") return { ok: true, value: "false" };
+    // A checkbox is never "missing": an unchecked box is a valid answer, not required-empty, and stores no row.
+    if (definition.type === "checkbox") return { ok: true, value: null };
     if (definition.required) {
       return { ok: false, error: `Field "${definition.key}" is required` };
     }
@@ -117,7 +122,12 @@ export function validateFieldValue(
   if (definition.type === "select") {
     const known = (definition.options ?? []).some((o) => o.id === value);
     if (!known) {
-      return { ok: false, error: `Unknown option for field "${definition.key}"` };
+      // An option removed from the definition after the value was stored — drop it like an
+      // unknown key, unless the field is required, in which case the gap is a genuine error.
+      if (definition.required) {
+        return { ok: false, error: `Unknown option for field "${definition.key}"` };
+      }
+      return { ok: true, value: null };
     }
   }
 
