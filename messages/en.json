@@ -1185,7 +1185,8 @@
       "deleteSyncLogs": "Delete sync logs",
       "manageShares": "Manage sharing",
       "manageGuestAccess": "Manage guest access & links",
-      "manageCalendarSettings": "Manage calendar settings"
+      "manageCalendarSettings": "Manage calendar settings",
+      "manageCustomFields": "Manage custom fields"
     },
     "capabilityHints": {
       "viewShifts": "See the calendar and its shifts",
@@ -1208,7 +1209,8 @@
       "deleteSyncLogs": "Delete external sync log entries",
       "manageShares": "Decide who has access to the calendar",
       "manageGuestAccess": "Control public access and access links",
-      "manageCalendarSettings": "Change the name, color and other settings"
+      "manageCalendarSettings": "Change the name, color and other settings",
+      "manageCustomFields": "Create and change extra fields for shifts and presets"
     }
   }
 }

@@ -1185,7 +1185,8 @@
       "deleteSyncLogs": "Sync-Protokolle löschen",
       "manageShares": "Freigaben verwalten",
       "manageGuestAccess": "Gastzugang & Links verwalten",
-      "manageCalendarSettings": "Kalendereinstellungen verwalten"
+      "manageCalendarSettings": "Kalendereinstellungen verwalten",
+      "manageCustomFields": "Eigene Felder verwalten"
     },
     "capabilityHints": {
       "viewShifts": "Kalender und Schichten sehen",
@@ -1208,7 +1209,8 @@
       "deleteSyncLogs": "Protokolleinträge des externen Syncs löschen",
       "manageShares": "Festlegen, wer Zugriff auf den Kalender hat",
       "manageGuestAccess": "Öffentlichen Zugriff und Zugangslinks steuern",
-      "manageCalendarSettings": "Name, Farbe und weitere Einstellungen ändern"
+      "manageCalendarSettings": "Name, Farbe und weitere Einstellungen ändern",
+      "manageCustomFields": "Zusätzliche Felder für Schichten und Presets anlegen und ändern"
     }
   }
 }

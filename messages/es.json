@@ -1185,7 +1185,8 @@
       "deleteSyncLogs": "Eliminar registros de sincronización",
       "manageShares": "Gestionar comparticiones",
       "manageGuestAccess": "Gestionar acceso de invitados y enlaces",
-      "manageCalendarSettings": "Gestionar ajustes del calendario"
+      "manageCalendarSettings": "Gestionar ajustes del calendario",
+      "manageCustomFields": "Gestionar campos personalizados"
     },
     "capabilityHints": {
       "viewShifts": "Ver el calendario y sus turnos",
@@ -1208,7 +1209,8 @@
       "deleteSyncLogs": "Eliminar entradas del registro de sincronización externa",
       "manageShares": "Decidir quién tiene acceso al calendario",
       "manageGuestAccess": "Controlar el acceso público y los enlaces de acceso",
-      "manageCalendarSettings": "Cambiar el nombre, color y otros ajustes"
+      "manageCalendarSettings": "Cambiar el nombre, color y otros ajustes",
+      "manageCustomFields": "Crear y modificar campos adicionales para turnos y ajustes preestablecidos"
     }
   }
 }

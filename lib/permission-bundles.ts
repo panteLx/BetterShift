@@ -36,6 +36,7 @@ export const CAPABILITIES = [
   "manageShares",
   "manageGuestAccess",
   "manageCalendarSettings",
+  "manageCustomFields",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -72,7 +73,12 @@ export const CAPABILITY_GROUPS: ReadonlyArray<{
   { key: "externalSync", capabilities: ["manageExternalSync", "deleteSyncLogs"] },
   {
     key: "administration",
-    capabilities: ["manageShares", "manageGuestAccess", "manageCalendarSettings"],
+    capabilities: [
+      "manageShares",
+      "manageGuestAccess",
+      "manageCalendarSettings",
+      "manageCustomFields",
+    ],
   },
 ];
 
@@ -93,6 +99,7 @@ const GUEST_INELIGIBLE: ReadonlySet<Capability> = new Set([
   "manageCalendarSettings",
   "manageExternalSync",
   "deleteSyncLogs",
+  "manageCustomFields",
 ]);
 
 export function isGuestEligible(capabilities: readonly Capability[]): boolean {
@@ -249,6 +256,7 @@ const ADMIN_BASE: Capability[] = [
   "manageShares",
   "manageGuestAccess",
   "manageCalendarSettings",
+  "manageCustomFields",
 ];
 
 /**

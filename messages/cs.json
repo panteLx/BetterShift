@@ -1185,7 +1185,8 @@
       "deleteSyncLogs": "Mazat protokoly synchronizace",
       "manageShares": "Spravovat sdílení",
       "manageGuestAccess": "Spravovat hostovský přístup a odkazy",
-      "manageCalendarSettings": "Spravovat nastavení kalendáře"
+      "manageCalendarSettings": "Spravovat nastavení kalendáře",
+      "manageCustomFields": "Spravovat vlastní pole"
     },
     "capabilityHints": {
       "viewShifts": "Vidět kalendář a jeho směny",
@@ -1208,7 +1209,8 @@
       "deleteSyncLogs": "Mazat záznamy protokolu externí synchronizace",
       "manageShares": "Rozhodovat, kdo má přístup ke kalendáři",
       "manageGuestAccess": "Řídit veřejný přístup a přístupové odkazy",
-      "manageCalendarSettings": "Měnit název, barvu a další nastavení"
+      "manageCalendarSettings": "Měnit název, barvu a další nastavení",
+      "manageCustomFields": "Vytvářet a upravovat další pole pro směny a předvolby"
     }
   }
 }

@@ -1185,7 +1185,8 @@
       "deleteSyncLogs": "Supprimer les journaux de synchronisation",
       "manageShares": "Gérer les partages",
       "manageGuestAccess": "Gérer l'accès invité et les liens",
-      "manageCalendarSettings": "Gérer les paramètres du calendrier"
+      "manageCalendarSettings": "Gérer les paramètres du calendrier",
+      "manageCustomFields": "Gérer les champs personnalisés"
     },
     "capabilityHints": {
       "viewShifts": "Voir le calendrier et ses créneaux",
@@ -1208,7 +1209,8 @@
       "deleteSyncLogs": "Supprimer les entrées du journal de synchronisation externe",
       "manageShares": "Décider qui a accès au calendrier",
       "manageGuestAccess": "Contrôler l'accès public et les liens d'accès",
-      "manageCalendarSettings": "Modifier le nom, la couleur et d'autres paramètres"
+      "manageCalendarSettings": "Modifier le nom, la couleur et d'autres paramètres",
+      "manageCustomFields": "Créer et modifier des champs supplémentaires pour les services et les préréglages"
     }
   }
 }
