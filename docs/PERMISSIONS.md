@@ -30,7 +30,7 @@ Recommended defaults for a newly created calendar:
 | **Read** | View shifts, notes & events, and statistics; sign up for shifts with open slots |
 | **Contribute** | Everything in Read, plus: create shifts, stamp presets, create presets, edit/delete shifts, presets, and notes/events you created yourself |
 | **Manage** | Everything in Contribute, plus: edit/delete shifts, presets, and notes/events created by anyone, and sign up other people |
-| **Admin** | Everything in Manage, plus: manage external calendar sync, delete sync log entries, manage shares, manage guest access & links, and manage calendar settings |
+| **Admin** | Everything in Manage, plus: manage external calendar sync, delete sync log entries, manage shares, manage guest access & links, manage calendar settings, and manage custom fields |
 
 These are only a starting point. Every capability can be added to or removed from any bundle, including the four starter ones — there's nothing special about them once edited, aside from the translated name.
 
@@ -68,6 +68,7 @@ The bundle editor groups capabilities by area:
 - Manage shares — decide who has access to the calendar, and edit any bundle's contents (see [Who can assign or edit bundles](#who-can-assign-or-edit-bundles))
 - Manage guest access — control public access and share links, and edit any bundle's contents
 - Manage calendar settings — change the calendar's name, color, and other calendar-wide settings
+- Manage custom fields — define, edit, and delete the calendar's custom fields
 
 ### Editing your own vs. anyone's entries
 
@@ -77,15 +78,18 @@ One rule to keep in mind: an entry with no known creator — imported legacy dat
 
 ### Capabilities that can never reach a guest or a link
 
-Five capabilities can never be granted through guest access or a share link, no matter what an owner ticks into the bundle used there:
+Six capabilities can never be granted through guest access or a share link, no matter what an owner ticks into the bundle used there:
 
 - Manage shares
 - Manage guest access
 - Manage calendar settings
 - Manage external sync
 - Delete sync logs
+- Manage custom fields
 
 The bundle picker shown when assigning guest access or a link only offers bundles that don't contain any of these. If you try to add one of them to a bundle that's already assigned to guest access or a link, saving the change is rejected and you're told which assignment is blocking it. This lockout is enforced again on the server independently of what a bundle claims to contain, so it holds even for bundles edited or reassigned later — a guest or link can never end up with administrative or sync-management capabilities by any path.
+
+Manage custom fields ships only in the Admin bundle's seed for newly created calendars; it is not added to any existing calendar's bundles on upgrade, so an owner who wants contributors to manage custom fields must tick it into a bundle explicitly.
 
 ### Read access is enforced everywhere
 
@@ -210,7 +214,7 @@ The per-calendar bundle applies to visitors without an account only while Guest 
 
 ### Guest Access Bundles
 
-The "Public access" picker in the Assignments tab only offers bundles that are guest-eligible (see [Capabilities that can never reach a guest or a link](#capabilities-that-can-never-reach-a-guest-or-a-link)) — the Admin bundle and any custom bundle holding one of the five locked capabilities are never offered here. Picking "No access" removes guest access entirely for this calendar.
+The "Public access" picker in the Assignments tab only offers bundles that are guest-eligible (see [Capabilities that can never reach a guest or a link](#capabilities-that-can-never-reach-a-guest-or-a-link)) — the Admin bundle and any custom bundle holding one of the six locked capabilities are never offered here. Picking "No access" removes guest access entirely for this calendar.
 
 ### Guest vs. Token Access
 
@@ -262,7 +266,7 @@ When a user accesses a calendar, BetterShift resolves their capabilities in this
 4. **Guest bundle check**: Does the calendar have a guest access bundle assigned, and is `ALLOW_GUEST_ACCESS` enabled? An anonymous visitor gets that bundle directly. A signed-in user who is neither the owner nor explicitly shared only gets it if they're subscribed to the calendar (see [Calendar Discovery](#calendar-discovery)) — a public calendar someone dismissed grants them nothing until they re-subscribe.
 5. **No access**: None of the above → access denied.
 
-The first matching rule determines the bundle, and therefore the capabilities, that apply. Whatever the resolved bundle contains, a token or guest-bundle source additionally has the five guest-locked capabilities filtered out before anything is granted (see [Capabilities that can never reach a guest or a link](#capabilities-that-can-never-reach-a-guest-or-a-link)) — this happens regardless of what the bundle's saved contents claim.
+The first matching rule determines the bundle, and therefore the capabilities, that apply. Whatever the resolved bundle contains, a token or guest-bundle source additionally has the six guest-locked capabilities filtered out before anything is granted (see [Capabilities that can never reach a guest or a link](#capabilities-that-can-never-reach-a-guest-or-a-link)) — this happens regardless of what the bundle's saved contents claim.
 
 ---
 
