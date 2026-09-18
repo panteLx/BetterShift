@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { ShiftFormData } from "@/components/shift-sheet";
-import { ShiftPreset } from "@/lib/db/schema";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
-import { usePresets } from "@/hooks/usePresets";
+import { usePresets, type ShiftPresetWithValues } from "@/hooks/usePresets";
 import { DEFAULT_COLOR } from "@/lib/constants";
-import type { TimeRange } from "@/lib/time-ranges";
 
 interface UseShiftFormOptions {
   open: boolean;
@@ -35,6 +33,7 @@ export function useShiftForm({
     isAllDay: false,
     signupCapacity: shift?.signupCapacity ?? null,
     segments: shift?.segments ?? [],
+    customFields: shift?.customFields ?? {},
   });
 
   const { presets, createPreset } = usePresets(calendarId);
@@ -61,7 +60,7 @@ export function useShiftForm({
     return success;
   };
 
-  const applyPreset = (preset: ShiftPreset & { segments?: TimeRange[] }) => {
+  const applyPreset = (preset: ShiftPresetWithValues) => {
     setFormData({
       ...formData,
       startTime: preset.startTime,
@@ -72,6 +71,9 @@ export function useShiftForm({
       isAllDay: preset.isAllDay || false,
       signupCapacity: preset.defaultSignupCapacity ?? null,
       segments: preset.segments ?? [],
+      // Copied at creation time only — editing the preset afterwards must not
+      // affect shifts already created from it.
+      customFields: preset.customFields ?? {},
     });
   };
 
@@ -87,6 +89,7 @@ export function useShiftForm({
       isAllDay: false,
       signupCapacity: null,
       segments: [],
+      customFields: {},
     });
   };
 
@@ -103,6 +106,7 @@ export function useShiftForm({
       isAllDay: false,
       signupCapacity: null,
       segments: [],
+      customFields: {},
     });
     setPresetName("");
     setSaveAsPreset(false);
@@ -132,6 +136,7 @@ export function useShiftForm({
         isAllDay: shift?.isAllDay || false,
         signupCapacity: shift?.signupCapacity ?? null,
         segments: shift?.segments ?? [],
+        customFields: shift?.customFields ?? {},
       };
 
       // Compare form data fields directly
@@ -145,7 +150,9 @@ export function useShiftForm({
         formDataRef.current.isAllDay !== newFormData.isAllDay ||
         formDataRef.current.signupCapacity !== newFormData.signupCapacity ||
         JSON.stringify(formDataRef.current.segments ?? []) !==
-          JSON.stringify(newFormData.segments ?? []);
+          JSON.stringify(newFormData.segments ?? []) ||
+        JSON.stringify(formDataRef.current.customFields ?? {}) !==
+          JSON.stringify(newFormData.customFields ?? {});
 
       if (needsUpdate) {
         setFormData(newFormData);

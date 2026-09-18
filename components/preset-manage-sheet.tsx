@@ -241,6 +241,7 @@ export function PresetsPanel({
             titleRef={titleRef}
             existingGroupNames={existingGroupNames}
             splitShiftsEnabled={splitShiftsEnabled}
+            calendarId={calendarId}
           />
         )}
       </PanelBody>

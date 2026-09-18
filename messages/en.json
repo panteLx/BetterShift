@@ -1229,6 +1229,7 @@
     "typeDate": "Date",
     "typeCheckbox": "Yes/No",
     "typeSelect": "Choice",
+    "selectNone": "No selection",
     "optionsLabel": "Options",
     "optionsHint": "Enter at least one option",
     "addOption": "Add option",
@@ -1236,6 +1237,7 @@
     "requiredHint": "Must be filled in when saving a shift",
     "showInCalendarLabel": "Show in calendar view",
     "showInCalendarHint": "Appears in the day column and compactly in month and week cells",
+    "presetDefaultsTitle": "Default values",
     "deleteConfirm": "This field will be deleted. Values in {shifts} shifts and {presets} presets will be lost.",
     "saveFailed": "Failed to save field",
     "deleteFailed": "Failed to delete field"

@@ -1229,6 +1229,7 @@
     "typeDate": "Datum",
     "typeCheckbox": "Ja/Nein",
     "typeSelect": "Auswahl",
+    "selectNone": "Keine Auswahl",
     "optionsLabel": "Optionen",
     "optionsHint": "Mindestens eine Option angeben",
     "addOption": "Option hinzufügen",
@@ -1236,6 +1237,7 @@
     "requiredHint": "Muss beim Speichern einer Schicht ausgefüllt sein",
     "showInCalendarLabel": "In der Kalenderansicht anzeigen",
     "showInCalendarHint": "Erscheint in der Tagesspalte und kompakt in den Monats- und Wochenzellen",
+    "presetDefaultsTitle": "Standardwerte",
     "deleteConfirm": "Dieses Feld wird gelöscht. Werte in {shifts} Schichten und {presets} Presets gehen dabei verloren.",
     "saveFailed": "Feld konnte nicht gespeichert werden",
     "deleteFailed": "Feld konnte nicht gelöscht werden"

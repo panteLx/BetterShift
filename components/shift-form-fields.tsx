@@ -11,7 +11,9 @@ import {
   textareaClass,
 } from "@/components/form-kit";
 import { ShiftFormData } from "@/components/shift-sheet";
+import { CustomFieldInputs } from "@/components/custom-field-inputs";
 import { useAutoFocusRef } from "@/hooks/useAutoFocus";
+import { useCustomFields } from "@/hooks/useCustomFields";
 import { DEFAULT_COLOR } from "@/lib/constants";
 import { formatHours } from "@/lib/shift-display";
 import { sumRangeDurations, suggestNextTimeRange, validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
@@ -27,6 +29,9 @@ interface ShiftFormFieldsProps {
   isEditing: boolean;
   readOnly?: boolean;
   splitShiftsEnabled?: boolean;
+  calendarId?: string;
+  /** Externally synced shifts show their custom field values but cannot edit them. */
+  syncedFromExternal?: boolean;
 }
 
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
@@ -41,10 +46,14 @@ export function ShiftFormFields({
   isEditing,
   readOnly = false,
   splitShiftsEnabled = false,
+  calendarId,
+  syncedFromExternal = false,
 }: ShiftFormFieldsProps) {
   const t = useTranslations();
   const locale = useLocale();
   const titleRef = useAutoFocusRef<HTMLInputElement>(!readOnly);
+  const { customFields } = useCustomFields(calendarId ?? null);
+  const customFieldsDisabled = readOnly || syncedFromExternal;
 
   const validTimes =
     !formData.isAllDay &&
@@ -224,6 +233,13 @@ export function ShiftFormFields({
           className={cn(textareaClass, "min-h-16")}
         />
       </Field>
+
+      <CustomFieldInputs
+        definitions={customFields}
+        values={formData.customFields ?? {}}
+        onChange={(customFields) => onFormDataChange({ ...formData, customFields })}
+        disabled={customFieldsDisabled}
+      />
 
       {!isEditing && !readOnly && (
         <div className="flex flex-col gap-2.5 lg:gap-3">

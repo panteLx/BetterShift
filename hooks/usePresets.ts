@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api-error";
 import { generateTempId } from "@/lib/utils";
 import { useIsCalendarAccessible } from "@/hooks/useCalendars";
 import type { TimeRange } from "@/lib/time-ranges";
+import type { CustomFieldInputValue } from "@/lib/custom-fields";
 
 // Form data interface
 export interface PresetFormData {
@@ -21,10 +22,20 @@ export interface PresetFormData {
   hideFromStats: boolean;
   defaultSignupCapacity?: number | null;
   segments: TimeRange[];
+  customFields?: Record<string, CustomFieldInputValue>;
 }
 
+/**
+ * A preset row as the API actually returns it: segments and custom field
+ * values are attached at read time and aren't real ShiftPreset columns.
+ */
+export type ShiftPresetWithValues = ShiftPreset & {
+  segments?: TimeRange[];
+  customFields?: Record<string, CustomFieldInputValue>;
+};
+
 // API functions
-async function fetchPresetsApi(calendarId: string): Promise<ShiftPreset[]> {
+async function fetchPresetsApi(calendarId: string): Promise<ShiftPresetWithValues[]> {
   const params = new URLSearchParams({ calendarId });
   const response = await fetch(`/api/presets?${params}`);
 
@@ -38,7 +49,7 @@ async function fetchPresetsApi(calendarId: string): Promise<ShiftPreset[]> {
 async function createPresetApi(
   calendarId: string,
   formData: PresetFormData
-): Promise<ShiftPreset> {
+): Promise<ShiftPresetWithValues> {
   const response = await fetch("/api/presets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -56,7 +67,7 @@ async function createPresetApi(
 async function updatePresetApi(
   presetId: string,
   formData: PresetFormData
-): Promise<ShiftPreset> {
+): Promise<ShiftPresetWithValues> {
   const response = await fetch(`/api/presets/${presetId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -104,7 +115,7 @@ async function reorderPresetsApi(
 function createOptimisticPreset(
   calendarId: string,
   formData: PresetFormData
-): ShiftPreset & { segments: TimeRange[] } {
+): ShiftPresetWithValues {
   return {
     id: `temp-${generateTempId()}`,
     calendarId,
@@ -119,6 +130,7 @@ function createOptimisticPreset(
     hideFromStats: formData.hideFromStats,
     defaultSignupCapacity: formData.defaultSignupCapacity ?? null,
     segments: formData.segments,
+    customFields: formData.customFields ?? {},
     order: 999, // Will be corrected by server
     createdBy: null,
     createdAt: new Date(),
@@ -158,7 +170,7 @@ export function usePresets(calendarId: string | undefined) {
       const optimisticPreset = createOptimisticPreset(calendarId!, formData);
       queryClient.setQueryData(
         queryKeys.presets.byCalendar(calendarId!),
-        (old: ShiftPreset[] = []) => [...old, optimisticPreset]
+        (old: ShiftPresetWithValues[] = []) => [...old, optimisticPreset]
       );
       return { previous };
     },
@@ -201,7 +213,7 @@ export function usePresets(calendarId: string | undefined) {
       );
       queryClient.setQueryData(
         queryKeys.presets.byCalendar(calendarId!),
-        (old: ShiftPreset[] = []) =>
+        (old: ShiftPresetWithValues[] = []) =>
           old.map((p) =>
             p.id === presetId
               ? {
@@ -247,7 +259,7 @@ export function usePresets(calendarId: string | undefined) {
       );
       queryClient.setQueryData(
         queryKeys.presets.byCalendar(calendarId!),
-        (old: ShiftPreset[] = []) => old.filter((p) => p.id !== presetId)
+        (old: ShiftPresetWithValues[] = []) => old.filter((p) => p.id !== presetId)
       );
       return { previous };
     },
@@ -286,7 +298,7 @@ export function usePresets(calendarId: string | undefined) {
       // Optimistically reorder
       queryClient.setQueryData(
         queryKeys.presets.byCalendar(calendarId!),
-        (old: ShiftPreset[] = []) => {
+        (old: ShiftPresetWithValues[] = []) => {
           const orderMap = new Map(presetOrders.map((po) => [po.id, po.order]));
           return [...old].sort((a, b) => {
             const orderA = orderMap.get(a.id) ?? a.order;

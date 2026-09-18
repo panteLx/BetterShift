@@ -14,6 +14,7 @@ import { useCalendars } from "@/hooks/useCalendars";
 import { formatDateToLocal, formatLongDate, parseLocalDate } from "@/lib/date-utils";
 import { isTempId } from "@/lib/utils";
 import { validateTimeRanges, toTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import type { CustomFieldInputValue } from "@/lib/custom-fields";
 
 interface ShiftSheetProps {
   open: boolean;
@@ -39,6 +40,7 @@ export interface ShiftFormData {
   segments?: TimeRange[];
   /** New shifts only: people to sign up immediately once the shift is created. */
   signupUserIds?: string[];
+  customFields?: Record<string, CustomFieldInputValue>;
 }
 
 // presetId is left out: the form never changes it and does not load it
@@ -53,7 +55,14 @@ function snapshot(data: ShiftFormData) {
     isAllDay: data.isAllDay || false,
     signupCapacity: data.signupCapacity ?? null,
     segments: data.segments ?? [],
+    customFields: data.customFields ?? {},
   });
+}
+
+/** Whether any custom field carries a user-entered value (used for the new-shift "any data entered" check). */
+function hasCustomFieldEntries(values?: Record<string, CustomFieldInputValue>) {
+  if (!values) return false;
+  return Object.values(values).some((v) => v !== null && v !== undefined && v !== "" && v !== false);
 }
 
 export function ShiftSheet({
@@ -120,6 +129,7 @@ export function ShiftSheet({
             isAllDay: shift.isAllDay || false,
             signupCapacity: shift.signupCapacity ?? null,
             segments: shift.segments ?? [],
+            customFields: shift.customFields ?? {},
           })
         : null,
     [shift]
@@ -136,7 +146,8 @@ export function ShiftSheet({
       formData.notes?.trim() !== "" ||
       saveAsPreset ||
       presetName.trim() !== "" ||
-      pendingSignupUserIds.length > 0
+      pendingSignupUserIds.length > 0 ||
+      hasCustomFieldEntries(formData.customFields)
     );
   };
 
@@ -228,6 +239,8 @@ export function ShiftSheet({
           isEditing={!!shift}
           readOnly={isReadOnly}
           splitShiftsEnabled={splitShiftsEnabled}
+          calendarId={calendarId}
+          syncedFromExternal={shift?.syncedFromExternal}
         />
 
         {/* Signups aren't gated by isReadOnly: a read-only member may still

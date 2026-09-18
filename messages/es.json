@@ -1229,6 +1229,7 @@
     "typeDate": "Fecha",
     "typeCheckbox": "Sí/No",
     "typeSelect": "Selección",
+    "selectNone": "Sin selección",
     "optionsLabel": "Opciones",
     "optionsHint": "Introduce al menos una opción",
     "addOption": "Añadir opción",
@@ -1236,6 +1237,7 @@
     "requiredHint": "Debe completarse al guardar un turno",
     "showInCalendarLabel": "Mostrar en la vista del calendario",
     "showInCalendarHint": "Aparece en la columna del día y de forma compacta en las celdas de mes y semana",
+    "presetDefaultsTitle": "Valores predeterminados",
     "deleteConfirm": "Este campo se eliminará. Se perderán los valores en {shifts} turnos y {presets} plantillas.",
     "saveFailed": "No se pudo guardar el campo",
     "deleteFailed": "No se pudo eliminar el campo"

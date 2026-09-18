@@ -1229,6 +1229,7 @@
     "typeDate": "Date",
     "typeCheckbox": "Oui/Non",
     "typeSelect": "Choix",
+    "selectNone": "Aucune sélection",
     "optionsLabel": "Options",
     "optionsHint": "Indiquez au moins une option",
     "addOption": "Ajouter une option",
@@ -1236,6 +1237,7 @@
     "requiredHint": "Doit être rempli lors de l'enregistrement d'un créneau",
     "showInCalendarLabel": "Afficher dans la vue du calendrier",
     "showInCalendarHint": "Apparaît dans la colonne du jour et de façon compacte dans les cellules du mois et de la semaine",
+    "presetDefaultsTitle": "Valeurs par défaut",
     "deleteConfirm": "Ce champ va être supprimé. Les valeurs de {shifts} créneaux et {presets} modèles seront perdues.",
     "saveFailed": "Impossible d'enregistrer le champ",
     "deleteFailed": "Impossible de supprimer le champ"

@@ -1229,6 +1229,7 @@
     "typeDate": "Datum",
     "typeCheckbox": "Ano/Ne",
     "typeSelect": "Výběr",
+    "selectNone": "Bez výběru",
     "optionsLabel": "Možnosti",
     "optionsHint": "Zadejte alespoň jednu možnost",
     "addOption": "Přidat možnost",
@@ -1236,6 +1237,7 @@
     "requiredHint": "Musí být vyplněno při ukládání směny",
     "showInCalendarLabel": "Zobrazit v zobrazení kalendáře",
     "showInCalendarHint": "Zobrazí se ve sloupci dne a kompaktně v buňkách měsíce a týdne",
+    "presetDefaultsTitle": "Výchozí hodnoty",
     "deleteConfirm": "Toto pole bude smazáno. Hodnoty v {shifts} směnách a {presets} předlohách budou ztraceny.",
     "saveFailed": "Pole se nepodařilo uložit",
     "deleteFailed": "Pole se nepodařilo smazat"

@@ -4,13 +4,13 @@ import { Ref, useId } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { CheckRow, ColorSwatches, Field, inputClass } from "@/components/form-kit";
-import { ShiftPreset } from "@/lib/db/schema";
+import { CustomFieldInputs } from "@/components/custom-field-inputs";
 import { DEFAULT_COLOR } from "@/lib/constants";
-import type { PresetFormData } from "@/hooks/usePresets";
+import type { PresetFormData, ShiftPresetWithValues } from "@/hooks/usePresets";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { useCustomFields } from "@/hooks/useCustomFields";
 import { cn } from "@/lib/utils";
 import { suggestNextTimeRange, validateTimeRanges, toTimeRanges } from "@/lib/time-ranges";
-import type { TimeRange } from "@/lib/time-ranges";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 
@@ -26,9 +26,10 @@ export const EMPTY_PRESET_FORM: PresetFormData = {
   hideFromStats: false,
   defaultSignupCapacity: null,
   segments: [],
+  customFields: {},
 };
 
-export function presetToFormData(preset: ShiftPreset & { segments?: TimeRange[] }): PresetFormData {
+export function presetToFormData(preset: ShiftPresetWithValues): PresetFormData {
   return {
     title: preset.title,
     startTime: preset.startTime,
@@ -41,15 +42,17 @@ export function presetToFormData(preset: ShiftPreset & { segments?: TimeRange[] 
     hideFromStats: preset.hideFromStats || false,
     defaultSignupCapacity: preset.defaultSignupCapacity ?? null,
     segments: preset.segments ?? [],
+    customFields: preset.customFields ?? {},
   };
 }
 
 export function samePresetForm(a: PresetFormData, b: PresetFormData): boolean {
-  const { segments: segmentsA, ...restA } = a;
-  const { segments: segmentsB, ...restB } = b;
+  const { segments: segmentsA, customFields: customFieldsA, ...restA } = a;
+  const { segments: segmentsB, customFields: customFieldsB, ...restB } = b;
   return (
     (Object.keys(restA) as (keyof typeof restA)[]).every((key) => restA[key] === restB[key]) &&
-    JSON.stringify(segmentsA) === JSON.stringify(segmentsB)
+    JSON.stringify(segmentsA) === JSON.stringify(segmentsB) &&
+    JSON.stringify(customFieldsA ?? {}) === JSON.stringify(customFieldsB ?? {})
   );
 }
 
@@ -66,6 +69,7 @@ interface PresetFormCardProps {
   /** Existing group names across this calendar's presets, offered as datalist suggestions. */
   existingGroupNames?: string[];
   splitShiftsEnabled?: boolean;
+  calendarId?: string;
 }
 
 /** "Neue Vorlage" card; the same card edits an existing preset. */
@@ -80,10 +84,12 @@ export function PresetFormCard({
   titleRef,
   existingGroupNames = [],
   splitShiftsEnabled,
+  calendarId,
 }: PresetFormCardProps) {
   const t = useTranslations();
   const id = useId();
   const { isAuthEnabled } = useAuthFeatures();
+  const { customFields } = useCustomFields(calendarId ?? null);
   const fieldClass = cn(inputClass, "bg-surface-card");
 
   return (
@@ -222,6 +228,20 @@ export function PresetFormCard({
           disabled={disabled}
         />
       </Field>
+
+      {customFields.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="text-[13px] font-semibold text-fg-body">
+            {t("customFields.presetDefaultsTitle")}
+          </div>
+          <CustomFieldInputs
+            definitions={customFields}
+            values={value.customFields ?? {}}
+            onChange={(customFields) => onChange({ customFields })}
+            disabled={disabled}
+          />
+        </div>
+      )}
 
       {isAuthEnabled && (
         <Field

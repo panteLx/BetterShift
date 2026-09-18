@@ -54,10 +54,6 @@ interface CustomFieldManageSheetProps {
   calendarId: string;
 }
 
-// Task 8's shift/preset routes attach this at read time (withShiftCustomFields /
-// withPresetCustomFields); the ShiftWithCalendar/ShiftPreset types don't declare it yet.
-type WithCustomFieldValues = { customFields?: Record<string, unknown> };
-
 function useTypeLabels() {
   const t = useTranslations();
   const labels: Record<CustomFieldType, string> = {
@@ -254,11 +250,8 @@ export function CustomFieldManageSheet({
     if (!deleteTarget) return { shifts: 0, presets: 0 };
     const key = deleteTarget.key;
     return {
-      shifts: shifts.filter((s) => (s as WithCustomFieldValues).customFields?.[key] !== undefined)
-        .length,
-      presets: presets.filter(
-        (p) => (p as WithCustomFieldValues).customFields?.[key] !== undefined
-      ).length,
+      shifts: shifts.filter((s) => s.customFields?.[key] !== undefined).length,
+      presets: presets.filter((p) => p.customFields?.[key] !== undefined).length,
     };
   }, [deleteTarget, shifts, presets]);
 

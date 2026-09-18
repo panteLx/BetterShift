@@ -1229,6 +1229,7 @@
     "typeDate": "Data",
     "typeCheckbox": "Sì/No",
     "typeSelect": "Selezione",
+    "selectNone": "Nessuna selezione",
     "optionsLabel": "Opzioni",
     "optionsHint": "Inserisci almeno un'opzione",
     "addOption": "Aggiungi opzione",
@@ -1236,6 +1237,7 @@
     "requiredHint": "Deve essere compilato al salvataggio di un turno",
     "showInCalendarLabel": "Mostra nella vista calendario",
     "showInCalendarHint": "Compare nella colonna del giorno e in forma compatta nelle celle di mese e settimana",
+    "presetDefaultsTitle": "Valori predefiniti",
     "deleteConfirm": "Questo campo verrà eliminato. I valori in {shifts} turni e {presets} modelli andranno persi.",
     "saveFailed": "Impossibile salvare il campo",
     "deleteFailed": "Impossibile eliminare il campo"

@@ -1,5 +1,6 @@
 import type { CalendarViewSettings } from "./view-settings";
 import type { BundleRef, Capability } from "./permission-bundles";
+import type { CustomFieldInputValue } from "./custom-fields";
 
 // Re-export types from Drizzle schema
 export type { Calendar, Shift, ExternalSync } from "./db/schema";
@@ -52,6 +53,8 @@ export interface ShiftWithCalendar {
   signups?: ShiftSignupUser[];
   /** Additional time ranges beyond startTime/endTime (split shifts). Empty/undefined for a normal shift. */
   segments?: { startTime: string; endTime: string }[];
+  /** Values for this calendar's custom fields, keyed by the definition's `key`. Absent when the calendar defines none. */
+  customFields?: Record<string, CustomFieldInputValue>;
   // Optional (not just nullable): the create-mutation's optimistic shift in
   // useShifts.ts predates the server response and has no value for it yet.
   createdBy?: string | null;
