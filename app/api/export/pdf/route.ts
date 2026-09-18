@@ -8,6 +8,8 @@ import { hasCapability } from "@/lib/auth/permissions";
 import { rateLimit } from "@/lib/rate-limiter";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { formatTimeRange } from "@/lib/shift-display";
+import { getCalendarCustomFields, withShiftCustomFields } from "@/lib/shift-custom-fields";
+import { formatValueForDisplay } from "@/lib/custom-fields";
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,6 +103,24 @@ export async function POST(request: NextRequest) {
     const calendarMap = new Map(
       accessibleCalendars.map((c) => [c.id, { name: c.name, color: c.color }])
     );
+
+    // Field keys are per calendar, so definitions and values must be resolved calendar by calendar.
+    const definitionsByCalendar = new Map(
+      await Promise.all(
+        accessibleCalendars.map(
+          async (c) => [c.id, await getCalendarCustomFields(c.id)] as const
+        )
+      )
+    );
+    const customFieldsByShiftId = new Map<string, Record<string, string | number | boolean | null>>();
+    for (const c of accessibleCalendars) {
+      const definitions = definitionsByCalendar.get(c.id) ?? [];
+      const calendarShifts = allShifts.filter((s) => s.calendarId === c.id);
+      const withFields = await withShiftCustomFields(calendarShifts, definitions);
+      for (const s of withFields) {
+        customFieldsByShiftId.set(s.id, s.customFields);
+      }
+    }
 
     // Determine if multi-calendar export
     const isMultiCalendar = accessibleCalendars.length > 1;
@@ -274,12 +294,23 @@ export async function POST(request: NextRequest) {
 
           yPosition += 5;
 
-          // Notes (if present)
-          if (shift.notes) {
+          // Notes and custom field values, wrapped and paged together
+          const definitions = definitionsByCalendar.get(shift.calendarId) ?? [];
+          const customFields = customFieldsByShiftId.get(shift.id) ?? {};
+          const fieldLines = definitions
+            .map((d) => {
+              const raw = customFields[d.key];
+              if (raw === null || raw === undefined || raw === "") return null;
+              return `${d.label}: ${formatValueForDisplay(d, String(raw), locale)}`;
+            })
+            .filter((line): line is string => line !== null);
+          const noteText = [shift.notes, ...fieldLines].filter(Boolean).join("\n");
+
+          if (noteText) {
             doc.setFont("helvetica", "italic");
             doc.setFontSize(9);
             const notesLines = doc.splitTextToSize(
-              shift.notes,
+              noteText,
               pageWidth - margin * 2 - 10
             );
             for (const line of notesLines) {

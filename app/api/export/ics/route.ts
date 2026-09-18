@@ -8,6 +8,8 @@ import { hasCapability } from "@/lib/auth/permissions";
 import { getServerTimezone, formatDateToLocal } from "@/lib/date-utils";
 import { rateLimit } from "@/lib/rate-limiter";
 import { toTimeRanges } from "@/lib/time-ranges";
+import { getCalendarCustomFields, withShiftCustomFields } from "@/lib/shift-custom-fields";
+import { formatValueForDisplay } from "@/lib/custom-fields";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +18,9 @@ export async function POST(request: NextRequest) {
     // Rate limiting: 20 ICS exports per 10 minutes
     const rateLimitResponse = rateLimit(request, user?.id, "export-ics");
     if (rateLimitResponse) return rateLimitResponse;
+
+    const { searchParams } = new URL(request.url);
+    const locale = searchParams.get("locale") || "en";
 
     const { calendarIds } = await request.json();
 
@@ -77,6 +82,24 @@ export async function POST(request: NextRequest) {
     // Create calendar name lookup
     const calendarMap = new Map(accessibleCalendars.map((c) => [c.id, c.name]));
 
+    // Field keys are per calendar, so definitions and values must be resolved calendar by calendar.
+    const definitionsByCalendar = new Map(
+      await Promise.all(
+        accessibleCalendars.map(
+          async (c) => [c.id, await getCalendarCustomFields(c.id)] as const
+        )
+      )
+    );
+    const customFieldsByShiftId = new Map<string, Record<string, string | number | boolean | null>>();
+    for (const c of accessibleCalendars) {
+      const definitions = definitionsByCalendar.get(c.id) ?? [];
+      const calendarShifts = allShifts.filter((s) => s.calendarId === c.id);
+      const withFields = await withShiftCustomFields(calendarShifts, definitions);
+      for (const s of withFields) {
+        customFieldsByShiftId.set(s.id, s.customFields);
+      }
+    }
+
     // Get server timezone for proper time conversion
     const serverTimezone = getServerTimezone();
 
@@ -110,14 +133,25 @@ export async function POST(request: NextRequest) {
 
       const ranges = shift.isAllDay ? [null] : toTimeRanges(shift);
 
+      const definitions = definitionsByCalendar.get(shift.calendarId) ?? [];
+      const customFields = customFieldsByShiftId.get(shift.id) ?? {};
+      const fieldLines = definitions
+        .map((d) => {
+          const raw = customFields[d.key];
+          if (raw === null || raw === undefined || raw === "") return null;
+          return `${d.label}: ${formatValueForDisplay(d, String(raw), locale)}`;
+        })
+        .filter((line): line is string => line !== null);
+      const description = [shift.notes, ...fieldLines].filter(Boolean).join("\n");
+
       ranges.forEach((range, index) => {
         const vevent = new ICAL.Component("vevent");
         const event = new ICAL.Event(vevent);
 
         event.uid = index === 0 ? shift.id : `${shift.id}-seg-${index}`;
         event.summary = summary;
-        if (shift.notes) {
-          event.description = shift.notes;
+        if (description) {
+          event.description = description;
         }
 
         if (!range) {

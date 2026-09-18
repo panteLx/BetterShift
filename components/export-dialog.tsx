@@ -68,8 +68,8 @@ export function ExportPanel({
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.append("locale", locale);
       if (format === "pdf") {
-        params.append("locale", locale);
         if (range === "month") params.append("month", month);
         if (range === "year") params.append("year", year);
       }
