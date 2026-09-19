@@ -11,12 +11,14 @@ export async function register() {
     // (bad version lookup, sync scheduler error) logs instead of taking the
     // whole server down.
     const { autoSyncService } = await import("@/lib/auto-sync-service");
+    const { telemetryService } = await import("@/lib/telemetry/sender");
     try {
       // Preload version during startup to avoid blocking on first request
       const { initializeVersion } = await import("@/lib/version");
       await initializeVersion();
 
       await autoSyncService.start();
+      telemetryService.start();
     } catch (error) {
       console.error("[Instrumentation] Startup task failed:", error);
     }
@@ -38,6 +40,7 @@ export async function register() {
       shuttingDown = true;
       console.log(`Received ${signal}, shutting down auto-sync service...`);
       autoSyncService.stop();
+      telemetryService.stop();
     };
     process.once("SIGTERM", shutdown);
     process.once("SIGINT", shutdown);
