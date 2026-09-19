@@ -3,6 +3,8 @@ import { getBuildInfo, buildGitHubUrl } from "@/lib/version";
 import { getAdminUser } from "@/lib/auth/admin-helpers";
 import { isAdmin } from "@/lib/auth/admin";
 import { getSystemSettings } from "@/lib/system-settings";
+import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
+import { isTelemetryForcedByEnv } from "@/lib/telemetry/config";
 
 /**
  * Cache Strategy: 15 minutes for the GitHub release lookup.
@@ -24,6 +26,8 @@ interface VersionResponse {
   latestVersion?: string;
   latestUrl?: string;
   hasUpdate?: boolean;
+  /** Admins only: the consent dialog must be shown. */
+  telemetryPrompt?: boolean;
 }
 
 // Cache latest release info
@@ -109,14 +113,14 @@ function isDevVersion(version: string): boolean {
 }
 
 /** Whether the given requester's role is included in the configured banner audience. */
-async function isVisibleToRequester(
-  request: NextRequest,
+function isVisibleToRequester(
+  requesterIsAdmin: boolean,
   visibility: "all" | "admins"
-): Promise<boolean> {
+): boolean {
   if (visibility === "all") return true;
 
   // "admins": only requesters with an admin/superadmin role qualify
-  return isAdmin(await getAdminUser(request.headers));
+  return requesterIsAdmin;
 }
 
 export async function GET(request: NextRequest) {
@@ -124,6 +128,9 @@ export async function GET(request: NextRequest) {
     getBuildInfo(), // from .build-info.json (created at build time)
     getSystemSettings(),
   ]);
+
+  // Resolved once and reused below, so the admin lookup only runs once per request.
+  const requesterIsAdmin = isAdmin(await getAdminUser(request.headers));
 
   // Build GitHub URL based on version and commit
   const githubUrl = buildGitHubUrl(buildInfo.version, buildInfo.commitSha);
@@ -141,7 +148,16 @@ export async function GET(request: NextRequest) {
 
   const showUpdateInfo =
     !!latestRelease &&
-    (await isVisibleToRequester(request, settings.updateBannerVisibility));
+    isVisibleToRequester(requesterIsAdmin, settings.updateBannerVisibility);
+
+  // Admin-only and never cached across roles: the response is already
+  // Cache-Control: private for exactly this reason.
+  const telemetryPrompt =
+    requesterIsAdmin && !isTelemetryForcedByEnv()
+      ? settings.telemetryEnabled === null ||
+        (settings.telemetryEnabled === true &&
+          (settings.telemetryConsentedSchema ?? 0) < TELEMETRY_SCHEMA_VERSION)
+      : false;
 
   const response: VersionResponse = {
     version: buildInfo.version,
@@ -158,6 +174,7 @@ export async function GET(request: NextRequest) {
         latestUrl: latestRelease.url,
         hasUpdate,
       }),
+    telemetryPrompt,
   };
 
   return NextResponse.json(response, {
