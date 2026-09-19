@@ -64,9 +64,11 @@ export default function AdminDashboardPage() {
   const { settings, updateSettings, isUpdating } = useSystemSettings();
   const [, usersArea, calendarsArea, logsArea] = useAdminSections();
 
-  const telemetryEnabled = settings?.telemetryEnabled === true;
+  // Resolved server-side: an env override wins over the stored value here too.
+  const telemetryEnabled = settings?.telemetryResolved === true;
   const { data: telemetryPreview } = useTelemetryPayload("telemetry", true);
-  const { data: diagnostics } = useTelemetryPayload("diagnostics", true) as {
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const { data: diagnostics } = useTelemetryPayload("diagnostics", diagnosticsOpen) as {
     data: DiagnosticsPayload | undefined;
   };
   const [includeInstanceId, setIncludeInstanceId] = useState(true);
@@ -339,9 +341,12 @@ export default function AdminDashboardPage() {
             />
           )}
 
-          <details className="rounded-lg border border-line">
+          <details
+            className="rounded-lg border border-line"
+            onToggle={(event) => setDiagnosticsOpen(event.currentTarget.open)}
+          >
             <summary className="cursor-pointer select-none px-3 py-2 text-[13px] font-medium text-fg-secondary">
-              {t("admin.telemetry.previewTitle")}
+              {t("admin.telemetry.diagnosticsPreviewTitle")}
             </summary>
             <pre className="max-h-[240px] overflow-auto rounded-b-lg border-t border-line bg-surface-panel px-3 py-2.5 text-[11.5px] leading-relaxed text-fg-tertiary">
               {diagnosticsBody ? JSON.stringify(diagnosticsBody, null, 2) : t("common.loading")}

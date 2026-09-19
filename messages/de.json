@@ -670,6 +670,7 @@
       "notDecided": "Noch nicht entschieden",
       "envManaged": "Durch die Umgebungsvariable TELEMETRY_ENABLED festgelegt",
       "previewTitle": "Gesendete Daten",
+      "diagnosticsPreviewTitle": "Exportierte Daten",
       "diagnosticsTitle": "Diagnosedaten für Fehlerberichte",
       "diagnosticsDescription": "Enthält genaue Zahlen und gesetzte Konfigurationsschalter. Nur für Fehlerberichte gedacht.",
       "includeInstanceId": "Instanz-Kennung mitgeben",

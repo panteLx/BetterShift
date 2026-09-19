@@ -670,6 +670,7 @@
       "notDecided": "Aún sin decidir",
       "envManaged": "Definido por la variable de entorno TELEMETRY_ENABLED",
       "previewTitle": "Datos enviados",
+      "diagnosticsPreviewTitle": "Datos exportados",
       "diagnosticsTitle": "Datos de diagnóstico para informes de error",
       "diagnosticsDescription": "Incluye cifras exactas y los interruptores de configuración activados. Pensado solo para informes de error.",
       "includeInstanceId": "Incluir identificador de instancia",

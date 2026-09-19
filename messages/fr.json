@@ -670,6 +670,7 @@
       "notDecided": "Pas encore décidé",
       "envManaged": "Défini par la variable d'environnement TELEMETRY_ENABLED",
       "previewTitle": "Données envoyées",
+      "diagnosticsPreviewTitle": "Données exportées",
       "diagnosticsTitle": "Données de diagnostic pour les rapports de bug",
       "diagnosticsDescription": "Comprend des chiffres exacts et les options de configuration activées. Destiné uniquement aux rapports de bug.",
       "includeInstanceId": "Inclure l'identifiant de l'instance",

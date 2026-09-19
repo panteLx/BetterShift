@@ -12,7 +12,10 @@ import {
   type AdminSystemSettingsUpdatedMetadata,
   type AdminTelemetryConsentMetadata,
 } from "@/lib/audit-log";
-import { isTelemetryForcedByEnv } from "@/lib/telemetry/config";
+import {
+  isTelemetryForcedByEnv,
+  resolveTelemetryEnabled,
+} from "@/lib/telemetry/config";
 import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
@@ -50,8 +53,13 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     const settings = await getSystemSettings();
-    // Derived, never stored: the client can't read process.env itself.
-    return NextResponse.json({ ...settings, telemetryEnvManaged: isTelemetryForcedByEnv() });
+    // Derived, never stored: the client can't read process.env itself, so the
+    // panel would otherwise show the stored value while the env override sends.
+    return NextResponse.json({
+      ...settings,
+      telemetryEnvManaged: isTelemetryForcedByEnv(),
+      telemetryResolved: resolveTelemetryEnabled(settings.telemetryEnabled),
+    });
   } catch (error) {
     console.error("Failed to fetch system settings:", error);
     return NextResponse.json(

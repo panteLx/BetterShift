@@ -670,6 +670,7 @@
       "notDecided": "Not decided yet",
       "envManaged": "Set by the TELEMETRY_ENABLED environment variable",
       "previewTitle": "Sent data",
+      "diagnosticsPreviewTitle": "Exported data",
       "diagnosticsTitle": "Diagnostic data for bug reports",
       "diagnosticsDescription": "Includes exact figures and enabled configuration switches. Intended only for bug reports.",
       "includeInstanceId": "Include instance ID",

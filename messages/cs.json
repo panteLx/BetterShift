@@ -670,6 +670,7 @@
       "notDecided": "Zatím nerozhodnuto",
       "envManaged": "Nastaveno proměnnou prostředí TELEMETRY_ENABLED",
       "previewTitle": "Odesílaná data",
+      "diagnosticsPreviewTitle": "Exportovaná data",
       "diagnosticsTitle": "Diagnostická data pro hlášení chyb",
       "diagnosticsDescription": "Obsahuje přesná čísla a nastavené konfigurační přepínače. Určeno pouze pro hlášení chyb.",
       "includeInstanceId": "Přidat identifikátor instance",
