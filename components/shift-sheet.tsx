@@ -14,7 +14,8 @@ import { useCalendars } from "@/hooks/useCalendars";
 import { formatDateToLocal, formatLongDate, parseLocalDate } from "@/lib/date-utils";
 import { isTempId } from "@/lib/utils";
 import { validateTimeRanges, toTimeRanges, type TimeRange } from "@/lib/time-ranges";
-import type { CustomFieldInputValue } from "@/lib/custom-fields";
+import { validateFieldValue, type CustomFieldInputValue } from "@/lib/custom-fields";
+import { useCustomFields } from "@/hooks/useCustomFields";
 
 interface ShiftSheetProps {
   open: boolean;
@@ -80,6 +81,7 @@ export function ShiftSheet({
   const permission = useCalendarPermission(calendarId);
   const { calendars } = useCalendars();
   const splitShiftsEnabled = calendars.find((c) => c.id === calendarId)?.splitShiftsEnabled ?? false;
+  const { customFields: customFieldDefinitions } = useCustomFields(calendarId ?? null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Determine if sheet should be in read-only mode
@@ -195,6 +197,12 @@ export function ShiftSheet({
     clearPreset();
   };
 
+  // Same required-field values calendar settings enforce on save — kept in sync
+  // client-side so the button reflects it before the request round-trips.
+  const missingRequiredCustomField = customFieldDefinitions.some(
+    (definition) => !validateFieldValue(definition, formData.customFields?.[definition.key]).ok
+  );
+
   const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(formData.date)
     ? formatLongDate(parseLocalDate(formData.date), locale, { year: true })
     : undefined;
@@ -212,7 +220,8 @@ export function ShiftSheet({
       saveDisabled={
         !formData.title.trim() ||
         (shift && !hasChanges()) ||
-        (!formData.isAllDay && !!validateTimeRanges(toTimeRanges(formData)))
+        (!formData.isAllDay && !!validateTimeRanges(toTimeRanges(formData))) ||
+        missingRequiredCustomField
       }
       saveLabel={shift ? undefined : t("shiftSheet.createAction")}
       hasUnsavedChanges={!isReadOnly && hasChanges()}

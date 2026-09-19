@@ -50,10 +50,8 @@ async function createShiftApi(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Failed to create shift: ${response.status} ${response.statusText} - ${errorText}`
-    );
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to create shift");
   }
 
   const data = await response.json();
@@ -66,10 +64,8 @@ async function deleteShiftApi(id: string): Promise<void> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Failed to delete shift: ${response.status} ${response.statusText} - ${errorText}`
-    );
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to delete shift");
   }
 }
 
@@ -84,10 +80,8 @@ async function updateShiftApi(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Failed to update shift: ${response.status} ${response.statusText} - ${errorText}`
-    );
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to update shift");
   }
 
   const data = await response.json();
@@ -179,7 +173,11 @@ export function useShifts(calendarId: string | undefined) {
         );
       }
       console.error("Failed to create shift:", err);
-      toast.error(t("common.createError", { item: t("shift.shift_one") }));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.createError", { item: t("shift.shift_one") })
+      );
     },
     onSuccess: () => {
       toast.success(t("common.created", { item: t("shift.shift_one") }));
@@ -220,7 +218,11 @@ export function useShifts(calendarId: string | undefined) {
         );
       }
       console.error("Failed to delete shift:", err);
-      toast.error(t("common.deleteError", { item: t("shift.shift_one") }));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.deleteError", { item: t("shift.shift_one") })
+      );
     },
     onSuccess: () => {
       toast.success(t("common.deleted", { item: t("shift.shift_one") }));
@@ -284,7 +286,11 @@ export function useShifts(calendarId: string | undefined) {
         );
       }
       console.error("Failed to update shift:", err);
-      toast.error(t("common.updateError", { item: t("shift.shift_one") }));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.updateError", { item: t("shift.shift_one") })
+      );
     },
     onSuccess: () => {
       toast.success(t("common.updated", { item: t("shift.shift_one") }));

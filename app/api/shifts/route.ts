@@ -9,9 +9,11 @@ import { parseLocalDate } from "@/lib/date-utils";
 import type { CalendarMember } from "@/lib/types";
 import { withShiftSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
+import type { CustomFieldInputValue } from "@/lib/custom-fields";
 import {
   getCalendarCustomFields,
   withShiftCustomFields,
+  withPresetCustomFields,
   resolveCustomFieldValues,
   replaceShiftCustomFieldValues,
   readPresetCustomFieldValues,
@@ -222,6 +224,10 @@ export async function POST(request: Request) {
     let customFieldValuesToPersist: CustomFieldValueRow[] = [];
     const customFieldDefinitions = await getCalendarCustomFields(calendarId);
     if (access.can("createShift")) {
+      // A preset's own stored values are the defaults; a value the client
+      // actually submits (e.g. edited in the shift dialog after picking the
+      // preset) still wins, since this branch is the trusted-body path.
+      let presetCustomFieldDefaults: Record<string, CustomFieldInputValue> = {};
       if (presetId) {
         const [preset] = await db
           .select()
@@ -238,6 +244,11 @@ export async function POST(request: Request) {
             { status: 404 }
           );
         }
+        const [presetWithFields] = await withPresetCustomFields(
+          [preset],
+          customFieldDefinitions
+        );
+        presetCustomFieldDefaults = presetWithFields.customFields;
       }
       insertValues = {
         title,
@@ -247,7 +258,12 @@ export async function POST(request: Request) {
         notes: notes || null,
         isAllDay: isAllDay || false,
       };
-      const resolved = resolveCustomFieldValues(customFieldDefinitions, customFields);
+      const resolved = resolveCustomFieldValues(customFieldDefinitions, {
+        ...presetCustomFieldDefaults,
+        ...(typeof customFields === "object" && customFields !== null && !Array.isArray(customFields)
+          ? customFields
+          : {}),
+      });
       if ("error" in resolved) {
         return NextResponse.json({ error: resolved.error }, { status: 400 });
       }
