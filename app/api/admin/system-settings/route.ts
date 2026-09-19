@@ -20,10 +20,16 @@ import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
 
-/** Strips telemetryInstanceId -- an audit log is exportable, the id must not be in it. */
+/** Enumerated, not spread: an audit log is exportable and must never carry the instance id. */
 function forAudit(settings: SystemSettings): AdminSystemSettingsUpdatedMetadata["before"] {
-  const { telemetryInstanceId: _ignored, ...rest } = settings;
-  return rest;
+  return {
+    updateCheckEnabled: settings.updateCheckEnabled,
+    updateBannerVisibility: settings.updateBannerVisibility,
+    allowGuestAccess: settings.allowGuestAccess,
+    telemetryEnabled: settings.telemetryEnabled,
+    telemetryConsentedSchema: settings.telemetryConsentedSchema,
+    telemetryDecidedAt: settings.telemetryDecidedAt,
+  };
 }
 
 /**
