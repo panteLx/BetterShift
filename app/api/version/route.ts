@@ -129,8 +129,19 @@ export async function GET(request: NextRequest) {
     getSystemSettings(),
   ]);
 
+  // Once an instance has answered for the current schema no prompt is possible,
+  // so the session lookup is skipped unless a role-specific answer needs it.
+  const telemetryPromptPossible =
+    !isTelemetryForcedByEnv() &&
+    (settings.telemetryEnabled === null ||
+      (settings.telemetryEnabled === true &&
+        (settings.telemetryConsentedSchema ?? 0) < TELEMETRY_SCHEMA_VERSION));
+  const needsRequesterRole =
+    settings.updateBannerVisibility === "admins" || telemetryPromptPossible;
   // Resolved once and reused below, so the admin lookup only runs once per request.
-  const requesterIsAdmin = isAdmin(await getAdminUser(request.headers));
+  const requesterIsAdmin = needsRequesterRole
+    ? isAdmin(await getAdminUser(request.headers))
+    : false;
 
   // Build GitHub URL based on version and commit
   const githubUrl = buildGitHubUrl(buildInfo.version, buildInfo.commitSha);
@@ -152,12 +163,7 @@ export async function GET(request: NextRequest) {
 
   // Admin-only and never cached across roles: the response is already
   // Cache-Control: private for exactly this reason.
-  const telemetryPrompt =
-    requesterIsAdmin && !isTelemetryForcedByEnv()
-      ? settings.telemetryEnabled === null ||
-        (settings.telemetryEnabled === true &&
-          (settings.telemetryConsentedSchema ?? 0) < TELEMETRY_SCHEMA_VERSION)
-      : false;
+  const telemetryPrompt = telemetryPromptPossible && requesterIsAdmin;
 
   const response: VersionResponse = {
     version: buildInfo.version,

@@ -32,19 +32,6 @@ import {
 
 const startedAt = Date.now();
 
-// Counting spans a dozen tables; cache like getSystemSettings() so the admin
-// preview and the daily send don't repeat all of it on every call.
-let cached: {
-  profile: TelemetryProfile;
-  value: TelemetryPayload | DiagnosticsPayload;
-  expiresAt: number;
-} | null = null;
-const CACHE_DURATION = 10 * 1000;
-
-export function clearTelemetryCache(): void {
-  cached = null;
-}
-
 // Only these keys ever leave the instance; never iterate process.env itself.
 const REPORTABLE_ENV = [
   "AUTH_ENABLED",
@@ -93,10 +80,6 @@ export async function collectTelemetryPayload(
 export async function collectTelemetryPayload(
   profile: TelemetryProfile
 ): Promise<TelemetryPayload | DiagnosticsPayload> {
-  if (cached && cached.profile === profile && Date.now() < cached.expiresAt) {
-    return cached.value;
-  }
-
   const [settings, buildInfo] = await Promise.all([
     getSystemSettings(),
     getBuildInfo(),
@@ -239,6 +222,5 @@ export async function collectTelemetryPayload(
           migrationList: collectMigrationList(),
         };
 
-  cached = { profile, value, expiresAt: Date.now() + CACHE_DURATION };
   return value;
 }
