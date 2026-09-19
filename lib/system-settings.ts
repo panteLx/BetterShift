@@ -11,6 +11,10 @@ export interface SystemSettings {
   updateCheckEnabled: boolean;
   updateBannerVisibility: UpdateBannerVisibility;
   allowGuestAccess: boolean;
+  telemetryEnabled: boolean | null;
+  telemetryInstanceId: string | null;
+  telemetryConsentedSchema: number | null;
+  telemetryDecidedAt: Date | null;
 }
 
 // Neither the row nor (on upgrade) this specific column may exist yet, so
@@ -21,6 +25,10 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   updateCheckEnabled: true,
   updateBannerVisibility: "all",
   allowGuestAccess: ALLOW_GUEST_ACCESS,
+  telemetryEnabled: null,
+  telemetryInstanceId: null,
+  telemetryConsentedSchema: null,
+  telemetryDecidedAt: null,
 };
 
 // Settings are read on every /api/version request; a short cache avoids a DB
@@ -40,6 +48,10 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       updateCheckEnabled: systemSettings.updateCheckEnabled,
       updateBannerVisibility: systemSettings.updateBannerVisibility,
       allowGuestAccess: systemSettings.allowGuestAccess,
+      telemetryEnabled: systemSettings.telemetryEnabled,
+      telemetryInstanceId: systemSettings.telemetryInstanceId,
+      telemetryConsentedSchema: systemSettings.telemetryConsentedSchema,
+      telemetryDecidedAt: systemSettings.telemetryDecidedAt,
     })
     .from(systemSettings)
     .where(eq(systemSettings.id, SETTINGS_ID))

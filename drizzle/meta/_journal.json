@@ -204,6 +204,13 @@
       "when": 1789823233140,
       "tag": "0028_dapper_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1789845766565,
+      "tag": "0029_red_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

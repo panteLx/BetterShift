@@ -287,6 +287,14 @@ export const systemSettings = sqliteTable("system_settings", {
   // to ALLOW_GUEST_ACCESS (see lib/system-settings.ts), not silently to
   // false -- a NOT NULL DEFAULT would force that on every upgrade.
   allowGuestAccess: integer("allow_guest_access", { mode: "boolean" }),
+  // All four are nullable without default: telemetryEnabled null means "not
+  // decided yet", which is what an upgrading instance must land on. The
+  // instance id is created on first opt-in only, so a declining instance
+  // never holds an identifier at all.
+  telemetryEnabled: integer("telemetry_enabled", { mode: "boolean" }),
+  telemetryInstanceId: text("telemetry_instance_id"),
+  telemetryConsentedSchema: integer("telemetry_consented_schema"),
+  telemetryDecidedAt: integer("telemetry_decided_at", { mode: "timestamp" }),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)
