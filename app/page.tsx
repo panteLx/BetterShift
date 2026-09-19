@@ -57,9 +57,8 @@ function HomeContent() {
 
   const { isGuest } = useAuth();
 
-  // telemetryPrompt is admin-only and server-computed; not yet part of the shared VersionInfo type.
   const { versionInfo } = useVersionUpdateCheck();
-  const telemetryPrompt = (versionInfo as { telemetryPrompt?: boolean } | null)?.telemetryPrompt;
+  const telemetryPrompt = versionInfo?.telemetryPrompt;
   // Local flag so the dialog closes right after an answer, without waiting for the next poll.
   const [telemetryDecided, setTelemetryDecided] = useState(false);
 

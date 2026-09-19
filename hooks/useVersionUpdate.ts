@@ -14,6 +14,8 @@ interface VersionInfo {
   latestVersion?: string;
   latestUrl?: string;
   hasUpdate?: boolean;
+  /** Admins only: the consent dialog must be shown. */
+  telemetryPrompt?: boolean;
 }
 
 // Dismissing is per-version: the banner reappears once a newer release ships

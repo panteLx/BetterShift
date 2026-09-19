@@ -179,8 +179,12 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(response, {
     headers: {
-      // "private": the response varies by requester role, so shared/CDN caches must not reuse it
-      "Cache-Control": `private, max-age=${CACHE_SECONDS}`,
+      // "private": the response varies by requester role, so shared/CDN caches must not reuse it.
+      // While a prompt is pending, no-store: a cached response would let an admin's browser keep
+      // re-showing the consent dialog after they already answered it, until the max-age expired.
+      "Cache-Control": telemetryPrompt
+        ? "private, no-store"
+        : `private, max-age=${CACHE_SECONDS}`,
     },
   });
 }
