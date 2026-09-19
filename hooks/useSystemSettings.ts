@@ -6,7 +6,12 @@ import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import type { SystemSettings } from "@/lib/system-settings";
 
-async function fetchSystemSettings(): Promise<SystemSettings> {
+// GET-only field: true when TELEMETRY_ENABLED is set and overrides the stored value.
+export interface SystemSettingsResponse extends SystemSettings {
+  telemetryEnvManaged: boolean;
+}
+
+async function fetchSystemSettings(): Promise<SystemSettingsResponse> {
   const response = await fetch("/api/admin/system-settings");
   if (!response.ok) throw new Error(`Failed to fetch system settings: ${response.status}`);
   return response.json();
@@ -25,7 +30,7 @@ async function updateSystemSettingsApi(
 }
 
 interface UpdateSettingsContext {
-  previous: SystemSettings | undefined;
+  previous: SystemSettingsResponse | undefined;
 }
 
 /** Instance-wide toggles for the update-check banner, admin-only. */
@@ -42,9 +47,9 @@ export function useSystemSettings() {
     mutationFn: updateSystemSettingsApi,
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.admin.systemSettings });
-      const previous = queryClient.getQueryData<SystemSettings>(queryKeys.admin.systemSettings);
+      const previous = queryClient.getQueryData<SystemSettingsResponse>(queryKeys.admin.systemSettings);
       if (previous) {
-        queryClient.setQueryData<SystemSettings>(queryKeys.admin.systemSettings, { ...previous, ...patch });
+        queryClient.setQueryData<SystemSettingsResponse>(queryKeys.admin.systemSettings, { ...previous, ...patch });
       }
       return { previous };
     },

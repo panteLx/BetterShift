@@ -65,6 +65,8 @@ export const queryKeys = {
     auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
     systemSettings: ["admin", "system-settings"] as const,
+    telemetryPayload: (profile: string) =>
+      ["admin", "telemetry-payload", profile] as const,
   },
 
   // Calendar Features

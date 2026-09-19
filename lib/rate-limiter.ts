@@ -29,6 +29,8 @@
  * - RATE_LIMIT_USER_SEARCH_WINDOW
  * - RATE_LIMIT_BUNDLE_MUTATIONS_REQUESTS - Permission bundle create/update/delete/clone (per calendar)
  * - RATE_LIMIT_BUNDLE_MUTATIONS_WINDOW
+ * - RATE_LIMIT_TELEMETRY_PAYLOAD_REQUESTS - Admin telemetry payload preview
+ * - RATE_LIMIT_TELEMETRY_PAYLOAD_WINDOW
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -202,6 +204,13 @@ const config = {
       parseInt(process.env.RATE_LIMIT_CUSTOM_FIELD_MUTATIONS_WINDOW || "3600", 10) *
       1000, // 1 hour
   },
+  // Admin telemetry payload preview; the collector's own cache keeps repeat
+  // calls cheap, this just bounds the burst.
+  telemetryPayload: {
+    requests: parseInt(process.env.RATE_LIMIT_TELEMETRY_PAYLOAD_REQUESTS || "20", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_TELEMETRY_PAYLOAD_WINDOW || "60", 10) * 1000,
+  },
 };
 
 /**
@@ -230,6 +239,7 @@ const limitsByType = {
   "admin-calendar-mutations": config.adminCalendarMutations,
   "bundle-mutations": config.bundleMutations,
   "custom-field-mutations": config.customFieldMutations,
+  "telemetry-payload": config.telemetryPayload,
 } as const;
 
 export type RateLimitType = keyof typeof limitsByType;

@@ -6,7 +6,9 @@ import {
   updateSystemSettings,
   type UpdateBannerVisibility,
 } from "@/lib/system-settings";
-import { logAdminAction } from "@/lib/audit-log";
+import { logAdminAction, type AdminTelemetryConsentMetadata } from "@/lib/audit-log";
+import { isTelemetryForcedByEnv } from "@/lib/telemetry/config";
+import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
 
@@ -37,7 +39,8 @@ export async function GET(request: NextRequest) {
     if (error) return error;
 
     const settings = await getSystemSettings();
-    return NextResponse.json(settings);
+    // Derived, never stored: the client can't read process.env itself.
+    return NextResponse.json({ ...settings, telemetryEnvManaged: isTelemetryForcedByEnv() });
   } catch (error) {
     console.error("Failed to fetch system settings:", error);
     return NextResponse.json(
@@ -61,6 +64,10 @@ export async function PATCH(request: NextRequest) {
       updateCheckEnabled?: boolean;
       updateBannerVisibility?: UpdateBannerVisibility;
       allowGuestAccess?: boolean;
+      telemetryEnabled?: boolean;
+      telemetryDecidedAt?: Date;
+      telemetryConsentedSchema?: number;
+      telemetryInstanceId?: string;
     } = {};
 
     if ("updateCheckEnabled" in body) {
@@ -87,6 +94,26 @@ export async function PATCH(request: NextRequest) {
       patch.allowGuestAccess = body.allowGuestAccess;
     }
 
+    if ("telemetryEnabled" in body) {
+      if (typeof body.telemetryEnabled !== "boolean") {
+        return NextResponse.json({ error: "telemetryEnabled must be a boolean" }, { status: 400 });
+      }
+      if (isTelemetryForcedByEnv()) {
+        return NextResponse.json(
+          { error: "telemetryEnabled is managed by the TELEMETRY_ENABLED environment variable and cannot be changed here" },
+          { status: 400 }
+        );
+      }
+      patch.telemetryEnabled = body.telemetryEnabled;
+      patch.telemetryDecidedAt = new Date();
+      patch.telemetryConsentedSchema = TELEMETRY_SCHEMA_VERSION;
+      if (body.telemetryEnabled) {
+        const current = await getSystemSettings();
+        // Created on first opt-in only, never at install time.
+        patch.telemetryInstanceId = current.telemetryInstanceId ?? crypto.randomUUID();
+      }
+    }
+
     const { before, after } = await updateSystemSettings(patch);
 
     await logAdminAction({
@@ -95,6 +122,20 @@ export async function PATCH(request: NextRequest) {
       request,
       metadata: { before, after },
     });
+
+    if ("telemetryEnabled" in patch) {
+      await logAdminAction<AdminTelemetryConsentMetadata>({
+        action: "admin.telemetry_consent",
+        userId: currentUser!.id,
+        resourceType: "system_settings",
+        request,
+        metadata: {
+          before: before.telemetryEnabled,
+          after: after.telemetryEnabled === true,
+          schemaVersion: TELEMETRY_SCHEMA_VERSION,
+        },
+      });
+    }
 
     return NextResponse.json(after);
   } catch (error) {

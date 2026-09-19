@@ -162,6 +162,12 @@ export interface AdminSystemSettingsUpdatedMetadata {
   after: { updateCheckEnabled: boolean; updateBannerVisibility: string; allowGuestAccess: boolean };
 }
 
+export interface AdminTelemetryConsentMetadata {
+  before: boolean | null;
+  after: boolean;
+  schemaVersion: number;
+}
+
 export interface AdminUserCreateMetadata {
   createdUser: string;
   role: string;
@@ -241,6 +247,7 @@ export type AuditLogMetadata =
   | AdminCalendarTransferMetadata
   | AdminPasswordResetMetadata
   | AdminSystemSettingsUpdatedMetadata
+  | AdminTelemetryConsentMetadata
   | CalendarBundleCreatedMetadata
   | CalendarBundleUpdatedMetadata
   | CalendarBundleClonedMetadata
