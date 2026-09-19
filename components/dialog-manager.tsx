@@ -9,6 +9,7 @@ import { NoteSheet } from "@/components/note-sheet";
 import { NotesListDialog } from "@/components/notes-list-dialog";
 import { PresetManageSheet } from "@/components/preset-manage-sheet";
 import { MonthStatsDialog } from "@/components/month-dialogs";
+import { TelemetryConsentDialog } from "@/components/telemetry-consent-dialog";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { ShiftWithCalendar } from "@/lib/types";
 import { CalendarNote } from "@/lib/db/schema";
@@ -86,6 +87,10 @@ interface DialogManagerProps {
   // Preset management opened from the stamp dock
   showPresetManageDialog: boolean;
   onPresetManageDialogChange: (open: boolean) => void;
+
+  // Telemetry consent gate, shown once to an admin whose instance has not decided yet
+  showTelemetryConsent: boolean;
+  onTelemetryDecide: (accepted: boolean) => void;
 }
 
 export function DialogManager(props: DialogManagerProps) {
@@ -190,6 +195,11 @@ export function DialogManager(props: DialogManagerProps) {
         note={props.selectedNote}
         calendarId={props.noteCalendarId ?? (props.selectedCalendar || undefined)}
       />
+
+      {/* Mounted only while relevant, so a non-admin session never fires the admin-only fetches it needs. */}
+      {props.showTelemetryConsent && (
+        <TelemetryConsentDialog open onDecide={props.onTelemetryDecide} />
+      )}
     </>
   );
 }

@@ -21,6 +21,7 @@ import { useDialogStates } from "@/hooks/useDialogStates";
 import { useAuth } from "@/hooks/useAuth";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { CalendarViewMode, useCalendarViewMode } from "@/hooks/useCalendarViewMode";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
@@ -55,6 +56,12 @@ function HomeContent() {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
   const { isGuest } = useAuth();
+
+  // telemetryPrompt is admin-only and server-computed; not yet part of the shared VersionInfo type.
+  const { versionInfo } = useVersionUpdateCheck();
+  const telemetryPrompt = (versionInfo as { telemetryPrompt?: boolean } | null)?.telemetryPrompt;
+  // Local flag so the dialog closes right after an answer, without waiting for the next poll.
+  const [telemetryDecided, setTelemetryDecided] = useState(false);
 
   const {
     calendars,
@@ -395,6 +402,8 @@ function HomeContent() {
       onMonthStatsDialogChange={dialogStates.setShowMonthStatsDialog}
       showPresetManageDialog={dialogStates.showPresetManageDialog}
       onPresetManageDialogChange={dialogStates.setShowPresetManageDialog}
+      showTelemetryConsent={Boolean(telemetryPrompt) && !telemetryDecided}
+      onTelemetryDecide={() => setTelemetryDecided(true)}
     />
   );
 
