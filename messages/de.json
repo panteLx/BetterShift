@@ -662,7 +662,22 @@
     "createUser": "Benutzer erstellen",
     "createUserSubtitle": "Legt ein neues Konto an, auch wenn die Registrierung deaktiviert ist.",
     "mustChangePasswordHint": "Der Benutzer muss dieses Passwort beim ersten Login ändern.",
-    "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits"
+    "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
+    "telemetry": {
+      "title": "Telemetrie & Diagnose",
+      "description": "Anonyme Nutzungsdaten an das Projekt senden.",
+      "toggleLabel": "Telemetrie senden",
+      "notDecided": "Noch nicht entschieden",
+      "envManaged": "Durch die Umgebungsvariable TELEMETRY_ENABLED festgelegt",
+      "previewTitle": "Gesendete Daten",
+      "diagnosticsTitle": "Diagnosedaten für Fehlerberichte",
+      "diagnosticsDescription": "Enthält genaue Zahlen und gesetzte Konfigurationsschalter. Nur für Fehlerberichte gedacht.",
+      "includeInstanceId": "Instanz-Kennung mitgeben",
+      "includeInstanceIdHint": "Verknüpft den Fehlerbericht mit den Telemetriedaten dieser Instanz.",
+      "copy": "Als Markdown kopieren",
+      "copied": "In die Zwischenablage kopiert",
+      "openIssue": "Fehlerbericht auf GitHub öffnen"
+    }
   },
   "appearance": {
     "title": "Erscheinungsbild",
@@ -1248,5 +1263,18 @@
     "deleteConfirm": "Dieses Feld wird gelöscht. Werte in {shifts} Schichten und {presets} Presets gehen dabei verloren.",
     "saveFailed": "Feld konnte nicht gespeichert werden",
     "deleteFailed": "Feld konnte nicht gelöscht werden"
+  },
+  "telemetry": {
+    "consent": {
+      "title": "Anonyme Diagnosedaten senden?",
+      "description": "BetterShift kann einmal täglich anonyme Nutzungsdaten an das Projekt senden. Das hilft dabei zu entscheiden, welche Funktionen gepflegt werden und welche Umgebungen unterstützt werden müssen.",
+      "pointAnonymous": "Keine Namen, Adressen, E-Mails oder Kalenderinhalte",
+      "pointBuckets": "Größenangaben nur als Bereich, etwa „6-20 Nutzer“",
+      "pointRevocable": "Jederzeit im Admin-Bereich widerrufbar",
+      "previewToggle": "Gesendete Daten anzeigen",
+      "docsLink": "Vollständige Dokumentation",
+      "accept": "Senden",
+      "decline": "Nicht senden"
+    }
   }
 }
