@@ -1,7 +1,7 @@
 # Dockerfile for BetterShift Production
 
 # Stage 1: Dependencies
-FROM node:24-alpine AS deps
+FROM node:26-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.npm-deps \
     npm ci --cache /root/.npm-deps
 
 # Stage 2: Builder
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -39,7 +39,7 @@ RUN find /app/node_modules/drizzle-orm \
         \( -name '*.map' -o -name '*.d.ts' -o -name '*.d.cts' \) -delete
 
 # Stage 3: Runner
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 # su-exec: see docker-entrypoint.sh.
 RUN apk add --no-cache libc6-compat dumb-init su-exec
 WORKDIR /app
