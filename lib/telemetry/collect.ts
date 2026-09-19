@@ -16,7 +16,12 @@ import {
 } from "@/lib/db/schema";
 import { getSystemSettings } from "@/lib/system-settings";
 import { getBuildInfo } from "@/lib/version";
-import { isAuthEnabled, allowGuestAccess } from "@/lib/auth/feature-flags";
+import {
+  isAuthEnabled,
+  allowGuestAccess,
+  allowUserRegistration,
+} from "@/lib/auth/feature-flags";
+import { DEFAULT_TELEMETRY_ENDPOINT } from "@/lib/telemetry/config";
 import {
   TELEMETRY_SCHEMA_VERSION,
   toBucket,
@@ -57,6 +62,11 @@ function collectEnvFlags(): Record<string, string> {
     const value = process.env[key];
     if (value !== undefined) flags[key] = value;
   }
+  // A self-hosted receiver URL can be private and carry a token, and this export
+  // is pasted into public issues -- report only whether it differs from the default.
+  const endpoint = process.env.TELEMETRY_ENDPOINT;
+  flags.TELEMETRY_ENDPOINT =
+    endpoint && endpoint !== DEFAULT_TELEMETRY_ENDPOINT ? "custom" : "default";
   return flags;
 }
 
@@ -167,7 +177,7 @@ export async function collectTelemetryPayload(
     config: {
       authEnabled: isAuthEnabled(),
       guestAccess: await allowGuestAccess(),
-      registrationOpen: process.env.ALLOW_USER_REGISTRATION !== "false",
+      registrationOpen: allowUserRegistration(),
       defaultLocale: process.env.DEFAULT_LOCALE ?? "en",
       updateCheckEnabled: settings.updateCheckEnabled,
       rateLimitOverrides,

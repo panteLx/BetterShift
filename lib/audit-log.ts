@@ -157,9 +157,20 @@ export interface AdminPasswordResetMetadata {
   targetUser: string;
 }
 
+// Mirrors SystemSettings minus telemetryInstanceId: the instance id must never
+// reach an audit log, which admins can export.
+interface AuditedSystemSettings {
+  updateCheckEnabled: boolean;
+  updateBannerVisibility: string;
+  allowGuestAccess: boolean;
+  telemetryEnabled: boolean | null;
+  telemetryConsentedSchema: number | null;
+  telemetryDecidedAt: Date | null;
+}
+
 export interface AdminSystemSettingsUpdatedMetadata {
-  before: { updateCheckEnabled: boolean; updateBannerVisibility: string; allowGuestAccess: boolean };
-  after: { updateCheckEnabled: boolean; updateBannerVisibility: string; allowGuestAccess: boolean };
+  before: AuditedSystemSettings;
+  after: AuditedSystemSettings;
 }
 
 export interface AdminTelemetryConsentMetadata {

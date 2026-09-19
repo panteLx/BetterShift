@@ -10,6 +10,10 @@ export async function sendToPostHog(payload: PayloadV1, apiKey: string): Promise
     distinct_id: payload.instanceId ?? "anonymous",
     timestamp: payload.sentAt,
     properties: {
+      // The Worker runs in the PoP nearest the sending instance, so PostHog would
+      // geolocate that IP and approximate every instance's location.
+      $ip: null,
+      $geoip_disable: true,
       // Keeps PostHog from creating a person profile per instance -- there is no person here.
       $process_person_profile: false,
       schema_version: payload.schemaVersion,

@@ -4,13 +4,24 @@ import { canManageSystemSettings } from "@/lib/auth/admin";
 import {
   getSystemSettings,
   updateSystemSettings,
+  type SystemSettings,
   type UpdateBannerVisibility,
 } from "@/lib/system-settings";
-import { logAdminAction, type AdminTelemetryConsentMetadata } from "@/lib/audit-log";
+import {
+  logAdminAction,
+  type AdminSystemSettingsUpdatedMetadata,
+  type AdminTelemetryConsentMetadata,
+} from "@/lib/audit-log";
 import { isTelemetryForcedByEnv } from "@/lib/telemetry/config";
 import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
+
+/** Strips telemetryInstanceId -- an audit log is exportable, the id must not be in it. */
+function forAudit(settings: SystemSettings): AdminSystemSettingsUpdatedMetadata["before"] {
+  const { telemetryInstanceId: _ignored, ...rest } = settings;
+  return rest;
+}
 
 /**
  * Admin System Settings API
@@ -116,11 +127,11 @@ export async function PATCH(request: NextRequest) {
 
     const { before, after } = await updateSystemSettings(patch);
 
-    await logAdminAction({
+    await logAdminAction<AdminSystemSettingsUpdatedMetadata>({
       action: "admin.system_settings.update",
       userId: currentUser!.id,
       request,
-      metadata: { before, after },
+      metadata: { before: forAudit(before), after: forAudit(after) },
     });
 
     if ("telemetryEnabled" in patch) {
