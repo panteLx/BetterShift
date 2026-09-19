@@ -244,6 +244,12 @@ export async function POST(request: Request) {
             { status: 404 }
           );
         }
+        if (preset.archivedAt) {
+          return NextResponse.json(
+            { error: "Preset is archived" },
+            { status: 400 }
+          );
+        }
         const [presetWithFields] = await withPresetCustomFields(
           [preset],
           customFieldDefinitions
@@ -310,6 +316,12 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: "Preset not found" },
           { status: 404 }
+        );
+      }
+      if (preset.archivedAt) {
+        return NextResponse.json(
+          { error: "Preset is archived" },
+          { status: 400 }
         );
       }
       insertValues = {

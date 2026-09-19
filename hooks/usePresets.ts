@@ -95,6 +95,24 @@ async function deletePresetApi(presetId: string): Promise<void> {
   }
 }
 
+async function archivePresetApi(
+  presetId: string,
+  archived: boolean
+): Promise<ShiftPresetWithValues> {
+  const response = await fetch(`/api/presets/${presetId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ archived }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to archive preset");
+  }
+
+  return await response.json();
+}
+
 async function reorderPresetsApi(
   calendarId: string,
   presetOrders: Array<{ id: string; order: number }>
@@ -132,6 +150,7 @@ function createOptimisticPreset(
     segments: formData.segments,
     customFields: formData.customFields ?? {},
     order: 999, // Will be corrected by server
+    archivedAt: null,
     createdBy: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -284,6 +303,49 @@ export function usePresets(calendarId: string | undefined) {
     },
   });
 
+  // Archive / restore preset mutation
+  const archiveMutation = useMutation({
+    mutationFn: ({ presetId, archived }: { presetId: string; archived: boolean }) =>
+      archivePresetApi(presetId, archived),
+    onMutate: async ({ presetId, archived }) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.presets.byCalendar(calendarId!),
+      });
+      const previous = queryClient.getQueryData(
+        queryKeys.presets.byCalendar(calendarId!)
+      );
+      queryClient.setQueryData(
+        queryKeys.presets.byCalendar(calendarId!),
+        (old: ShiftPresetWithValues[] = []) =>
+          old.map((p) =>
+            p.id === presetId
+              ? { ...p, archivedAt: archived ? new Date() : null, updatedAt: new Date() }
+              : p
+          )
+      );
+      return { previous };
+    },
+    onError: (error, variables, context) => {
+      queryClient.setQueryData(
+        queryKeys.presets.byCalendar(calendarId!),
+        context?.previous
+      );
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("common.updateError", { item: t("preset.preset") })
+      );
+    },
+    onSuccess: (_data, { archived }) => {
+      toast.success(archived ? t("preset.archivedToast") : t("preset.restoredToast"));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.presets.byCalendar(calendarId!),
+      });
+    },
+  });
+
   // Reorder presets mutation
   const reorderMutation = useMutation({
     mutationFn: (presetOrders: Array<{ id: string; order: number }>) =>
@@ -354,6 +416,14 @@ export function usePresets(calendarId: string | undefined) {
     deletePreset: async (presetId: string) => {
       try {
         await deleteMutation.mutateAsync(presetId);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    archivePreset: async (presetId: string, archived: boolean) => {
+      try {
+        await archiveMutation.mutateAsync({ presetId, archived });
         return true;
       } catch {
         return false;

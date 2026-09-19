@@ -2,12 +2,12 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
-import { PresetSection } from "@/components/preset-list";
+import { ArchivedPresetSection, PresetSection } from "@/components/preset-list";
 import {
   EMPTY_PRESET_FORM,
   PresetFormCard,
@@ -15,7 +15,7 @@ import {
   samePresetForm,
 } from "@/components/preset-form";
 import { ShiftPreset } from "@/lib/db/schema";
-import { groupPresetsByName } from "@/lib/shift-display";
+import { activePresets, groupPresetsByName } from "@/lib/shift-display";
 import { usePresets, type PresetFormData } from "@/hooks/usePresets";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useCalendars } from "@/hooks/useCalendars";
@@ -52,8 +52,15 @@ export function PresetsPanel({
   // Banner-level "no preset capability at all" — individual actions still gate themselves.
   const isReadOnly =
     readOnly || (!permission.can("createPreset") && !permission.can("manageOwnPresets"));
-  const { presets, loading, createPreset, updatePreset, deletePreset, reorderPresets } =
-    usePresets(calendarId);
+  const {
+    presets,
+    loading,
+    createPreset,
+    updatePreset,
+    deletePreset,
+    archivePreset,
+    reorderPresets,
+  } = usePresets(calendarId);
   const { calendars } = useCalendars();
   const splitShiftsEnabled = calendars.find((c) => c.id === calendarId)?.splitShiftsEnabled ?? false;
 
@@ -67,6 +74,8 @@ export function PresetsPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [cloningId, setCloningId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ShiftPreset | null>(null);
   const [pendingDiscard, setPendingDiscard] = useState<(() => void) | null>(null);
   // Holds the dropped order until the reorder request settles, so rows don't snap back.
@@ -90,10 +99,12 @@ export function PresetsPanel({
     const last = pendingOrder.length;
     return [...presets].sort((a, b) => (rank.get(a.id) ?? last) - (rank.get(b.id) ?? last));
   }, [presets, pendingOrder]);
-  const primary = ordered.filter((p) => !p.isSecondary);
-  const secondary = ordered.filter((p) => p.isSecondary);
+  const active = activePresets(ordered);
+  const archived = ordered.filter((p) => p.archivedAt);
+  const primary = active.filter((p) => !p.isSecondary);
+  const secondary = active.filter((p) => p.isSecondary);
   const existingGroupNames = useMemo(
-    () => groupPresetsByName(presets).groups.map((g) => g.name),
+    () => groupPresetsByName(activePresets(presets)).groups.map((g) => g.name),
     [presets]
   );
 
@@ -184,6 +195,21 @@ export function PresetsPanel({
     else guardDiscard(onClose);
   };
 
+  const handleArchive = async (preset: ShiftPreset, nextArchived: boolean) => {
+    if (archivingId) return;
+    setArchivingId(preset.id);
+    try {
+      const success = await archivePreset(preset.id, nextArchived);
+      if (success) {
+        if (nextArchived && editingPreset?.id === preset.id) resetForm();
+        if (nextArchived) setArchiveOpen(true);
+        onPresetsChange?.();
+      }
+    } finally {
+      setArchivingId(null);
+    }
+  };
+
   const rowActions = {
     canEdit: canEditPreset,
     canClone: canCreate,
@@ -191,9 +217,11 @@ export function PresetsPanel({
     editingId: editingPreset?.id ?? null,
     deletingId,
     cloningId,
+    archivingId,
     onEdit: startEdit,
     onClone: clonePreset,
     onDelete: setDeleteTarget,
+    onArchive: handleArchive,
   };
 
   return (
@@ -227,6 +255,34 @@ export function PresetsPanel({
             onReorder={(next) => saveOrder([...primary, ...next])}
             {...rowActions}
           />
+        )}
+
+        {archived.length > 0 && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setArchiveOpen((current) => !current)}
+              aria-expanded={archiveOpen}
+              className="flex w-full items-center gap-1.5 rounded-[9px] px-1 py-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary transition-colors hover:text-fg-secondary"
+            >
+              {t("presetSheet.archivedSection")}
+              <span className="font-mono normal-case tracking-normal opacity-70">
+                ({archived.length})
+              </span>
+              {archiveOpen ? (
+                <ChevronUp className="size-3.5" />
+              ) : (
+                <ChevronDown className="size-3.5" />
+              )}
+            </button>
+            {archiveOpen && (
+              <ArchivedPresetSection
+                label={t("presetSheet.archivedHint")}
+                presets={archived}
+                {...rowActions}
+              />
+            )}
+          </div>
         )}
 
         {formVisible && (

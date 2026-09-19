@@ -199,6 +199,11 @@
   "preset": {
     "preset": "Preset",
     "edit": "Modifica Preset",
+    "archive": "Archivia modello",
+    "restore": "Ripristina modello",
+    "archived": "Archiviato",
+    "archivedToast": "Modello archiviato",
+    "restoredToast": "Modello ripristinato",
     "saveAsPreset": "Salva come preset",
     "presetName": "Nome preset",
     "presetNamePlaceholder": "es., Turno Mattutino, Turno Serale...",
@@ -818,6 +823,8 @@
     "delete": "Elimina preset",
     "dragHandle": "Trascina per riordinare",
     "secondarySection": "Sotto «Altri»",
+    "archivedSection": "Archivio",
+    "archivedHint": "Non crea più nuovi turni",
     "markAsSecondaryHint": "Compare nella barra dei modelli solo dopo aver cliccato «Altri»",
     "defaultSignupCapacityLabel": "Numero massimo di persone",
     "defaultSignupCapacityHint": "Stabilisce quante persone possono iscriversi ai turni creati da questo modello. Lascia vuoto per un numero illimitato. Viene copiato alla creazione e può essere modificato per ogni turno."

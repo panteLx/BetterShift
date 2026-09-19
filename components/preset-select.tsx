@@ -49,6 +49,11 @@ export function PresetSelect({ presets, value, onPresetSelect, onClear }: Preset
                 style={shiftVars(preset.color)}
               />
               {preset.title}
+              {preset.archivedAt && (
+                <span className="text-[11px] font-normal opacity-70">
+                  {t("preset.archived")}
+                </span>
+              )}
             </button>
           );
         })}

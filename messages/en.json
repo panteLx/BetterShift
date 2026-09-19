@@ -199,6 +199,11 @@
   "preset": {
     "preset": "Preset",
     "edit": "Edit Preset",
+    "archive": "Archive preset",
+    "restore": "Restore preset",
+    "archived": "Archived",
+    "archivedToast": "Preset archived",
+    "restoredToast": "Preset restored",
     "saveAsPreset": "Save as preset",
     "presetName": "Preset name",
     "presetNamePlaceholder": "e.g., Morning Shift, Evening Shift...",
@@ -818,6 +823,8 @@
     "delete": "Delete preset",
     "dragHandle": "Drag to reorder",
     "secondarySection": "Under “More”",
+    "archivedSection": "Archive",
+    "archivedHint": "No longer creates new shifts",
     "markAsSecondaryHint": "Shows in the preset bar only after clicking “More”",
     "defaultSignupCapacityLabel": "Maximum number of people",
     "defaultSignupCapacityHint": "Sets how many people can sign up for shifts created from this preset. Leave empty for unlimited signups. Copied when a shift is created and can be adjusted per shift."

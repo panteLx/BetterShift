@@ -199,6 +199,11 @@
   "preset": {
     "preset": "Vorlage",
     "edit": "Vorlage bearbeiten",
+    "archive": "Vorlage archivieren",
+    "restore": "Vorlage reaktivieren",
+    "archived": "Archiviert",
+    "archivedToast": "Vorlage archiviert",
+    "restoredToast": "Vorlage reaktiviert",
     "saveAsPreset": "Als Vorlage speichern",
     "presetName": "Vorlagenname",
     "presetNamePlaceholder": "z.B. Frühschicht, Spätschicht...",
@@ -818,6 +823,8 @@
     "delete": "Vorlage löschen",
     "dragHandle": "Zum Sortieren ziehen",
     "secondarySection": "Unter „Weitere“",
+    "archivedSection": "Archiv",
+    "archivedHint": "Erstellt keine neuen Schichten mehr",
     "markAsSecondaryHint": "Erscheint in der Vorlagenleiste erst nach Klick auf „Weitere“",
     "defaultSignupCapacityLabel": "Maximale Anzahl Personen",
     "defaultSignupCapacityHint": "Legt fest, wie viele Personen sich für Schichten aus dieser Vorlage eintragen können. Leer lassen für unbegrenzt viele Anmeldungen. Wird beim Anlegen übernommen und kann pro Schicht angepasst werden."

@@ -35,7 +35,7 @@ import { ShiftFormData } from "@/components/shift-sheet";
 import { getCalendarDays, getMonthDays, getWeekDays } from "@/lib/calendar-utils";
 import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { findNotesForDate } from "@/lib/event-utils";
-import { DayLayoutOptions } from "@/lib/shift-display";
+import { activePresets, DayLayoutOptions } from "@/lib/shift-display";
 import { CalendarViewSettings } from "@/lib/view-settings";
 
 function toDayLayout(view: CalendarViewSettings): DayLayoutOptions {
@@ -331,7 +331,8 @@ function HomeContent() {
   // The armed presets are page state that outlives the stamp bar: it survives a
   // calendar switch, going offline and the personal toggle, none of which render
   // the dock. Derived here so a day click can never stamp without it on screen.
-  const presetIdSet = new Set(presets.map((p) => p.id));
+  // Archived presets drop out of the set, so one archived while armed stops stamping.
+  const presetIdSet = new Set(activePresets(presets).map((p) => p.id));
   const armedPresetIds =
     canStampPreset && isOnline && calendarView.showStampBar
       ? selectedPresetIds.filter((id) => presetIdSet.has(id))

@@ -388,6 +388,9 @@ export const shiftPresets = sqliteTable("shift_presets", {
   // Copied into signupCapacity on shifts created from this preset
   defaultSignupCapacity: integer("default_signup_capacity"),
   order: integer("order").notNull().default(0),
+  // null = active. Archived presets can no longer create shifts, but shifts
+  // already stamped from them stay untouched.
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
   // null = no known creator, see shifts.createdBy above.
   createdBy: text("created_by").references(() => user.id, {
     onDelete: "set null",

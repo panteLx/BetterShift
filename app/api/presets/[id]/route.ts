@@ -90,6 +90,7 @@ export async function PATCH(
       defaultSignupCapacity,
       segments: requestedSegments,
       customFields,
+      archived,
     } = body;
 
     // groupName: undefined leaves it unchanged, null explicitly clears it,
@@ -141,6 +142,26 @@ export async function PATCH(
         { error: "Insufficient permissions" },
         { status: 403 }
       );
+    }
+
+    // An archive toggle is a request of its own and carries no other fields:
+    // the generic update below rewrites every shift stamped from this preset,
+    // which archiving must never do.
+    if (archived !== undefined) {
+      if (typeof archived !== "boolean") {
+        return NextResponse.json({ error: "Invalid archived" }, { status: 400 });
+      }
+      const [toggled] = await db
+        .update(shiftPresets)
+        .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
+        .where(eq(shiftPresets.id, id))
+        .returning();
+      const [withSegs] = await withPresetSegments([toggled]);
+      const [result] = await withPresetCustomFields(
+        [withSegs],
+        await getCalendarCustomFields(existingPreset.calendarId)
+      );
+      return NextResponse.json(result);
     }
 
     const nextIsAllDay = isAllDay !== undefined ? isAllDay : existingPreset.isAllDay;

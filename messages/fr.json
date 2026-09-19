@@ -199,6 +199,11 @@
   "preset": {
     "preset": "Modèle",
     "edit": "Modifier le modèle",
+    "archive": "Archiver le modèle",
+    "restore": "Réactiver le modèle",
+    "archived": "Archivé",
+    "archivedToast": "Modèle archivé",
+    "restoredToast": "Modèle réactivé",
     "saveAsPreset": "Enregistrer comme modèle",
     "presetName": "Nom du modèle",
     "presetNamePlaceholder": "ex. : Créneau matin, Créneau soir...",
@@ -818,6 +823,8 @@
     "delete": "Supprimer le modèle",
     "dragHandle": "Glisser pour réordonner",
     "secondarySection": "Sous « Plus »",
+    "archivedSection": "Archives",
+    "archivedHint": "Ne crée plus de nouveaux créneaux",
     "markAsSecondaryHint": "N’apparaît dans la barre de modèles qu’après un clic sur « Plus »",
     "defaultSignupCapacityLabel": "Nombre maximum de personnes",
     "defaultSignupCapacityHint": "Définit combien de personnes peuvent s'inscrire aux gardes créées à partir de ce modèle. Laissez vide pour un nombre illimité. Copié à la création et modifiable pour chaque garde."

@@ -156,7 +156,8 @@ export function useCompareMode({
         await Promise.all(
           selectedPresetIds.map(async (presetId) => {
             const preset = calendarPresets.find((p) => p.id === presetId);
-            if (!preset) return;
+            // Archived presets neither stamp nor un-stamp, same as on the server.
+            if (!preset || preset.archivedAt) return;
 
             const existingShift = calendarShifts.find(
               (shift) =>

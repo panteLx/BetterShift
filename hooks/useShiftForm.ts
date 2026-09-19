@@ -3,6 +3,7 @@ import { ShiftFormData } from "@/components/shift-sheet";
 import { ShiftWithCalendar } from "@/lib/types";
 import { formatDateToLocal } from "@/lib/date-utils";
 import { usePresets, type ShiftPresetWithValues } from "@/hooks/usePresets";
+import { activePresets } from "@/lib/shift-display";
 import { DEFAULT_COLOR } from "@/lib/constants";
 
 interface UseShiftFormOptions {
@@ -36,7 +37,16 @@ export function useShiftForm({
     customFields: shift?.customFields ?? {},
   });
 
-  const { presets, createPreset } = usePresets(calendarId);
+  const { presets: allPresets, createPreset } = usePresets(calendarId);
+  // An archived preset can no longer be picked, but the one an edited shift was
+  // stamped from stays in the list so its selection isn't silently dropped.
+  const selectablePresets = activePresets(allPresets);
+  const archivedCurrent = shift?.presetId
+    ? allPresets.find((p) => p.id === shift.presetId && p.archivedAt)
+    : undefined;
+  const presets = archivedCurrent
+    ? [...selectablePresets, archivedCurrent]
+    : selectablePresets;
   const [saveAsPreset, setSaveAsPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
 

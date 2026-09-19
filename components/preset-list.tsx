@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -19,14 +19,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, GripVertical, Pencil, Tag, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, GripVertical, Pencil, Tag, Trash2 } from "lucide-react";
 import { ShiftPreset } from "@/lib/db/schema";
 import { getShiftCode, groupPresetsByName, presetTime, shiftVars } from "@/lib/shift-display";
 import { ListRow, Pill, RowIconButton, SectionLabel } from "@/components/form-kit";
 import { cn } from "@/lib/utils";
 
-interface PresetRowActions {
-  /** Per-preset Own/Any check — edit/delete depend on who created that preset. */
+export interface PresetRowActions {
+  /** Per-preset Own/Any check — edit/delete/archive depend on who created that preset. */
   canEdit: (preset: ShiftPreset) => boolean;
   /** Cloning creates a new preset, so it's gated calendar-wide, not per-row. */
   canClone: boolean;
@@ -35,66 +35,49 @@ interface PresetRowActions {
   editingId: string | null;
   deletingId: string | null;
   cloningId: string | null;
+  archivingId: string | null;
   onEdit: (preset: ShiftPreset) => void;
   onClone: (preset: ShiftPreset) => void;
   onDelete: (preset: ShiftPreset) => void;
+  onArchive: (preset: ShiftPreset, archived: boolean) => void;
 }
 
-interface SortablePresetRowProps extends PresetRowActions {
+interface PresetRowProps extends PresetRowActions {
   preset: ShiftPreset;
-  draggable: boolean;
+  /** Rendered as the leading grip; omitted when the row can't be dragged. */
+  dragHandle?: ReactNode;
 }
 
-function SortablePresetRow({
+export function PresetRow({
   preset,
-  draggable,
+  dragHandle,
   canEdit,
   canClone,
   editingId,
   deletingId,
   cloningId,
+  archivingId,
   onEdit,
   onClone,
   onDelete,
-}: SortablePresetRowProps) {
+  onArchive,
+}: PresetRowProps) {
   const t = useTranslations();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: preset.id, disabled: !draggable });
-  const busy = deletingId === preset.id || cloningId === preset.id;
+  const busy =
+    deletingId === preset.id || cloningId === preset.id || archivingId === preset.id;
   const editable = canEdit(preset);
+  const archived = preset.archivedAt !== null;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: isDragging ? undefined : transition,
-      }}
-      className={cn("relative", isDragging && "z-10 opacity-60")}
-    >
       <ListRow
         highlighted={editingId === preset.id}
-        className={cn("gap-2.5 py-2.5 pr-1.5", draggable ? "pl-1.5" : "pl-3.5")}
-      >
-        {draggable && (
-          <button
-            ref={setActivatorNodeRef}
-            type="button"
-            aria-label={t("presetSheet.dragHandle")}
-            className="-my-1 flex h-8 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="size-4" />
-          </button>
+        className={cn(
+          "gap-2.5 py-2.5 pr-1.5",
+          dragHandle ? "pl-1.5" : "pl-3.5",
+          archived && "opacity-70"
         )}
+      >
+        {dragHandle}
         <span
           className="shift-solid flex size-[22px] shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold"
           style={shiftVars(preset.color)}
@@ -109,6 +92,7 @@ function SortablePresetRow({
             <span className="font-mono text-[12px] text-fg-tertiary">
               {presetTime(preset, t("presetSheet.allDayShort"))}
             </span>
+            {archived && <Pill tone="warning">{t("preset.archived")}</Pill>}
             {preset.isSecondary && <Pill>{t("preset.secondary")}</Pill>}
             {preset.hideFromStats && (
               <Pill tone="warning">{t("presetSheet.notInStats")}</Pill>
@@ -117,7 +101,7 @@ function SortablePresetRow({
         </div>
         {(canClone || editable) && (
           <>
-            {canClone && (
+            {canClone && !archived && (
               <RowIconButton
                 icon={Copy}
                 label={t("common.copy")}
@@ -125,11 +109,19 @@ function SortablePresetRow({
                 disabled={busy}
               />
             )}
-            {editable && (
+            {editable && !archived && (
               <RowIconButton
                 icon={Pencil}
                 label={t("preset.edit")}
                 onClick={() => onEdit(preset)}
+                disabled={busy}
+              />
+            )}
+            {editable && (
+              <RowIconButton
+                icon={archived ? ArchiveRestore : Archive}
+                label={archived ? t("preset.restore") : t("preset.archive")}
+                onClick={() => onArchive(preset, !archived)}
                 disabled={busy}
               />
             )}
@@ -145,6 +137,53 @@ function SortablePresetRow({
           </>
         )}
       </ListRow>
+  );
+}
+
+interface SortablePresetRowProps extends PresetRowActions {
+  preset: ShiftPreset;
+  draggable: boolean;
+}
+
+function SortablePresetRow({ preset, draggable, ...actions }: SortablePresetRowProps) {
+  const t = useTranslations();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: preset.id, disabled: !draggable });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+      }}
+      className={cn("relative", isDragging && "z-10 opacity-60")}
+    >
+      <PresetRow
+        preset={preset}
+        dragHandle={
+          draggable ? (
+            <button
+              ref={setActivatorNodeRef}
+              type="button"
+              aria-label={t("presetSheet.dragHandle")}
+              className="-my-1 flex h-8 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-sunken active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="size-4" />
+            </button>
+          ) : undefined
+        }
+        {...actions}
+      />
     </div>
   );
 }
@@ -238,6 +277,24 @@ export function PresetSection({ label, presets, onReorder, ...actions }: PresetS
           />
         </div>
       ))}
+    </section>
+  );
+}
+
+/** Archived presets: a flat, non-draggable list — order only matters for the stamp bar. */
+export function ArchivedPresetSection({
+  label,
+  presets,
+  ...actions
+}: PresetRowActions & { label: string; presets: ShiftPreset[] }) {
+  return (
+    <section>
+      <SectionLabel>{label}</SectionLabel>
+      <div className="flex flex-col gap-2">
+        {presets.map((preset) => (
+          <PresetRow key={preset.id} preset={preset} {...actions} />
+        ))}
+      </div>
     </section>
   );
 }

@@ -199,6 +199,11 @@
   "preset": {
     "preset": "Preajuste",
     "edit": "Editar preajuste",
+    "archive": "Archivar plantilla",
+    "restore": "Restaurar plantilla",
+    "archived": "Archivada",
+    "archivedToast": "Plantilla archivada",
+    "restoredToast": "Plantilla restaurada",
     "saveAsPreset": "Guardar como preajuste",
     "presetName": "Nombre del preajuste",
     "presetNamePlaceholder": "ej., Turno de mañana, Turno de tarde...",
@@ -818,6 +823,8 @@
     "delete": "Eliminar preajuste",
     "dragHandle": "Arrastrar para ordenar",
     "secondarySection": "En «Más»",
+    "archivedSection": "Archivo",
+    "archivedHint": "Ya no crea turnos nuevos",
     "markAsSecondaryHint": "Aparece en la barra de plantillas solo al pulsar «Más»",
     "defaultSignupCapacityLabel": "Numero maximo de personas",
     "defaultSignupCapacityHint": "Define cuántas personas pueden inscribirse en turnos creados a partir de esta plantilla. Déjalo vacío para inscripciones ilimitadas. Se copia al crear el turno y puede ajustarse por turno."

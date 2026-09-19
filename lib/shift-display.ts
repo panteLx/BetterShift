@@ -202,6 +202,11 @@ export function formatTimeRange(times: {
     .join(", ");
 }
 
+/** Presets that may still create shifts — archived ones stay loaded for existing shifts, stats colors and the manage sheet. */
+export function activePresets<T extends { archivedAt: Date | null }>(presets: T[]): T[] {
+  return presets.filter((p) => !p.archivedAt);
+}
+
 export interface PresetGroup {
   name: string;
   items: ShiftPreset[];

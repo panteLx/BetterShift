@@ -15,11 +15,18 @@ import {
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ShiftPreset } from "@/lib/db/schema";
-import { getShiftCode, groupPresetsByName, presetTime, shiftVars } from "@/lib/shift-display";
+import {
+  activePresets,
+  getShiftCode,
+  groupPresetsByName,
+  presetTime,
+  shiftVars,
+} from "@/lib/shift-display";
 import { cn, isMultiSelectClick } from "@/lib/utils";
 
+/** Archived presets are dropped here, which covers the stamp bar, the mobile bar and compare mode at once. */
 export function splitStampPresets(presets: ShiftPreset[]) {
-  const { ungrouped, groups } = groupPresetsByName(presets);
+  const { ungrouped, groups } = groupPresetsByName(activePresets(presets));
   const ordered = [...ungrouped, ...groups.flatMap((group) => group.items)];
   return {
     primary: ordered.filter((p) => !p.isSecondary),
@@ -313,7 +320,7 @@ export function MultiSelectToggle({
 export function StampDock({ presets, selectedPresetIds, onSelectPreset, onManage }: StampProps) {
   const t = useTranslations();
   const { primary, secondary } = splitStampPresets(presets);
-  const groups = useMemo(() => groupPresetsByName(presets).groups, [presets]);
+  const groups = useMemo(() => groupPresetsByName(activePresets(presets)).groups, [presets]);
   const [multiMode, setMultiMode] = useState(false);
   const activeIds = new Set(selectedPresetIds);
 
@@ -327,7 +334,7 @@ export function StampDock({ presets, selectedPresetIds, onSelectPreset, onManage
         {t("calendarView.stamp")}
       </span>
       <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-        {presets.length === 0 && (
+        {primary.length === 0 && secondary.length === 0 && (
           <button
             type="button"
             onClick={onManage}
@@ -432,10 +439,10 @@ export function MobilePresetBar({
   const [moreOpen, setMoreOpen] = useState(false);
   const [multiMode, setMultiMode] = useState(false);
   const { primary, secondary } = splitStampPresets(presets);
-  const groups = useMemo(() => groupPresetsByName(presets).groups, [presets]);
+  const groups = useMemo(() => groupPresetsByName(activePresets(presets)).groups, [presets]);
   const activeIds = new Set(selectedPresetIds);
-  const activePresets = presets.filter((p) => activeIds.has(p.id));
-  const activeSecondary = activePresets.filter((p) => p.isSecondary);
+  const armed = presets.filter((p) => activeIds.has(p.id));
+  const activeSecondary = armed.filter((p) => p.isSecondary);
   // Otherwise the list would pop up by itself once nothing secondary is armed anymore
   if (moreOpen && secondary.length === 0) setMoreOpen(false);
 
@@ -459,7 +466,7 @@ export function MobilePresetBar({
       )}
       <div className="flex items-center gap-2 py-2.5 pl-3 pr-3">
         <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-          {presets.length === 0 && (
+          {primary.length === 0 && secondary.length === 0 && (
             <button
               type="button"
               onClick={onManage}
@@ -546,13 +553,13 @@ export function MobilePresetBar({
         </div>
         <MultiSelectToggle variant="bar" active={multiMode} onClick={() => setMultiMode((m) => !m)} />
       </div>
-      {activePresets.length > 0 && (
+      {armed.length > 0 && (
         <div className="flex items-center gap-2 px-4 pb-2.5 text-[12px] leading-snug text-fg-secondary">
           <Hand className="size-4 shrink-0" />
           <span className="min-w-0 flex-1">
-            {activePresets.length === 1
-              ? t("calendarView.stampHint", { title: activePresets[0].title })
-              : t("calendarView.stampHintMulti", { count: activePresets.length })}
+            {armed.length === 1
+              ? t("calendarView.stampHint", { title: armed[0].title })
+              : t("calendarView.stampHintMulti", { count: armed.length })}
           </span>
           <button
             type="button"
