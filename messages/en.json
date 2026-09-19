@@ -662,7 +662,22 @@
     "createUser": "Create user",
     "createUserSubtitle": "Creates a new account, even while registration is disabled.",
     "mustChangePasswordHint": "The user will be required to change this password on first login.",
-    "emailAlreadyExists": "A user with this email address already exists"
+    "emailAlreadyExists": "A user with this email address already exists",
+    "telemetry": {
+      "title": "Telemetry & Diagnostics",
+      "description": "Send anonymous usage data to the project.",
+      "toggleLabel": "Send telemetry",
+      "notDecided": "Not decided yet",
+      "envManaged": "Set by the TELEMETRY_ENABLED environment variable",
+      "previewTitle": "Sent data",
+      "diagnosticsTitle": "Diagnostic data for bug reports",
+      "diagnosticsDescription": "Includes exact figures and enabled configuration switches. Intended only for bug reports.",
+      "includeInstanceId": "Include instance ID",
+      "includeInstanceIdHint": "Links the bug report to this instance's telemetry data.",
+      "copy": "Copy as Markdown",
+      "copied": "Copied to clipboard",
+      "openIssue": "Open bug report on GitHub"
+    }
   },
   "appearance": {
     "title": "Appearance",
@@ -1248,5 +1263,18 @@
     "deleteConfirm": "This field will be deleted. Values in {shifts} shifts and {presets} presets will be lost.",
     "saveFailed": "Failed to save field",
     "deleteFailed": "Failed to delete field"
+  },
+  "telemetry": {
+    "consent": {
+      "title": "Send anonymous diagnostic data?",
+      "description": "BetterShift can send anonymous usage data to the project once a day. This helps decide which features to maintain and which environments need support.",
+      "pointAnonymous": "No names, addresses, emails, or calendar content",
+      "pointBuckets": "Size figures only as a range, e.g. “6-20 users”",
+      "pointRevocable": "Revocable at any time in the admin area",
+      "previewToggle": "Show sent data",
+      "docsLink": "Full documentation",
+      "accept": "Send",
+      "decline": "Don't send"
+    }
   }
 }

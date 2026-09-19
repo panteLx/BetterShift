@@ -662,7 +662,22 @@
     "createUser": "Crea utente",
     "createUserSubtitle": "Crea un nuovo account, anche con la registrazione disattivata.",
     "mustChangePasswordHint": "L'utente dovrà cambiare questa password al primo accesso.",
-    "emailAlreadyExists": "Esiste già un utente con questo indirizzo email"
+    "emailAlreadyExists": "Esiste già un utente con questo indirizzo email",
+    "telemetry": {
+      "title": "Telemetria e diagnostica",
+      "description": "Invia dati di utilizzo anonimi al progetto.",
+      "toggleLabel": "Invia telemetria",
+      "notDecided": "Non ancora deciso",
+      "envManaged": "Impostato dalla variabile d'ambiente TELEMETRY_ENABLED",
+      "previewTitle": "Dati inviati",
+      "diagnosticsTitle": "Dati di diagnostica per le segnalazioni di bug",
+      "diagnosticsDescription": "Include cifre esatte e le opzioni di configurazione attive. Pensato solo per le segnalazioni di bug.",
+      "includeInstanceId": "Includi ID istanza",
+      "includeInstanceIdHint": "Collega la segnalazione di bug ai dati di telemetria di questa istanza.",
+      "copy": "Copia come Markdown",
+      "copied": "Copiato negli appunti",
+      "openIssue": "Apri una segnalazione di bug su GitHub"
+    }
   },
   "appearance": {
     "title": "Aspetto",
@@ -1248,5 +1263,18 @@
     "deleteConfirm": "Questo campo verrà eliminato. I valori in {shifts} turni e {presets} modelli andranno persi.",
     "saveFailed": "Impossibile salvare il campo",
     "deleteFailed": "Impossibile eliminare il campo"
+  },
+  "telemetry": {
+    "consent": {
+      "title": "Inviare dati di diagnostica anonimi?",
+      "description": "BetterShift può inviare una volta al giorno dati di utilizzo anonimi al progetto. Questo aiuta a decidere quali funzionalità mantenere e quali ambienti supportare.",
+      "pointAnonymous": "Nessun nome, indirizzo, email o contenuto dei calendari",
+      "pointBuckets": "Le dimensioni sono indicate solo come intervallo, ad esempio «6-20 utenti»",
+      "pointRevocable": "Revocabile in qualsiasi momento dal Pannello Admin",
+      "previewToggle": "Mostra i dati inviati",
+      "docsLink": "Documentazione completa",
+      "accept": "Invia",
+      "decline": "Non inviare"
+    }
   }
 }

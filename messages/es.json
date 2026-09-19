@@ -662,7 +662,22 @@
     "createUser": "Crear usuario",
     "createUserSubtitle": "Crea una nueva cuenta, incluso con el registro desactivado.",
     "mustChangePasswordHint": "El usuario deberá cambiar esta contraseña en el primer inicio de sesión.",
-    "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico"
+    "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
+    "telemetry": {
+      "title": "Telemetría y diagnóstico",
+      "description": "Enviar datos de uso anónimos al proyecto.",
+      "toggleLabel": "Enviar telemetría",
+      "notDecided": "Aún sin decidir",
+      "envManaged": "Definido por la variable de entorno TELEMETRY_ENABLED",
+      "previewTitle": "Datos enviados",
+      "diagnosticsTitle": "Datos de diagnóstico para informes de error",
+      "diagnosticsDescription": "Incluye cifras exactas y los interruptores de configuración activados. Pensado solo para informes de error.",
+      "includeInstanceId": "Incluir identificador de instancia",
+      "includeInstanceIdHint": "Vincula el informe de error con los datos de telemetría de esta instancia.",
+      "copy": "Copiar como Markdown",
+      "copied": "Copiado al portapapeles",
+      "openIssue": "Abrir informe de error en GitHub"
+    }
   },
   "appearance": {
     "title": "Apariencia",
@@ -1248,5 +1263,18 @@
     "deleteConfirm": "Este campo se eliminará. Se perderán los valores en {shifts} turnos y {presets} plantillas.",
     "saveFailed": "No se pudo guardar el campo",
     "deleteFailed": "No se pudo eliminar el campo"
+  },
+  "telemetry": {
+    "consent": {
+      "title": "¿Enviar datos de diagnóstico anónimos?",
+      "description": "BetterShift puede enviar datos de uso anónimos al proyecto una vez al día. Esto ayuda a decidir qué funciones mantener y qué entornos necesitan compatibilidad.",
+      "pointAnonymous": "Sin nombres, direcciones, correos electrónicos ni contenido de calendarios",
+      "pointBuckets": "Los tamaños solo se indican como rango, por ejemplo «6-20 usuarios»",
+      "pointRevocable": "Revocable en cualquier momento desde el panel de administración",
+      "previewToggle": "Mostrar datos enviados",
+      "docsLink": "Documentación completa",
+      "accept": "Enviar",
+      "decline": "No enviar"
+    }
   }
 }

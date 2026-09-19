@@ -662,7 +662,22 @@
     "createUser": "Créer un utilisateur",
     "createUserSubtitle": "Crée un nouveau compte, même si l'inscription est désactivée.",
     "mustChangePasswordHint": "L'utilisateur devra changer ce mot de passe lors de sa première connexion.",
-    "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà"
+    "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
+    "telemetry": {
+      "title": "Télémétrie et diagnostic",
+      "description": "Envoyer des données d'utilisation anonymes au projet.",
+      "toggleLabel": "Envoyer la télémétrie",
+      "notDecided": "Pas encore décidé",
+      "envManaged": "Défini par la variable d'environnement TELEMETRY_ENABLED",
+      "previewTitle": "Données envoyées",
+      "diagnosticsTitle": "Données de diagnostic pour les rapports de bug",
+      "diagnosticsDescription": "Comprend des chiffres exacts et les options de configuration activées. Destiné uniquement aux rapports de bug.",
+      "includeInstanceId": "Inclure l'identifiant de l'instance",
+      "includeInstanceIdHint": "Associe le rapport de bug aux données de télémétrie de cette instance.",
+      "copy": "Copier au format Markdown",
+      "copied": "Copié dans le presse-papiers",
+      "openIssue": "Ouvrir un rapport de bug sur GitHub"
+    }
   },
   "appearance": {
     "title": "Apparence",
@@ -1248,5 +1263,18 @@
     "deleteConfirm": "Ce champ va être supprimé. Les valeurs de {shifts} créneaux et {presets} modèles seront perdues.",
     "saveFailed": "Impossible d'enregistrer le champ",
     "deleteFailed": "Impossible de supprimer le champ"
+  },
+  "telemetry": {
+    "consent": {
+      "title": "Envoyer des données de diagnostic anonymes ?",
+      "description": "BetterShift peut envoyer une fois par jour des données d'utilisation anonymes au projet. Cela aide à décider quelles fonctionnalités maintenir et quels environnements prendre en charge.",
+      "pointAnonymous": "Aucun nom, adresse, e-mail ni contenu de calendrier",
+      "pointBuckets": "Les tailles ne sont indiquées que sous forme de plage, par exemple « 6-20 utilisateurs »",
+      "pointRevocable": "Révocable à tout moment depuis le panneau d'administration",
+      "previewToggle": "Afficher les données envoyées",
+      "docsLink": "Documentation complète",
+      "accept": "Envoyer",
+      "decline": "Ne pas envoyer"
+    }
   }
 }

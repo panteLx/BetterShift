@@ -662,7 +662,22 @@
     "createUser": "Vytvořit uživatele",
     "createUserSubtitle": "Vytvoří nový účet i při vypnuté registraci.",
     "mustChangePasswordHint": "Uživatel bude muset toto heslo změnit při prvním přihlášení.",
-    "emailAlreadyExists": "Uživatel s touto e-mailovou adresou již existuje"
+    "emailAlreadyExists": "Uživatel s touto e-mailovou adresou již existuje",
+    "telemetry": {
+      "title": "Telemetrie a diagnostika",
+      "description": "Odesílat anonymní data o používání projektu.",
+      "toggleLabel": "Odesílat telemetrii",
+      "notDecided": "Zatím nerozhodnuto",
+      "envManaged": "Nastaveno proměnnou prostředí TELEMETRY_ENABLED",
+      "previewTitle": "Odesílaná data",
+      "diagnosticsTitle": "Diagnostická data pro hlášení chyb",
+      "diagnosticsDescription": "Obsahuje přesná čísla a nastavené konfigurační přepínače. Určeno pouze pro hlášení chyb.",
+      "includeInstanceId": "Přidat identifikátor instance",
+      "includeInstanceIdHint": "Propojí hlášení chyby s telemetrickými daty této instance.",
+      "copy": "Kopírovat jako Markdown",
+      "copied": "Zkopírováno do schránky",
+      "openIssue": "Otevřít hlášení chyby na GitHubu"
+    }
   },
   "appearance": {
     "title": "Vzhled",
@@ -1248,5 +1263,18 @@
     "deleteConfirm": "Toto pole bude smazáno. Hodnoty v {shifts} směnách a {presets} předlohách budou ztraceny.",
     "saveFailed": "Pole se nepodařilo uložit",
     "deleteFailed": "Pole se nepodařilo smazat"
+  },
+  "telemetry": {
+    "consent": {
+      "title": "Odeslat anonymní diagnostická data?",
+      "description": "BetterShift může jednou denně odeslat projektu anonymní data o používání. Pomáhá to rozhodnout, které funkce udržovat a která prostředí podporovat.",
+      "pointAnonymous": "Žádná jména, adresy, e-maily ani obsah kalendářů",
+      "pointBuckets": "Velikosti se uvádějí pouze jako rozsah, například „6-20 uživatelů“",
+      "pointRevocable": "Kdykoli odvolatelné v panelu správce",
+      "previewToggle": "Zobrazit odesílaná data",
+      "docsLink": "Úplná dokumentace",
+      "accept": "Odeslat",
+      "decline": "Neodesílat"
+    }
   }
 }
