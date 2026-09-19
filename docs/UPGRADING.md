@@ -25,17 +25,17 @@ Breaking changes between BetterShift releases and the steps to get through them.
 
 ## Versions
 
-- [3.2.0](#320-from-310) — from `3.1.0`
+- [3.3.0](#330-from-320) — from `3.2.0`
 - [3.1.0](#310-from-300) — from `3.0.0`
 - [3.0.0](#300-from-22x) — from `2.2.x`
 
 ---
 
-## 3.2.0 (from 3.1.0)
+## 3.3.0 (from 3.2.0)
 
-BetterShift 3.2.0 adds optional, anonymous telemetry — see the [Telemetry Guide](TELEMETRY.md) for exactly what is collected and how to control it. There's no schema change requiring action, but there is a one-time interaction every admin will hit after upgrading.
+BetterShift 3.3.0 adds optional, anonymous telemetry — see the [Telemetry Guide](TELEMETRY.md) for exactly what is collected and how to control it. There's no schema change requiring action, but there is a one-time interaction every admin will hit after upgrading.
 
-### What to expect (3.2.0)
+### What to expect (3.3.0)
 
 The first time an admin opens the app after upgrading, a non-dismissible dialog asks whether to enable telemetry. It has no close button and can't be dismissed by pressing Escape or clicking outside — only the "Accept" or "Decline" button resolves it. Declining is stored the same way accepting is: it's a permanent, valid answer, and the dialog does not come back. Non-admin users never see it.
 
