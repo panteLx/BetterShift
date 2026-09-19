@@ -51,7 +51,6 @@ export interface PhoneMenuCalendarContext {
   viewSettings: ViewSettingsState;
   onDeleteCalendar: () => void;
   onSyncComplete: () => void;
-  onManageCustomFields: () => void;
 }
 
 interface PhoneMenuProps {
@@ -248,11 +247,6 @@ function PhoneMenuSheet({
   const { guarded, confirmProps } = useGuardedAction(dirty, () => setDirty(false));
   const openSection = (id: MenuSection | null) =>
     guarded(() => {
-      // This section is its own dialog (CustomFieldManageSheet), not an inline panel.
-      if (id === "customFields") {
-        calendarGroup?.onManageCustomFields();
-        return;
-      }
       setDirty(false);
       setSection(id);
     });

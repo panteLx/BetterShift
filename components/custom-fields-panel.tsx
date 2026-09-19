@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
-import { BaseSheet } from "@/components/ui/base-sheet";
+import { PanelBody, PanelFooter } from "@/components/panel-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,15 +43,15 @@ import { useCustomFields } from "@/hooks/useCustomFields";
 import { useCustomFieldActions } from "@/hooks/useCustomFieldActions";
 import { useCustomFieldForm } from "@/hooks/useCustomFieldForm";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
+import { useReportDirty } from "@/hooks/useDirtyState";
 import { useShifts } from "@/hooks/useShifts";
 import { usePresets } from "@/hooks/usePresets";
 import { CUSTOM_FIELD_TYPES, type CustomFieldDefinition, type CustomFieldType } from "@/lib/custom-fields";
 import { cn } from "@/lib/utils";
 
-interface CustomFieldManageSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface CustomFieldsPanelProps {
   calendarId: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function useTypeLabels() {
@@ -142,11 +142,8 @@ function SortableFieldRow({
   );
 }
 
-export function CustomFieldManageSheet({
-  open,
-  onOpenChange,
-  calendarId,
-}: CustomFieldManageSheetProps) {
+/** Calendar settings section for managing the custom field catalog. */
+export function CustomFieldsPanel({ calendarId, onDirtyChange }: CustomFieldsPanelProps) {
   const t = useTranslations();
   const typeLabels = useTypeLabels();
   const permission = useCalendarPermission(calendarId);
@@ -177,6 +174,7 @@ export function CustomFieldManageSheet({
   );
 
   const isDirty = showEditor && form.isDirty;
+  useReportDirty(isDirty, onDirtyChange);
 
   const closeEditor = () => {
     setShowEditor(false);
@@ -270,41 +268,7 @@ export function CustomFieldManageSheet({
 
   return (
     <>
-      <BaseSheet
-        open={open}
-        onOpenChange={onOpenChange}
-        title={t("customFields.title")}
-        description={t("customFields.description")}
-        hasUnsavedChanges={isDirty}
-        footer={
-          showEditor ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 flex-1 font-semibold"
-                onClick={closeEditor}
-                disabled={isSaving}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                className="h-10 flex-1 font-semibold"
-                onClick={handleSave}
-                disabled={!canSave}
-              >
-                {isSaving ? t("common.saving") : t("common.save")}
-              </Button>
-            </>
-          ) : canManage ? (
-            <Button type="button" className="h-10 w-full font-semibold" onClick={startCreate}>
-              <Plus className="size-4" />
-              {t("customFields.addButton")}
-            </Button>
-          ) : undefined
-        }
-      >
+      <PanelBody>
         <div className="flex flex-col gap-4">
           {customFields.length === 0 && !isLoading && (
             <p className="rounded-[11px] border border-dashed border-control px-4 py-5 text-center text-[13px] text-fg-tertiary">
@@ -453,7 +417,38 @@ export function CustomFieldManageSheet({
             </div>
           )}
         </div>
-      </BaseSheet>
+      </PanelBody>
+
+      {(showEditor || canManage) && (
+        <PanelFooter>
+          {showEditor ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 flex-1 font-semibold"
+                onClick={closeEditor}
+                disabled={isSaving}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                className="h-10 flex-1 font-semibold"
+                onClick={handleSave}
+                disabled={!canSave}
+              >
+                {isSaving ? t("common.saving") : t("common.save")}
+              </Button>
+            </>
+          ) : (
+            <Button type="button" className="h-10 w-full font-semibold" onClick={startCreate}>
+              <Plus className="size-4" />
+              {t("customFields.addButton")}
+            </Button>
+          )}
+        </PanelFooter>
+      )}
 
       <ConfirmationDialog
         open={!!deleteTarget}

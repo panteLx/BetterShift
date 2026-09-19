@@ -14,7 +14,6 @@ export function useDialogStates() {
   const [showNotesListDialog, setShowNotesListDialog] = useState(false);
   const [showMonthStatsDialog, setShowMonthStatsDialog] = useState(false);
   const [showPresetManageDialog, setShowPresetManageDialog] = useState(false);
-  const [showCustomFieldManageDialog, setShowCustomFieldManageDialog] = useState(false);
 
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [selectedDayShifts, setSelectedDayShifts] = useState<
@@ -41,8 +40,6 @@ export function useDialogStates() {
     setShowMonthStatsDialog,
     showPresetManageDialog,
     setShowPresetManageDialog,
-    showCustomFieldManageDialog,
-    setShowCustomFieldManageDialog,
     selectedDayDate,
     setSelectedDayDate,
     selectedDayShifts,
