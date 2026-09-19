@@ -108,6 +108,8 @@ Three independent controls, in order of precedence:
 2. **`TELEMETRY_ENABLED=true`** — the mirror image: a hard on. It also skips the dialog and disables the admin toggle, and wins over a stored "no".
 3. **The admin toggle** (Admin → System Settings) — only reachable when `TELEMETRY_ENABLED` is unset in the environment. This is what the one-time consent dialog writes to, and it can be flipped again at any time afterwards.
 
+Only the literal values `true` and `false` are recognised. Anything else (`1`, `yes`, `TRUE`, …) is treated as `false` — a hard off that also disables the admin toggle — so a typo fails closed rather than silently turning telemetry on.
+
 `TELEMETRY_ENDPOINT` (default `https://telemetry.bettershift.app/`) lets you point the daily send at your own receiver instead — useful if you'd rather run [`telemetry-hub/`](../telemetry-hub/) yourself, or something else entirely that accepts the same JSON body.
 
 ---
@@ -117,7 +119,7 @@ Three independent controls, in order of precedence:
 The default endpoint is a small Cloudflare Worker; its source lives in this repository at [`telemetry-hub/`](../telemetry-hub/) (excluded from the Docker image — it's deployed separately, not run alongside the app). It:
 
 - Accepts only `POST` requests up to 16 KB.
-- Validates the payload against the current schema version (`telemetry-hub/src/schemas/v1.ts`); anything malformed or from an unknown/retired schema version is silently discarded rather than rejected, so the fire-and-forget sender never sees or retries a failure.
+- Validates the payload against the current schema version (`telemetry-hub/src/schemas/v1.ts`). A body that isn't valid JSON is answered with `400` and one larger than 16 KB with `413`; a payload that parses but fails validation, or carries an unknown/retired `schemaVersion`, is answered with `200` and discarded. Either way the fire-and-forget sender ignores the status and never retries.
 - Forwards a valid payload to [PostHog](https://posthog.com/) (`telemetry-hub/src/targets/posthog.ts`), explicitly enumerating each field it passes on rather than forwarding the request body as-is, so an unexpected extra field can never leak through.
 - Sends `$ip: null` and `$geoip_disable: true` with every event, so PostHog neither stores the request IP nor derives a country or city from it — without this, the Cloudflare PoP nearest the sending instance would approximate its location.
 - **Stores nothing itself.** There is no database, no request log, and no persistence layer in the Worker — a payload it can't forward to PostHog is simply lost, not queued or written anywhere.

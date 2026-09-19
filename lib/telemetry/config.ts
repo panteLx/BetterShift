@@ -4,6 +4,8 @@ export const DEFAULT_TELEMETRY_ENDPOINT = "https://telemetry.bettershift.app/";
 function envOverride(): boolean | null {
   const raw = process.env.TELEMETRY_ENABLED;
   if (raw === undefined || raw === "") return null;
+  // Only the literal "true" enables: anything else ("1", "yes", "TRUE") is a
+  // forced off, so a typo fails closed instead of silently opting an instance in.
   return raw === "true";
 }
 

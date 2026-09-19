@@ -13,6 +13,8 @@ export default {
       return new Response(null, { status: 405 });
     }
 
+    // Content-Length only: a chunked body skips this check, which is acceptable
+    // because Workers cap the request size first and parseV1 gates every field.
     const length = Number(request.headers.get("content-length") ?? "0");
     if (length > MAX_BODY_BYTES) {
       return new Response(null, { status: 413 });
