@@ -53,6 +53,9 @@ data/
 .claude
 .LOCAL
 
+# Cloudflare Worker: separate TS project, never part of the Next.js image
+telemetry-hub
+
 # IDE
 .vscode
 .idea

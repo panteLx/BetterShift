@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     // Gitignored scratch space (design handoffs, local scripts). CI never sees
     // it, so linting it only ever breaks `npm test` on a working copy.
     ".LOCAL/**",
+    // Separate Cloudflare Worker project with its own tsconfig and globals.
+    "telemetry-hub/**",
   ]),
 ]);
 

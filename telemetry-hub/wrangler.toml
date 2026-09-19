@@ -1,0 +1,7 @@
+name = "bettershift-telemetry-hub"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+routes = [
+  { pattern = "telemetry.bettershift.app", custom_domain = true }
+]
