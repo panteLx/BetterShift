@@ -71,11 +71,15 @@ async function komodo(path, body) {
 
 /**
  * Komodo answers 200 even when the compose run failed; the outcome sits in the
- * returned Update. A response without a `success` field is not a failure.
+ * returned Update. Returns a German message on a real failure, else null.
+ * A response without a `success` field is not a failure, and `success` is also
+ * false while an update is still Queued or InProgress — so a `status` that is
+ * present but not terminal is not a failure either.
  */
-function assertUpdateOk(label, result) {
+function updateFailure(label, result) {
   const update = result && typeof result === "object" ? (result.update ?? result) : null;
-  if (!update || typeof update !== "object" || update.success !== false) return;
+  if (!update || typeof update !== "object" || update.success !== false) return null;
+  if (typeof update.status === "string" && !/^complete/i.test(update.status)) return null;
 
   const logs = Array.isArray(update.logs) ? update.logs : [];
   const failed = logs.filter((log) => log && log.success === false);
@@ -84,7 +88,12 @@ function assertUpdateOk(label, result) {
     .filter(Boolean)
     .join("\n---\n");
 
-  throw new Error(`${label} fehlgeschlagen.${detail ? `\n${redact(detail)}` : " Komodo lieferte keine Details."}`);
+  return `${label} fehlgeschlagen.${detail ? `\n${redact(detail)}` : " Komodo lieferte keine Details."}`;
+}
+
+function assertUpdateOk(label, result) {
+  const message = updateFailure(label, result);
+  if (message) throw new Error(message);
 }
 
 /**
@@ -210,10 +219,15 @@ async function destroy({ dryRun }) {
     return;
   }
 
-  assertUpdateOk(
+  // Best effort on purpose: a stack whose containers never came up reports a
+  // failed destroy, and the row must still go, or nothing ever cleans it up.
+  const failure = updateFailure(
     "DestroyStack",
     await komodo("/execute/DestroyStack", { stack: name, services: [], remove_orphans: true })
   );
+  if (failure) {
+    console.error(`${failure}\nLösche den Stack-Eintrag trotzdem.`);
+  }
   await komodo("/write/DeleteStack", { id: stackId(existing, name) });
   console.log(`Stack ${name} zerstört und gelöscht.`);
 }
