@@ -1,8 +1,18 @@
 #!/usr/bin/env node
 // Creates the "BetterShift Instanzen" dashboards in PostHog from the instance_ping events.
 //
-//   POSTHOG_PERSONAL_API_KEY=phx_... POSTHOG_PROJECT_ID=12345 \
-//     node scripts/create-posthog-dashboard.mjs [--dry-run]
+//   npm run dashboard [-- --dry-run]
+//
+// Settings come from telemetry-hub/.env (copy .env.example) or the environment; the environment wins.
+// Only POSTHOG_PERSONAL_API_KEY is required, everything else has a default:
+//   POSTHOG_PERSONAL_API_KEY  personal key (phx_..., not the phc_ project key) with the
+//                             dashboard:write and insight:write scopes, plus project:read for
+//                             finding the project id
+//   POSTHOG_PROJECT_ID        only needed if the key can see more than one project
+//   POSTHOG_HOST              app host, default https://eu.posthog.com (not the eu.i. ingest host)
+//   DASHBOARD_NAME            default "BetterShift Instanzen"
+//   DASHBOARD_VARIANTS        all,no-dev,dev-only,no-ids (default: all four)
+//   EXCLUDE_INSTANCE_IDS      id1,id2 for the no-ids dashboard
 //
 // One run builds up to four dashboards with the same insights and a different filter each:
 //   all       "<name>"                     no filter
@@ -11,18 +21,20 @@
 //   no-ids    "<name> · ohne Test-Instanzen"  EXCLUDE_INSTANCE_IDS left out
 // A dashboard that already exists (matched by name) is updated in place, insight by insight,
 // so new instance ids can be added later by running the script again.
-//
-// The key needs the dashboard:write and insight:write scopes (a personal key, not the phc_ project key).
-// Optional: POSTHOG_HOST (default https://us.posthog.com), DASHBOARD_NAME,
-// DASHBOARD_VARIANTS=all,no-dev,dev-only,no-ids (default: all four),
-// EXCLUDE_INSTANCE_IDS=id1,id2 for the no-ids dashboard.
+
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+// loadEnvFile never overrides variables that are already set.
+const envFile = fileURLToPath(new URL("../.env", import.meta.url));
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
 
-const HOST = (process.env.POSTHOG_HOST || "https://us.posthog.com").replace(/\/$/, "");
+const HOST = (process.env.POSTHOG_HOST || "https://eu.posthog.com").replace(/\/$/, "");
 const KEY = process.env.POSTHOG_PERSONAL_API_KEY;
-const PROJECT = process.env.POSTHOG_PROJECT_ID;
+let PROJECT = process.env.POSTHOG_PROJECT_ID;
 const DASHBOARD_NAME = process.env.DASHBOARD_NAME || "BetterShift Instanzen";
 const EVENT = "instance_ping";
 const TAG = "bettershift-telemetry";
@@ -334,7 +346,11 @@ function buildInsights(condition) {
 // ---------------------------------------------------------------------------
 
 async function api(method, path, body) {
-  const response = await fetch(`${HOST}/api/projects/${PROJECT}${path}`, {
+  return request(method, `/api/projects/${PROJECT}${path}`, body);
+}
+
+async function request(method, path, body) {
+  const response = await fetch(`${HOST}${path}`, {
     method,
     headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -342,6 +358,22 @@ async function api(method, path, body) {
   const text = await response.text();
   if (!response.ok) throw new Error(`${method} ${path} -> ${response.status} ${text.slice(0, 300)}`);
   return text ? JSON.parse(text) : {};
+}
+
+/** Uses the only project the key can see; with several (or no project:read scope) the id must be set. */
+async function findProject() {
+  let projects;
+  try {
+    projects = (await request("GET", "/api/projects/")).results ?? [];
+  } catch (error) {
+    fail(`POSTHOG_PROJECT_ID fehlt und die Projektliste ließ sich nicht laden (${error.message}).`);
+  }
+  if (projects.length !== 1) {
+    const list = projects.map((p) => `  ${p.id}  ${p.name}`).join("\n");
+    fail(`POSTHOG_PROJECT_ID fehlt und der Key sieht ${projects.length} Projekte:\n${list}`);
+  }
+  console.log(`Projekt "${projects[0].name}" (ID ${projects[0].id}) automatisch gewählt.`);
+  return projects[0].id;
 }
 
 /** Creates or updates the insights of one dashboard; returns the names that failed. */
@@ -387,8 +419,10 @@ async function main() {
     return;
   }
 
-  if (!KEY) fail("POSTHOG_PERSONAL_API_KEY fehlt.");
-  if (!PROJECT) fail("POSTHOG_PROJECT_ID fehlt.");
+  if (!KEY) {
+    fail("POSTHOG_PERSONAL_API_KEY fehlt. In telemetry-hub/.env eintragen (Vorlage: .env.example) oder als Variable setzen.");
+  }
+  if (!PROJECT) PROJECT = await findProject();
 
   const existing = (await api("GET", "/dashboards/?limit=200")).results ?? [];
   let failed = 0;

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "dashboard": "node scripts/create-posthog-dashboard.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
