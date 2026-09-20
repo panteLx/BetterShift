@@ -19,6 +19,10 @@ permissions:
 env:
   PREVIEW_LABEL: preview
   STACK_COMMENT_MARKER: "<!-- pr-preview -->"
+  # Hostname prefix, not the image tag: previews live at
+  # <prefix>-<n>.<PREVIEW_DOMAIN>, while ghcr.io keeps its pr-<n> tags.
+  # Inherited by every step, so scripts/preview-stack.mjs reads the same value.
+  PREVIEW_HOST_PREFIX: bs-pr
 
 jobs:
   fork-notice:
@@ -146,7 +150,7 @@ jobs:
 
       - name: Wait for the instance
         env:
-          URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
+          URL: https://${{ env.PREVIEW_HOST_PREFIX }}-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           BASIC_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
           CF_BYPASS: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: |
@@ -180,7 +184,7 @@ jobs:
 
       - name: Seed the demo data
         env:
-          PREVIEW_URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
+          PREVIEW_URL: https://${{ env.PREVIEW_HOST_PREFIX }}-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_BASIC_AUTH_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
           PREVIEW_ADMIN_EMAIL: admin@${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_MEMBER_EMAIL: member@${{ vars.PREVIEW_DOMAIN }}
@@ -192,7 +196,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.number }}
-          URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
+          URL: https://${{ env.PREVIEW_HOST_PREFIX }}-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           ADMIN_EMAIL: admin@${{ vars.PREVIEW_DOMAIN }}
           MEMBER_EMAIL: member@${{ vars.PREVIEW_DOMAIN }}
           ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}

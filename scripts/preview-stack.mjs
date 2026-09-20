@@ -169,7 +169,7 @@ function escapeEnvValue(value) {
 
 function stackConfig() {
   const pr = process.env.PR_NUMBER;
-  const host = `pr-${pr}.${process.env.PREVIEW_DOMAIN}`;
+  const host = `${process.env.PREVIEW_HOST_PREFIX || "bs-pr"}-${pr}.${process.env.PREVIEW_DOMAIN}`;
   return {
     server_id: process.env.KOMODO_SERVER_ID,
     project_name: `bettershift-pr-${pr}`,
