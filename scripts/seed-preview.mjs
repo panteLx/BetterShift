@@ -86,7 +86,15 @@ async function main() {
   try {
     await signUp({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, name: "Preview Admin" });
   } catch (error) {
-    if (/exist/i.test(error.bodyText || "")) {
+    // Narrow on purpose: better-auth's actual duplicate-user answer only, not any
+    // error whose body happens to contain "exist" (e.g. a misrouted 404 page).
+    let code;
+    try {
+      code = JSON.parse(error.bodyText || "").code;
+    } catch {
+      // not JSON — falls through, code stays undefined, error propagates below
+    }
+    if (error.status === 422 && code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
       console.log("Instanz ist bereits geseedet — nichts zu tun.");
       return;
     }
