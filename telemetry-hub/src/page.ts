@@ -1,8 +1,8 @@
 import type { DistributionEntry, HistoryPoint, PublicAggregate, VersionEntry } from "./aggregate";
 
-// Mirrors MIN_GROUP_SIZE in aggregate.ts — the page explains the floor in words.
-const MIN_GROUP_SIZE = 3;
 const HISTORY_DAYS = 90;
+// Mirrors MAX_DISTRIBUTION_ENTRIES in aggregate.ts, for the footer wording only.
+const MAX_DISTRIBUTION_ENTRIES = 25;
 const REPO = "https://github.com/panteLx/bettershift";
 const DOCS_URL = `${REPO}/blob/main/docs/TELEMETRY.md`;
 
@@ -22,6 +22,12 @@ const esc = escapeHtml;
 
 function count(n: number): string {
   return Number.isFinite(n) ? Math.round(n).toLocaleString("en-US") : "0";
+}
+
+/** Keeps the one decimal aggregate.ts computes for avgUptimeHours. */
+function decimal(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  return (Math.round(n * 10) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
 function percent(share: number): string {
@@ -139,9 +145,11 @@ function orderedKeys(group: Record<string, DistributionEntry[]>, section: string
 
 interface BarOptions {
   dimension: string;
-  total: number;
   note?: (entry: DistributionEntry, index: number) => string | null;
 }
+
+// aggregate.ts labels its size-guard remainder entry "other (N more values)".
+const isRemainder = (value: string): boolean => /^other \(\d+ more values\)$/.test(value);
 
 /**
  * Entries are indexed by position, never by `value`: values are truncated to 64
@@ -152,12 +160,16 @@ function renderBars(entries: DistributionEntry[], options: BarOptions): string {
     .map((entry, index) => {
       const width = Math.max(0.8, Math.min(100, (entry.share || 0) * 100));
       const label = valueLabel(options.dimension, entry.value);
-      const isOther = entry.value === "other";
+      const remainder = isRemainder(entry.value);
       const note = options.note?.(entry, index);
-      return `<li class="bar${isOther ? " bar-other" : ""}">
+      return `<li class="bar${remainder ? " bar-other" : ""}">
   <div class="bar-head">
-    <span class="bar-label">${esc(label)}</span>
-    <span class="bar-value"><b>${esc(percent(entry.share))}</b><span class="bar-count">${esc(count(entry.instances))}</span></span>
+    <span class="bar-label">${esc(label)}${remainder ? '<span class="bar-hint"> — long tail, summed to keep this page small</span>' : ""}</span>
+    <span class="bar-value">${
+      // A multi-select dimension counts an instance once per value it holds, so a
+      // summed remainder can exceed the population. A share above 1 is not a share.
+      (entry.share || 0) > 1 ? "" : `<b>${esc(percent(entry.share))}</b>`
+    }<span class="bar-count">${esc(count(entry.instances))}</span></span>
   </div>
   <div class="track"><div class="fill" style="width:${esc(width.toFixed(1))}%"></div></div>
   ${note ? `<p class="bar-note">${esc(note)}</p>` : ""}
@@ -165,24 +177,13 @@ function renderBars(entries: DistributionEntry[], options: BarOptions): string {
     })
     .join("\n");
 
-  const covered = entries.reduce((sum, entry) => sum + entry.instances, 0);
-  const gap =
-    options.total > 0 && covered < options.total
-      ? `<p class="coverage">Covers ${esc(count(covered))} of ${esc(count(options.total))} instances — the rest sat below the group floor.</p>`
-      : "";
-
-  return `<ul class="bars">\n${rows}\n</ul>${gap}`;
+  return `<ul class="bars">\n${rows}\n</ul>`;
 }
 
-function renderGroup(
-  key: string,
-  entries: DistributionEntry[],
-  total: number,
-  note?: BarOptions["note"],
-): string {
+function renderGroup(key: string, entries: DistributionEntry[], note?: BarOptions["note"]): string {
   return `<div class="dim">
   <h3>${esc(dimensionLabel(key))}</h3>
-  ${renderBars(entries, { dimension: key, total, note })}
+  ${renderBars(entries, { dimension: key, note })}
 </div>`;
 }
 
@@ -191,11 +192,10 @@ function renderDistributionSection(
   title: string,
   caption: string,
   group: Record<string, DistributionEntry[]>,
-  total: number,
 ): string {
   const keys = orderedKeys(group ?? {}, id);
   if (keys.length === 0) return "";
-  const body = keys.map((key) => renderGroup(key, group[key], total)).join("\n");
+  const body = keys.map((key) => renderGroup(key, group[key])).join("\n");
   return `<section id="${esc(id)}">
   <h2>${esc(title)}</h2>
   <p class="caption">${esc(caption)}</p>
@@ -205,7 +205,7 @@ ${body}
 </section>`;
 }
 
-function renderVersions(versions: VersionEntry[], total: number): string {
+function renderVersions(versions: VersionEntry[]): string {
   if (versions.length === 0) return "";
   const note = (_entry: DistributionEntry, index: number) => {
     const dev = versions[index]?.devInstances ?? 0;
@@ -215,7 +215,7 @@ function renderVersions(versions: VersionEntry[], total: number): string {
   <h2>Versions in use</h2>
   <p class="caption">The release each reporting instance was running when it last checked in.</p>
   <div class="dims">
-${renderGroup("versions", versions, total, note)}
+${renderGroup("versions", versions, note)}
   </div>
 </section>`;
 }
@@ -246,9 +246,9 @@ interface Point {
 }
 
 /**
- * A sparse series: days on which fewer than MIN_GROUP_SIZE instances reported are
- * absent from the data. Gaps stay gaps — zero-filling would draw a dip that never
- * happened. Only runs of consecutive days are joined by a line.
+ * A sparse series: a day on which nothing reported is absent from the data, not
+ * zero. Gaps stay gaps — zero-filling would draw a dip that never happened. Only
+ * runs of consecutive days are joined by a line.
  */
 function renderHistory(points: HistoryPoint[]): string {
   const caption = `Distinct instances that reported on each of the last ${HISTORY_DAYS} days.`;
@@ -271,7 +271,7 @@ function renderHistory(points: HistoryPoint[]): string {
   <div class="empty-chart">
     <div class="empty-baseline"></div>
     <p class="empty-title">Nothing to plot yet</p>
-    <p class="empty-body">No single day in the window was reported by ${esc(String(MIN_GROUP_SIZE))} or more instances, so every day falls under the privacy floor and none is published. The chart appears once a day clears it.</p>
+    <p class="empty-body">No instance has reported on any day in this window, so there is no series to draw. The chart appears with the first day that carries a report.</p>
   </div>
 </section>`;
   }
@@ -328,7 +328,10 @@ function renderHistory(points: HistoryPoint[]): string {
     )
     .join("");
 
-  const ticks = [0, yMax / 2, yMax].map(
+  // Instance counts are integers: a mid tick at 2.5 labelled "3" would put a
+  // 3-instance day below its own gridline, so it is only drawn when it is whole.
+  const tickValues = yMax % 2 === 0 ? [0, yMax / 2, yMax] : [0, yMax];
+  const ticks = tickValues.map(
     (value) =>
       `<line class="grid" x1="${esc(padL)}" x2="${esc(width - padR)}" y1="${esc(y(value).toFixed(1))}" y2="${esc(y(value).toFixed(1))}" />` +
       `<text class="tick" x="${esc(padL - 8)}" y="${esc((y(value) + 4).toFixed(1))}" text-anchor="end">${esc(count(value))}</text>`,
@@ -339,8 +342,8 @@ function renderHistory(points: HistoryPoint[]): string {
 
   const gapNote =
     parsed.length < span + 1
-      ? `Where the line breaks, no day-level figure was published: fewer than ${MIN_GROUP_SIZE} instances reported that day. A break is not a drop to zero.`
-      : `Every day in this range cleared the ${MIN_GROUP_SIZE}-instance floor, so the line is unbroken.`;
+      ? "Where the line breaks, no instance reported that day at all. A break is not a drop to zero."
+      : "Every day in this range carries at least one report, so the line is unbroken.";
 
   return `<section id="history">
   <h2>Reports over time</h2>
@@ -360,24 +363,26 @@ function renderHistory(points: HistoryPoint[]): string {
 }
 
 function renderHealth(health: PublicAggregate["health"]): string {
+  // Zero is a true and useful answer here — "no instance reported a failed sync"
+  // is a statement worth publishing, so this section never disappears.
   const uptime = Number(health?.avgUptimeHours ?? 0);
   const failures = Number(health?.instancesWithSyncFailures ?? 0);
-  if (!(uptime > 0) && !(failures > 0)) return "";
   return `<section id="health">
   <h2>Health</h2>
   <p class="caption">Two plain figures, across the instances that reported.</p>
   <div class="figures">
-    <div class="figure"><span class="figure-value">${esc(count(uptime))} h</span><span class="figure-label">Average uptime since the last restart</span></div>
+    <div class="figure"><span class="figure-value">${esc(decimal(uptime))} h</span><span class="figure-label">Average uptime since the last restart</span></div>
     <div class="figure"><span class="figure-value">${esc(count(failures))}</span><span class="figure-label">Instances with a failed calendar sync in the last 24 hours</span></div>
   </div>
 </section>`;
 }
 
-function renderFloorNotice(total: number): string {
-  return `<section id="floor">
+/** Nothing is being withheld here — no instance has reported in the window. */
+function renderNoReportsNotice(): string {
+  return `<section id="no-reports">
   <div class="notice">
-    <p class="notice-title">Only the headline is published right now</p>
-    <p>Breakdowns — versions, runtime, configuration, size, features — appear once at least ${esc(String(MIN_GROUP_SIZE))} instances have reported in the window. With ${esc(count(total))} ${esc(plural(total, "instance", "instances"))} in the pool, a single row of any table would describe one specific installation, so nothing below the headline is computed at all. This is the privacy floor doing its job, not missing data.</p>
+    <p class="notice-title">No instance has reported in the last 30 days</p>
+    <p>There is nothing to break down, because nothing has come in. That is the normal state for a freshly deployed hub, and it is also what this page shows once every instance that once reported has aged out of the 30-day window. Nothing is being withheld.</p>
   </div>
 </section>`;
 }
@@ -431,7 +436,7 @@ section{margin:0 0 40px}
 .track{height:10px;background:var(--track);border-radius:2px;overflow:hidden}
 .fill{height:100%;background:var(--series);border-radius:0 4px 4px 0}
 .bar-note{color:var(--muted);font-size:12px;margin:5px 0 0}
-.coverage{color:var(--muted);font-size:12px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--border)}
+.bar-hint{color:var(--muted);font-size:12px;font-style:normal}
 .figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .figure{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
 .figure-value{display:block;font-size:30px;font-weight:600;letter-spacing:-.02em}
@@ -452,7 +457,8 @@ function renderFooter(computedAt: string | null): string {
   return `<footer>
   <p class="stamp">${stamp}</p>
   <p>BetterShift telemetry is <b>opt-in and off by default</b>. A self-hosted instance sends nothing until an administrator explicitly agrees; declining is permanent, and nothing here was counted without that consent.</p>
-  <p>Percentages are shares of the instances that reported within the last 30 days — not of all BetterShift installations — and they deliberately do not add up to 100%: any value held by fewer than ${esc(String(MIN_GROUP_SIZE))} instances is grouped as <i>other</i>, and is omitted entirely when even that group stays under ${esc(String(MIN_GROUP_SIZE))}.</p>
+  <p>Percentages are shares of the instances that reported within the last 30 days — not of all BetterShift installations. A single instance can hold more than one value in some breakdowns (the custom field types it uses, for one), so the shares in a card need not add up to 100%.</p>
+  <p>Each breakdown lists its ${esc(String(MAX_DISTRIBUTION_ENTRIES))} largest values and sums everything past that into one <i>other (N more values)</i> entry. That is a size guard — the reported strings are arbitrary and a page has to stay small — not a privacy rule: nothing is withheld for being rare, and a value held by a single instance is published with its count of one.</p>
   <p>Every field an instance can send is documented in <a href="${esc(DOCS_URL)}" rel="noopener">docs/TELEMETRY.md</a>.</p>
 </footer>`;
 }
@@ -475,7 +481,7 @@ function page(main: string, computedAt: string | null): string {
 <div class="promise">
 <p><b>Nobody is counted without agreeing first.</b> Telemetry is opt-in and off by default; an instance sends nothing until an admin says yes.</p>
 <p><b>No names, no URLs, no IP addresses.</b> Sizes travel as buckets, never as exact counts.</p>
-<p><b>Anything fewer than ${esc(String(MIN_GROUP_SIZE))} instances share is grouped or dropped</b> before it reaches this page, so no figure here can point at one installation.</p>
+<p><b>One snapshot a day, nothing in between.</b> No page tracking, no analytics script, no cookie — and every field an instance can send is documented before an admin agrees to it.</p>
 </div>
 </header>
 ${main}
@@ -512,6 +518,10 @@ export function renderPage(aggregate: PublicAggregate | null): string {
   </div>
 </section>`;
 
+  if (total <= 0) {
+    return page(tiles + renderNoReportsNotice(), aggregate.computedAt ?? null);
+  }
+
   const versions = Array.isArray(aggregate.versions) ? aggregate.versions : [];
   const environment = aggregate.environment ?? {};
   const configuration = aggregate.configuration ?? {};
@@ -520,27 +530,13 @@ export function renderPage(aggregate: PublicAggregate | null): string {
   const customFieldTypes = Array.isArray(aggregate.customFieldTypes) ? aggregate.customFieldTypes : [];
   const history = Array.isArray(aggregate.history) ? aggregate.history : [];
 
-  const hasDetail =
-    versions.length > 0 ||
-    customFieldTypes.length > 0 ||
-    history.length > 0 ||
-    [environment, configuration, sizes, features].some((group) =>
-      Object.values(group).some((entries) => Array.isArray(entries) && entries.length > 0),
-    );
-
-  // Below the floor the aggregate carries a headline and nothing else — say that
-  // in words rather than rendering a column of empty sections.
-  if (!hasDetail) {
-    return page(tiles + renderFloorNotice(total), aggregate.computedAt ?? null);
-  }
-
   const customFields =
     customFieldTypes.length > 0
       ? `<section id="custom-fields">
   <h2>Custom field types</h2>
-  <p class="caption">Which custom field types are in use. Field keys and labels are never collected — only the type.</p>
+  <p class="caption">Which custom field types are in use. Field keys and labels are never collected — only the type. An instance appears once per type it uses, so these counts describe types, not a split of the instance population.</p>
   <div class="dims">
-${renderGroup("types", customFieldTypes, total)}
+${renderGroup("types", customFieldTypes)}
   </div>
 </section>`
       : "";
@@ -548,34 +544,25 @@ ${renderGroup("types", customFieldTypes, total)}
   const main = [
     tiles,
     renderHistory(history),
-    renderVersions(versions, total),
-    renderDistributionSection(
-      "environment",
-      "Runtime environment",
-      "What the app runs on.",
-      environment,
-      total,
-    ),
+    renderVersions(versions),
+    renderDistributionSection("environment", "Runtime environment", "What the app runs on.", environment),
     renderDistributionSection(
       "configuration",
       "Configuration",
       "How instances are set up. Each setting is counted on its own.",
       configuration,
-      total,
     ),
     renderDistributionSection(
       "sizes",
       "Size of an instance",
       "Reported as buckets, never as exact counts.",
       sizes,
-      total,
     ),
     renderDistributionSection(
       "features",
       "Feature use",
       "Which optional parts of the app are in use.",
       features,
-      total,
     ),
     customFields,
     renderHealth(aggregate.health),

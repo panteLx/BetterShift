@@ -26,13 +26,18 @@ export interface PublicAggregate {
   health: { avgUptimeHours: number; instancesWithSyncFailures: number };
 }
 
-// A distribution value held by fewer than this many instances is folded into
-// "other": with a small population, n=1 plus the other dimensions identifies.
-const MIN_GROUP_SIZE = 3;
 const ACTIVE_WINDOW_DAYS = 30;
 const HISTORY_DAYS = 90;
 // Payload string fields are unbounded and the hub is unauthenticated.
 const MAX_VALUE_LENGTH = 64;
+// SIZE GUARD, NOT A PRIVACY RULE: a single ping can carry arbitrarily many
+// distinct values (features.customFields.types is an unbounded string array), and
+// every distinct value becomes a row in /data.json and a bar on the page. The long
+// tail past this many entries is summed into one remainder entry so both stay
+// bounded. Nothing is hidden for being rare — small counts are published as-is.
+const MAX_DISTRIBUTION_ENTRIES = 25;
+
+const remainderLabel = (values: number): string => `other (${values} more values)`;
 
 const iso = (now: Date, daysAgo: number): string =>
   new Date(now.getTime() - daysAgo * 86_400_000).toISOString();
@@ -46,60 +51,64 @@ interface RawGroup {
   instances: number;
 }
 
-/** Sorts by size, folds small groups into one "other" entry, adds shares. */
+const share = (instances: number, base: number): number =>
+  base > 0 ? Math.round((instances / base) * 10_000) / 10_000 : 0;
+
+/** Sorts by size, caps the long tail (see MAX_DISTRIBUTION_ENTRIES), adds shares. */
 function collapse(rows: RawGroup[], base: number): DistributionEntry[] {
-  const kept: DistributionEntry[] = [];
-  let otherCount = 0;
+  const sorted = rows
+    .map((row) => ({ value: truncate(String(row.value)), instances: row.instances }))
+    .sort((a, b) => b.instances - a.instances);
 
-  for (const row of rows) {
-    if (row.instances < MIN_GROUP_SIZE) {
-      otherCount += row.instances;
-      continue;
-    }
-    kept.push({ value: truncate(String(row.value)), instances: row.instances, share: 0 });
+  const kept = sorted.slice(0, MAX_DISTRIBUTION_ENTRIES);
+  const tail = sorted.slice(MAX_DISTRIBUTION_ENTRIES);
+
+  const entries: DistributionEntry[] = kept.map((row) => ({
+    value: row.value,
+    instances: row.instances,
+    share: share(row.instances, base),
+  }));
+
+  if (tail.length > 0) {
+    const instances = tail.reduce((sum, row) => sum + row.instances, 0);
+    entries.push({ value: remainderLabel(tail.length), instances, share: share(instances, base) });
   }
-
-  // A sub-floor "other" is itself a fingerprint once read across dimensions.
-  if (otherCount >= MIN_GROUP_SIZE) kept.push({ value: "other", instances: otherCount, share: 0 });
-
-  for (const entry of kept) {
-    entry.share = base > 0 ? Math.round((entry.instances / base) * 10_000) / 10_000 : 0;
-  }
-  return kept.sort((a, b) => b.instances - a.instances);
+  return entries;
 }
 
-/** Same folding rule as collapse(), plus a dev-instance count carried per entry. */
+/** Same tail cap as collapse(), plus a dev-instance count carried per entry. */
 function buildVersions(
   rows: Array<{ value: string; instances: number; dev_instances: number }>,
   base: number,
 ): VersionEntry[] {
-  const kept: Array<{ value: string; instances: number; devInstances: number }> = [];
-  let otherInstances = 0;
-  let otherDev = 0;
-
-  for (const row of rows) {
-    const dev = Number(row.dev_instances ?? 0);
-    if (row.instances < MIN_GROUP_SIZE) {
-      otherInstances += row.instances;
-      otherDev += dev;
-      continue;
-    }
-    kept.push({ value: truncate(row.value), instances: row.instances, devInstances: dev });
-  }
-
-  if (otherInstances >= MIN_GROUP_SIZE) {
-    kept.push({ value: "other", instances: otherInstances, devInstances: otherDev });
-  }
-
-  return kept
-    .map((entry) => ({
-      value: entry.value,
-      instances: entry.instances,
-      share: base > 0 ? Math.round((entry.instances / base) * 10_000) / 10_000 : 0,
-      // A dev count below the floor would out one instance within a kept version.
-      devInstances: entry.devInstances >= MIN_GROUP_SIZE ? entry.devInstances : 0,
+  const sorted = rows
+    .map((row) => ({
+      value: truncate(row.value),
+      instances: row.instances,
+      devInstances: Number(row.dev_instances ?? 0),
     }))
     .sort((a, b) => b.instances - a.instances);
+
+  const kept = sorted.slice(0, MAX_DISTRIBUTION_ENTRIES);
+  const tail = sorted.slice(MAX_DISTRIBUTION_ENTRIES);
+
+  const entries: VersionEntry[] = kept.map((row) => ({
+    value: row.value,
+    instances: row.instances,
+    share: share(row.instances, base),
+    devInstances: row.devInstances,
+  }));
+
+  if (tail.length > 0) {
+    const instances = tail.reduce((sum, row) => sum + row.instances, 0);
+    entries.push({
+      value: remainderLabel(tail.length),
+      instances,
+      share: share(instances, base),
+      devInstances: tail.reduce((sum, row) => sum + row.devInstances, 0),
+    });
+  }
+  return entries;
 }
 
 function groupByKey(rows: RawGroup[], base: number): Record<string, DistributionEntry[]> {
@@ -219,23 +228,6 @@ export async function buildAggregate(db: D1Database, now: Date = new Date()): Pr
     newLast30Days: Number(totalsRow.new_30d ?? 0),
   };
 
-  // Below the floor, any distribution or history point would single out the one instance.
-  // The headline counts above are still published — that's a deliberate product decision.
-  if (base < MIN_GROUP_SIZE) {
-    return {
-      computedAt: now.toISOString(),
-      instances,
-      history: [],
-      versions: [],
-      environment: {},
-      configuration: {},
-      sizes: {},
-      features: {},
-      customFieldTypes: [],
-      health: { avgUptimeHours: 0, instancesWithSyncFailures: 0 },
-    };
-  }
-
   const healthRow = (health.results[0] ?? {}) as Record<string, number | null>;
 
   const versionRows = versions.results as unknown as Array<{
@@ -247,10 +239,7 @@ export async function buildAggregate(db: D1Database, now: Date = new Date()): Pr
   return {
     computedAt: now.toISOString(),
     instances,
-    // A day attributable to fewer than MIN_GROUP_SIZE instances is dropped, not floored.
-    history: (history.results as unknown as HistoryPoint[]).filter(
-      (point) => point.instances >= MIN_GROUP_SIZE,
-    ),
+    history: history.results as unknown as HistoryPoint[],
     versions: buildVersions(
       versionRows.map((r) => ({
         value: r.value,
