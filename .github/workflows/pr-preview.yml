@@ -19,9 +19,6 @@ permissions:
 env:
   PREVIEW_LABEL: preview
   STACK_COMMENT_MARKER: "<!-- pr-preview -->"
-  # Set here rather than left to the default in scripts/seed-preview.mjs, because
-  # the comment step has to name the same account the seed step creates.
-  PREVIEW_MEMBER_EMAIL: mitarbeiter@preview.local
 
 jobs:
   fork-notice:
@@ -63,7 +60,6 @@ jobs:
           KOMODO_SERVER_ID: ${{ vars.KOMODO_SERVER_ID }}
           PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_CADDY_NETWORK: ${{ vars.PREVIEW_CADDY_NETWORK }}
-          PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
           KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
           KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
           PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
@@ -73,7 +69,7 @@ jobs:
         run: |
           missing=""
           for name in KOMODO_URL KOMODO_SERVER_ID PREVIEW_DOMAIN PREVIEW_CADDY_NETWORK \
-                      PREVIEW_ADMIN_EMAIL KOMODO_API_KEY KOMODO_API_SECRET \
+                      KOMODO_API_KEY KOMODO_API_SECRET \
                       PREVIEW_BETTER_AUTH_SECRET PREVIEW_BASIC_AUTH_HASH \
                       PREVIEW_BASIC_AUTH_PASSWORD PREVIEW_ADMIN_PASSWORD; do
             eval "value=\${$name}"
@@ -179,7 +175,8 @@ jobs:
         env:
           PREVIEW_URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_BASIC_AUTH_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
-          PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          PREVIEW_ADMIN_EMAIL: admin@${{ vars.PREVIEW_DOMAIN }}
+          PREVIEW_MEMBER_EMAIL: member@${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
           PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/seed-preview.mjs
@@ -189,7 +186,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.number }}
           URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
-          ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          ADMIN_EMAIL: admin@${{ vars.PREVIEW_DOMAIN }}
+          MEMBER_EMAIL: member@${{ vars.PREVIEW_DOMAIN }}
           ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
           SHA: ${{ github.event.pull_request.head.sha }}
           STALE_IMAGE: ${{ steps.image.outputs.stale }}
@@ -209,7 +207,7 @@ jobs:
           | Account | E-mail | Password |
           | --- | --- | --- |
           | Admin (superadmin, owns both calendars) | \`$ADMIN_EMAIL\` | \`$ADMIN_PASSWORD\` |
-          | Member (Contribute bundle on "Dienstplan Team A") | \`$PREVIEW_MEMBER_EMAIL\` | \`$ADMIN_PASSWORD\` |
+          | Member (Contribute bundle on "Dienstplan Team A") | \`$MEMBER_EMAIL\` | \`$ADMIN_PASSWORD\` |
 
           The instance sits behind basic auth (user \`preview\`). Every further push resets
           it and seeds the demo data again.

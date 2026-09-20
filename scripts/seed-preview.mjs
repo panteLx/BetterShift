@@ -19,7 +19,7 @@ function requireEnv(name) {
 const BASE = requireEnv("PREVIEW_URL").replace(/\/$/, "");
 const ADMIN_EMAIL = requireEnv("PREVIEW_ADMIN_EMAIL");
 const ADMIN_PASSWORD = requireEnv("PREVIEW_ADMIN_PASSWORD");
-const MEMBER_EMAIL = process.env.PREVIEW_MEMBER_EMAIL || "mitarbeiter@preview.local";
+const MEMBER_EMAIL = process.env.PREVIEW_MEMBER_EMAIL || `member@${new URL(BASE).hostname}`;
 const BASIC_USER = process.env.PREVIEW_BASIC_AUTH_USER || "preview";
 const BASIC_PASSWORD = process.env.PREVIEW_BASIC_AUTH_PASSWORD || "";
 

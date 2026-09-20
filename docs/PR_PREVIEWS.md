@@ -98,6 +98,8 @@ Store its output in `PREVIEW_BASIC_AUTH_HASH` exactly as printed — plain, unes
 
 `PREVIEW_BASIC_AUTH_PASSWORD` has to hold the plain-text password, not just the hash, because both the workflow's health check (a plain `curl` request) and `scripts/seed-preview.mjs` need to authenticate through Basic Auth themselves before they can reach the app at all.
 
+Both seeded accounts get their address from `PREVIEW_DOMAIN`: `admin@<PREVIEW_DOMAIN>` and `member@<PREVIEW_DOMAIN>`. They are identifiers, nothing more — BetterShift sends no mail at all, so neither address has to be a real mailbox. There is no repository variable for either one; the workflow builds them, and `scripts/seed-preview.mjs` takes `PREVIEW_ADMIN_EMAIL` and `PREVIEW_MEMBER_EMAIL` for a run by hand against some other instance.
+
 `PREVIEW_ADMIN_PASSWORD` has two constraints. It must be **at least 8 characters** long — better-auth enforces that minimum on `/api/auth/sign-up/email`, and a shorter one makes `scripts/seed-preview.mjs` fail with an opaque `400` that says nothing about the length. And it must be a **throwaway used nowhere else**: the deploy job writes it into the sticky PR comment in plain text, on a public repository, so anyone can read it. The member account the seed script creates (`mitarbeiter@preview.local`) is registered with the same password.
 
 The Basic Auth username is fixed to `preview` — it's hardcoded into the compose label key (`caddy.basic_auth.preview`) and into the workflow's health-check `curl` call, and it's the default `scripts/seed-preview.mjs` falls back to (`PREVIEW_BASIC_AUTH_USER`, which this workflow never sets). There is no repository variable for it.
@@ -112,7 +114,6 @@ Repository variables the `deploy` job reads. Same place, one tab over: **Setting
 | `KOMODO_SERVER_ID` | ID of the server the previews are deployed to |
 | `PREVIEW_DOMAIN` | `preview.example.com` |
 | `PREVIEW_CADDY_NETWORK` | name of the Docker network Caddy is attached to (see [Prerequisites](#prerequisites-on-the-server)) |
-| `PREVIEW_ADMIN_EMAIL` | `preview@example.com` |
 | `PREVIEW_CADDY_IMPORT` | optional — name of a Caddy snippet to import instead of a plain `reverse_proxy`, e.g. `cf-proxy` |
 
 ## Cloudflare in Front
