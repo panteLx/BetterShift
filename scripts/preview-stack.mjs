@@ -37,6 +37,18 @@ function requireEnv(names) {
   }
 }
 
+/**
+ * Actions masks the registered secrets, but escapeEnvValue() doubles every `$`,
+ * so an echoed `environment` would no longer match and would print in clear.
+ */
+function redact(text) {
+  const masked = String(text ?? "").replace(
+    /((?:BASIC_AUTH_HASH|BETTER_AUTH_SECRET)=)[^\s"',\\]*/g,
+    "$1<maskiert>"
+  );
+  return masked.length > 2000 ? `${masked.slice(0, 2000)}… [gekürzt]` : masked;
+}
+
 async function komodo(path, body) {
   const res = await fetch(`${process.env.KOMODO_URL.replace(/\/$/, "")}${path}`, {
     method: "POST",
@@ -49,12 +61,30 @@ async function komodo(path, body) {
   });
   const text = await res.text();
   if (!res.ok) {
-    const error = new Error(`${path} -> ${res.status}: ${text}`);
+    const error = new Error(`${path} -> ${res.status}: ${redact(text)}`);
     error.status = res.status;
     error.bodyText = text;
     throw error;
   }
   return text ? JSON.parse(text) : null;
+}
+
+/**
+ * Komodo answers 200 even when the compose run failed; the outcome sits in the
+ * returned Update. A response without a `success` field is not a failure.
+ */
+function assertUpdateOk(label, result) {
+  const update = result && typeof result === "object" ? (result.update ?? result) : null;
+  if (!update || typeof update !== "object" || update.success !== false) return;
+
+  const logs = Array.isArray(update.logs) ? update.logs : [];
+  const failed = logs.filter((log) => log && log.success === false);
+  const detail = (failed.length > 0 ? failed : logs)
+    .map((log) => [log?.stage, log?.command, log?.stderr, log?.stdout].filter(Boolean).join("\n"))
+    .filter(Boolean)
+    .join("\n---\n");
+
+  throw new Error(`${label} fehlgeschlagen.${detail ? `\n${redact(detail)}` : " Komodo lieferte keine Details."}`);
 }
 
 /**
@@ -152,14 +182,17 @@ async function deploy({ dryRun }) {
 
   const existing = await findStack(name);
   if (existing) {
-    await komodo("/write/UpdateStack", { id: stackId(existing, name), config });
+    assertUpdateOk(
+      "UpdateStack",
+      await komodo("/write/UpdateStack", { id: stackId(existing, name), config })
+    );
     console.log(`Stack ${name} aktualisiert.`);
   } else {
-    await komodo("/write/CreateStack", { name, config });
+    assertUpdateOk("CreateStack", await komodo("/write/CreateStack", { name, config }));
     console.log(`Stack ${name} angelegt.`);
   }
 
-  await komodo("/execute/DeployStack", { stack: name });
+  assertUpdateOk("DeployStack", await komodo("/execute/DeployStack", { stack: name }));
   console.log(`Stack ${name} deployed.`);
 }
 
@@ -177,7 +210,10 @@ async function destroy({ dryRun }) {
     return;
   }
 
-  await komodo("/execute/DestroyStack", { stack: name, services: [], remove_orphans: true });
+  assertUpdateOk(
+    "DestroyStack",
+    await komodo("/execute/DestroyStack", { stack: name, services: [], remove_orphans: true })
+  );
   await komodo("/write/DeleteStack", { id: stackId(existing, name) });
   console.log(`Stack ${name} zerstört und gelöscht.`);
 }
