@@ -3,6 +3,8 @@ import { sendToPostHog } from "./targets/posthog";
 
 interface Env {
   POSTHOG_API_KEY: string;
+  // Optional ingest host, e.g. https://us.i.posthog.com; defaults to EU.
+  POSTHOG_HOST?: string;
 }
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -35,7 +37,7 @@ export default {
     }
 
     try {
-      await sendToPostHog(payload, env.POSTHOG_API_KEY);
+      await sendToPostHog(payload, env.POSTHOG_API_KEY, env.POSTHOG_HOST || undefined);
     } catch (error) {
       // The sender still gets a 200. Only the message is logged (a status, never the payload).
       console.error(error instanceof Error ? error.message : "PostHog forward failed");

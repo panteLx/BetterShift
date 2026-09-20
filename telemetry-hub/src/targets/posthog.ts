@@ -1,9 +1,14 @@
 import type { PayloadV1 } from "../schemas/v1";
 
-const POSTHOG_ENDPOINT = "https://us.i.posthog.com/i/v0/e/";
+// The ingest host is region-specific, and so is the project API key (US: https://us.i.posthog.com).
+const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
 
 // Enumerates target fields rather than spreading, so an unknown input field cannot pass through.
-export async function sendToPostHog(payload: PayloadV1, apiKey: string): Promise<void> {
+export async function sendToPostHog(
+  payload: PayloadV1,
+  apiKey: string,
+  host: string = DEFAULT_POSTHOG_HOST,
+): Promise<void> {
   const body = {
     api_key: apiKey,
     event: "instance_ping",
@@ -52,7 +57,7 @@ export async function sendToPostHog(payload: PayloadV1, apiKey: string): Promise
     },
   };
 
-  const response = await fetch(POSTHOG_ENDPOINT, {
+  const response = await fetch(`${host.replace(/\/$/, "")}/i/v0/e/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

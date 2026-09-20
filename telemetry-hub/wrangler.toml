@@ -3,8 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2026-09-18"
 
 routes = [
-  { pattern = "telemetry-bettershift.pantelx.com", custom_domain = true }
+  { pattern = "telemetry-bettershift.pantelx.com", custom_domain = true, zone_name = "pantelx.com", enabled = true, previews_enabled = false }
 ]
 
 [dev]
 ip = "0.0.0.0"
+
+[vars]
+POSTHOG_HOST = "https://eu.i.posthog.com"
