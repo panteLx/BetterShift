@@ -496,6 +496,7 @@
     "usersMenu": "Usuarios",
     "calendarsMenu": "Calendarios",
     "auditLogs": "Registros de auditoría",
+    "announcementsMenu": "Anuncios",
     "backToApp": "Volver a la App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Expandir barra lateral",
@@ -687,6 +688,28 @@
       "sendSuccess": "Telemetría enviada",
       "sendFailed": "Error al enviar. El servidor de telemetría no está accesible o rechazó la solicitud.",
       "sendUnavailable": "No se puede enviar: la telemetría está desactivada, el consentimiento está desactualizado o es una compilación de desarrollo."
+    },
+    "announcements": {
+      "title": "Anuncios",
+      "description": "Avisos que se muestran a todos en las páginas de inicio de sesión y en el tablero.",
+      "create": "Nuevo anuncio",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "empty": "Aún no hay anuncios",
+      "emptyHint": "Crea un anuncio para llegar a todos los usuarios de esta instancia.",
+      "statusActive": "Activo",
+      "statusScheduled": "Programado",
+      "statusExpired": "Caducado",
+      "statusOff": "Desactivado",
+      "toneInfo": "Información",
+      "toneWarning": "Advertencia",
+      "toneDanger": "Crítico",
+      "showOnAuth": "Páginas de inicio de sesión",
+      "showOnDashboard": "Tablero",
+      "createdBy": "por {name}",
+      "unknownAuthor": "Desconocido",
+      "saveError": "No se pudo guardar el anuncio",
+      "deleteError": "No se pudo eliminar el anuncio"
     }
   },
   "appearance": {
@@ -1016,6 +1039,7 @@
   },
   "adminShell": {
     "logsShort": "Registros",
+    "announcementsShort": "Anuncios",
     "breadcrumb": "Ruta de navegación"
   },
   "adminDashboard": {

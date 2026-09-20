@@ -11,6 +11,7 @@ import {
   Crown,
   FolderClosed,
   LayoutDashboard,
+  Megaphone,
   ScrollText,
   Users,
   type LucideIcon,
@@ -42,6 +43,12 @@ export function useAdminSections(): AdminSection[] {
       icon: FolderClosed,
     },
     { href: "/admin/logs", label: t("admin.auditLogs"), shortLabel: t("adminShell.logsShort"), icon: ScrollText },
+    {
+      href: "/admin/announcements",
+      label: t("admin.announcementsMenu"),
+      shortLabel: t("adminShell.announcementsShort"),
+      icon: Megaphone,
+    },
   ];
 }
 
@@ -166,7 +173,7 @@ export function AdminMobileNav() {
   const sections = useAdminSections();
 
   return (
-    <nav className="grid shrink-0 grid-cols-4 gap-1 border-t border-line bg-background px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+    <nav className="grid shrink-0 grid-cols-5 gap-1 border-t border-line bg-background px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
       {sections.map((section) => {
         const active = isActiveSection(pathname, section.href);
         return (

@@ -496,6 +496,7 @@
     "usersMenu": "Uživatelé",
     "calendarsMenu": "Kalendáře",
     "auditLogs": "Protokoly auditu",
+    "announcementsMenu": "Oznámení",
     "backToApp": "Zpět do aplikace",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Rozbalit postranní panel",
@@ -687,6 +688,28 @@
       "sendSuccess": "Telemetrie odeslána",
       "sendFailed": "Odeslání se nezdařilo. Telemetrický server je nedostupný nebo požadavek odmítl.",
       "sendUnavailable": "Odeslání není možné: telemetrie je vypnutá, souhlas je zastaralý nebo jde o vývojové sestavení."
+    },
+    "announcements": {
+      "title": "Oznámení",
+      "description": "Upozornění zobrazená všem na přihlašovacích stránkách a v přehledu.",
+      "create": "Nové oznámení",
+      "edit": "Upravit",
+      "delete": "Smazat",
+      "empty": "Zatím žádná oznámení",
+      "emptyHint": "Vytvořte oznámení, abyste oslovili všechny uživatele této instance.",
+      "statusActive": "Aktivní",
+      "statusScheduled": "Naplánováno",
+      "statusExpired": "Vypršelo",
+      "statusOff": "Vypnuto",
+      "toneInfo": "Info",
+      "toneWarning": "Varování",
+      "toneDanger": "Kritické",
+      "showOnAuth": "Přihlašovací stránky",
+      "showOnDashboard": "Přehled",
+      "createdBy": "od {name}",
+      "unknownAuthor": "Neznámý",
+      "saveError": "Oznámení se nepodařilo uložit",
+      "deleteError": "Oznámení se nepodařilo smazat"
     }
   },
   "appearance": {
@@ -1016,6 +1039,7 @@
   },
   "adminShell": {
     "logsShort": "Logy",
+    "announcementsShort": "Oznámení",
     "breadcrumb": "Drobečková navigace"
   },
   "adminDashboard": {

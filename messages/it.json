@@ -496,6 +496,7 @@
     "usersMenu": "Utenti",
     "calendarsMenu": "Calendari",
     "auditLogs": "Log di Audit",
+    "announcementsMenu": "Annunci",
     "backToApp": "Torna all'App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Espandi Barra Laterale",
@@ -687,6 +688,28 @@
       "sendSuccess": "Telemetria inviata",
       "sendFailed": "Invio non riuscito. Il server di telemetria non è raggiungibile o ha rifiutato la richiesta.",
       "sendUnavailable": "Impossibile inviare: la telemetria è disattivata, il consenso non è aggiornato oppure si tratta di una build di sviluppo."
+    },
+    "announcements": {
+      "title": "Annunci",
+      "description": "Avvisi mostrati a tutti nelle pagine di accesso e nella dashboard.",
+      "create": "Nuovo annuncio",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "empty": "Nessun annuncio ancora",
+      "emptyHint": "Crea un annuncio per raggiungere tutti gli utenti di questa istanza.",
+      "statusActive": "Attivo",
+      "statusScheduled": "Programmato",
+      "statusExpired": "Scaduto",
+      "statusOff": "Disattivato",
+      "toneInfo": "Info",
+      "toneWarning": "Avviso",
+      "toneDanger": "Critico",
+      "showOnAuth": "Pagine di accesso",
+      "showOnDashboard": "Dashboard",
+      "createdBy": "di {name}",
+      "unknownAuthor": "Sconosciuto",
+      "saveError": "Impossibile salvare l'annuncio",
+      "deleteError": "Impossibile eliminare l'annuncio"
     }
   },
   "appearance": {
@@ -1016,6 +1039,7 @@
   },
   "adminShell": {
     "logsShort": "Log",
+    "announcementsShort": "Annunci",
     "breadcrumb": "Percorso di navigazione"
   },
   "adminDashboard": {

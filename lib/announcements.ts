@@ -1,9 +1,19 @@
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { announcements } from "@/lib/db/schema";
+import {
+  ANNOUNCEMENT_TONES,
+  getAnnouncementStatus,
+  isVisibleNow,
+  type AnnouncementStatus,
+  type AnnouncementTone,
+} from "@/lib/announcement-status";
 
-export const ANNOUNCEMENT_TONES = ["info", "warning", "danger"] as const;
-export type AnnouncementTone = (typeof ANNOUNCEMENT_TONES)[number];
+// Re-exported so existing server-side consumers keep importing from this
+// module; client components should import these from lib/announcement-status
+// directly to avoid pulling lib/db into the browser bundle.
+export { ANNOUNCEMENT_TONES, getAnnouncementStatus, isVisibleNow };
+export type { AnnouncementStatus, AnnouncementTone };
 
 export const ANNOUNCEMENT_PLACEMENTS = ["auth", "dashboard"] as const;
 export type AnnouncementPlacement = (typeof ANNOUNCEMENT_PLACEMENTS)[number];
@@ -40,32 +50,6 @@ export type AnnouncementInputError =
   | "INVALID_STARTS_AT"
   | "INVALID_ENDS_AT"
   | "INVALID_WINDOW";
-
-interface VisibilityFields {
-  enabled: boolean;
-  startsAt: Date | null;
-  endsAt: Date | null;
-}
-
-/** The single place the enabled flag and the window are evaluated. */
-export function isVisibleNow(row: VisibilityFields, now: Date = new Date()): boolean {
-  if (!row.enabled) return false;
-  if (row.startsAt && row.startsAt.getTime() > now.getTime()) return false;
-  if (row.endsAt && row.endsAt.getTime() <= now.getTime()) return false;
-  return true;
-}
-
-export type AnnouncementStatus = "active" | "scheduled" | "expired" | "off";
-
-export function getAnnouncementStatus(
-  row: VisibilityFields,
-  now: Date = new Date()
-): AnnouncementStatus {
-  if (!row.enabled) return "off";
-  if (row.startsAt && row.startsAt.getTime() > now.getTime()) return "scheduled";
-  if (row.endsAt && row.endsAt.getTime() <= now.getTime()) return "expired";
-  return "active";
-}
 
 /** undefined means "present but unparseable", which the caller rejects. */
 function parseTimestamp(value: unknown): Date | null | undefined {

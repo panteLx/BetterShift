@@ -496,6 +496,7 @@
     "usersMenu": "Benutzer",
     "calendarsMenu": "Kalender",
     "auditLogs": "Audit-Logs",
+    "announcementsMenu": "Ankündigungen",
     "backToApp": "Zurück zur App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Seitenleiste ausklappen",
@@ -687,6 +688,28 @@
       "sendSuccess": "Telemetriedaten gesendet",
       "sendFailed": "Senden fehlgeschlagen. Der Telemetrie-Server ist nicht erreichbar oder hat die Anfrage abgelehnt.",
       "sendUnavailable": "Senden nicht möglich: Telemetrie ist aus, die Zustimmung ist veraltet oder dies ist ein Entwicklungs-Build."
+    },
+    "announcements": {
+      "title": "Ankündigungen",
+      "description": "Hinweise, die allen auf den Anmeldeseiten und im Dashboard angezeigt werden.",
+      "create": "Neue Ankündigung",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "empty": "Noch keine Ankündigungen",
+      "emptyHint": "Lege eine Ankündigung an, um alle Nutzer dieser Instanz zu erreichen.",
+      "statusActive": "Aktiv",
+      "statusScheduled": "Geplant",
+      "statusExpired": "Abgelaufen",
+      "statusOff": "Aus",
+      "toneInfo": "Info",
+      "toneWarning": "Warnung",
+      "toneDanger": "Kritisch",
+      "showOnAuth": "Anmeldeseiten",
+      "showOnDashboard": "Dashboard",
+      "createdBy": "von {name}",
+      "unknownAuthor": "Unbekannt",
+      "saveError": "Ankündigung konnte nicht gespeichert werden",
+      "deleteError": "Ankündigung konnte nicht gelöscht werden"
     }
   },
   "appearance": {
@@ -1016,6 +1039,7 @@
   },
   "adminShell": {
     "logsShort": "Logs",
+    "announcementsShort": "Ankündigungen",
     "breadcrumb": "Navigationspfad"
   },
   "adminDashboard": {

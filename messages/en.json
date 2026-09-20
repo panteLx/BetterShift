@@ -496,6 +496,7 @@
     "usersMenu": "Users",
     "calendarsMenu": "Calendars",
     "auditLogs": "Audit Logs",
+    "announcementsMenu": "Announcements",
     "backToApp": "Back to App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Expand Sidebar",
@@ -687,6 +688,28 @@
       "sendSuccess": "Telemetry sent",
       "sendFailed": "Sending failed. The telemetry server is unreachable or rejected the request.",
       "sendUnavailable": "Cannot send: telemetry is off, the consent is outdated, or this is a development build."
+    },
+    "announcements": {
+      "title": "Announcements",
+      "description": "Notices shown to everyone on the sign-in pages and the dashboard.",
+      "create": "New announcement",
+      "edit": "Edit",
+      "delete": "Delete",
+      "empty": "No announcements yet",
+      "emptyHint": "Create an announcement to reach everyone on this instance.",
+      "statusActive": "Active",
+      "statusScheduled": "Scheduled",
+      "statusExpired": "Expired",
+      "statusOff": "Off",
+      "toneInfo": "Info",
+      "toneWarning": "Warning",
+      "toneDanger": "Critical",
+      "showOnAuth": "Sign-in pages",
+      "showOnDashboard": "Dashboard",
+      "createdBy": "by {name}",
+      "unknownAuthor": "Unknown",
+      "saveError": "Could not save the announcement",
+      "deleteError": "Could not delete the announcement"
     }
   },
   "appearance": {
@@ -1016,6 +1039,7 @@
   },
   "adminShell": {
     "logsShort": "Logs",
+    "announcementsShort": "Announcements",
     "breadcrumb": "Breadcrumb"
   },
   "adminDashboard": {

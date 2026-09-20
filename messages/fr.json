@@ -496,6 +496,7 @@
     "usersMenu": "Utilisateurs",
     "calendarsMenu": "Calendriers",
     "auditLogs": "Journaux d'audit",
+    "announcementsMenu": "Annonces",
     "backToApp": "Retour à l'application",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Développer la barre latérale",
@@ -687,6 +688,28 @@
       "sendSuccess": "Télémétrie envoyée",
       "sendFailed": "Échec de l'envoi. Le serveur de télémétrie est injoignable ou a refusé la requête.",
       "sendUnavailable": "Envoi impossible : la télémétrie est désactivée, le consentement est obsolète ou il s'agit d'une version de développement."
+    },
+    "announcements": {
+      "title": "Annonces",
+      "description": "Messages affichés à tous sur les pages de connexion et le tableau de bord.",
+      "create": "Nouvelle annonce",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "empty": "Aucune annonce pour l'instant",
+      "emptyHint": "Créez une annonce pour joindre tous les utilisateurs de cette instance.",
+      "statusActive": "Active",
+      "statusScheduled": "Planifiée",
+      "statusExpired": "Expirée",
+      "statusOff": "Désactivée",
+      "toneInfo": "Info",
+      "toneWarning": "Avertissement",
+      "toneDanger": "Critique",
+      "showOnAuth": "Pages de connexion",
+      "showOnDashboard": "Tableau de bord",
+      "createdBy": "par {name}",
+      "unknownAuthor": "Inconnu",
+      "saveError": "Impossible d'enregistrer l'annonce",
+      "deleteError": "Impossible de supprimer l'annonce"
     }
   },
   "appearance": {
@@ -1016,6 +1039,7 @@
   },
   "adminShell": {
     "logsShort": "Journaux",
+    "announcementsShort": "Annonces",
     "breadcrumb": "Fil d’Ariane"
   },
   "adminDashboard": {
