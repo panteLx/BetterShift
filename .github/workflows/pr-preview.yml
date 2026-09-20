@@ -3,18 +3,18 @@ name: PR Preview
 on:
   pull_request:
     types: [labeled, unlabeled, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR-Nummer, deren Preview abgeräumt werden soll"
+        required: true
+        type: string
 
 permissions:
   contents: read
   checks: read
   packages: read
   pull-requests: write
-
-# Deploy und Teardown teilen sich eine Gruppe: ein Schließen des PRs soll ein
-# laufendes Deploy abbrechen, sonst legt es den gerade abgeräumten Stack neu an.
-concurrency:
-  group: pr-preview-${{ github.event.number }}
-  cancel-in-progress: true
 
 env:
   PREVIEW_LABEL: preview
@@ -29,13 +29,10 @@ jobs:
       github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Kommentar schreiben
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.number }}
+      # Ein Fork-PR bekommt nur ein Read-only-Token, `gh pr comment` liefe auf 403.
+      - name: Hinweis ausgeben
         run: |
-          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body \
-            "Für Pull Requests aus einem Fork gibt es keine Preview: der Workflow bekommt dort weder die Secrets noch ein nach ghcr.io gepushtes Image."
+          echo "::notice::Für Pull Requests aus einem Fork gibt es keine Preview: der Workflow bekommt dort weder die Secrets noch ein nach ghcr.io gepushtes Image."
 
   deploy:
     name: Preview deployen
@@ -47,6 +44,12 @@ jobs:
        (github.event.action == 'labeled' && github.event.label.name == 'preview'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # Job-Ebene, nicht Workflow-Ebene: ein übersprungener Job darf keinen laufenden
+    # Teardown abbrechen. Gleiche Gruppe wie teardown, damit ein Schließen des PRs
+    # ein laufendes Deploy abbricht, sonst legt es den abgeräumten Stack neu an.
+    concurrency:
+      group: pr-preview-${{ github.event.number || inputs.pr_number }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -87,6 +90,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Auf das PR-Image warten
+        id: image
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.pull_request.head.sha }}
@@ -96,8 +100,14 @@ jobs:
           start=$(date +%s)
           deadline=$(( start + 1500 ))
           while [ "$(date +%s)" -lt "$deadline" ]; do
-            run=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
-                    --jq '.check_runs[] | select(.name=="build-dev") | "\(.status) \(.conclusion)"' | head -1)
+            # Exit-Status von gh selbst auswerten: ein 403 oder Netzwerkfehler darf
+            # nicht wie "noch kein Lauf vorhanden" aussehen, sonst greift der Fallback.
+            if ! runs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+                    --jq '.check_runs[] | select(.name=="build-dev") | "\(.status) \(.conclusion)"' 2>&1); then
+              echo "::error::Abfrage der Check-Runs fehlgeschlagen: $runs"
+              exit 1
+            fi
+            run=$(printf '%s\n' "$runs" | head -1)
             case "$run" in
               "completed success") echo "Image-Build fertig."; exit 0 ;;
               "completed "*) echo "::error::Image-Build endete mit: $run"; exit 1 ;;
@@ -108,6 +118,7 @@ jobs:
             if [ -z "$run" ] && [ "$(( $(date +%s) - start ))" -ge 180 ]; then
               if docker buildx imagetools inspect "ghcr.io/pantelx/bettershift:pr-$PR" >/dev/null 2>&1; then
                 echo "::notice::Kein Build für $SHA (paths-ignore); nutze den vorhandenen Tag pr-$PR."
+                echo "stale=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
               echo "::error::Kein Build für $SHA und kein Image pr-$PR. Erst einen Commit pushen, der den Build auslöst."
@@ -137,7 +148,8 @@ jobs:
           URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           BASIC_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
         run: |
-          deadline=$(( $(date +%s) + 180 ))
+          # Muss Registry-Pull, Migration, Next-Boot und Caddys erste ACME-Ausstellung abdecken.
+          deadline=$(( $(date +%s) + 300 ))
           while [ "$(date +%s)" -lt "$deadline" ]; do
             if curl -sf -u "preview:$BASIC_PASSWORD" "$URL/api/health" >/dev/null; then
               echo "Instanz ist erreichbar."
@@ -164,7 +176,13 @@ jobs:
           ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
           SHA: ${{ github.event.pull_request.head.sha }}
+          STALE_IMAGE: ${{ steps.image.outputs.stale }}
         run: |
+          if [ "$STALE_IMAGE" = "true" ]; then
+            commit_line="Image: aus einem früheren Commit dieses PRs — für \`$SHA\` wurde kein Image gebaut (paths-ignore)."
+          else
+            commit_line="Commit: \`$SHA\`"
+          fi
           body=$(cat <<EOF
           $STACK_COMMENT_MARKER
           ### Preview bereit
@@ -176,12 +194,12 @@ jobs:
           Die Instanz liegt hinter Basic Auth (Benutzer \`preview\`). Jeder weitere Push
           setzt sie zurück und spielt die Demodaten neu ein.
 
-          Commit: \`$SHA\`
+          $commit_line
           EOF
           )
-          existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq "[.[] | select(.body | contains(\"$STACK_COMMENT_MARKER\"))][0].id")
-          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq ".[] | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
+          if [ -n "$existing" ]; then
             gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -f body="$body"
           else
             gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body"
@@ -189,12 +207,19 @@ jobs:
 
   teardown:
     name: Preview abräumen
+    # vars.KOMODO_URL als Schalter: Secrets sind in einem Job-`if` nicht lesbar,
+    # Repository-Variablen schon. Ohne Konfiguration gibt es nichts abzuräumen.
     if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      (github.event.action == 'closed' ||
-       (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))
+      vars.KOMODO_URL != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.action == 'closed' ||
+         (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: pr-preview-${{ github.event.number || inputs.pr_number }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -204,17 +229,17 @@ jobs:
           KOMODO_URL: ${{ vars.KOMODO_URL }}
           KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
           KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
-          PR_NUMBER: ${{ github.event.number }}
+          PR_NUMBER: ${{ github.event.number || inputs.pr_number }}
         run: node scripts/preview-stack.mjs destroy
 
       - name: Kommentar aktualisieren
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.number }}
+          PR: ${{ github.event.number || inputs.pr_number }}
         run: |
-          existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq "[.[] | select(.body | contains(\"$STACK_COMMENT_MARKER\"))][0].id")
-          if [ -z "$existing" ] || [ "$existing" = "null" ]; then
+          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq ".[] | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
+          if [ -z "$existing" ]; then
             echo "Kein Preview-Kommentar vorhanden — nichts zu aktualisieren."
             exit 0
           fi
