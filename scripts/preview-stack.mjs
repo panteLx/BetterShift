@@ -198,7 +198,9 @@ async function findStack(name) {
     return await komodo("/read/GetStack", { stack: name });
   } catch (error) {
     if (isCloudflareChallenge(error.bodyText)) throw error;
-    if (error.status === 404 || /not found|does not exist/i.test(error.bodyText || "")) {
+    // Komodo answers an unknown stack with 500 and "Did not find any Stack
+    // matching <name>", so the status alone says nothing — match the wording too.
+    if (error.status === 404 || /not found|does not exist|did not find/i.test(error.bodyText || "")) {
       return null;
     }
     throw error;
