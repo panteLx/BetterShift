@@ -297,6 +297,7 @@ export async function proxy(request: NextRequest) {
     "/api/auth", // Better Auth API routes
     "/api/version", // Version info (always public)
     "/api/releases", // Changelog/releases (always public)
+    "/api/announcements", // Instance announcements (shown on the logged-out auth pages)
     "/api/health", // Health check endpoint
     "/manifest.json", // Browsers fetch the PWA manifest without cookies
   ];
