@@ -25,7 +25,7 @@ export function useTelemetrySend() {
         await handleRateLimitError(response, t);
         throw new SendError("rate-limited");
       }
-      // 409: off, outdated consent or dev build -- nothing was attempted.
+      // 409: off or outdated consent -- nothing was attempted.
       throw new SendError(response.status === 409 ? "unavailable" : "failed");
     },
     onSuccess: () => toast.success(t("admin.telemetry.sendSuccess")),

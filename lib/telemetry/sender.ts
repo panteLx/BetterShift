@@ -24,7 +24,6 @@ export type TelemetrySendResult =
   | { status: "sent" }
   | { status: "disabled" }
   | { status: "consent-outdated" }
-  | { status: "dev-build" }
   | { status: "failed"; reason: "timeout" | "network" | "http" };
 
 // Shared by the daily timer and the admin "send now" button. Throws on DB
@@ -45,7 +44,6 @@ export async function sendTelemetryNow(): Promise<TelemetrySendResult> {
 
   await ensureTelemetryInstanceId();
   const payload = await collectTelemetryPayload("telemetry");
-  if (payload.app.isDev) return { status: "dev-build" };
 
   const controller = new AbortController();
   const abort = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);

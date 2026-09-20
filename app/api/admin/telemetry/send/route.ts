@@ -11,7 +11,7 @@ import { sendTelemetryNow, toSendAuditMetadata } from "@/lib/telemetry/sender";
  * POST /api/admin/telemetry/send
  *
  * Same guards as the daily send: nothing is sent unless telemetry is on, the
- * consent covers the current schema, and the build is not a dev build.
+ * consent covers the current schema.
  *
  * Permission: Admin or Superadmin only
  */
