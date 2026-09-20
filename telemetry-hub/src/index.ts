@@ -1,3 +1,4 @@
+import { buildAggregate, storeAggregate } from "./aggregate";
 import { parseV1 } from "./schemas/v1";
 import { storeInD1 } from "./targets/d1";
 
@@ -43,5 +44,18 @@ export default {
     }
 
     return new Response(null, { status: 200 });
+  },
+
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      (async () => {
+        try {
+          await storeAggregate(env.bettershift_telemetry, await buildAggregate(env.bettershift_telemetry));
+        } catch (error) {
+          // The previous aggregate stays in place and keeps being served.
+          console.error(error instanceof Error ? error.message : "Aggregate run failed");
+        }
+      })(),
+    );
   },
 };

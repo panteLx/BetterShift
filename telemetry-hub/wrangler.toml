@@ -14,3 +14,7 @@ binding = "bettershift_telemetry"
 database_name = "bettershift-telemetry"
 database_id = "79d67a9c-d7bc-4514-af1e-f24dd1a94e24"
 migrations_dir = "migrations"
+
+# Off the hour: the top of the hour is the busiest slot on Cloudflare's scheduler.
+[triggers]
+crons = ["17 * * * *"]
