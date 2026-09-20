@@ -214,6 +214,6 @@ Note that a health check that times out during deploy deliberately leaves the st
 
 ## Security Note
 
-This repository is public, and a PR comment is world-readable. The sticky comment the `deploy` job posts therefore includes the seed admin's login (email and password) so anyone can look at the preview, but never the Basic Auth password — that one stays a repository secret and is never written into a comment.
+This repository is public, and a PR comment is world-readable. The sticky comment the `deploy` job posts therefore includes the login of both seeded accounts — the admin and the member — so anyone can look at the preview from either side, but never the Basic Auth password — that one stays a repository secret and is never written into a comment.
 
 Preview instances only ever contain data `scripts/seed-preview.mjs` generates itself: fictional names, fictional calendars, fictional shifts. Nothing from a real deployment is ever copied into a preview.

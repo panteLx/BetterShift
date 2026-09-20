@@ -19,6 +19,9 @@ permissions:
 env:
   PREVIEW_LABEL: preview
   STACK_COMMENT_MARKER: "<!-- pr-preview -->"
+  # Set here rather than left to the default in scripts/seed-preview.mjs, because
+  # the comment step has to name the same account the seed step creates.
+  PREVIEW_MEMBER_EMAIL: mitarbeiter@preview.local
 
 jobs:
   fork-notice:
@@ -203,7 +206,10 @@ jobs:
 
           **$URL**
 
-          Sign in with \`$ADMIN_EMAIL\` / \`$ADMIN_PASSWORD\`
+          | Account | E-mail | Password |
+          | --- | --- | --- |
+          | Admin (superadmin, owns both calendars) | \`$ADMIN_EMAIL\` | \`$ADMIN_PASSWORD\` |
+          | Member (Contribute bundle on "Dienstplan Team A") | \`$PREVIEW_MEMBER_EMAIL\` | \`$ADMIN_PASSWORD\` |
 
           The instance sits behind basic auth (user \`preview\`). Every further push resets
           it and seeds the demo data again.
