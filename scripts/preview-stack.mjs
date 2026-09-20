@@ -127,14 +127,14 @@ function assertUpdateOk(label, result) {
  * writes: a bcrypt hash contains `$`, which compose would read as a variable
  * if it sat in the compose file itself.
  */
-function composeFile({ image, host, network, tz, locale }) {
+function composeFile({ image, host, network, tz, locale, caddyImport }) {
   return [
     "services:",
     "  app:",
     `    image: ${image}`,
     "    pull_policy: always",
     "    restart: unless-stopped",
-    "    networks: [caddy]",
+    `    networks: [${network}]`,
     "    environment:",
     '      AUTH_ENABLED: "true"',
     '      ALLOW_USER_REGISTRATION: "true"',
@@ -149,14 +149,17 @@ function composeFile({ image, host, network, tz, locale }) {
     // it is confirmed off for the preview domain.
     '      CSP_STRICT_DYNAMIC_BYPASS: "true"',
     "    labels:",
-    `      caddy: ${host}`,
-    '      caddy.reverse_proxy: "{{upstreams 3000}}"',
+    // http:// on purpose: Cloudflare terminates TLS, so Caddy must not try to
+    // get its own certificate for a name that never resolves to it directly.
+    `      caddy: http://${host}`,
+    caddyImport
+      ? `      caddy.import: ${caddyImport} {{upstreams 3000}}`
+      : '      caddy.reverse_proxy: "{{upstreams 3000}}"',
     '      caddy.basic_auth.preview: "${BASIC_AUTH_HASH}"',
     "",
     "networks:",
-    "  caddy:",
+    `  ${network}:`,
     "    external: true",
-    `    name: ${network}`,
     "",
   ].join("\n");
 }
@@ -178,6 +181,7 @@ function stackConfig() {
       network: process.env.PREVIEW_CADDY_NETWORK,
       tz: process.env.PREVIEW_TZ || "Europe/Berlin",
       locale: process.env.PREVIEW_LOCALE || "de",
+      caddyImport: process.env.PREVIEW_CADDY_IMPORT || "",
     }),
     environment: [
       `BETTER_AUTH_SECRET=${escapeEnvValue(process.env.PREVIEW_BETTER_AUTH_SECRET)}`,

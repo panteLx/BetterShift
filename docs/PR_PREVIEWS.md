@@ -113,6 +113,7 @@ Repository variables the `deploy` job reads. Same place, one tab over: **Setting
 | `PREVIEW_DOMAIN` | `preview.example.com` |
 | `PREVIEW_CADDY_NETWORK` | name of the Docker network Caddy is attached to (see [Prerequisites](#prerequisites-on-the-server)) |
 | `PREVIEW_ADMIN_EMAIL` | `preview@example.com` |
+| `PREVIEW_CADDY_IMPORT` | optional — name of a Caddy snippet to import instead of a plain `reverse_proxy`, e.g. `cf-proxy` |
 
 ## Cloudflare in Front
 
@@ -138,6 +139,8 @@ For everything else, a WAF custom rule lets CI through, keyed on a header only C
 Leaving `PREVIEW_CF_BYPASS_TOKEN` unset is fine for a host that isn't behind Cloudflare, or where the fix was a toggle rather than a rule: the scripts then send no extra header. Either way, a challenge that comes back anyway is now named as such by both scripts and the health check, instead of being reported as a bare `403` with a page of HTML attached.
 
 The header is a shared secret, not authentication — anyone who learns it can skip the WAF for those hostnames. Komodo's own API key and the Basic Auth in front of every preview instance still apply behind it.
+
+Two details of the generated compose file are worth knowing before the first deploy. The site label is written as `caddy: http://pr-<n>.<PREVIEW_DOMAIN>` — the explicit scheme keeps Caddy from starting automatic HTTPS for a name that resolves to Cloudflare rather than to the server, which behind a TLS-terminating proxy ends in a redirect loop or a certificate order that can never complete. And if your other sites share a Caddy snippet for the proxy directive (`import cf-proxy {{upstreams 3000}}` or similar), set `PREVIEW_CADDY_IMPORT` to its name and previews use it too; left unset, the label falls back to a plain `caddy.reverse_proxy`.
 
 ## How the Pieces Fit Together
 
