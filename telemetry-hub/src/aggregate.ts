@@ -234,12 +234,20 @@ interface VersionJsonRow {
   dev_instances: number;
 }
 
+// Falling back to [] would otherwise publish an all-zeros aggregate with nothing
+// in the logs, so every unexpected shape is reported before it is swallowed.
 function parseJsonArray<T>(value: unknown): T[] {
-  if (typeof value !== "string") return [];
+  if (typeof value !== "string") {
+    console.error(`Aggregate column was ${typeof value}, expected a JSON string`);
+    return [];
+  }
   try {
     const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? (parsed as T[]) : [];
+    if (Array.isArray(parsed)) return parsed as T[];
+    console.error("Aggregate column parsed to a non-array");
+    return [];
   } catch {
+    console.error("Aggregate column is not valid JSON");
     return [];
   }
 }
