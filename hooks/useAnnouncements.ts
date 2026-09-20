@@ -22,6 +22,9 @@ export function useAnnouncements(placement: AnnouncementPlacement): PublicAnnoun
     queryFn: () => fetchAnnouncements(placement),
     staleTime: 60 * 1000,
     retry: 1,
+    // A page load, focus and reconnect already cover the liveness this needs;
+    // the global background interval would otherwise poll every open tab forever.
+    refetchInterval: false,
   });
 
   return data ?? [];

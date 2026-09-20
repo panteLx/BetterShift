@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Megaphone, OctagonAlert, TriangleAlert, X } from "lucide-react";
 import { StatusBanner } from "@/components/status-banner";
@@ -9,6 +9,11 @@ import type { AnnouncementPlacement, AnnouncementTone } from "@/lib/announcement
 import { cn, readStorage, writeStorage } from "@/lib/utils";
 
 const DISMISS_KEY = "dismissed-announcements";
+// One list across both placements, so dismissing on the dashboard doesn't
+// resurrect on /login and vice versa. Capped rather than pruned against
+// whichever placement happens to be mounted, which would erase the other
+// placement's dismissals.
+const MAX_DISMISSED = 100;
 
 const TONE_ICONS: Record<AnnouncementTone, typeof Megaphone> = {
   info: Megaphone,
@@ -48,30 +53,17 @@ export function AnnouncementBanners({
     setHydrated(true);
   }, []);
 
-  // Derived, not stateful: what's still live is recomputed from `dismissed` and
-  // `announcements` on every render, so no effect is needed just to show it.
-  const pruned = useMemo(() => {
-    const live = new Set(announcements.map((a) => a.id));
-    return dismissed.filter((id) => live.has(id));
-  }, [dismissed, announcements]);
-
-  // Storage hygiene only: trims ids of announcements deleted long ago. `pruned`
-  // above already reflects the trimmed set for rendering regardless of this write.
-  useEffect(() => {
-    if (hydrated && pruned.length !== dismissed.length) {
-      writeStorage(DISMISS_KEY, JSON.stringify(pruned));
-    }
-  }, [hydrated, pruned, dismissed]);
-
   if (!hydrated) return null;
 
-  const visible = announcements.filter((a) => !pruned.includes(a.id));
+  const visible = announcements.filter((a) => !dismissed.includes(a.id));
   if (visible.length === 0) return null;
 
   const dismiss = (id: string) => {
-    const next = [...pruned, id];
-    writeStorage(DISMISS_KEY, JSON.stringify(next));
-    setDismissed(next);
+    setDismissed((prev) => {
+      const next = [...prev, id].slice(-MAX_DISMISSED);
+      writeStorage(DISMISS_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   return (
@@ -93,7 +85,7 @@ export function AnnouncementBanners({
             </button>
           }
         >
-          {announcement.body}
+          {announcement.body && <span className="whitespace-pre-line">{announcement.body}</span>}
         </StatusBanner>
       ))}
     </div>
