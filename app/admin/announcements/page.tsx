@@ -71,6 +71,7 @@ export default function AdminAnnouncementsPage() {
       )}
 
       <AnnouncementEditSheet
+        key={editing?.id ?? (creating ? "create" : "closed")}
         open={creating || editing !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -107,8 +108,12 @@ export default function AdminAnnouncementsPage() {
           })}
           confirmLabel={t("admin.announcements.deleteConfirm")}
           onConfirm={async () => {
-            await deleteAnnouncement(deleting.id);
-            setDeleting(null);
+            try {
+              await deleteAnnouncement(deleting.id);
+              setDeleting(null);
+            } catch {
+              // Already toasted by the mutation's onError; keep the dialog open so the user can retry.
+            }
           }}
         />
       )}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +10,7 @@ import {
   TITLE_MAX_LENGTH,
   type AnnouncementTone,
 } from "@/lib/announcement-status";
+import { useAnnouncementForm } from "@/hooks/useAnnouncementForm";
 import type { AdminAnnouncement, AnnouncementPayload } from "@/hooks/useAdminAnnouncements";
 
 /** `datetime-local` wants "YYYY-MM-DDTHH:mm" in local time, not an ISO string. */
@@ -27,17 +27,6 @@ function fromLocalInput(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-const EMPTY: AnnouncementPayload = {
-  title: "",
-  body: null,
-  tone: "info",
-  showOnAuth: true,
-  showOnDashboard: true,
-  enabled: true,
-  startsAt: null,
-  endsAt: null,
-};
-
 export function AnnouncementEditSheet({
   open,
   onOpenChange,
@@ -52,49 +41,17 @@ export function AnnouncementEditSheet({
   isSaving: boolean;
 }) {
   const t = useTranslations();
-  const [form, setForm] = useState<AnnouncementPayload>(EMPTY);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    // Syncing from the `announcement` prop (an external source) when the sheet opens, not from render state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setError(null);
-    setForm(
-      announcement
-        ? {
-            title: announcement.title,
-            body: announcement.body,
-            tone: announcement.tone,
-            showOnAuth: announcement.showOnAuth,
-            showOnDashboard: announcement.showOnDashboard,
-            enabled: announcement.enabled,
-            startsAt: announcement.startsAt,
-            endsAt: announcement.endsAt,
-          }
-        : EMPTY
-    );
-  }, [open, announcement]);
-
-  const patch = (next: Partial<AnnouncementPayload>) =>
-    setForm((current) => ({ ...current, ...next }));
+  const { form, patch, error, validate } = useAnnouncementForm(announcement);
 
   const handleSave = async () => {
-    if (!form.title.trim()) {
-      setError(t("admin.announcements.errorTitleRequired"));
-      return;
+    const payload = validate();
+    if (!payload) return;
+    try {
+      await onSubmit(payload);
+      onOpenChange(false);
+    } catch {
+      // Already toasted by the mutation's onError; keep the sheet open so the user can retry.
     }
-    if (!form.showOnAuth && !form.showOnDashboard) {
-      setError(t("admin.announcements.errorNoPlacement"));
-      return;
-    }
-    if (form.startsAt && form.endsAt && new Date(form.endsAt) <= new Date(form.startsAt)) {
-      setError(t("admin.announcements.errorWindow"));
-      return;
-    }
-    setError(null);
-    await onSubmit({ ...form, title: form.title.trim() });
-    onOpenChange(false);
   };
 
   return (
@@ -113,8 +70,9 @@ export function AnnouncementEditSheet({
       saveDisabled={!form.title.trim()}
     >
       <div className="flex flex-col gap-4">
-        <Field label={t("admin.announcements.fieldTitle")}>
+        <Field label={t("admin.announcements.fieldTitle")} htmlFor="announcement-title">
           <Input
+            id="announcement-title"
             value={form.title}
             maxLength={TITLE_MAX_LENGTH}
             onChange={(event) => patch({ title: event.target.value })}
@@ -123,8 +81,9 @@ export function AnnouncementEditSheet({
           />
         </Field>
 
-        <Field label={t("admin.announcements.fieldBody")}>
+        <Field label={t("admin.announcements.fieldBody")} htmlFor="announcement-body">
           <Textarea
+            id="announcement-body"
             value={form.body ?? ""}
             maxLength={BODY_MAX_LENGTH}
             rows={4}
@@ -168,16 +127,22 @@ export function AnnouncementEditSheet({
           onCheckedChange={(enabled) => patch({ enabled })}
         />
 
-        <Field label={t("admin.announcements.startsAt")} hint={t("admin.announcements.windowHint")}>
+        <Field
+          label={t("admin.announcements.startsAt")}
+          htmlFor="announcement-starts-at"
+          hint={t("admin.announcements.windowHint")}
+        >
           <Input
+            id="announcement-starts-at"
             type="datetime-local"
             value={toLocalInput(form.startsAt)}
             onChange={(event) => patch({ startsAt: fromLocalInput(event.target.value) })}
             className={inputClass}
           />
         </Field>
-        <Field label={t("admin.announcements.endsAt")}>
+        <Field label={t("admin.announcements.endsAt")} htmlFor="announcement-ends-at">
           <Input
+            id="announcement-ends-at"
             type="datetime-local"
             value={toLocalInput(form.endsAt)}
             onChange={(event) => patch({ endsAt: fromLocalInput(event.target.value) })}
