@@ -19,7 +19,7 @@ This guide explains the automated preview environments BetterShift spins up for 
 
 Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance a few minutes later, at `https://pr-<number>.<PREVIEW_DOMAIN>`. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
 
-Closing the PR, or removing the `preview` label again, tears the instance down completely — container and data, nothing left behind.
+Closing the PR, or removing the `preview` label again, tears the instance down completely — container and data, nothing left behind. Reopening a closed PR that still carries the `preview` label deploys it again, the same way a `synchronize` push does: fresh container, freshly reseeded database.
 
 A pull request from a fork never gets a preview: `.github/workflows/pr-preview.yml` checks `head.repo.full_name` against the target repository and, for a fork PR that gets labeled `preview`, only posts an explanatory comment instead of deploying anything. Fork PRs don't get repository secrets or a pushed image, so there would be nothing to deploy against anyway.
 
