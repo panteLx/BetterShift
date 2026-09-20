@@ -1287,6 +1287,7 @@
       "pointAnonymous": "Žádná jména, adresy, e-maily ani obsah kalendářů",
       "pointBuckets": "Velikosti se uvádějí pouze jako rozsah, například „6-20 uživatelů“",
       "pointRevocable": "Kdykoli odvolatelné v panelu správce",
+      "pointPublic": "Souhrnná čísla se zobrazují na veřejné stránce se statistikami",
       "previewToggle": "Zobrazit náhled dat k odeslání",
       "docsLink": "Úplná dokumentace",
       "accept": "Odeslat",
