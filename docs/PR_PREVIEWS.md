@@ -1,0 +1,159 @@
+# PR Preview Deployments Guide
+
+This guide explains the automated preview environments BetterShift spins up for pull requests, what has to be configured on the server before the first one can deploy, and how to clean one up by hand if the automation doesn't.
+
+## Table of Contents
+
+1. [What It Does](#what-it-does)
+2. [Prerequisites on the Server](#prerequisites-on-the-server)
+3. [Secrets](#secrets)
+4. [Variables](#variables)
+5. [How the Pieces Fit Together](#how-the-pieces-fit-together)
+6. [What's Different in a Preview](#whats-different-in-a-preview)
+7. [Manual Cleanup](#manual-cleanup)
+8. [Security Note](#security-note)
+
+---
+
+## What It Does
+
+Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance a few minutes later, at `https://pr-<number>.<PREVIEW_DOMAIN>`. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
+
+Closing the PR, or removing the `preview` label again, tears the instance down completely — container and data, nothing left behind.
+
+A pull request from a fork never gets a preview: `.github/workflows/pr-preview.yml` checks `head.repo.full_name` against the target repository and, for a fork PR that gets labeled `preview`, only posts an explanatory comment instead of deploying anything. Fork PRs don't get repository secrets or a pushed image, so there would be nothing to deploy against anyway.
+
+## Prerequisites on the Server
+
+Before the first preview can go live, the server that Komodo deploys to needs:
+
+- A wildcard DNS record on `*.<PREVIEW_DOMAIN>` pointing at that server.
+- A running `caddy-docker-proxy` instance. It reads Docker labels on containers and reconfigures itself automatically — there's no reload step this feature has to trigger.
+- The Docker network named in `PREVIEW_CADDY_NETWORK`, the one Caddy is attached to. If you don't know its name, find it with:
+
+  ```bash
+  docker inspect <caddy-container> --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+  ```
+
+- A Komodo instance reachable over HTTPS, with an API key/secret pair (`KOMODO_API_KEY` / `KOMODO_API_SECRET`) that can create, update, deploy, and delete stacks on the target server.
+
+### One-Time Setup Checks
+
+Two things depend on versions nobody here could verify in advance. Check both once, when setting this up on your server:
+
+**1. Caddy version, for the Basic Auth label.** The compose file `scripts/preview-stack.mjs` generates uses the label `caddy.basic_auth.preview`. Caddy renamed the directive from `basicauth` to `basic_auth` in Caddy 2.8. Check your running version:
+
+```bash
+docker exec <caddy-container> caddy version
+```
+
+If it's older than 2.8, change the label key in `composeFile()` in `scripts/preview-stack.mjs` from `caddy.basic_auth.preview` to `caddy.basicauth.preview`.
+
+**2. Komodo's `environment` field type.** `scripts/preview-stack.mjs` sends the stack's `environment` as a single newline-separated string (`KEY=value\nKEY=value`). Some Komodo versions instead expect a list of strings. Verify against your instance with a read against any existing stack:
+
+```bash
+curl -s -X POST "$KOMODO_URL/read/GetStack" \
+  -H "x-api-key: $KOMODO_API_KEY" -H "x-api-secret: $KOMODO_API_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"stack": "<existing-stack-name>"}' | jq '.config.environment'
+```
+
+If that comes back as an array rather than a string, the `environment` value built in `stackConfig()` in `scripts/preview-stack.mjs` needs to become an array of `"KEY=value"` strings instead of the joined string it is today.
+
+## Secrets
+
+Repository secrets the `deploy` job in `.github/workflows/pr-preview.yml` requires:
+
+| Secret | Contents |
+| --- | --- |
+| `KOMODO_API_KEY` | API key of a Komodo (service) user |
+| `KOMODO_API_SECRET` | matching API secret |
+| `PREVIEW_BETTER_AUTH_SECRET` | `BETTER_AUTH_SECRET` used by every preview instance |
+| `PREVIEW_BASIC_AUTH_HASH` | bcrypt hash of the Basic Auth password |
+| `PREVIEW_BASIC_AUTH_PASSWORD` | the same password, in plain text |
+| `PREVIEW_ADMIN_PASSWORD` | password for the seed admin account |
+
+Generate the hash with:
+
+```bash
+docker run --rm caddy caddy hash-password --plaintext '<password>'
+```
+
+Store its output in `PREVIEW_BASIC_AUTH_HASH` exactly as printed — plain, unescaped bcrypt hash, `$` characters and all. Do **not** pre-escape any `$` in it by hand: `scripts/preview-stack.mjs` already replaces every `$` with `$$` itself when it writes the value into the `.env` file Komodo hands to Docker Compose, because Compose expands `$`-variables inside `.env` values. Hand-escaping the hash before storing it would double the escaping and produce a broken hash on the other end.
+
+`PREVIEW_BASIC_AUTH_PASSWORD` has to hold the plain-text password, not just the hash, because both the workflow's health check (a plain `curl` request) and `scripts/seed-preview.mjs` need to authenticate through Basic Auth themselves before they can reach the app at all.
+
+The Basic Auth username is fixed to `preview` — it's hardcoded into the compose label key (`caddy.basic_auth.preview`) and into the workflow's health-check `curl` call, and it's the default `scripts/seed-preview.mjs` falls back to (`PREVIEW_BASIC_AUTH_USER`, which this workflow never sets). There is no repository variable for it.
+
+## Variables
+
+Repository variables the `deploy` job reads:
+
+| Variable | Example |
+| --- | --- |
+| `KOMODO_URL` | `https://komodo.example.com` |
+| `KOMODO_SERVER_ID` | ID of the server the previews are deployed to |
+| `PREVIEW_DOMAIN` | `preview.example.com` |
+| `PREVIEW_CADDY_NETWORK` | name of the Docker network Caddy is attached to (see [Prerequisites](#prerequisites-on-the-server)) |
+| `PREVIEW_ADMIN_EMAIL` | `preview@example.com` |
+
+## How the Pieces Fit Together
+
+```text
+PR gets the label "preview"
+        │
+        ▼
+.github/workflows/pr-preview.yml (job: deploy)
+        │
+        ├─ wait for the "build-dev" check run (from the "Docker Dev Build"
+        │   workflow) to succeed for the PR's head SHA
+        ├─ node scripts/preview-stack.mjs deploy
+        │       ├─ Komodo /read/GetStack, then /write/CreateStack or /write/UpdateStack
+        │       └─ Komodo /execute/DeployStack (destroy_before_deploy: true)
+        │               └─ server: docker compose up
+        │                       └─ container carrying the Caddy labels
+        │                               └─ caddy-docker-proxy picks up the
+        │                                   subdomain live, no reload needed
+        ├─ wait for GET /api/health == 200 (through Basic Auth)
+        ├─ node scripts/seed-preview.mjs
+        └─ sticky PR comment ("### Preview bereit") created or updated
+
+PR is closed  /  the "preview" label is removed
+        │
+        ▼
+.github/workflows/pr-preview.yml (job: teardown)
+        ├─ node scripts/preview-stack.mjs destroy
+        │       ├─ Komodo /execute/DestroyStack
+        │       └─ Komodo /write/DeleteStack
+        └─ sticky PR comment rewritten to "### Preview abgeräumt"
+```
+
+`scripts/preview-stack.mjs` only ever talks to Komodo; it knows nothing about GitHub. `scripts/seed-preview.mjs` only ever talks to the running instance over plain HTTP; it knows nothing about Komodo or GitHub either — that's why it can also be pointed at any instance by hand, for testing, just by setting its environment variables.
+
+## What's Different in a Preview
+
+A few things distinguish a preview container from a normal deployment:
+
+- **No volumes.** The compose file `preview-stack.mjs` generates has no `volumes:` section at all — SQLite and any uploads live in the container's own writable layer. Combined with `destroy_before_deploy: true`, that means every push resets the instance completely and the seed script runs again from an empty database. This is deliberate, not a gap: state is meant to be disposable here.
+- **`ALLOW_USER_REGISTRATION=true`** is set on the container so that `scripts/seed-preview.mjs` can register its accounts through the regular `/api/auth/sign-up/email` route, the same way a real user would.
+- **The first account the seed script registers becomes superadmin automatically** — that's standard BetterShift behaviour for the first user on any fresh instance (`lib/auth/first-user.ts`), not something specific to previews.
+- `AUTH_ENABLED=true`, `TZ=Europe/Berlin` and `DEFAULT_LOCALE=de` are also fixed on the container (overridable only by setting `PREVIEW_TZ` / `PREVIEW_LOCALE` in the workflow's own environment before it calls `scripts/preview-stack.mjs`, since the script falls back to those defaults itself).
+
+## Manual Cleanup
+
+If a teardown run failed, or a stack was left standing on purpose after a broken deploy (see the next paragraph), remove it by hand:
+
+```bash
+KOMODO_URL=… KOMODO_API_KEY=… KOMODO_API_SECRET=… PR_NUMBER=<n> \
+  node scripts/preview-stack.mjs destroy
+```
+
+This is safe to run even if the stack is already gone — `scripts/preview-stack.mjs` checks for it first and does nothing if it can't find it.
+
+Note that a health check that times out during deploy deliberately leaves the stack running instead of tearing it down: the whole point is to keep the container's logs inspectable in Komodo while you figure out what went wrong. The same is true if the seed step fails. In both cases nothing removes the stack automatically — use the command above once you're done investigating.
+
+## Security Note
+
+This repository is public, and a PR comment is world-readable. The sticky comment the `deploy` job posts therefore includes the seed admin's login (email and password) so anyone can look at the preview, but never the Basic Auth password — that one stays a repository secret and is never written into a comment.
+
+Preview instances only ever contain data `scripts/seed-preview.mjs` generates itself: fictional names, fictional calendars, fictional shifts. Nothing from a real deployment is ever copied into a preview.
