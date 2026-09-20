@@ -8,17 +8,21 @@ import { Pill, RowIconButton } from "@/components/form-kit";
 import { getAnnouncementStatus, type AnnouncementStatus, type AnnouncementTone } from "@/lib/announcement-status";
 import type { AdminAnnouncement } from "@/hooks/useAdminAnnouncements";
 
-const STATUS_LABEL: Record<AnnouncementStatus, string> = {
-  active: "admin.announcements.statusActive",
-  scheduled: "admin.announcements.statusScheduled",
-  expired: "admin.announcements.statusExpired",
-  off: "admin.announcements.statusOff",
+// Capitalised suffixes for the admin.announcements.status*/tone* keys. Kept
+// separate from the t() call site so the i18n scanner still sees the static
+// prefix + interpolation shape (its documented `admin.role${role}` idiom)
+// instead of an opaque variable it can't resolve.
+const STATUS_SUFFIX: Record<AnnouncementStatus, string> = {
+  active: "Active",
+  scheduled: "Scheduled",
+  expired: "Expired",
+  off: "Off",
 };
 
-const TONE_LABEL: Record<AnnouncementTone, string> = {
-  info: "admin.announcements.toneInfo",
-  warning: "admin.announcements.toneWarning",
-  danger: "admin.announcements.toneDanger",
+const TONE_SUFFIX: Record<AnnouncementTone, string> = {
+  info: "Info",
+  warning: "Warning",
+  danger: "Danger",
 };
 
 function toDate(value: string | null): Date | null {
@@ -56,8 +60,8 @@ export function AnnouncementTable({
                 <span className="truncate text-[14px] font-semibold text-fg-strong">
                   {announcement.title}
                 </span>
-                <Pill>{t(STATUS_LABEL[status])}</Pill>
-                <Pill>{t(TONE_LABEL[announcement.tone])}</Pill>
+                <Pill>{t(`admin.announcements.status${STATUS_SUFFIX[status]}`)}</Pill>
+                <Pill>{t(`admin.announcements.tone${TONE_SUFFIX[announcement.tone]}`)}</Pill>
               </div>
               {announcement.body && (
                 <p className="mt-0.5 line-clamp-2 text-[12.5px] text-fg-secondary">
