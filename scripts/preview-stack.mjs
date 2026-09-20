@@ -241,6 +241,27 @@ async function deploy({ dryRun }) {
   console.log(`Stack ${name} deployed.`);
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * `/execute/DestroyStack` returns before the compose run behind it has finished,
+ * and Komodo refuses to delete a stack while one is in flight ("Stack busy").
+ * Polling the delete is simpler than polling for a state Komodo spells
+ * differently across versions.
+ */
+async function deleteStack(id, name) {
+  const deadline = Date.now() + 120_000;
+  for (;;) {
+    try {
+      return await komodo("/write/DeleteStack", { id });
+    } catch (error) {
+      if (!/busy/i.test(error.bodyText || "") || Date.now() >= deadline) throw error;
+      console.log(`Stack ${name} is still busy — waiting to delete it.`);
+      await sleep(5000);
+    }
+  }
+}
+
 async function destroy({ dryRun }) {
   const name = `bettershift-pr-${process.env.PR_NUMBER}`;
 
@@ -264,7 +285,7 @@ async function destroy({ dryRun }) {
   if (failure) {
     console.error(`${failure}\nDeleting the stack entry anyway.`);
   }
-  await komodo("/write/DeleteStack", { id: stackId(existing, name) });
+  await deleteStack(stackId(existing, name), name);
   console.log(`Stack ${name} destroyed and deleted.`);
 }
 

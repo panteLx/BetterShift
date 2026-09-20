@@ -208,6 +208,8 @@ KOMODO_URL=… KOMODO_API_KEY=… KOMODO_API_SECRET=… PR_NUMBER=<n> \
   node scripts/preview-stack.mjs destroy
 ```
 
+Komodo answers `/execute/DestroyStack` before the compose run behind it has finished and then refuses the delete with `Stack busy`, which leaves the containers down but the stack row standing. `scripts/preview-stack.mjs` retries the delete for up to two minutes for that reason; a row that is still there after a teardown run usually means the destroy itself never completed, and the container log in Komodo says why.
+
 This is safe to run even if the stack is already gone — `scripts/preview-stack.mjs` checks for it first and does nothing if it can't find it. If Komodo is behind Cloudflare, add `PREVIEW_CF_BYPASS_TOKEN=…` to that line as well (see [Cloudflare in Front](#cloudflare-in-front)).
 
 Note that a health check that times out during deploy deliberately leaves the stack running instead of tearing it down: the whole point is to keep the container's logs inspectable in Komodo while you figure out what went wrong. The same is true if the seed step fails. In both cases nothing removes the stack automatically — use the command above once you're done investigating.
