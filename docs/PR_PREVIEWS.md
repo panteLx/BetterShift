@@ -18,7 +18,7 @@ This guide explains the automated preview environments BetterShift spins up for 
 
 ## What It Does
 
-Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance at `https://pr-<number>.<PREVIEW_DOMAIN>`. Usually that takes a few minutes; in the worst case it takes considerably longer, because the deploy job first waits for the PR's image to finish building — that wait alone is allowed to run for up to 25 minutes. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
+Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance at `https://bs-pr-<number>.<PREVIEW_DOMAIN>`. Usually that takes a few minutes; in the worst case it takes considerably longer, because the deploy job first waits for the PR's image to finish building — that wait alone is allowed to run for up to 25 minutes. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
 
 Closing a PR that carries the `preview` label, or removing the label again, tears the instance down completely — container and data, nothing left behind. Closing a PR that never had the label does nothing: the `teardown` job checks for the label on the `closed` event and skips itself otherwise, so it doesn't go looking for a stack that was never created. Reopening a closed PR that still carries the `preview` label deploys it again, the same way a `synchronize` push does: fresh container, freshly reseeded database.
 
@@ -140,7 +140,7 @@ Leaving `PREVIEW_CF_BYPASS_TOKEN` unset is fine for a host that isn't behind Clo
 
 The header is a shared secret, not authentication — anyone who learns it can skip the WAF for those hostnames. Komodo's own API key and the Basic Auth in front of every preview instance still apply behind it.
 
-Two details of the generated compose file are worth knowing before the first deploy. The site label is written as `caddy: http://pr-<n>.<PREVIEW_DOMAIN>` — the explicit scheme keeps Caddy from starting automatic HTTPS for a name that resolves to Cloudflare rather than to the server, which behind a TLS-terminating proxy ends in a redirect loop or a certificate order that can never complete.
+Two details of the generated compose file are worth knowing before the first deploy. The site label is written as `caddy: http://bs-pr-<n>.<PREVIEW_DOMAIN>` — the explicit scheme keeps Caddy from starting automatic HTTPS for a name that resolves to Cloudflare rather than to the server, which behind a TLS-terminating proxy ends in a redirect loop or a certificate order that can never complete.
 
 ## How the Pieces Fit Together
 
