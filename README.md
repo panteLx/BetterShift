@@ -105,6 +105,7 @@ npm run dev
 | [Authentication Setup](docs/AUTH_SETUP.md)                     | Email/password, OAuth, OIDC configuration                           |
 | [Admin Panel](docs/ADMIN_PANEL.md)                             | User management, calendar administration                            |
 | [Permissions](docs/PERMISSIONS.md)                             | Sharing, access tokens, guest access                                |
+| [Telemetry](docs/TELEMETRY.md)                                 | What data is collected and how to disable it                        |
 | [Enabling Auth on an Existing Instance](docs/ENABLING_AUTH.md) | Turn on accounts for an instance that ran with `AUTH_ENABLED=false` |
 | [Upgrade Guide](docs/UPGRADING.md)                             | Breaking changes between versions and the steps to get through them |
 
