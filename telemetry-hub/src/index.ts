@@ -46,16 +46,14 @@ export default {
     return new Response(null, { status: 200 });
   },
 
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(
-      (async () => {
-        try {
-          await storeAggregate(env.bettershift_telemetry, await buildAggregate(env.bettershift_telemetry));
-        } catch (error) {
-          // The previous aggregate stays in place and keeps being served.
-          console.error(error instanceof Error ? error.message : "Aggregate run failed");
-        }
-      })(),
-    );
+  async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    try {
+      await storeAggregate(env.bettershift_telemetry, await buildAggregate(env.bettershift_telemetry));
+    } catch (error) {
+      // db.batch + INSERT OR REPLACE already keep the previous aggregate intact;
+      // rethrow so Cloudflare's cron success metric reflects the failure.
+      console.error(error instanceof Error ? error.message : "Aggregate run failed");
+      throw error;
+    }
   },
 };

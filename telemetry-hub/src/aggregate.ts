@@ -31,9 +31,14 @@ export interface PublicAggregate {
 const MIN_GROUP_SIZE = 3;
 const ACTIVE_WINDOW_DAYS = 30;
 const HISTORY_DAYS = 90;
+// Payload string fields are unbounded and the hub is unauthenticated.
+const MAX_VALUE_LENGTH = 64;
 
 const iso = (now: Date, daysAgo: number): string =>
   new Date(now.getTime() - daysAgo * 86_400_000).toISOString();
+
+const truncate = (value: string): string =>
+  value.length > MAX_VALUE_LENGTH ? value.slice(0, MAX_VALUE_LENGTH) : value;
 
 interface RawGroup {
   key: string;
@@ -51,15 +56,50 @@ function collapse(rows: RawGroup[], base: number): DistributionEntry[] {
       otherCount += row.instances;
       continue;
     }
-    kept.push({ value: String(row.value), instances: row.instances, share: 0 });
+    kept.push({ value: truncate(String(row.value)), instances: row.instances, share: 0 });
   }
 
-  if (otherCount > 0) kept.push({ value: "other", instances: otherCount, share: 0 });
+  // A sub-floor "other" is itself a fingerprint once read across dimensions.
+  if (otherCount >= MIN_GROUP_SIZE) kept.push({ value: "other", instances: otherCount, share: 0 });
 
   for (const entry of kept) {
     entry.share = base > 0 ? Math.round((entry.instances / base) * 10_000) / 10_000 : 0;
   }
   return kept.sort((a, b) => b.instances - a.instances);
+}
+
+/** Same folding rule as collapse(), plus a dev-instance count carried per entry. */
+function buildVersions(
+  rows: Array<{ value: string; instances: number; dev_instances: number }>,
+  base: number,
+): VersionEntry[] {
+  const kept: Array<{ value: string; instances: number; devInstances: number }> = [];
+  let otherInstances = 0;
+  let otherDev = 0;
+
+  for (const row of rows) {
+    const dev = Number(row.dev_instances ?? 0);
+    if (row.instances < MIN_GROUP_SIZE) {
+      otherInstances += row.instances;
+      otherDev += dev;
+      continue;
+    }
+    kept.push({ value: truncate(row.value), instances: row.instances, devInstances: dev });
+  }
+
+  if (otherInstances >= MIN_GROUP_SIZE) {
+    kept.push({ value: "other", instances: otherInstances, devInstances: otherDev });
+  }
+
+  return kept
+    .map((entry) => ({
+      value: entry.value,
+      instances: entry.instances,
+      share: base > 0 ? Math.round((entry.instances / base) * 10_000) / 10_000 : 0,
+      // A dev count below the floor would out one instance within a kept version.
+      devInstances: entry.devInstances >= MIN_GROUP_SIZE ? entry.devInstances : 0,
+    }))
+    .sort((a, b) => b.instances - a.instances);
 }
 
 function groupByKey(rows: RawGroup[], base: number): Record<string, DistributionEntry[]> {
@@ -172,6 +212,30 @@ export async function buildAggregate(db: D1Database, now: Date = new Date()): Pr
 
   const totalsRow = (totals.results[0] ?? {}) as Record<string, number>;
   const base = Number(totalsRow.total ?? 0);
+
+  const instances = {
+    total: base,
+    activeLast7Days: Number(totalsRow.active_7d ?? 0),
+    newLast30Days: Number(totalsRow.new_30d ?? 0),
+  };
+
+  // Below the floor, any distribution or history point would single out the one instance.
+  // The headline counts above are still published — that's a deliberate product decision.
+  if (base < MIN_GROUP_SIZE) {
+    return {
+      computedAt: now.toISOString(),
+      instances,
+      history: [],
+      versions: [],
+      environment: {},
+      configuration: {},
+      sizes: {},
+      features: {},
+      customFieldTypes: [],
+      health: { avgUptimeHours: 0, instancesWithSyncFailures: 0 },
+    };
+  }
+
   const healthRow = (health.results[0] ?? {}) as Record<string, number | null>;
 
   const versionRows = versions.results as unknown as Array<{
@@ -179,20 +243,22 @@ export async function buildAggregate(db: D1Database, now: Date = new Date()): Pr
     instances: number;
     dev_instances: number;
   }>;
-  const devByVersion = new Map(versionRows.map((r) => [String(r.value), Number(r.dev_instances)]));
 
   return {
     computedAt: now.toISOString(),
-    instances: {
-      total: base,
-      activeLast7Days: Number(totalsRow.active_7d ?? 0),
-      newLast30Days: Number(totalsRow.new_30d ?? 0),
-    },
-    history: history.results as unknown as HistoryPoint[],
-    versions: collapse(
-      versionRows.map((r) => ({ key: "versions", value: r.value, instances: Number(r.instances) })),
+    instances,
+    // A day attributable to fewer than MIN_GROUP_SIZE instances is dropped, not floored.
+    history: (history.results as unknown as HistoryPoint[]).filter(
+      (point) => point.instances >= MIN_GROUP_SIZE,
+    ),
+    versions: buildVersions(
+      versionRows.map((r) => ({
+        value: r.value,
+        instances: Number(r.instances),
+        dev_instances: Number(r.dev_instances),
+      })),
       base,
-    ).map((entry) => ({ ...entry, devInstances: devByVersion.get(entry.value) ?? 0 })),
+    ),
     environment: groupByKey(environment.results as unknown as RawGroup[], base),
     configuration: groupByKey(configuration.results as unknown as RawGroup[], base),
     sizes: groupByKey(sizes.results as unknown as RawGroup[], base),
