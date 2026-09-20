@@ -13,9 +13,10 @@ The hub is deployed on its own and is not part of the Docker image.
 3. [Point Your Instances at It](#point-your-instances-at-it)
 4. [Test It Locally](#test-it-locally)
 5. [What the Worker Does](#what-the-worker-does)
-6. [Reading the Data](#reading-the-data)
-7. [Operating It](#operating-it)
-8. [Project Layout](#project-layout)
+6. [The Public Statistics Page](#the-public-statistics-page)
+7. [Reading the Data](#reading-the-data)
+8. [Operating It](#operating-it)
+9. [Project Layout](#project-layout)
 
 ---
 
@@ -66,7 +67,7 @@ No domain? Delete the whole `routes` block and add `workers_dev = true` instead.
 npm run migrate
 ```
 
-This applies everything in `migrations/` to the deployed database. Run it again after adding a migration; already-applied ones are skipped.
+This applies everything in `migrations/` to the deployed database. Run it again after adding a migration; already-applied ones are skipped — that includes `migrations/0002_create_aggregates.sql`, added for the public statistics page below, so `npm run migrate` needs a second run on a database that was already set up before it existed.
 
 ### 5. Deploy
 
@@ -115,13 +116,32 @@ The Worker then listens on `http://localhost:8787` against a local SQLite file u
 npm run stats -- --local
 ```
 
+To check the public page and `/data.json` without sending pings by hand, seed deterministic fixture data instead:
+
+```bash
+npm run seed:local -- --reset
+```
+
+This deletes all local pings and inserts a fixed set of instances, never against `--remote`. `npx wrangler dev --test-scheduled` lets you then trigger the hourly cron by hand (`curl "http://localhost:8787/__scheduled?cron=17+*+*+*+*"`) to compute the aggregate from the seeded rows, and reload `/` or `/data.json` to see it.
+
 `npm run typecheck` checks the types.
 
 ## What the Worker Does
 
+Routing resolves the path first, then the method:
+
+| Request                                | Answer                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /`                                | The public statistics page (HTML).                                                 |
+| `GET /data.json`                       | The same statistics as JSON.                                                        |
+| `POST /`                                | Ingest — validated and written to D1, see below.                                    |
+| Any other path                         | `404`                                                                               |
+| A known path with the wrong method     | `405` (e.g. `PUT /`, or `POST /data.json`)                                          |
+
+For `POST /` specifically:
+
 | Request                                              | Answer                                                                                   |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Any method except `POST`                             | `405`                                                                                    |
 | Body larger than 16 KB                               | `413`                                                                                    |
 | Body is not valid JSON                               | `400`                                                                                    |
 | Valid JSON that fails validation, or unknown version | `200`, discarded                                                                         |
@@ -134,6 +154,12 @@ Each field is written to its own column explicitly; nothing is spread from the r
 Cloudflare itself still sees the connecting IP in its own edge logs, like for any hosted Worker.
 
 Rows are kept indefinitely. There is no expiry job: at one ping per instance per day the table stays small for years (see [Cost](#cost)).
+
+## The Public Statistics Page
+
+`GET /` renders an HTML page — and `GET /data.json` the same data as JSON — from a single precomputed row in the `aggregates` table, so the read path never touches `instance_pings` (`src/aggregate.ts`, `src/page.ts`). A `[triggers]` cron in `wrangler.toml` (`17 * * * *`, off the hour on purpose) recomputes that row once an hour by running `buildAggregate()` and replacing it wholesale via `storeAggregate()` — a run in progress never leaves a partially updated page. Until the first cron run after deploy, the page shows a neutral empty state.
+
+The aggregate only ever holds counts and shares grouped across instances: no instance id, no raw row, no per-instance timestamp appears in it, and `/data.json` is served with `Access-Control-Allow-Origin: *` since it carries nothing that needs to stay private to a caller. What exactly is published, including the fact that there is no small-group threshold, is documented in [`docs/TELEMETRY.md`](../docs/TELEMETRY.md#where-it-goes).
 
 ## Reading the Data
 
@@ -167,7 +193,7 @@ npx wrangler d1 execute bettershift-telemetry --remote \
   --command "SELECT app_version, COUNT(*) FROM latest_pings GROUP BY app_version"
 ```
 
-To put a dashboard on top later, the table is ordinary SQLite: Grafana via a read endpoint, or a scheduled Worker that writes aggregates for a static page.
+The `queries/` reports and this ad-hoc SQL run against the raw `instance_pings` table and need `wrangler` access to the database. The public page at `GET /` and `GET /data.json` (see [The Public Statistics Page](#the-public-statistics-page)) is the equivalent view for anyone without that access — it needs no credentials because it never touches `instance_pings` directly, only the hourly precomputed aggregate.
 
 ## Cost
 
@@ -182,13 +208,18 @@ Everything here fits in the Cloudflare free plan, which covers 100,000 D1 row wr
 ## Project Layout
 
 ```text
-src/index.ts             request handling: method, size, JSON, validation, store
+src/index.ts             routing: path then method, size, JSON, validation, store
 src/schemas/v1.ts        payload type and validator for schemaVersion 1
 src/targets/d1.ts        maps a payload to a row and inserts it
+src/aggregate.ts         builds and (re)stores the public statistics, run hourly by the cron
+src/page.ts              renders the public statistics page from a stored aggregate
 migrations/              D1 schema, applied with `npm run migrate`
+  0001_create_instance_pings.sql   the raw ping table
+  0002_create_aggregates.sql       the one-row precomputed aggregate table
 queries/                 one SQL report per file, run with `npm run stats`
 scripts/stats.mjs        runs the reports through wrangler and prints them
-wrangler.toml            Worker name, route and the D1 binding
+scripts/seed-local.mjs   fills the local D1 with deterministic fixture pings
+wrangler.toml            Worker name, route, the D1 binding and the cron trigger
 ```
 
 This project is self-contained and does not import from the main app. `src/schemas/v1.ts` mirrors `TelemetryPayload` in [`lib/telemetry/schema.ts`](../lib/telemetry/schema.ts) by value, and `migrations/` mirrors it again as columns, so a change to the payload has to be made in all three places. Until a new `schemaVersion` exists, anything that is not a valid v1 payload is discarded.
