@@ -1295,5 +1295,8 @@
       "accept": "Odeslat",
       "decline": "Neodesílat"
     }
+  },
+  "announcements": {
+    "dismiss": "Skrýt oznámení"
   }
 }

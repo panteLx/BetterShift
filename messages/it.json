@@ -1295,5 +1295,8 @@
       "accept": "Invia",
       "decline": "Non inviare"
     }
+  },
+  "announcements": {
+    "dismiss": "Nascondi annuncio"
   }
 }

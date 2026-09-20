@@ -43,6 +43,10 @@ export const queryKeys = {
     byCalendar: (calendarId: string) => ["external-syncs", calendarId] as const,
     logs: (calendarId: string) => ["sync-logs", calendarId] as const,
   },
+  announcements: {
+    all: ["announcements"] as const,
+    byPlacement: (placement: string) => ["announcements", placement] as const,
+  },
 
   // Admin Data
   admin: {

@@ -13,6 +13,7 @@ import { ListSort, ShiftListView } from "@/components/shift-list-view";
 import { DayInspector, DayActions, DayViewModel } from "@/components/day-inspector";
 import { MobileDayFooter, MobileDaySheet, MobileStatsSheet } from "@/components/mobile-day-sheet";
 import { MobilePresetBar, StampDock, orderStampPresets } from "@/components/stamp-dock";
+import { AnnouncementBanners } from "@/components/announcement-banners";
 import { GuestBanner } from "@/components/guest-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { StatusBanner } from "@/components/status-banner";
@@ -217,6 +218,7 @@ export function CalendarWorkspace({
 
   const banners = (
     <>
+      <AnnouncementBanners placement="dashboard" />
       {!isOnline && (
         <StatusBanner
           tone="danger"

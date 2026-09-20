@@ -1295,5 +1295,8 @@
       "accept": "Enviar",
       "decline": "No enviar"
     }
+  },
+  "announcements": {
+    "dismiss": "Ocultar anuncio"
   }
 }
