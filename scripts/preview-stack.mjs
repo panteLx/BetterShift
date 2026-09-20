@@ -90,6 +90,11 @@ function composeFile({ image, host, network, tz, locale }) {
   ].join("\n");
 }
 
+// Compose expands variables inside .env values, so escape literal $ as $$.
+function escapeEnvValue(value) {
+  return value.replace(/\$/g, "$$$$");
+}
+
 function stackConfig() {
   const pr = process.env.PR_NUMBER;
   const host = `pr-${pr}.${process.env.PREVIEW_DOMAIN}`;
@@ -104,8 +109,8 @@ function stackConfig() {
       locale: process.env.PREVIEW_LOCALE || "de",
     }),
     environment: [
-      `BETTER_AUTH_SECRET=${process.env.PREVIEW_BETTER_AUTH_SECRET}`,
-      `BASIC_AUTH_HASH=${process.env.PREVIEW_BASIC_AUTH_HASH}`,
+      `BETTER_AUTH_SECRET=${escapeEnvValue(process.env.PREVIEW_BETTER_AUTH_SECRET)}`,
+      `BASIC_AUTH_HASH=${escapeEnvValue(process.env.PREVIEW_BASIC_AUTH_HASH)}`,
     ].join("\n"),
     env_file_path: ".env",
     // Each push must start from an empty database, and there are no volumes
