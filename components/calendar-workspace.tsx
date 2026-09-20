@@ -218,7 +218,6 @@ export function CalendarWorkspace({
 
   const banners = (
     <>
-      <AnnouncementBanners placement="dashboard" />
       {!isOnline && (
         <StatusBanner
           tone="danger"
@@ -310,6 +309,7 @@ export function CalendarWorkspace({
         {header}
         <div className="flex min-h-0 flex-1">
           <main className="relative flex min-w-0 flex-1 flex-col pb-[18px]">
+            <AnnouncementBanners placement="dashboard" className="px-[18px] pt-3.5" />
             {hasBanner && <div className="flex flex-col gap-2 px-[18px] pt-3.5">{banners}</div>}
             <div className={isOnline ? "contents" : "contents [&>div]:opacity-60"}>{surface}</div>
             {stampingEnabled && (
@@ -332,6 +332,7 @@ export function CalendarWorkspace({
       {header}
       {/* In list mode the list brings its own scroller, so <main> must not scroll too */}
       <main className={cn("flex min-h-0 flex-1 flex-col", viewMode !== "list" && "overflow-y-auto")}>
+        <AnnouncementBanners placement="dashboard" className="px-3 pt-3" />
         {hasBanner && <div className="flex flex-col gap-2 px-3 pt-3">{banners}</div>}
         <div className="flex items-center gap-2 px-3.5 pb-[9px] pt-3">
           <h1 className="min-w-0 flex-1 truncate text-[19px] font-semibold tracking-[-0.015em] text-fg-strong">

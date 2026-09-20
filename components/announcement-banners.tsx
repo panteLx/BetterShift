@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Megaphone, OctagonAlert, TriangleAlert, X } from "lucide-react";
 import { StatusBanner } from "@/components/status-banner";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import type { AnnouncementPlacement, AnnouncementTone } from "@/lib/announcements";
-import { readStorage, writeStorage } from "@/lib/utils";
+import { cn, readStorage, writeStorage } from "@/lib/utils";
 
 const DISMISS_KEY = "dismissed-announcements";
 
@@ -27,7 +27,13 @@ function readDismissed(): string[] {
   }
 }
 
-export function AnnouncementBanners({ placement }: { placement: AnnouncementPlacement }) {
+export function AnnouncementBanners({
+  placement,
+  className,
+}: {
+  placement: AnnouncementPlacement;
+  className?: string;
+}) {
   const t = useTranslations();
   const announcements = useAnnouncements(placement);
   const [dismissed, setDismissed] = useState<string[]>([]);
@@ -42,34 +48,34 @@ export function AnnouncementBanners({ placement }: { placement: AnnouncementPlac
     setHydrated(true);
   }, []);
 
-  // Without pruning, the stored list keeps ids of announcements deleted long ago.
-  useEffect(() => {
-    if (!hydrated || announcements.length === 0) return;
+  // Derived, not stateful: what's still live is recomputed from `dismissed` and
+  // `announcements` on every render, so no effect is needed just to show it.
+  const pruned = useMemo(() => {
     const live = new Set(announcements.map((a) => a.id));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDismissed((current) => {
-      const pruned = current.filter((id) => live.has(id));
-      if (pruned.length === current.length) return current;
+    return dismissed.filter((id) => live.has(id));
+  }, [dismissed, announcements]);
+
+  // Storage hygiene only: trims ids of announcements deleted long ago. `pruned`
+  // above already reflects the trimmed set for rendering regardless of this write.
+  useEffect(() => {
+    if (hydrated && pruned.length !== dismissed.length) {
       writeStorage(DISMISS_KEY, JSON.stringify(pruned));
-      return pruned;
-    });
-  }, [hydrated, announcements]);
+    }
+  }, [hydrated, pruned, dismissed]);
 
   if (!hydrated) return null;
 
-  const visible = announcements.filter((a) => !dismissed.includes(a.id));
+  const visible = announcements.filter((a) => !pruned.includes(a.id));
   if (visible.length === 0) return null;
 
   const dismiss = (id: string) => {
-    setDismissed((current) => {
-      const next = [...current, id];
-      writeStorage(DISMISS_KEY, JSON.stringify(next));
-      return next;
-    });
+    const next = [...pruned, id];
+    writeStorage(DISMISS_KEY, JSON.stringify(next));
+    setDismissed(next);
   };
 
   return (
-    <>
+    <div className={cn("flex flex-col gap-2", className)}>
       {visible.map((announcement) => (
         <StatusBanner
           key={announcement.id}
@@ -90,6 +96,6 @@ export function AnnouncementBanners({ placement }: { placement: AnnouncementPlac
           {announcement.body}
         </StatusBanner>
       ))}
-    </>
+    </div>
   );
 }
