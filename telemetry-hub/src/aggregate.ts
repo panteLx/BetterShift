@@ -139,118 +139,136 @@ function groupByKey(rows: RawGroup[], base: number): Record<string, Distribution
   return out;
 }
 
-// Unpivots columns into (key, value) pairs. D1 caps a compound SELECT at five
-// terms, so UNION ALL is not an option here.
+// Unpivots columns into (key, value) pairs, reading the already-filtered `active`
+// CTE (see buildAggregate) instead of the view directly. D1 caps a compound SELECT
+// at five terms, so UNION ALL is not an option for the columns themselves.
 const unpivot = (pairs: string) => `
   SELECT t.key AS key, t.value AS value, COUNT(*) AS instances
-  FROM latest_pings AS p, json_each(json_object(${pairs})) AS t
-  WHERE p.received_at >= ?1
+  FROM active AS p, json_each(json_object(${pairs})) AS t
   GROUP BY t.key, t.value`;
+
+// Wraps a (key?, value, instances[, extra]) query as a JSON array so it can sit
+// in its own scalar-subquery column of the single mega-query below. That keeps
+// every one of these reports reading the same MATERIALIZED `active` CTE instead
+// of each re-deriving "the latest ping per instance" from the full ping history.
+const asJsonArray = (columns: string, innerSql: string) =>
+  `(SELECT COALESCE(json_group_array(json_object(${columns})), '[]') FROM (${innerSql}))`;
+
+const VERSIONS_SQL = `
+  SELECT app_version AS value, COUNT(*) AS instances,
+         SUM(CASE WHEN app_is_dev = 1 THEN 1 ELSE 0 END) AS dev_instances
+  FROM active GROUP BY app_version`;
+
+const FIELD_TYPES_SQL = `
+  SELECT t.value AS value, COUNT(DISTINCT p.id) AS instances
+  FROM active AS p, json_each(p.features_custom_field_types) AS t
+  GROUP BY t.value`;
+
+/**
+ * Every report below used to read the `latest_pings` view independently (nine
+ * references in total), and the view itself has no time bound: each reference
+ * re-scanned the entire ping history to find each instance's newest row before
+ * filtering it down to the active window. At the README's own worked example
+ * (~36,000 rows/year) that is roughly 9x the necessary reads per cron run.
+ *
+ * Instead, `active` is materialized exactly once (one scan of `instance_pings`,
+ * enforced with the MATERIALIZED hint so SQLite doesn't just inline the CTE per
+ * reference) and every report reads that bounded, already-filtered result as a
+ * scalar subquery of one row -- one statement, one full scan, regardless of how
+ * many breakdowns are computed from it.
+ */
+const MEGA_SQL = `
+  WITH active AS MATERIALIZED (SELECT * FROM latest_pings WHERE received_at >= ?1)
+  SELECT
+    (SELECT COUNT(*) FROM active) AS total,
+    (SELECT COUNT(*) FROM active WHERE received_at >= ?2) AS active_7d,
+    (SELECT COUNT(*) FROM (
+       SELECT instance_id FROM instance_pings
+       WHERE instance_id IS NOT NULL
+       GROUP BY instance_id HAVING MIN(received_at) >= ?1
+    )) AS new_30d,
+    ${asJsonArray("'value', value, 'instances', instances, 'dev_instances', dev_instances", VERSIONS_SQL)} AS versions_json,
+    ${asJsonArray(
+      "'key', key, 'value', value, 'instances', instances",
+      unpivot(
+        `'node', p.runtime_node, 'platform', p.runtime_platform, 'arch', p.runtime_arch,
+         'sqlite', p.runtime_sqlite, 'timezone', p.runtime_timezone`,
+      ),
+    )} AS environment_json,
+    ${asJsonArray(
+      "'key', key, 'value', value, 'instances', instances",
+      unpivot(
+        `'auth_enabled', p.config_auth_enabled, 'guest_access', p.config_guest_access,
+         'registration_open', p.config_registration_open,
+         'update_check_enabled', p.config_update_check_enabled,
+         'default_locale', p.config_default_locale,
+         'rate_limit_overrides', p.config_rate_limit_overrides`,
+      ),
+    )} AS configuration_json,
+    ${asJsonArray(
+      "'key', key, 'value', value, 'instances', instances",
+      unpivot(
+        `'users', p.scale_users, 'calendars', p.scale_calendars, 'shifts', p.scale_shifts,
+         'presets', p.scale_presets, 'notes', p.scale_notes, 'bundles', p.scale_bundles,
+         'shares', p.scale_shares, 'access_tokens', p.scale_access_tokens,
+         'signups', p.scale_signups`,
+      ),
+    )} AS sizes_json,
+    ${asJsonArray(
+      "'key', key, 'value', value, 'instances', instances",
+      unpivot(
+        `'external_syncs', p.features_external_syncs,
+         'calendar_view_overrides', p.features_calendar_view_overrides,
+         'custom_fields_count', p.features_custom_fields_count,
+         'archived_presets', p.features_archived_presets,
+         'split_shifts', p.features_split_shifts`,
+      ),
+    )} AS features_json,
+    ${asJsonArray("'value', value, 'instances', instances", FIELD_TYPES_SQL)} AS field_types_json,
+    (SELECT ROUND(AVG(health_uptime_hours), 1) FROM active) AS avg_uptime,
+    (SELECT SUM(CASE WHEN health_sync_failures_24h > 0 THEN 1 ELSE 0 END) FROM active) AS with_failures`;
+
+interface VersionJsonRow {
+  value: string;
+  instances: number;
+  dev_instances: number;
+}
+
+function parseJsonArray<T>(value: unknown): T[] {
+  if (typeof value !== "string") return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export async function buildAggregate(db: D1Database, now: Date = new Date()): Promise<PublicAggregate> {
   const activeCutoff = iso(now, ACTIVE_WINDOW_DAYS);
   const weekCutoff = iso(now, 7);
   const historyCutoff = iso(now, HISTORY_DAYS).slice(0, 10);
 
-  const [totals, history, versions, environment, configuration, sizes, features, fieldTypes, health] =
-    await db.batch([
-      db
-        .prepare(
-          `SELECT
-             (SELECT COUNT(*) FROM latest_pings WHERE received_at >= ?1) AS total,
-             (SELECT COUNT(*) FROM latest_pings WHERE received_at >= ?2) AS active_7d,
-             (SELECT COUNT(*) FROM (
-                SELECT instance_id FROM instance_pings
-                WHERE instance_id IS NOT NULL
-                GROUP BY instance_id HAVING MIN(received_at) >= ?1
-             )) AS new_30d`,
-        )
-        .bind(activeCutoff, weekCutoff),
-      db
-        .prepare(
-          `SELECT ping_day AS day, COUNT(DISTINCT COALESCE(instance_id, 'anon:' || id)) AS instances
-           FROM instance_pings WHERE ping_day >= ?1 GROUP BY ping_day ORDER BY day`,
-        )
-        .bind(historyCutoff),
-      db
-        .prepare(
-          `SELECT app_version AS value, COUNT(*) AS instances,
-                  SUM(CASE WHEN app_is_dev = 1 THEN 1 ELSE 0 END) AS dev_instances
-           FROM latest_pings WHERE received_at >= ?1 GROUP BY app_version`,
-        )
-        .bind(activeCutoff),
-      db
-        .prepare(
-          unpivot(
-            `'node', p.runtime_node, 'platform', p.runtime_platform, 'arch', p.runtime_arch,
-             'sqlite', p.runtime_sqlite, 'timezone', p.runtime_timezone`,
-          ),
-        )
-        .bind(activeCutoff),
-      db
-        .prepare(
-          unpivot(
-            `'auth_enabled', p.config_auth_enabled, 'guest_access', p.config_guest_access,
-             'registration_open', p.config_registration_open,
-             'update_check_enabled', p.config_update_check_enabled,
-             'default_locale', p.config_default_locale,
-             'rate_limit_overrides', p.config_rate_limit_overrides`,
-          ),
-        )
-        .bind(activeCutoff),
-      db
-        .prepare(
-          unpivot(
-            `'users', p.scale_users, 'calendars', p.scale_calendars, 'shifts', p.scale_shifts,
-             'presets', p.scale_presets, 'notes', p.scale_notes, 'bundles', p.scale_bundles,
-             'shares', p.scale_shares, 'access_tokens', p.scale_access_tokens,
-             'signups', p.scale_signups`,
-          ),
-        )
-        .bind(activeCutoff),
-      db
-        .prepare(
-          unpivot(
-            `'external_syncs', p.features_external_syncs,
-             'calendar_view_overrides', p.features_calendar_view_overrides,
-             'custom_fields_count', p.features_custom_fields_count,
-             'archived_presets', p.features_archived_presets,
-             'split_shifts', p.features_split_shifts`,
-          ),
-        )
-        .bind(activeCutoff),
-      db
-        .prepare(
-          `SELECT t.value AS value, COUNT(DISTINCT p.id) AS instances
-           FROM latest_pings AS p, json_each(p.features_custom_field_types) AS t
-           WHERE p.received_at >= ?1 GROUP BY t.value`,
-        )
-        .bind(activeCutoff),
-      db
-        .prepare(
-          `SELECT ROUND(AVG(health_uptime_hours), 1) AS avg_uptime,
-                  SUM(CASE WHEN health_sync_failures_24h > 0 THEN 1 ELSE 0 END) AS with_failures
-           FROM latest_pings WHERE received_at >= ?1`,
-        )
-        .bind(activeCutoff),
-    ]);
+  const [mega, history] = await db.batch([
+    db.prepare(MEGA_SQL).bind(activeCutoff, weekCutoff),
+    db
+      .prepare(
+        `SELECT ping_day AS day, COUNT(DISTINCT COALESCE(instance_id, 'anon:' || id)) AS instances
+         FROM instance_pings WHERE ping_day >= ?1 GROUP BY ping_day ORDER BY day`,
+      )
+      .bind(historyCutoff),
+  ]);
 
-  const totalsRow = (totals.results[0] ?? {}) as Record<string, number>;
-  const base = Number(totalsRow.total ?? 0);
+  const megaRow = (mega.results[0] ?? {}) as Record<string, unknown>;
+  const base = Number(megaRow.total ?? 0);
 
   const instances = {
     total: base,
-    activeLast7Days: Number(totalsRow.active_7d ?? 0),
-    newLast30Days: Number(totalsRow.new_30d ?? 0),
+    activeLast7Days: Number(megaRow.active_7d ?? 0),
+    newLast30Days: Number(megaRow.new_30d ?? 0),
   };
 
-  const healthRow = (health.results[0] ?? {}) as Record<string, number | null>;
-
-  const versionRows = versions.results as unknown as Array<{
-    value: string;
-    instances: number;
-    dev_instances: number;
-  }>;
+  const versionRows = parseJsonArray<VersionJsonRow>(megaRow.versions_json);
 
   return {
     computedAt: now.toISOString(),
@@ -264,17 +282,17 @@ export async function buildAggregate(db: D1Database, now: Date = new Date()): Pr
       })),
       base,
     ),
-    environment: groupByKey(environment.results as unknown as RawGroup[], base),
-    configuration: groupByKey(configuration.results as unknown as RawGroup[], base),
-    sizes: groupByKey(sizes.results as unknown as RawGroup[], base),
-    features: groupByKey(features.results as unknown as RawGroup[], base),
+    environment: groupByKey(parseJsonArray<RawGroup>(megaRow.environment_json), base),
+    configuration: groupByKey(parseJsonArray<RawGroup>(megaRow.configuration_json), base),
+    sizes: groupByKey(parseJsonArray<RawGroup>(megaRow.sizes_json), base),
+    features: groupByKey(parseJsonArray<RawGroup>(megaRow.features_json), base),
     customFieldTypes: collapse(
-      (fieldTypes.results as unknown as RawGroup[]).map((r) => ({ ...r, key: "types" })),
+      parseJsonArray<RawGroup>(megaRow.field_types_json).map((r) => ({ ...r, key: "types" })),
       base,
     ),
     health: {
-      avgUptimeHours: Number(healthRow.avg_uptime ?? 0),
-      instancesWithSyncFailures: Number(healthRow.with_failures ?? 0),
+      avgUptimeHours: Number(megaRow.avg_uptime ?? 0),
+      instancesWithSyncFailures: Number(megaRow.with_failures ?? 0),
     },
   };
 }

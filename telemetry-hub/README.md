@@ -197,7 +197,11 @@ The `queries/` reports and this ad-hoc SQL run against the raw `instance_pings` 
 
 ## Cost
 
-Everything here fits in the Cloudflare free plan, which covers 100,000 D1 row writes and 5 million row reads per day and 5 GB of storage. One instance writes one row per day, and a row is roughly 300 bytes — a hundred instances reporting daily for a year is about 36,000 rows, some 11 MB. Since 1 September 2026 Cloudflare returns errors on free accounts that exceed the daily row limits instead of billing for them, so the plan cannot turn into a surprise invoice.
+Everything here fits in the Cloudflare free plan, which covers 100,000 D1 row writes and 5 million row reads per day and 5 GB of storage. One instance writes one row per day, and a row is roughly 300 bytes — a hundred instances reporting daily for a year is about 36,000 rows, some 11 MB, well inside the write limit.
+
+Reads are a separate budget, and the hourly cron is what spends it, not the writes above. `buildAggregate()` (`src/aggregate.ts`) scans the ping history once per run to resolve `latest_pings` — each instance's newest ping — then computes every breakdown (versions, environment, configuration, sizes, features, custom field types, health) from that one filtered, materialized set instead of re-deriving it per breakdown. At the 36,000-row example above, one run reads on the order of 36,000 rows; 24 runs a day is roughly 864,000 rows/day, comfortably under the 5M/day limit. Querying `latest_pings` independently for each of those seven breakdowns instead — as an earlier version of this query did — reads the full ping history again each time: roughly 9× per run, about 7.8M rows/day at the same example, over the free-tier read limit with no warning beyond the cron silently failing. `EXPLAIN QUERY PLAN` on `buildAggregate()`'s query shows a single `MATERIALIZE active` step feeding every breakdown, which is what keeps this bounded as the ping history grows.
+
+Since 1 September 2026 Cloudflare returns errors on free accounts that exceed the daily row limits instead of billing for them, so the plan cannot turn into a surprise invoice.
 
 ## Operating It
 
