@@ -1,4 +1,5 @@
 import { buildAggregate, readAggregate, storeAggregate } from "./aggregate";
+import { renderPage } from "./page";
 import { parseV1 } from "./schemas/v1";
 import { storeInD1 } from "./targets/d1";
 
@@ -28,8 +29,13 @@ export default {
     if (pathname !== "/") return new Response(null, { status: 404 });
 
     if (request.method === "GET") {
-      // Task 5 replaces this with the rendered page.
-      return new Response(null, { status: 404 });
+      const aggregate = await readAggregate(env.bettershift_telemetry);
+      return new Response(renderPage(aggregate), {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=900",
+        },
+      });
     }
 
     if (request.method !== "POST") return new Response(null, { status: 405 });
