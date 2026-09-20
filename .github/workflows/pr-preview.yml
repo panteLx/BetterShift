@@ -138,7 +138,6 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
           PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_CADDY_NETWORK: ${{ vars.PREVIEW_CADDY_NETWORK }}
-          PREVIEW_CADDY_IMPORT: ${{ vars.PREVIEW_CADDY_IMPORT }}
           PREVIEW_IMAGE: ghcr.io/pantelx/bettershift:pr-${{ github.event.number }}
           PREVIEW_BASIC_AUTH_HASH: ${{ secrets.PREVIEW_BASIC_AUTH_HASH }}
           PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
