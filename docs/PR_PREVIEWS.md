@@ -86,6 +86,8 @@ Repository secrets the `deploy` job in `.github/workflows/pr-preview.yml` requir
 | `PREVIEW_ADMIN_PASSWORD` | password for the seed admin account |
 | `PREVIEW_CF_BYPASS_TOKEN` | optional — shared value for the `X-Preview-CI-Bypass` header, see [Cloudflare in Front](#cloudflare-in-front) |
 
+The Komodo user behind `KOMODO_API_KEY` needs permissions on two resource types, not one. On **Stacks**, level `Write` — that covers creating, updating and deleting them as well as the `Execute` that deploy and destroy need. On the **Server** named by `KOMODO_SERVER_ID`, level `Read` plus the specific permission `Attach`: Komodo checks separately whether a user may hang a new stack onto a given server, and without it `/write/CreateStack` fails with `Cannot attach Stack to this Server` even though every stack permission is in place. In TOML form that second part reads `all.Server = { level = "Read", specific = ["Attach"] }`.
+
 Generate the hash with:
 
 ```bash
