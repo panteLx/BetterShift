@@ -17,11 +17,11 @@ This guide explains the automated preview environments BetterShift spins up for 
 
 ## What It Does
 
-Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance a few minutes later, at `https://pr-<number>.<PREVIEW_DOMAIN>`. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
+Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance at `https://pr-<number>.<PREVIEW_DOMAIN>`. Usually that takes a few minutes; in the worst case it takes considerably longer, because the deploy job first waits for the PR's image to finish building — that wait alone is allowed to run for up to 25 minutes. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
 
 Closing the PR, or removing the `preview` label again, tears the instance down completely — container and data, nothing left behind. Reopening a closed PR that still carries the `preview` label deploys it again, the same way a `synchronize` push does: fresh container, freshly reseeded database.
 
-A pull request from a fork never gets a preview: `.github/workflows/pr-preview.yml` checks `head.repo.full_name` against the target repository and, for a fork PR that gets labeled `preview`, only posts an explanatory comment instead of deploying anything. Fork PRs don't get repository secrets or a pushed image, so there would be nothing to deploy against anyway.
+A pull request from a fork never gets a preview: `.github/workflows/pr-preview.yml` checks `head.repo.full_name` against the target repository and, for a fork PR that gets labeled `preview`, only writes an explanatory `::notice::` into the job log instead of deploying anything. It is a log line rather than a PR comment on purpose: a `pull_request` event from a fork gets a read-only `GITHUB_TOKEN` no matter what the workflow's `permissions:` block says, so posting a comment would simply fail with a 403. Whoever added the label has write access and can read the job. Fork PRs don't get repository secrets or a pushed image, so there would be nothing to deploy against anyway.
 
 ## Prerequisites on the Server
 
@@ -35,11 +35,18 @@ Before the first preview can go live, the server that Komodo deploys to needs:
   docker inspect <caddy-container> --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
   ```
 
-- A Komodo instance reachable over HTTPS, with an API key/secret pair (`KOMODO_API_KEY` / `KOMODO_API_SECRET`) that can create, update, deploy, and delete stacks on the target server.
+- A Komodo instance reachable over HTTPS, with an API key/secret pair (`KOMODO_API_KEY` / `KOMODO_API_SECRET`) that can create, update, deploy, and delete stacks on the target server. Scope that key to the preview server only. Do **not** use an admin key: the same credentials would be able to reach and destroy your production stacks, and they live in a repository that anyone can open a pull request against.
+- The GHCR package `ghcr.io/pantelx/bettershift` has to be **public**. The compose file `scripts/preview-stack.mjs` generates carries no registry credentials, so the Komodo host pulls the `pr-<n>` tag anonymously. If you keep the package private, the pull fails with "unauthorized" and you have to attach a Komodo `registry_account` to the stack config instead (and add the corresponding field in `stackConfig()`).
+
+### Image Cleanup Is Your Job
+
+Nothing in this feature prunes images. `docker compose down` — what a teardown runs — removes containers, not images, and every PR pulls a fresh `pr-<n>` image that then sits on the host forever. The first symptom of a full disk is usually an unrelated deploy failing, so treat this as a standing operator duty: run `docker image prune -af --filter "until=168h"` periodically on the preview host (a cron job, or a scheduled prune in Komodo).
+
+The `pr-<n>` tags on ghcr.io are never deleted either, neither by the preview workflow nor by `docker-dev.yml`. That is a deliberate choice — tags cost little and keeping them makes a preview reproducible after the fact — not an oversight.
 
 ### One-Time Setup Checks
 
-Two things depend on versions nobody here could verify in advance. Check both once, when setting this up on your server:
+Three things depend on versions nobody here could verify in advance. Check them once, when setting this up on your server:
 
 **1. Caddy version, for the Basic Auth label.** The compose file `scripts/preview-stack.mjs` generates uses the label `caddy.basic_auth.preview`. Caddy renamed the directive from `basicauth` to `basic_auth` in Caddy 2.8. Check your running version:
 
@@ -60,9 +67,11 @@ curl -s -X POST "$KOMODO_URL/read/GetStack" \
 
 If that comes back as an array rather than a string, the `environment` value built in `stackConfig()` in `scripts/preview-stack.mjs` needs to become an array of `"KEY=value"` strings instead of the joined string it is today.
 
+**3. Komodo's request shape.** `komodo()` in `scripts/preview-stack.mjs` posts to one endpoint per call with the params as the body — `POST /read/GetStack` with `{"stack": …}`, `POST /execute/DeployStack` with `{"stack": …}`, and so on. Some Komodo versions instead expose a single endpoint per category and expect the call to be named in the body: `POST /read` with `{"type": "GetStack", "params": {"stack": …}}`. The curl above is the test: a `404` or `405` on `/read/GetStack` means your instance wants the other shape, and `komodo()` has to be changed to take a type plus params and post to `/read`, `/write` or `/execute`.
+
 ## Secrets
 
-Repository secrets the `deploy` job in `.github/workflows/pr-preview.yml` requires:
+Repository secrets the `deploy` job in `.github/workflows/pr-preview.yml` requires. Configure them under **Settings → Secrets and variables → Actions → Secrets** (repository secrets, not environment secrets):
 
 | Secret | Contents |
 | --- | --- |
@@ -83,11 +92,13 @@ Store its output in `PREVIEW_BASIC_AUTH_HASH` exactly as printed — plain, unes
 
 `PREVIEW_BASIC_AUTH_PASSWORD` has to hold the plain-text password, not just the hash, because both the workflow's health check (a plain `curl` request) and `scripts/seed-preview.mjs` need to authenticate through Basic Auth themselves before they can reach the app at all.
 
+`PREVIEW_ADMIN_PASSWORD` has two constraints. It must be **at least 8 characters** long — better-auth enforces that minimum on `/api/auth/sign-up/email`, and a shorter one makes `scripts/seed-preview.mjs` fail with an opaque `400` that says nothing about the length. And it must be a **throwaway used nowhere else**: the deploy job writes it into the sticky PR comment in plain text, on a public repository, so anyone can read it. The member account the seed script creates (`mitarbeiter@preview.local`) is registered with the same password.
+
 The Basic Auth username is fixed to `preview` — it's hardcoded into the compose label key (`caddy.basic_auth.preview`) and into the workflow's health-check `curl` call, and it's the default `scripts/seed-preview.mjs` falls back to (`PREVIEW_BASIC_AUTH_USER`, which this workflow never sets). There is no repository variable for it.
 
 ## Variables
 
-Repository variables the `deploy` job reads:
+Repository variables the `deploy` job reads. Same place, one tab over: **Settings → Secrets and variables → Actions → Variables**. `KOMODO_URL` doubles as the feature's on/off switch — while it is unset, the `teardown` job skips itself, so closing a PR on a repository that has no preview server configured doesn't produce a red job.
 
 | Variable | Example |
 | --- | --- |
@@ -105,8 +116,16 @@ PR gets the label "preview"
         ▼
 .github/workflows/pr-preview.yml (job: deploy)
         │
-        ├─ wait for the "build-dev" check run (from the "Docker Dev Build"
-        │   workflow) to succeed for the PR's head SHA
+        ├─ wait (up to 25 min) for the "build-dev" check run (from the
+        │   "Docker Dev Build" workflow) on the PR's head SHA
+        │       ├─ success            → carry on
+        │       ├─ failure/cancelled  → job fails
+        │       └─ still no run after 3 min (docker-dev.yml has paths-ignore
+        │           for messages/**, docs/** and **/*.md, so this commit
+        │           never triggered a build)
+        │               ├─ tag pr-<n> exists from an earlier push → carry on,
+        │               │   and mark the deploy as running an older image
+        │               └─ no tag at all → job fails
         ├─ node scripts/preview-stack.mjs deploy
         │       ├─ Komodo /read/GetStack, then /write/CreateStack or /write/UpdateStack
         │       └─ Komodo /execute/DeployStack (destroy_before_deploy: true)
@@ -114,11 +133,14 @@ PR gets the label "preview"
         │                       └─ container carrying the Caddy labels
         │                               └─ caddy-docker-proxy picks up the
         │                                   subdomain live, no reload needed
-        ├─ wait for GET /api/health == 200 (through Basic Auth)
+        ├─ wait up to 5 min for GET /api/health == 200 (through Basic Auth)
         ├─ node scripts/seed-preview.mjs
-        └─ sticky PR comment ("### Preview bereit") created or updated
+        └─ sticky PR comment ("### Preview bereit") created or updated,
+            naming the head commit — or, on the fallback path above,
+            saying that the image comes from an earlier commit
 
 PR is closed  /  the "preview" label is removed
+  /  the workflow is started by hand (Run workflow, with a PR number)
         │
         ▼
 .github/workflows/pr-preview.yml (job: teardown)
@@ -141,7 +163,9 @@ A few things distinguish a preview container from a normal deployment:
 
 ## Manual Cleanup
 
-If a teardown run failed, or a stack was left standing on purpose after a broken deploy (see the next paragraph), remove it by hand:
+If a teardown run failed, or a stack was left standing on purpose after a broken deploy (see the paragraph after next), the easiest fix is the workflow's manual entry point: **Actions → PR Preview → Run workflow**, enter the PR number, start it. That runs the `teardown` job for exactly that PR — destroy the stack, delete it in Komodo, rewrite the sticky comment — without needing any further event on the PR. A closed PR emits no event you could retry, so this is the only in-GitHub way back.
+
+Alternatively, from a checkout with the Komodo credentials at hand:
 
 ```bash
 KOMODO_URL=… KOMODO_API_KEY=… KOMODO_API_SECRET=… PR_NUMBER=<n> \
