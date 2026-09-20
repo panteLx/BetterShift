@@ -6,7 +6,8 @@ on:
 
 permissions:
   contents: read
-  actions: read
+  checks: read
+  packages: read
   pull-requests: write
 
 # Deploy und Teardown teilen sich eine Gruppe: ein Schließen des PRs soll ein
