@@ -60,7 +60,6 @@ jobs:
           KOMODO_SERVER_ID: ${{ vars.KOMODO_SERVER_ID }}
           PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_CADDY_NETWORK: ${{ vars.PREVIEW_CADDY_NETWORK }}
-          PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
           KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
           KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
           PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
@@ -70,7 +69,7 @@ jobs:
         run: |
           missing=""
           for name in KOMODO_URL KOMODO_SERVER_ID PREVIEW_DOMAIN PREVIEW_CADDY_NETWORK \
-                      PREVIEW_ADMIN_EMAIL KOMODO_API_KEY KOMODO_API_SECRET \
+                      KOMODO_API_KEY KOMODO_API_SECRET \
                       PREVIEW_BETTER_AUTH_SECRET PREVIEW_BASIC_AUTH_HASH \
                       PREVIEW_BASIC_AUTH_PASSWORD PREVIEW_ADMIN_PASSWORD; do
             eval "value=\${$name}"
@@ -142,22 +141,40 @@ jobs:
           PREVIEW_IMAGE: ghcr.io/pantelx/bettershift:pr-${{ github.event.number }}
           PREVIEW_BASIC_AUTH_HASH: ${{ secrets.PREVIEW_BASIC_AUTH_HASH }}
           PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
+          PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/preview-stack.mjs deploy
 
       - name: Wait for the instance
         env:
           URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           BASIC_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
+          CF_BYPASS: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: |
           # Has to cover a registry pull, the migration, the Next.js boot and Caddy's first ACME issuance.
           deadline=$(( $(date +%s) + 300 ))
+          # Three in a row, not one: right after a redeploy the proxy may still
+          # hold the old container as an upstream and answer at random.
+          ok=0
           while [ "$(date +%s)" -lt "$deadline" ]; do
-            if curl -sf -u "preview:$BASIC_PASSWORD" "$URL/api/health" >/dev/null; then
-              echo "Instanz ist erreichbar."
-              exit 0
+            if curl -sf -u "preview:$BASIC_PASSWORD" -H "X-Preview-CI-Bypass: $CF_BYPASS" \
+                 "$URL/api/health" >/dev/null; then
+              ok=$(( ok + 1 ))
+              if [ "$ok" -ge 3 ]; then
+                echo "Instanz ist erreichbar."
+                exit 0
+              fi
+            else
+              ok=0
             fi
             sleep 5
           done
+          # A Cloudflare challenge looks exactly like a dead instance to curl -f.
+          body=$(curl -s -u "preview:$BASIC_PASSWORD" -H "X-Preview-CI-Bypass: $CF_BYPASS" "$URL/api/health" || true)
+          case "$body" in
+            *"Just a moment"*|*"challenges.cloudflare.com"*)
+              echo "::error::Cloudflare is challenging $URL instead of passing the request through. The X-Preview-CI-Bypass header needs a matching WAF skip rule (see docs/PR_PREVIEWS.md)."
+              exit 1 ;;
+          esac
           echo "::error::$URL/api/health is not answering. The stack is left standing for debugging."
           exit 1
 
@@ -165,8 +182,10 @@ jobs:
         env:
           PREVIEW_URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_BASIC_AUTH_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
-          PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          PREVIEW_ADMIN_EMAIL: admin@${{ vars.PREVIEW_DOMAIN }}
+          PREVIEW_MEMBER_EMAIL: member@${{ vars.PREVIEW_DOMAIN }}
           PREVIEW_ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
+          PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/seed-preview.mjs
 
       - name: Comment on the PR
@@ -174,7 +193,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.number }}
           URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
-          ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          ADMIN_EMAIL: admin@${{ vars.PREVIEW_DOMAIN }}
+          MEMBER_EMAIL: member@${{ vars.PREVIEW_DOMAIN }}
           ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
           SHA: ${{ github.event.pull_request.head.sha }}
           STALE_IMAGE: ${{ steps.image.outputs.stale }}
@@ -191,7 +211,10 @@ jobs:
 
           **$URL**
 
-          Sign in with \`$ADMIN_EMAIL\` / \`$ADMIN_PASSWORD\`
+          | Account | E-mail | Password |
+          | --- | --- | --- |
+          | Admin (superadmin, owns both calendars) | \`$ADMIN_EMAIL\` | \`$ADMIN_PASSWORD\` |
+          | Member (Contribute bundle on "Dienstplan Team A") | \`$MEMBER_EMAIL\` | \`$ADMIN_PASSWORD\` |
 
           The instance sits behind basic auth (user \`preview\`). Every further push resets
           it and seeds the demo data again.
@@ -211,11 +234,14 @@ jobs:
     name: Tear the preview down
     # vars.KOMODO_URL as the switch: secrets are not readable in a job-level `if`,
     # repository variables are. With no configuration there is nothing to tear down.
+    # On `closed` the label is still on the payload, so it gates the run: without it
+    # this PR never had a preview and there is no stack to destroy.
     if: >-
       vars.KOMODO_URL != '' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.pull_request.head.repo.full_name == github.repository &&
-        (github.event.action == 'closed' ||
+        ((github.event.action == 'closed' &&
+          contains(github.event.pull_request.labels.*.name, 'preview')) ||
          (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -232,6 +258,7 @@ jobs:
           KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
           KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
           PR_NUMBER: ${{ github.event.number || inputs.pr_number }}
+          PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/preview-stack.mjs destroy
 
       - name: Update the comment

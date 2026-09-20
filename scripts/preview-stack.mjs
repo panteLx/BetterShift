@@ -49,10 +49,26 @@ function redact(text) {
   return masked.length > 2000 ? `${masked.slice(0, 2000)}… [truncated]` : masked;
 }
 
+/**
+ * Cloudflare answers a challenge with an HTML page, not JSON — without this the
+ * failure reads as an unexplained 403 with a page of markup glued to it.
+ */
+function isCloudflareChallenge(text) {
+  return /Just a moment|cf-browser-verification|challenges\.cloudflare\.com/i.test(text || "");
+}
+
+// Sent on every request so a Cloudflare WAF rule can skip its security checks
+// for CI (see docs/PR_PREVIEWS.md). Unset means no Cloudflare in front.
+function bypassHeader() {
+  const token = process.env.PREVIEW_CF_BYPASS_TOKEN;
+  return token ? { "x-preview-ci-bypass": token } : {};
+}
+
 async function komodo(path, body) {
   const res = await fetch(`${process.env.KOMODO_URL.replace(/\/$/, "")}${path}`, {
     method: "POST",
     headers: {
+      ...bypassHeader(),
       "content-type": "application/json",
       "x-api-key": process.env.KOMODO_API_KEY,
       "x-api-secret": process.env.KOMODO_API_SECRET,
@@ -61,6 +77,16 @@ async function komodo(path, body) {
   });
   const text = await res.text();
   if (!res.ok) {
+    if (isCloudflareChallenge(text)) {
+      const error = new Error(
+        `${path} -> ${res.status}: Cloudflare served a challenge instead of passing the request to Komodo. ` +
+          "Add a WAF rule that skips the security checks for the X-Preview-CI-Bypass header and store its " +
+          "value in the PREVIEW_CF_BYPASS_TOKEN secret (see docs/PR_PREVIEWS.md)."
+      );
+      error.status = res.status;
+      error.bodyText = text;
+      throw error;
+    }
     const error = new Error(`${path} -> ${res.status}: ${redact(text)}`);
     error.status = res.status;
     error.bodyText = text;
@@ -108,7 +134,7 @@ function composeFile({ image, host, network, tz, locale }) {
     `    image: ${image}`,
     "    pull_policy: always",
     "    restart: unless-stopped",
-    "    networks: [caddy]",
+    `    networks: [${network}]`,
     "    environment:",
     '      AUTH_ENABLED: "true"',
     '      ALLOW_USER_REGISTRATION: "true"',
@@ -123,14 +149,15 @@ function composeFile({ image, host, network, tz, locale }) {
     // it is confirmed off for the preview domain.
     '      CSP_STRICT_DYNAMIC_BYPASS: "true"',
     "    labels:",
-    `      caddy: ${host}`,
+    // http:// on purpose: Cloudflare terminates TLS, so Caddy must not try to
+    // get its own certificate for a name that never resolves to it directly.
+    `      caddy: http://${host}`,
     '      caddy.reverse_proxy: "{{upstreams 3000}}"',
     '      caddy.basic_auth.preview: "${BASIC_AUTH_HASH}"',
     "",
     "networks:",
-    "  caddy:",
+    `  ${network}:`,
     "    external: true",
-    `    name: ${network}`,
     "",
   ].join("\n");
 }
@@ -171,7 +198,10 @@ async function findStack(name) {
   try {
     return await komodo("/read/GetStack", { stack: name });
   } catch (error) {
-    if (error.status === 404 || /not found|does not exist/i.test(error.bodyText || "")) {
+    if (isCloudflareChallenge(error.bodyText)) throw error;
+    // Komodo answers an unknown stack with 500 and "Did not find any Stack
+    // matching <name>", so the status alone says nothing — match the wording too.
+    if (error.status === 404 || /not found|does not exist|did not find/i.test(error.bodyText || "")) {
       return null;
     }
     throw error;

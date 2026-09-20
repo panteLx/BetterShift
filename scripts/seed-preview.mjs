@@ -19,7 +19,7 @@ function requireEnv(name) {
 const BASE = requireEnv("PREVIEW_URL").replace(/\/$/, "");
 const ADMIN_EMAIL = requireEnv("PREVIEW_ADMIN_EMAIL");
 const ADMIN_PASSWORD = requireEnv("PREVIEW_ADMIN_PASSWORD");
-const MEMBER_EMAIL = process.env.PREVIEW_MEMBER_EMAIL || "mitarbeiter@preview.local";
+const MEMBER_EMAIL = process.env.PREVIEW_MEMBER_EMAIL || `member@${new URL(BASE).hostname}`;
 const BASIC_USER = process.env.PREVIEW_BASIC_AUTH_USER || "preview";
 const BASIC_PASSWORD = process.env.PREVIEW_BASIC_AUTH_PASSWORD || "";
 
@@ -28,13 +28,47 @@ const BASIC_HEADER = BASIC_PASSWORD
   ? { authorization: "Basic " + Buffer.from(`${BASIC_USER}:${BASIC_PASSWORD}`).toString("base64") }
   : {};
 
+// Lets a Cloudflare WAF rule skip its security checks for CI requests
+// (see docs/PR_PREVIEWS.md). Unset means no Cloudflare in front.
+const BYPASS_HEADER = process.env.PREVIEW_CF_BYPASS_TOKEN
+  ? { "x-preview-ci-bypass": process.env.PREVIEW_CF_BYPASS_TOKEN }
+  : {};
+
 let cookie = "";
 
-async function api(path, { method = "GET", body } = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Right after a redeploy the proxy can still hold the old container as an
+ * upstream, so single requests come back as a gateway error while others
+ * succeed. Retrying is worth the small risk of creating a row twice: every
+ * push wipes the database anyway, but a failed seed fails the whole deploy.
+ */
+const TRANSIENT = new Set([502, 503, 504]);
+
+async function request(path, { method, body }) {
+  for (let attempt = 1; ; attempt += 1) {
+    let res;
+    try {
+      res = await send(path, { method, body });
+    } catch (error) {
+      if (attempt >= 5) throw error;
+      console.warn(`${method} ${path} failed (${error.message}) — retry ${attempt}/4.`);
+      await sleep(2000);
+      continue;
+    }
+    if (!TRANSIENT.has(res.status) || attempt >= 5) return res;
+    console.warn(`${method} ${path} -> ${res.status} from the proxy — retry ${attempt}/4.`);
+    await sleep(2000);
+  }
+}
+
+async function send(path, { method = "GET", body } = {}) {
+  return fetch(`${BASE}${path}`, {
     method,
     headers: {
       ...BASIC_HEADER,
+      ...BYPASS_HEADER,
       "content-type": "application/json",
       // Node's fetch sends `sec-fetch-mode: cors` (unlike a browser it never adds
       // Origin itself), which trips better-auth's CSRF check unless we set it.
@@ -43,6 +77,10 @@ async function api(path, { method = "GET", body } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+}
+
+async function api(path, { method = "GET", body } = {}) {
+  const res = await request(path, { method, body });
 
   const setCookies = res.headers.getSetCookie();
   if (setCookies.length > 0) {
@@ -51,6 +89,12 @@ async function api(path, { method = "GET", body } = {}) {
 
   const text = await res.text();
   if (!res.ok) {
+    if (/Just a moment|challenges\.cloudflare\.com/i.test(text)) {
+      throw new Error(
+        `${method} ${path} -> ${res.status}: Cloudflare served a challenge instead of the app. ` +
+          "The X-Preview-CI-Bypass header needs a matching WAF skip rule (see docs/PR_PREVIEWS.md)."
+      );
+    }
     const error = new Error(`${method} ${path} -> ${res.status}: ${text}`);
     error.status = res.status;
     error.bodyText = text;
