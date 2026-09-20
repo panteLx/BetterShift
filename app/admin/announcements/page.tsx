@@ -20,9 +20,29 @@ export default function AdminAnnouncementsPage() {
   const { announcements, isLoading } = useAdminAnnouncements();
   const { createAnnouncement, updateAnnouncement, deleteAnnouncement, isSaving } =
     useAdminAnnouncementActions();
+  // null means create mode; the sheet's `open` prop lives separately below so
+  // closing never has to clear this — that would tie it to the same state
+  // that flips `open` false, see `sheetKey` below.
   const [editing, setEditing] = useState<AdminAnnouncement | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // Bumped only when opening for create/edit, never when closing: used solely as
+  // the sheet's `key` so every open gets a fresh form (even reopening the same
+  // target), while every close path leaves the key — and the exit animation —
+  // undisturbed.
+  const [sheetKey, setSheetKey] = useState(0);
   const [deleting, setDeleting] = useState<AdminAnnouncement | null>(null);
+
+  const openCreate = () => {
+    setEditing(null);
+    setSheetKey((key) => key + 1);
+    setSheetOpen(true);
+  };
+
+  const openEdit = (announcement: AdminAnnouncement) => {
+    setEditing(announcement);
+    setSheetKey((key) => key + 1);
+    setSheetOpen(true);
+  };
 
   if (isLoading) return <FullscreenLoader />;
 
@@ -34,7 +54,7 @@ export default function AdminAnnouncementsPage() {
         actions={
           <Button
             variant="outline"
-            onClick={() => setCreating(true)}
+            onClick={openCreate}
             className="h-[38px] gap-2 rounded-[9px] font-semibold"
           >
             <Plus className="size-4" />
@@ -44,7 +64,7 @@ export default function AdminAnnouncementsPage() {
         mobileActions={
           <button
             type="button"
-            onClick={() => setCreating(true)}
+            onClick={openCreate}
             aria-label={t("admin.announcements.create")}
             className="flex size-[34px] items-center justify-center rounded-[9px] border border-line text-fg-secondary"
           >
@@ -65,20 +85,15 @@ export default function AdminAnnouncementsPage() {
       ) : (
         <AnnouncementTable
           announcements={announcements}
-          onEdit={(announcement) => setEditing(announcement)}
+          onEdit={openEdit}
           onDelete={(announcement) => setDeleting(announcement)}
         />
       )}
 
       <AnnouncementEditSheet
-        key={editing?.id ?? (creating ? "create" : "closed")}
-        open={creating || editing !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCreating(false);
-            setEditing(null);
-          }
-        }}
+        key={sheetKey}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
         announcement={editing}
         isSaving={isSaving}
         onSubmit={async (payload) => {
