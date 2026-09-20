@@ -106,7 +106,7 @@ UI strings and log output are product text in the project's locales; code commen
 
 ## Reference
 
-`docs/AUTH_SETUP.md`, `docs/PERMISSIONS.md`, `docs/ADMIN_PANEL.md`, `docs/ENABLING_AUTH.md`, `docs/UPGRADING.md`; `.env.example` documents every environment variable with its default.
+`docs/AUTH_SETUP.md`, `docs/PERMISSIONS.md`, `docs/ADMIN_PANEL.md`, `docs/ENABLING_AUTH.md`, `docs/UPGRADING.md`, `docs/PR_PREVIEWS.md`; `.env.example` documents every environment variable with its default.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

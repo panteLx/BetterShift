@@ -1,0 +1,253 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Number of the PR whose preview should be torn down"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: read
+  packages: read
+  pull-requests: write
+
+env:
+  PREVIEW_LABEL: preview
+  STACK_COMMENT_MARKER: "<!-- pr-preview -->"
+
+jobs:
+  fork-notice:
+    name: Fork notice
+    if: >-
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'preview' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      # A fork PR only gets a read-only token, so `gh pr comment` would 403.
+      - name: Print the notice
+        run: |
+          echo "::notice::Pull requests from a fork get no preview: the workflow has neither the secrets nor an image pushed to ghcr.io there."
+
+  deploy:
+    name: Deploy the preview
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      (github.event.action == 'synchronize' ||
+       github.event.action == 'reopened' ||
+       (github.event.action == 'labeled' && github.event.label.name == 'preview'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Job level, not workflow level: a skipped job must not cancel a running
+    # teardown. Same group as teardown, so closing the PR cancels a deploy in
+    # flight — otherwise it would recreate the stack that was just removed.
+    concurrency:
+      group: pr-preview-${{ github.event.number || inputs.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check the configuration
+        env:
+          KOMODO_URL: ${{ vars.KOMODO_URL }}
+          KOMODO_SERVER_ID: ${{ vars.KOMODO_SERVER_ID }}
+          PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
+          PREVIEW_CADDY_NETWORK: ${{ vars.PREVIEW_CADDY_NETWORK }}
+          PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
+          KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
+          PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
+          PREVIEW_BASIC_AUTH_HASH: ${{ secrets.PREVIEW_BASIC_AUTH_HASH }}
+          PREVIEW_BASIC_AUTH_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
+          PREVIEW_ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
+        run: |
+          missing=""
+          for name in KOMODO_URL KOMODO_SERVER_ID PREVIEW_DOMAIN PREVIEW_CADDY_NETWORK \
+                      PREVIEW_ADMIN_EMAIL KOMODO_API_KEY KOMODO_API_SECRET \
+                      PREVIEW_BETTER_AUTH_SECRET PREVIEW_BASIC_AUTH_HASH \
+                      PREVIEW_BASIC_AUTH_PASSWORD PREVIEW_ADMIN_PASSWORD; do
+            eval "value=\${$name}"
+            [ -z "$value" ] && missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secrets or variables:$missing"
+            exit 1
+          fi
+
+      # Only needed for the imagetools fallback in the next step.
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for the PR image
+        id: image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.number }}
+        run: |
+          # docker-dev.yml builds the pr-<n> tag; its job is named "build-dev".
+          start=$(date +%s)
+          deadline=$(( start + 1500 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            # Read gh's own exit status: a 403 or a network error must not look
+            # like "no run yet", or the fallback below would kick in.
+            if ! runs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+                    --jq '.check_runs[] | select(.name=="build-dev") | "\(.status) \(.conclusion)"' \
+                    2>"$RUNNER_TEMP/gh-err.txt"); then
+              echo "::error::Could not query the check runs: $(cat "$RUNNER_TEMP/gh-err.txt")"
+              exit 1
+            fi
+            run=$(printf '%s\n' "$runs" | head -1)
+            case "$run" in
+              "completed success") echo "Image-Build fertig."; exit 0 ;;
+              "completed "*) echo "::error::The image build ended as: $run"; exit 1 ;;
+            esac
+            # docker-dev.yml has paths-ignore for messages/**, docs/** and **/*.md.
+            # If no run has appeared after three minutes, this commit has none — then
+            # all that counts is whether an earlier push left the tag behind.
+            if [ -z "$run" ] && [ "$(( $(date +%s) - start ))" -ge 180 ]; then
+              if docker buildx imagetools inspect "ghcr.io/pantelx/bettershift:pr-$PR" >/dev/null 2>&1; then
+                echo "::notice::No build for $SHA (paths-ignore); using the existing tag pr-$PR."
+                echo "stale=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "::error::No build for $SHA and no image pr-$PR. Push a commit that triggers the build first."
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for the image build for $SHA."
+          exit 1
+
+      - name: Deploy the stack
+        env:
+          KOMODO_URL: ${{ vars.KOMODO_URL }}
+          KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
+          KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
+          KOMODO_SERVER_ID: ${{ vars.KOMODO_SERVER_ID }}
+          PR_NUMBER: ${{ github.event.number }}
+          PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
+          PREVIEW_CADDY_NETWORK: ${{ vars.PREVIEW_CADDY_NETWORK }}
+          PREVIEW_IMAGE: ghcr.io/pantelx/bettershift:pr-${{ github.event.number }}
+          PREVIEW_BASIC_AUTH_HASH: ${{ secrets.PREVIEW_BASIC_AUTH_HASH }}
+          PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
+        run: node scripts/preview-stack.mjs deploy
+
+      - name: Wait for the instance
+        env:
+          URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
+          BASIC_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
+        run: |
+          # Has to cover a registry pull, the migration, the Next.js boot and Caddy's first ACME issuance.
+          deadline=$(( $(date +%s) + 300 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            if curl -sf -u "preview:$BASIC_PASSWORD" "$URL/api/health" >/dev/null; then
+              echo "Instanz ist erreichbar."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$URL/api/health is not answering. The stack is left standing for debugging."
+          exit 1
+
+      - name: Seed the demo data
+        env:
+          PREVIEW_URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
+          PREVIEW_BASIC_AUTH_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
+          PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          PREVIEW_ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
+        run: node scripts/seed-preview.mjs
+
+      - name: Comment on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.number }}
+          URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
+          ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          STALE_IMAGE: ${{ steps.image.outputs.stale }}
+        run: |
+          set -o pipefail
+          if [ "$STALE_IMAGE" = "true" ]; then
+            commit_line="Image: from an earlier commit of this PR — no image was built for \`$SHA\` (paths-ignore)."
+          else
+            commit_line="Commit: \`$SHA\`"
+          fi
+          body=$(cat <<EOF
+          $STACK_COMMENT_MARKER
+          ### Preview ready
+
+          **$URL**
+
+          Sign in with \`$ADMIN_EMAIL\` / \`$ADMIN_PASSWORD\`
+
+          The instance sits behind basic auth (user \`preview\`). Every further push resets
+          it and seeds the demo data again.
+
+          $commit_line
+          EOF
+          )
+          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -f body="$body"
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body"
+          fi
+
+  teardown:
+    name: Tear the preview down
+    # vars.KOMODO_URL as the switch: secrets are not readable in a job-level `if`,
+    # repository variables are. With no configuration there is nothing to tear down.
+    if: >-
+      vars.KOMODO_URL != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.action == 'closed' ||
+         (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pr-preview-${{ github.event.number || inputs.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Destroy and delete the stack
+        env:
+          KOMODO_URL: ${{ vars.KOMODO_URL }}
+          KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
+          KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
+          PR_NUMBER: ${{ github.event.number || inputs.pr_number }}
+        run: node scripts/preview-stack.mjs destroy
+
+      - name: Update the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.number || inputs.pr_number }}
+        run: |
+          set -o pipefail
+          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
+          if [ -z "$existing" ]; then
+            echo "No preview comment present — nothing to update."
+            exit 0
+          fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" \
+            -f body="$STACK_COMMENT_MARKER
+          ### Preview torn down
+
+          The container and its data have been deleted."
