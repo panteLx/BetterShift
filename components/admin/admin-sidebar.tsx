@@ -30,7 +30,7 @@ export interface AdminSection {
   icon: LucideIcon;
 }
 
-/** The four admin areas, shared by sidebar, tab bar, breadcrumb and dashboard. */
+/** The five admin areas, shared by sidebar, tab bar, breadcrumb and dashboard. */
 export function useAdminSections(): AdminSection[] {
   const t = useTranslations();
   return [
