@@ -1339,6 +1339,7 @@
       "pointAnonymous": "Keine Namen, Adressen, E-Mails oder Kalenderinhalte",
       "pointBuckets": "Größenangaben nur als Bereich, etwa „6-20 Nutzer“",
       "pointRevocable": "Jederzeit im Admin-Bereich widerrufbar",
+      "pointPublic": "Aggregierte Kennzahlen erscheinen auf einer öffentlichen Statistikseite",
       "previewToggle": "Vorschau der zu sendenden Daten anzeigen",
       "docsLink": "Vollständige Dokumentation",
       "accept": "Senden",

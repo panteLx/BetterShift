@@ -1,19 +1,44 @@
+import { buildAggregate, readAggregate, storeAggregate } from "./aggregate";
+import { renderPage } from "./page";
 import { parseV1 } from "./schemas/v1";
-import { sendToPostHog } from "./targets/posthog";
+import { storeInD1 } from "./targets/d1";
 
+// The key must match the `binding` of the [[d1_databases]] block in wrangler.toml.
 interface Env {
-  POSTHOG_API_KEY: string;
-  // Optional ingest host, e.g. https://us.i.posthog.com; defaults to EU.
-  POSTHOG_HOST?: string;
+  bettershift_telemetry: D1Database;
 }
 
 const MAX_BODY_BYTES = 16 * 1024;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    if (request.method !== "POST") {
-      return new Response(null, { status: 405 });
+    const { pathname } = new URL(request.url);
+
+    if (pathname === "/data.json") {
+      if (request.method !== "GET") return new Response(null, { status: 405 });
+      const aggregate = await readAggregate(env.bettershift_telemetry);
+      return new Response(JSON.stringify(aggregate ?? { computedAt: null }), {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=900",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     }
+
+    if (pathname !== "/") return new Response(null, { status: 404 });
+
+    if (request.method === "GET") {
+      const aggregate = await readAggregate(env.bettershift_telemetry);
+      return new Response(renderPage(aggregate), {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=900",
+        },
+      });
+    }
+
+    if (request.method !== "POST") return new Response(null, { status: 405 });
 
     // Content-Length only: a chunked body skips this check, which is acceptable
     // because Workers cap the request size first and parseV1 gates every field.
@@ -37,12 +62,23 @@ export default {
     }
 
     try {
-      await sendToPostHog(payload, env.POSTHOG_API_KEY, env.POSTHOG_HOST || undefined);
+      await storeInD1(payload, env.bettershift_telemetry);
     } catch (error) {
-      // The sender still gets a 200. Only the message is logged (a status, never the payload).
-      console.error(error instanceof Error ? error.message : "PostHog forward failed");
+      // The sender still gets a 200. Only the message is logged (never the payload).
+      console.error(error instanceof Error ? error.message : "D1 write failed");
     }
 
     return new Response(null, { status: 200 });
+  },
+
+  async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    try {
+      await storeAggregate(env.bettershift_telemetry, await buildAggregate(env.bettershift_telemetry));
+    } catch (error) {
+      // db.batch + INSERT OR REPLACE already keep the previous aggregate intact;
+      // rethrow so Cloudflare's cron success metric reflects the failure.
+      console.error(error instanceof Error ? error.message : "Aggregate run failed");
+      throw error;
+    }
   },
 };

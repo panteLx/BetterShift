@@ -1339,6 +1339,7 @@
       "pointAnonymous": "Aucun nom, adresse, e-mail ni contenu de calendrier",
       "pointBuckets": "Les tailles ne sont indiquées que sous forme de plage, par exemple « 6-20 utilisateurs »",
       "pointRevocable": "Révocable à tout moment depuis le panneau d'administration",
+      "pointPublic": "Les chiffres agrégés apparaissent sur une page de statistiques publique",
       "previewToggle": "Afficher l'aperçu des données à envoyer",
       "docsLink": "Documentation complète",
       "accept": "Envoyer",

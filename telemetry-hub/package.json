@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "dashboard": "node scripts/create-posthog-dashboard.mjs",
+    "migrate": "wrangler d1 migrations apply bettershift-telemetry --remote",
+    "migrate:local": "wrangler d1 migrations apply bettershift-telemetry --local",
+    "seed:local": "node scripts/seed-local.mjs",
+    "stats": "node scripts/stats.mjs",
+    "tail": "wrangler tail",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

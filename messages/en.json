@@ -1339,6 +1339,7 @@
       "pointAnonymous": "No names, addresses, emails, or calendar content",
       "pointBuckets": "Size figures only as a range, e.g. “6-20 users”",
       "pointRevocable": "Revocable at any time in the admin area",
+      "pointPublic": "Aggregated figures appear on a public statistics page",
       "previewToggle": "Show preview of data to be sent",
       "docsLink": "Full documentation",
       "accept": "Send",

@@ -70,6 +70,10 @@ export function TelemetryConsentDialog({ open, onDecide }: TelemetryConsentDialo
               <span aria-hidden>•</span>
               {t("telemetry.consent.pointRevocable")}
             </li>
+            <li className="flex gap-2">
+              <span aria-hidden>•</span>
+              {t("telemetry.consent.pointPublic")}
+            </li>
           </ul>
 
           <details className="rounded-lg border border-line">
