@@ -9,5 +9,8 @@ routes = [
 [dev]
 ip = "0.0.0.0"
 
-[vars]
-POSTHOG_HOST = "https://eu.i.posthog.com"
+[[d1_databases]]
+binding = "bettershift_telemetry"
+database_name = "bettershift-telemetry"
+database_id = "79d67a9c-d7bc-4514-af1e-f24dd1a94e24"
+migrations_dir = "migrations"

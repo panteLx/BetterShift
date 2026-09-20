@@ -1,6 +1,6 @@
 # BetterShift Telemetry Hub
 
-A small Cloudflare Worker that receives the opt-in, anonymous instance pings of BetterShift and forwards them to [PostHog](https://posthog.com/). It stores nothing itself.
+A small Cloudflare Worker that receives the opt-in, anonymous instance pings of BetterShift and stores them in a [Cloudflare D1](https://developers.cloudflare.com/d1/) database. Reports are plain SQL, run from the command line.
 
 You only need this if you want to **run your own receiver**. By default, instances send to the maintainer's hub, and an admin can opt out completely. What is sent is documented field by field in [`docs/TELEMETRY.md`](../docs/TELEMETRY.md).
 
@@ -13,7 +13,7 @@ The hub is deployed on its own and is not part of the Docker image.
 3. [Point Your Instances at It](#point-your-instances-at-it)
 4. [Test It Locally](#test-it-locally)
 5. [What the Worker Does](#what-the-worker-does)
-6. [The PostHog Dashboards](#the-posthog-dashboards)
+6. [Reading the Data](#reading-the-data)
 7. [Operating It](#operating-it)
 8. [Project Layout](#project-layout)
 
@@ -21,10 +21,11 @@ The hub is deployed on its own and is not part of the Docker image.
 
 ## What You Need
 
-- A **Cloudflare account** (the free plan is enough).
-- A **PostHog project**, cloud EU or US. Use the _project API key_ (`phc_...`), not a personal key.
+- A **Cloudflare account** (the free plan is enough — see [Cost](#cost)).
 - **Node.js 20.12 or newer** on the machine you deploy from.
 - Optional: a domain on Cloudflare, if you want a URL like `telemetry.example.com`. Without one, the Worker is served from a free `*.workers.dev` address.
+
+There is no third-party service and no API key anywhere in this project.
 
 ## Set It Up
 
@@ -37,35 +38,43 @@ npm install
 npx wrangler login
 ```
 
-### 2. Adjust `wrangler.toml`
+### 2. Create the database
+
+```bash
+npx wrangler d1 create bettershift-telemetry
+```
+
+Wrangler prints a `database_id`. Paste it into the `[[d1_databases]]` block in `wrangler.toml`, replacing `REPLACE_WITH_YOUR_DATABASE_ID`. The id is not a secret and belongs in the file.
+
+### 3. Adjust `wrangler.toml`
 
 The committed file describes the maintainer's deployment. Change it before your first deploy:
 
-| Setting        | What to do                                                                                                                                                       |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`         | Any unique Worker name.                                                                                                                                          |
-| `routes`       | Replace `pattern` and `zone_name` with your own hostname and the Cloudflare zone it belongs to. Cloudflare creates the DNS record and certificate for you.      |
-| `POSTHOG_HOST` | The **ingest** host of your PostHog region: `https://eu.i.posthog.com` or `https://us.i.posthog.com`. It must match the region of the project key (see below). |
+| Setting         | What to do                                                                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | Any unique Worker name.                                                                                                                                     |
+| `routes`        | Replace `pattern` and `zone_name` with your own hostname and the Cloudflare zone it belongs to. Cloudflare creates the DNS record and certificate for you. |
+| `database_id`   | From step 2.                                                                                                                                                |
+| `database_name` | Only if you named the database something else. It also has to match the name in the `migrate` scripts in `package.json`.                                    |
+| `binding`       | Leave it alone unless you also change the matching key in `Env` in `src/index.ts`. A mismatch is silent: the Worker still answers `200` and drops the ping.  |
 
 No domain? Delete the whole `routes` block and add `workers_dev = true` instead. After the deploy, Wrangler prints the `https://<name>.<your-subdomain>.workers.dev` URL.
 
-### 3. Store the PostHog key as a secret
+### 4. Create the table
 
 ```bash
-npx wrangler secret put POSTHOG_API_KEY
+npm run migrate
 ```
 
-Paste the project API key (PostHog → Project settings → Project API key). It is stored encrypted in Cloudflare and is never written to `wrangler.toml` or the repository.
+This applies everything in `migrations/` to the deployed database. Run it again after adding a migration; already-applied ones are skipped.
 
-A key only works against its own region. An EU project used with `us.i.posthog.com` (or the other way round) is rejected, and because the Worker always answers `200`, you would see no error on the sender's side. See [Operating It](#operating-it) for where to look.
-
-### 4. Deploy
+### 5. Deploy
 
 ```bash
 npm run deploy
 ```
 
-### 5. Check that it arrived
+### 6. Check that it arrived
 
 Send one valid ping with an id you can recognise later:
 
@@ -75,9 +84,13 @@ curl -i -X POST https://YOUR-HUB-URL \
   -d '{"schemaVersion":1,"instanceId":"smoke-test","sentAt":"2026-01-01T00:00:00.000Z","app":{"version":"0.0.0","isDev":true,"migrations":0},"runtime":{"node":"24.0.0","arch":"x64","platform":"linux","sqlite":"3.45.1","timezone":"UTC"},"config":{"authEnabled":true,"guestAccess":false,"registrationOpen":false,"defaultLocale":"en","updateCheckEnabled":true,"rateLimitOverrides":0},"scale":{"users":"1-5","calendars":"1-5","shifts":"1-5","presets":"0","notes":"0","bundles":"0","shares":"0","accessTokens":"0","signups":"0"},"features":{"externalSyncs":"0","calendarViewOverrides":"0","customFields":{"count":"0","types":[]},"archivedPresets":false,"splitShifts":false},"health":{"uptimeHours":1,"syncRuns24h":0,"syncFailures24h":0}}'
 ```
 
-You should get `HTTP/2 200`, and an `instance_ping` event for `smoke-test` should show up in PostHog → Activity within a minute.
+You should get `HTTP/2 200`, and the ping should show up in:
 
-**A `200` alone proves nothing.** The Worker also answers `200` to payloads it discards and to failed forwards, on purpose (see [What the Worker Does](#what-the-worker-does)). The event in PostHog is the real confirmation.
+```bash
+npm run stats -- recent
+```
+
+**A `200` alone proves nothing.** The Worker also answers `200` to payloads it discards and to failed writes, on purpose (see [What the Worker Does](#what-the-worker-does)). The row is the real confirmation.
 
 ## Point Your Instances at It
 
@@ -91,68 +104,91 @@ Use the bare URL without a path. Telemetry itself stays opt-in: the instance adm
 
 ## Test It Locally
 
-Create `.dev.vars` in this directory:
-
-```env
-POSTHOG_API_KEY=phc_your_key
-POSTHOG_HOST=https://eu.i.posthog.com
-```
-
-Then start the dev server:
-
 ```bash
+npm run migrate:local
 npm run dev
 ```
 
-The Worker then listens on `http://localhost:8787`. Use the `curl` command from step 5 against that URL. `.dev.vars` is gitignored and only read by `wrangler dev`.
+The Worker then listens on `http://localhost:8787` against a local SQLite file under `.wrangler/` — nothing touches the deployed database. Use the `curl` command from step 6 against that URL, then:
 
-Use a throwaway PostHog project for this. Local test pings otherwise mix into your real data.
+```bash
+npm run stats -- --local
+```
 
 `npm run typecheck` checks the types.
 
 ## What the Worker Does
 
-| Request                                              | Answer                                                                                          |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Any method except `POST`                             | `405`                                                                                           |
-| Body larger than 16 KB                               | `413`                                                                                           |
-| Body is not valid JSON                               | `400`                                                                                           |
-| Valid JSON that fails validation, or unknown version | `200`, discarded                                                                                |
-| Valid v1 payload                                     | `200`, forwarded to PostHog. If PostHog rejects it, still `200`; the error message is logged.   |
+| Request                                              | Answer                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Any method except `POST`                             | `405`                                                                                    |
+| Body larger than 16 KB                               | `413`                                                                                    |
+| Body is not valid JSON                               | `400`                                                                                    |
+| Valid JSON that fails validation, or unknown version | `200`, discarded                                                                         |
+| Valid v1 payload                                     | `200`, written to D1. If the write fails, still `200`; the error message is logged.      |
 
-The senders are fire-and-forget and never retry, so a payload the Worker cannot forward is lost. That is by design: the Worker has no database, queue or request log.
+The senders are fire-and-forget and never retry, so a payload the Worker cannot write is lost. That is by design: there is no queue and no request log.
 
-Every event is sent to PostHog with `$ip: null` and `$geoip_disable: true`, so PostHog stores neither the sender's IP nor a location derived from it. Person profiles are switched off as well, since an instance is not a person. Each field is passed on explicitly; nothing is spread from the request body.
+Each field is written to its own column explicitly; nothing is spread from the request body, so an unexpected extra field cannot reach the database. The Worker never reads the connecting IP, and no column holds one — the stored `received_at` is the Worker's own clock, because the instance's `sent_at` can be skewed.
 
-Cloudflare itself still sees the connecting IP in its own edge logs, like for any hosted Worker. The Worker code never reads or stores it.
+Cloudflare itself still sees the connecting IP in its own edge logs, like for any hosted Worker.
 
-## The PostHog Dashboards
+Rows are kept indefinitely. There is no expiry job: at one ping per instance per day the table stays small for years (see [Cost](#cost)).
 
-`scripts/create-posthog-dashboard.mjs` builds ready-made dashboards (growth, versions, environment, sizes, configuration, features, health) from the `instance_ping` events. It uses a **personal** API key, not the project key of the Worker.
+## Reading the Data
+
+Every report in `queries/` is a plain SQL file. Run them all, or by name:
 
 ```bash
-cp .env.example .env    # then fill in POSTHOG_PERSONAL_API_KEY
-npm run dashboard -- --dry-run
-npm run dashboard
+npm run stats                     # every report
+npm run stats -- versions sizes   # just these two
+npm run stats -- --local          # against the local database
 ```
 
-The script also creates variants without dev builds, with dev builds only, and without your own test instances (`EXCLUDE_INSTANCE_IDS`, for example `smoke-test`). Run it again at any time: existing dashboards are matched by name and updated in place. All options are described in `.env.example` and in the header of the script.
+| Report               | What it answers                                                    |
+| -------------------- | ------------------------------------------------------------------ |
+| `instances-daily`    | How many instances reported per day                                |
+| `instances-new`      | New installs per day (first time an instance id was seen)          |
+| `versions`           | Which app versions are in use                                      |
+| `environment`        | Node, platform, arch, SQLite and timezone distribution             |
+| `configuration`      | Auth, guest access, registration, locale, update check             |
+| `sizes`              | Instance size buckets across users, calendars, shifts, …           |
+| `features`           | Feature adoption                                                   |
+| `custom-field-types` | Which custom field types are actually used                         |
+| `health`             | Uptime and external-sync failures                                  |
+| `recent`             | The last 25 raw pings                                              |
 
-If your PostHog project is in the US region, set `POSTHOG_HOST=https://us.posthog.com` in `.env` (the app host, not the `i.` ingest host).
+Distribution reports read the `latest_pings` view — one row per instance, its newest ping — so a frequently restarting instance cannot outvote a quiet one.
+
+For anything ad hoc:
+
+```bash
+npx wrangler d1 execute bettershift-telemetry --remote \
+  --command "SELECT app_version, COUNT(*) FROM latest_pings GROUP BY app_version"
+```
+
+To put a dashboard on top later, the table is ordinary SQLite: Grafana via a read endpoint, or a scheduled Worker that writes aggregates for a static page.
+
+## Cost
+
+Everything here fits in the Cloudflare free plan, which covers 100,000 D1 row writes and 5 million row reads per day and 5 GB of storage. One instance writes one row per day, and a row is roughly 300 bytes — a hundred instances reporting daily for a year is about 36,000 rows, some 11 MB. Since 1 September 2026 Cloudflare returns errors on free accounts that exceed the daily row limits instead of billing for them, so the plan cannot turn into a surprise invoice.
 
 ## Operating It
 
-- **Live logs:** `npx wrangler tail`. A failed forward appears as one line with the PostHog status, never the payload.
-- **Nothing shows up in PostHog:** check, in this order, that the ping reached the Worker (`wrangler tail` while sending), that the key belongs to the region set in `POSTHOG_HOST`, and that the sender is a real v1 payload (an invalid one is discarded silently).
-- **Rotating the key:** run `npx wrangler secret put POSTHOG_API_KEY` again. No redeploy is needed.
+- **Live logs:** `npx wrangler tail`. A failed write appears as one line with the error message, never the payload.
+- **Nothing shows up:** check, in this order, that the ping reached the Worker (`wrangler tail` while sending), that `npm run migrate` has been run against the deployed database, and that the sender is a real v1 payload (an invalid one is discarded silently).
+- **Deleting an instance's data:** `npx wrangler d1 execute bettershift-telemetry --remote --command "DELETE FROM instance_pings WHERE instance_id = '<id>'"`.
+
 ## Project Layout
 
 ```text
-src/index.ts             request handling: method, size, JSON, validation, forward
+src/index.ts             request handling: method, size, JSON, validation, store
 src/schemas/v1.ts        payload type and validator for schemaVersion 1
-src/targets/posthog.ts   maps a payload to a PostHog event
-scripts/                 create-posthog-dashboard.mjs
-wrangler.toml            Worker name, route and the PostHog host
+src/targets/d1.ts        maps a payload to a row and inserts it
+migrations/              D1 schema, applied with `npm run migrate`
+queries/                 one SQL report per file, run with `npm run stats`
+scripts/stats.mjs        runs the reports through wrangler and prints them
+wrangler.toml            Worker name, route and the D1 binding
 ```
 
-This project is self-contained and does not import from the main app. `src/schemas/v1.ts` mirrors `TelemetryPayload` in [`lib/telemetry/schema.ts`](../lib/telemetry/schema.ts) by value, so a change to the payload has to be made in both places. Until a new `schemaVersion` exists, anything that is not a valid v1 payload is discarded.
+This project is self-contained and does not import from the main app. `src/schemas/v1.ts` mirrors `TelemetryPayload` in [`lib/telemetry/schema.ts`](../lib/telemetry/schema.ts) by value, and `migrations/` mirrors it again as columns, so a change to the payload has to be made in all three places. Until a new `schemaVersion` exists, anything that is not a valid v1 payload is discarded.

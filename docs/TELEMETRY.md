@@ -122,9 +122,9 @@ The default endpoint is a small Cloudflare Worker; its source lives in this repo
 
 - Accepts only `POST` requests up to 16 KB.
 - Validates the payload against the current schema version (`telemetry-hub/src/schemas/v1.ts`). A body that isn't valid JSON is answered with `400` and one larger than 16 KB with `413`; a payload that parses but fails validation, or carries an unknown/retired `schemaVersion`, is answered with `200` and discarded. Either way the fire-and-forget sender ignores the status and never retries.
-- Forwards a valid payload to [PostHog](https://posthog.com/) (`telemetry-hub/src/targets/posthog.ts`), explicitly enumerating each field it passes on rather than forwarding the request body as-is, so an unexpected extra field can never leak through.
-- Sends `$ip: null` and `$geoip_disable: true` with every event, so PostHog neither stores the request IP nor derives a country or city from it — without this, the Cloudflare PoP nearest the sending instance would approximate its location.
-- **Stores nothing itself.** There is no database, no request log, and no persistence layer in the Worker — a payload it can't forward to PostHog is simply lost, not queued or written anywhere.
+- Writes a valid payload as one row into a [Cloudflare D1](https://developers.cloudflare.com/d1/) database (`telemetry-hub/src/targets/d1.ts`), with each field going into its own named column rather than the request body being stored as-is, so an unexpected extra field can never leak through. **No third party is involved** — the data goes to the operator's own Cloudflare account and nowhere else.
+- **Never reads the connecting IP**, and the table has no column that could hold one — neither an IP nor a country or city derived from it is stored. The `received_at` timestamp on each row is the Worker's own clock, not the instance's. Cloudflare still sees the connecting IP in its own edge logs, as it does for any hosted Worker, but the Worker code never touches it.
+- **Keeps rows indefinitely.** There is no expiry job: a ping written today is still there next year, and repeated pings from the same instance accumulate as separate rows linked by `instanceId`. Nothing beyond the fields listed above is stored, and there is no request log or queue — a payload the Worker cannot write is simply lost, not retried.
 
 ---
 

@@ -1,10 +1,9 @@
 import { parseV1 } from "./schemas/v1";
-import { sendToPostHog } from "./targets/posthog";
+import { storeInD1 } from "./targets/d1";
 
+// The key must match the `binding` of the [[d1_databases]] block in wrangler.toml.
 interface Env {
-  POSTHOG_API_KEY: string;
-  // Optional ingest host, e.g. https://us.i.posthog.com; defaults to EU.
-  POSTHOG_HOST?: string;
+  bettershift_telemetry: D1Database;
 }
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -37,10 +36,10 @@ export default {
     }
 
     try {
-      await sendToPostHog(payload, env.POSTHOG_API_KEY, env.POSTHOG_HOST || undefined);
+      await storeInD1(payload, env.bettershift_telemetry);
     } catch (error) {
-      // The sender still gets a 200. Only the message is logged (a status, never the payload).
-      console.error(error instanceof Error ? error.message : "PostHog forward failed");
+      // The sender still gets a 200. Only the message is logged (never the payload).
+      console.error(error instanceof Error ? error.message : "D1 write failed");
     }
 
     return new Response(null, { status: 200 });
