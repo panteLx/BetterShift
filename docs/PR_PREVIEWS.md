@@ -46,7 +46,7 @@ The `pr-<n>` tags on ghcr.io are never deleted either, neither by the preview wo
 
 ### One-Time Setup Checks
 
-Three things depend on versions nobody here could verify in advance. Check them once, when setting this up on your server:
+Four things depend on versions nobody here could verify in advance. Check them once, when setting this up on your server:
 
 **1. Caddy version, for the Basic Auth label.** The compose file `scripts/preview-stack.mjs` generates uses the label `caddy.basic_auth.preview`. Caddy renamed the directive from `basicauth` to `basic_auth` in Caddy 2.8. Check your running version:
 
@@ -68,6 +68,8 @@ curl -s -X POST "$KOMODO_URL/read/GetStack" \
 If that comes back as an array rather than a string, the `environment` value built in `stackConfig()` in `scripts/preview-stack.mjs` needs to become an array of `"KEY=value"` strings instead of the joined string it is today.
 
 **3. Komodo's request shape.** `komodo()` in `scripts/preview-stack.mjs` posts to one endpoint per call with the params as the body — `POST /read/GetStack` with `{"stack": …}`, `POST /execute/DeployStack` with `{"stack": …}`, and so on. Some Komodo versions instead expose a single endpoint per category and expect the call to be named in the body: `POST /read` with `{"type": "GetStack", "params": {"stack": …}}`. The curl above is the test: a `404` or `405` on `/read/GetStack` means your instance wants the other shape, and `komodo()` has to be changed to take a type plus params and post to `/read`, `/write` or `/execute`.
+
+**4. What `/execute/*` returns.** `updateFailure()` in `scripts/preview-stack.mjs` reads the returned Update's `success` field to catch a compose run that failed behind an HTTP 200, but only once `status` says the update is complete — `success` is also `false` while it is still `Queued` or `InProgress`. If your instance returns the initial update under a different `status` spelling, watch the first real deploy: a successful deploy that nevertheless reports `DeployStack fehlgeschlagen.` means the terminal-state check in `updateFailure()` needs your instance's spelling.
 
 ## Secrets
 
@@ -163,7 +165,7 @@ A few things distinguish a preview container from a normal deployment:
 
 ## Manual Cleanup
 
-If a teardown run failed, or a stack was left standing on purpose after a broken deploy (see the paragraph after next), the easiest fix is the workflow's manual entry point: **Actions → PR Preview → Run workflow**, enter the PR number, start it. That runs the `teardown` job for exactly that PR — destroy the stack, delete it in Komodo, rewrite the sticky comment — without needing any further event on the PR. A closed PR emits no event you could retry, so this is the only in-GitHub way back.
+If a teardown run failed, or a stack was left standing on purpose after a broken deploy (see "Note that a health check that times out…" at the end of this section), the easiest fix is the workflow's manual entry point: **Actions → PR Preview → Run workflow**, enter the PR number, start it. That runs the `teardown` job for exactly that PR — destroy the stack, delete it in Komodo, rewrite the sticky comment — without needing any further event on the PR. A closed PR emits no event you could retry, so this is the only in-GitHub way back.
 
 Alternatively, from a checkout with the Komodo credentials at hand:
 
