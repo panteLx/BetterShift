@@ -152,11 +152,19 @@ jobs:
         run: |
           # Has to cover a registry pull, the migration, the Next.js boot and Caddy's first ACME issuance.
           deadline=$(( $(date +%s) + 300 ))
+          # Three in a row, not one: right after a redeploy the proxy may still
+          # hold the old container as an upstream and answer at random.
+          ok=0
           while [ "$(date +%s)" -lt "$deadline" ]; do
             if curl -sf -u "preview:$BASIC_PASSWORD" -H "X-Preview-CI-Bypass: $CF_BYPASS" \
                  "$URL/api/health" >/dev/null; then
-              echo "Instanz ist erreichbar."
-              exit 0
+              ok=$(( ok + 1 ))
+              if [ "$ok" -ge 3 ]; then
+                echo "Instanz ist erreichbar."
+                exit 0
+              fi
+            else
+              ok=0
             fi
             sleep 5
           done

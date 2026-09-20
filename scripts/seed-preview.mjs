@@ -36,8 +36,35 @@ const BYPASS_HEADER = process.env.PREVIEW_CF_BYPASS_TOKEN
 
 let cookie = "";
 
-async function api(path, { method = "GET", body } = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Right after a redeploy the proxy can still hold the old container as an
+ * upstream, so single requests come back as a gateway error while others
+ * succeed. Retrying is worth the small risk of creating a row twice: every
+ * push wipes the database anyway, but a failed seed fails the whole deploy.
+ */
+const TRANSIENT = new Set([502, 503, 504]);
+
+async function request(path, { method, body }) {
+  for (let attempt = 1; ; attempt += 1) {
+    let res;
+    try {
+      res = await send(path, { method, body });
+    } catch (error) {
+      if (attempt >= 5) throw error;
+      console.warn(`${method} ${path} failed (${error.message}) — retry ${attempt}/4.`);
+      await sleep(2000);
+      continue;
+    }
+    if (!TRANSIENT.has(res.status) || attempt >= 5) return res;
+    console.warn(`${method} ${path} -> ${res.status} from the proxy — retry ${attempt}/4.`);
+    await sleep(2000);
+  }
+}
+
+async function send(path, { method = "GET", body } = {}) {
+  return fetch(`${BASE}${path}`, {
     method,
     headers: {
       ...BASIC_HEADER,
@@ -50,6 +77,10 @@ async function api(path, { method = "GET", body } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+}
+
+async function api(path, { method = "GET", body } = {}) {
+  const res = await request(path, { method, body });
 
   const setCookies = res.headers.getSetCookie();
   if (setCookies.length > 0) {
