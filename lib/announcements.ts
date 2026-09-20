@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { announcements } from "@/lib/db/schema";
 import {
   ANNOUNCEMENT_TONES,
+  BODY_MAX_LENGTH,
+  TITLE_MAX_LENGTH,
   getAnnouncementStatus,
   isVisibleNow,
   type AnnouncementStatus,
@@ -12,14 +14,11 @@ import {
 // Re-exported so existing server-side consumers keep importing from this
 // module; client components should import these from lib/announcement-status
 // directly to avoid pulling lib/db into the browser bundle.
-export { ANNOUNCEMENT_TONES, getAnnouncementStatus, isVisibleNow };
+export { ANNOUNCEMENT_TONES, BODY_MAX_LENGTH, TITLE_MAX_LENGTH, getAnnouncementStatus, isVisibleNow };
 export type { AnnouncementStatus, AnnouncementTone };
 
 export const ANNOUNCEMENT_PLACEMENTS = ["auth", "dashboard"] as const;
 export type AnnouncementPlacement = (typeof ANNOUNCEMENT_PLACEMENTS)[number];
-
-export const TITLE_MAX_LENGTH = 120;
-export const BODY_MAX_LENGTH = 1000;
 
 /** Exactly what the public route returns -- no creator, no timestamps. */
 export interface PublicAnnouncement {

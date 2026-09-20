@@ -5,6 +5,9 @@
 export const ANNOUNCEMENT_TONES = ["info", "warning", "danger"] as const;
 export type AnnouncementTone = (typeof ANNOUNCEMENT_TONES)[number];
 
+export const TITLE_MAX_LENGTH = 120;
+export const BODY_MAX_LENGTH = 1000;
+
 export type AnnouncementStatus = "active" | "scheduled" | "expired" | "off";
 
 interface VisibilityFields {

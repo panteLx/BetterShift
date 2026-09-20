@@ -7,16 +7,22 @@ import { Button } from "@/components/ui/button";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { AdminPageHeader } from "@/components/admin/admin-kit";
 import { AnnouncementTable } from "@/components/admin/announcement-table";
+import { AnnouncementEditSheet } from "@/components/admin/announcement-edit-sheet";
+import { ConfirmNameDeleteDialog } from "@/components/admin/confirm-name-delete-dialog";
 import {
   useAdminAnnouncements,
+  useAdminAnnouncementActions,
   type AdminAnnouncement,
 } from "@/hooks/useAdminAnnouncements";
 
 export default function AdminAnnouncementsPage() {
   const t = useTranslations();
   const { announcements, isLoading } = useAdminAnnouncements();
+  const { createAnnouncement, updateAnnouncement, deleteAnnouncement, isSaving } =
+    useAdminAnnouncementActions();
   const [editing, setEditing] = useState<AdminAnnouncement | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<AdminAnnouncement | null>(null);
 
   if (isLoading) return <FullscreenLoader />;
 
@@ -59,8 +65,51 @@ export default function AdminAnnouncementsPage() {
       ) : (
         <AnnouncementTable
           announcements={announcements}
-          onEdit={setEditing}
-          onDelete={setEditing}
+          onEdit={(announcement) => setEditing(announcement)}
+          onDelete={(announcement) => setDeleting(announcement)}
+        />
+      )}
+
+      <AnnouncementEditSheet
+        open={creating || editing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreating(false);
+            setEditing(null);
+          }
+        }}
+        announcement={editing}
+        isSaving={isSaving}
+        onSubmit={async (payload) => {
+          if (editing) {
+            await updateAnnouncement({ id: editing.id, ...payload });
+          } else {
+            await createAnnouncement(payload);
+          }
+        }}
+      />
+
+      {deleting && (
+        <ConfirmNameDeleteDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setDeleting(null);
+          }}
+          name={deleting.title}
+          idPrefix="announcement-delete"
+          title={t("admin.announcements.deleteTitle")}
+          description={t("admin.announcements.deleteDescription")}
+          warning={t("admin.announcements.deleteWarning")}
+          understoodLabel={t("admin.announcements.deleteUnderstood")}
+          confirmationLabel={t("admin.announcements.deleteConfirmationLabel")}
+          confirmationHint={t("admin.announcements.deleteConfirmationHint", {
+            name: deleting.title,
+          })}
+          confirmLabel={t("admin.announcements.deleteConfirm")}
+          onConfirm={async () => {
+            await deleteAnnouncement(deleting.id);
+            setDeleting(null);
+          }}
         />
       )}
     </div>

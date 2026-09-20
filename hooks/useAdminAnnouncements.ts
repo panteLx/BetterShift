@@ -72,6 +72,19 @@ export function useAdminAnnouncementActions() {
     queryClient.invalidateQueries({ queryKey: queryKeys.announcements.all });
   };
 
+  /** Cancels the in-flight list query, snapshots it and applies `patch`. */
+  const snapshotAndPatch = async (patch: (list: AdminAnnouncement[]) => AdminAnnouncement[]) => {
+    await queryClient.cancelQueries({ queryKey: queryKeys.admin.announcements });
+    const previous = queryClient.getQueryData<AdminAnnouncement[]>(queryKeys.admin.announcements);
+    queryClient.setQueryData<AdminAnnouncement[]>(queryKeys.admin.announcements, (old) =>
+      patch(old ?? [])
+    );
+    return previous;
+  };
+
+  const restore = (previous: AdminAnnouncement[] | undefined) =>
+    queryClient.setQueryData(queryKeys.admin.announcements, previous);
+
   const createMutation = useMutation({
     mutationFn: async (payload: AnnouncementPayload) => {
       const response = await fetch("/api/admin/announcements", {
@@ -82,7 +95,17 @@ export function useAdminAnnouncementActions() {
       await throwIfFailed(response);
       return response.json();
     },
-    onError: async (err) => {
+    onMutate: async (payload) => {
+      const optimistic: AdminAnnouncement = {
+        id: `optimistic-${Date.now()}`,
+        ...payload,
+        createdAt: new Date().toISOString(),
+        createdByName: null,
+      };
+      return { previous: await snapshotAndPatch((list) => [optimistic, ...list]) };
+    },
+    onError: async (err, variables, context) => {
+      restore(context?.previous);
       if (err instanceof RateLimitError) {
         await handleRateLimitError(err.response, t);
         return;
@@ -102,7 +125,13 @@ export function useAdminAnnouncementActions() {
       await throwIfFailed(response);
       return response.json();
     },
-    onError: async (err) => {
+    onMutate: async ({ id, ...payload }) => ({
+      previous: await snapshotAndPatch((list) =>
+        list.map((item) => (item.id === id ? { ...item, ...payload } : item))
+      ),
+    }),
+    onError: async (err, variables, context) => {
+      restore(context?.previous);
       if (err instanceof RateLimitError) {
         await handleRateLimitError(err.response, t);
         return;
@@ -118,7 +147,11 @@ export function useAdminAnnouncementActions() {
       await throwIfFailed(response);
       return response.json();
     },
-    onError: async (err) => {
+    onMutate: async (id) => ({
+      previous: await snapshotAndPatch((list) => list.filter((item) => item.id !== id)),
+    }),
+    onError: async (err, variables, context) => {
+      restore(context?.previous);
       if (err instanceof RateLimitError) {
         await handleRateLimitError(err.response, t);
         return;
