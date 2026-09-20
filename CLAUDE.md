@@ -77,6 +77,17 @@ Two separate permission layers, deliberately:
 
 The first registered user is promoted to superadmin (`lib/auth/first-user.ts`).
 
+Instance announcements (`announcements`) are admin-authored notices shown on the
+auth pages and above the calendar. `lib/announcement-status.ts` holds the pure,
+database-free pieces — the tone catalog and `isVisibleNow()`, the one place the
+enabled flag and the optional window are evaluated — so client components can
+import them without pulling `lib/db` into the browser bundle; `lib/announcements.ts`
+re-exports those, adds the placement catalog, `sanitizeAnnouncementInput()` and the
+`getVisibleAnnouncements()` query. `GET /api/announcements` is public (listed in
+`proxy.ts`) and returns only what is visible right now; the admin CRUD routes under
+`app/api/admin/announcements/**` gate on `canManageSystemSettings`. Dismissal is per
+browser in `localStorage`, never server state.
+
 ### External calendar sync
 
 `syncExternalCalendar()` in `app/api/external-syncs/[id]/sync/route.ts` is the single implementation, exported so the auto-sync service reuses it; the route handler is just the manual entry point. It normalises `webcal://`, fetches with a 10s abort, parses with `ical.js`, expands recurrences, splits multi-day events, and diffs against existing shifts using a fingerprint (`createEventFingerprint` / `needsUpdate` in `lib/external-calendar-utils.ts`) so unchanged events are not rewritten. Every run appends a `syncLogs` row with created/updated/deleted counts, which is what drives the sync notification dialog.
