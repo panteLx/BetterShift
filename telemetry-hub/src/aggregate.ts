@@ -288,7 +288,15 @@ export async function storeAggregate(db: D1Database, aggregate: PublicAggregate)
 }
 
 export async function readAggregate(db: D1Database): Promise<PublicAggregate | null> {
-  const row = await db.prepare("SELECT json FROM aggregates WHERE key = 'public'").first<{ json: string }>();
+  let row: { json: string } | null;
+  try {
+    row = await db.prepare("SELECT json FROM aggregates WHERE key = 'public'").first<{ json: string }>();
+  } catch (error) {
+    // A D1 read error (e.g. the table is missing on an un-migrated database)
+    // degrades to the empty state instead of a 500; see src/page.ts / src/index.ts.
+    console.error(error instanceof Error ? error.message : "Aggregate read failed");
+    return null;
+  }
   if (!row) return null;
   try {
     return JSON.parse(row.json) as PublicAggregate;
