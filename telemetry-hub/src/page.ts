@@ -148,8 +148,9 @@ interface BarOptions {
   note?: (entry: DistributionEntry, index: number) => string | null;
 }
 
-// aggregate.ts labels its size-guard remainder entry "other (N more values)".
-const isRemainder = (value: string): boolean => /^other \(\d+ more values\)$/.test(value);
+// Structural, not by label: reported values are attacker-supplied and could
+// otherwise impersonate the remainder entry's styling.
+const isRemainder = (entry: DistributionEntry): boolean => entry.remainder === true;
 
 /**
  * Entries are indexed by position, never by `value`: values are truncated to 64
@@ -158,20 +159,25 @@ const isRemainder = (value: string): boolean => /^other \(\d+ more values\)$/.te
 function renderBars(entries: DistributionEntry[], options: BarOptions): string {
   const rows = entries
     .map((entry, index) => {
-      const width = Math.max(0.8, Math.min(100, (entry.share || 0) * 100));
       const label = valueLabel(options.dimension, entry.value);
-      const remainder = isRemainder(entry.value);
+      const remainder = isRemainder(entry);
+      // A multi-select dimension counts an instance once per value it holds, so a
+      // summed remainder can exceed the population. A share above 1 is not a share
+      // there — while in a single-select dimension it would signal a counting bug,
+      // which must stay visible, so the suppression is scoped to the remainder.
+      const unshareable = remainder && (entry.share || 0) > 1;
+      const width = Math.max(0.8, Math.min(100, (entry.share || 0) * 100));
       const note = options.note?.(entry, index);
       return `<li class="bar${remainder ? " bar-other" : ""}">
   <div class="bar-head">
     <span class="bar-label">${esc(label)}${remainder ? '<span class="bar-hint"> — long tail, summed to keep this page small</span>' : ""}</span>
-    <span class="bar-value">${
-      // A multi-select dimension counts an instance once per value it holds, so a
-      // summed remainder can exceed the population. A share above 1 is not a share.
-      (entry.share || 0) > 1 ? "" : `<b>${esc(percent(entry.share))}</b>`
-    }<span class="bar-count">${esc(count(entry.instances))}</span></span>
+    <span class="bar-value">${unshareable ? "" : `<b>${esc(percent(entry.share))}</b>`}<span class="bar-count">${esc(count(entry.instances))}</span></span>
   </div>
-  <div class="track"><div class="fill" style="width:${esc(width.toFixed(1))}%"></div></div>
+  <div class="track">${
+    // No claimable share, so no fill: an empty track beats drawing the widest bar
+    // on the card for a number the page just refused to print.
+    unshareable ? "" : `<div class="fill" style="width:${esc(width.toFixed(1))}%"></div>`
+  }</div>
   ${note ? `<p class="bar-note">${esc(note)}</p>` : ""}
 </li>`;
     })
@@ -378,11 +384,14 @@ function renderHealth(health: PublicAggregate["health"]): string {
 }
 
 /** Nothing is being withheld here — no instance has reported in the window. */
-function renderNoReportsNotice(): string {
+function renderNoReportsNotice(hasHistory: boolean): string {
+  const tail = hasHistory
+    ? " The chart below still reaches back 90 days, so the last reports that did come in are plotted there."
+    : "";
   return `<section id="no-reports">
   <div class="notice">
     <p class="notice-title">No instance has reported in the last 30 days</p>
-    <p>There is nothing to break down, because nothing has come in. That is the normal state for a freshly deployed hub, and it is also what this page shows once every instance that once reported has aged out of the 30-day window. Nothing is being withheld.</p>
+    <p>There is nothing to break down, because nothing has come in. That is the normal state for a freshly deployed hub, and it is also what this page shows once every instance that once reported has aged out of the 30-day window. Nothing is being withheld.${tail}</p>
   </div>
 </section>`;
 }
@@ -518,8 +527,14 @@ export function renderPage(aggregate: PublicAggregate | null): string {
   </div>
 </section>`;
 
+  const history = Array.isArray(aggregate.history) ? aggregate.history : [];
+
+  // The history window is 90 days and the headline window is 30, so days can
+  // outlive the instances that reported them. Keep the chart in that case.
   if (total <= 0) {
-    return page(tiles + renderNoReportsNotice(), aggregate.computedAt ?? null);
+    const hasHistory = history.length > 0;
+    const main = tiles + renderNoReportsNotice(hasHistory) + (hasHistory ? renderHistory(history) : "");
+    return page(main, aggregate.computedAt ?? null);
   }
 
   const versions = Array.isArray(aggregate.versions) ? aggregate.versions : [];
@@ -528,7 +543,6 @@ export function renderPage(aggregate: PublicAggregate | null): string {
   const sizes = aggregate.sizes ?? {};
   const features = aggregate.features ?? {};
   const customFieldTypes = Array.isArray(aggregate.customFieldTypes) ? aggregate.customFieldTypes : [];
-  const history = Array.isArray(aggregate.history) ? aggregate.history : [];
 
   const customFields =
     customFieldTypes.length > 0

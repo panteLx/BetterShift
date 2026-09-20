@@ -2,6 +2,8 @@ export interface DistributionEntry {
   value: string;
   instances: number;
   share: number;
+  /** Set only on the size-guard remainder entry; see MAX_DISTRIBUTION_ENTRIES. */
+  remainder?: true;
 }
 
 export interface VersionEntry extends DistributionEntry {
@@ -51,6 +53,14 @@ interface RawGroup {
   instances: number;
 }
 
+// The GROUP BY queries have no ORDER BY, so entries tied on count could otherwise
+// straddle the cap differently between runs — by name one hour, in the remainder
+// the next. The value breaks the tie deterministically.
+const byCountThenValue = (
+  a: { value: string; instances: number },
+  b: { value: string; instances: number },
+): number => b.instances - a.instances || (a.value < b.value ? -1 : a.value > b.value ? 1 : 0);
+
 const share = (instances: number, base: number): number =>
   base > 0 ? Math.round((instances / base) * 10_000) / 10_000 : 0;
 
@@ -58,7 +68,7 @@ const share = (instances: number, base: number): number =>
 function collapse(rows: RawGroup[], base: number): DistributionEntry[] {
   const sorted = rows
     .map((row) => ({ value: truncate(String(row.value)), instances: row.instances }))
-    .sort((a, b) => b.instances - a.instances);
+    .sort(byCountThenValue);
 
   const kept = sorted.slice(0, MAX_DISTRIBUTION_ENTRIES);
   const tail = sorted.slice(MAX_DISTRIBUTION_ENTRIES);
@@ -71,7 +81,12 @@ function collapse(rows: RawGroup[], base: number): DistributionEntry[] {
 
   if (tail.length > 0) {
     const instances = tail.reduce((sum, row) => sum + row.instances, 0);
-    entries.push({ value: remainderLabel(tail.length), instances, share: share(instances, base) });
+    entries.push({
+      value: remainderLabel(tail.length),
+      instances,
+      share: share(instances, base),
+      remainder: true,
+    });
   }
   return entries;
 }
@@ -87,7 +102,7 @@ function buildVersions(
       instances: row.instances,
       devInstances: Number(row.dev_instances ?? 0),
     }))
-    .sort((a, b) => b.instances - a.instances);
+    .sort(byCountThenValue);
 
   const kept = sorted.slice(0, MAX_DISTRIBUTION_ENTRIES);
   const tail = sorted.slice(MAX_DISTRIBUTION_ENTRIES);
@@ -106,6 +121,7 @@ function buildVersions(
       instances,
       share: share(instances, base),
       devInstances: tail.reduce((sum, row) => sum + row.devInstances, 0),
+      remainder: true,
     });
   }
   return entries;
