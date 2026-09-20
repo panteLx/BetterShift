@@ -213,6 +213,12 @@ const config = {
     windowMs:
       parseInt(process.env.RATE_LIMIT_ANNOUNCEMENTS_WINDOW || "60", 10) * 1000, // 1 minute
   },
+  // Announcement create/update/delete from the admin panel -- low volume by nature.
+  adminAnnouncementMutations: {
+    requests: parseInt(process.env.RATE_LIMIT_ADMIN_ANNOUNCEMENT_MUTATIONS || "20", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_ADMIN_ANNOUNCEMENT_MUTATIONS_WINDOW || "60", 10) * 1000, // 1 minute
+  },
   // Admin telemetry payload preview; the collector's own cache keeps repeat
   // calls cheap, this just bounds the burst.
   telemetryPayload: {
@@ -255,6 +261,7 @@ const limitsByType = {
   "bundle-mutations": config.bundleMutations,
   "custom-field-mutations": config.customFieldMutations,
   announcements: config.announcements,
+  "admin-announcement-mutations": config.adminAnnouncementMutations,
   "telemetry-payload": config.telemetryPayload,
   "telemetry-send": config.telemetrySend,
 } as const;

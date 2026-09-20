@@ -179,6 +179,30 @@ export interface AdminTelemetryConsentMetadata {
   schemaVersion: number;
 }
 
+// Title only: an announcement body can be long and an audit log is exportable.
+interface AuditedAnnouncement {
+  title: string;
+  tone: string;
+  showOnAuth: boolean;
+  showOnDashboard: boolean;
+  enabled: boolean;
+  startsAt: Date | null;
+  endsAt: Date | null;
+}
+
+export interface AdminAnnouncementCreatedMetadata {
+  announcement: AuditedAnnouncement;
+}
+
+export interface AdminAnnouncementUpdatedMetadata {
+  before: AuditedAnnouncement;
+  after: AuditedAnnouncement;
+}
+
+export interface AdminAnnouncementDeletedMetadata {
+  title: string;
+}
+
 // Outcome only: the endpoint URL can be private and must not reach an exportable log.
 // Shared by the admin button and the daily timer.
 export interface TelemetrySendMetadata {
@@ -266,6 +290,9 @@ export type AuditLogMetadata =
   | AdminPasswordResetMetadata
   | AdminSystemSettingsUpdatedMetadata
   | AdminTelemetryConsentMetadata
+  | AdminAnnouncementCreatedMetadata
+  | AdminAnnouncementUpdatedMetadata
+  | AdminAnnouncementDeletedMetadata
   | TelemetrySendMetadata
   | CalendarBundleCreatedMetadata
   | CalendarBundleUpdatedMetadata
