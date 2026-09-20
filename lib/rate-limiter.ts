@@ -206,6 +206,19 @@ const config = {
       parseInt(process.env.RATE_LIMIT_CUSTOM_FIELD_MUTATIONS_WINDOW || "3600", 10) *
       1000, // 1 hour
   },
+  // Read-only, unauthenticated: every page load on /login and the dashboard hits
+  // it, so the ceiling is high -- it exists to stop scraping loops, not traffic.
+  announcements: {
+    requests: parseInt(process.env.RATE_LIMIT_ANNOUNCEMENTS_REQUESTS || "120", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_ANNOUNCEMENTS_WINDOW || "60", 10) * 1000, // 1 minute
+  },
+  // Announcement create/update/delete from the admin panel -- low volume by nature.
+  adminAnnouncementMutations: {
+    requests: parseInt(process.env.RATE_LIMIT_ADMIN_ANNOUNCEMENT_MUTATIONS || "20", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_ADMIN_ANNOUNCEMENT_MUTATIONS_WINDOW || "60", 10) * 1000, // 1 minute
+  },
   // Admin telemetry payload preview; the collector's own cache keeps repeat
   // calls cheap, this just bounds the burst.
   telemetryPayload: {
@@ -247,6 +260,8 @@ const limitsByType = {
   "admin-calendar-mutations": config.adminCalendarMutations,
   "bundle-mutations": config.bundleMutations,
   "custom-field-mutations": config.customFieldMutations,
+  announcements: config.announcements,
+  "admin-announcement-mutations": config.adminAnnouncementMutations,
   "telemetry-payload": config.telemetryPayload,
   "telemetry-send": config.telemetrySend,
 } as const;

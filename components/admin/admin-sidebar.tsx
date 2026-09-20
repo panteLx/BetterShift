@@ -11,6 +11,7 @@ import {
   Crown,
   FolderClosed,
   LayoutDashboard,
+  Megaphone,
   ScrollText,
   Users,
   type LucideIcon,
@@ -29,7 +30,7 @@ export interface AdminSection {
   icon: LucideIcon;
 }
 
-/** The four admin areas, shared by sidebar, tab bar, breadcrumb and dashboard. */
+/** The five admin areas, shared by sidebar, tab bar, breadcrumb and dashboard. */
 export function useAdminSections(): AdminSection[] {
   const t = useTranslations();
   return [
@@ -42,6 +43,12 @@ export function useAdminSections(): AdminSection[] {
       icon: FolderClosed,
     },
     { href: "/admin/logs", label: t("admin.auditLogs"), shortLabel: t("adminShell.logsShort"), icon: ScrollText },
+    {
+      href: "/admin/announcements",
+      label: t("admin.announcementsMenu"),
+      shortLabel: t("adminShell.announcementsShort"),
+      icon: Megaphone,
+    },
   ];
 }
 
@@ -49,7 +56,7 @@ export function isActiveSection(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 }
 
-/** Desktop area list (13a–13f): account row, the four areas, back to the app. */
+/** Desktop area list (13a–13f): account row, the five areas, back to the app. */
 export function AdminSidebar() {
   const t = useTranslations();
   const locale = useLocale();
@@ -166,7 +173,7 @@ export function AdminMobileNav() {
   const sections = useAdminSections();
 
   return (
-    <nav className="grid shrink-0 grid-cols-4 gap-1 border-t border-line bg-background px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+    <nav className="grid shrink-0 grid-cols-5 gap-1 border-t border-line bg-background px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden">
       {sections.map((section) => {
         const active = isActiveSection(pathname, section.href);
         return (

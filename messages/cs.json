@@ -496,6 +496,7 @@
     "usersMenu": "Uživatelé",
     "calendarsMenu": "Kalendáře",
     "auditLogs": "Protokoly auditu",
+    "announcementsMenu": "Oznámení",
     "backToApp": "Zpět do aplikace",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Rozbalit postranní panel",
@@ -687,6 +688,53 @@
       "sendSuccess": "Telemetrie odeslána",
       "sendFailed": "Odeslání se nezdařilo. Telemetrický server je nedostupný nebo požadavek odmítl.",
       "sendUnavailable": "Odeslání není možné: telemetrie je vypnutá, souhlas je zastaralý nebo jde o vývojové sestavení."
+    },
+    "announcements": {
+      "title": "Oznámení",
+      "description": "Upozornění zobrazená všem na přihlašovacích stránkách a v přehledu.",
+      "create": "Nové oznámení",
+      "edit": "Upravit",
+      "delete": "Smazat",
+      "empty": "Zatím žádná oznámení",
+      "emptyHint": "Vytvořte oznámení, abyste oslovili všechny uživatele této instance.",
+      "statusActive": "Aktivní",
+      "statusScheduled": "Naplánováno",
+      "statusExpired": "Vypršelo",
+      "statusOff": "Vypnuto",
+      "toneInfo": "Info",
+      "toneWarning": "Varování",
+      "toneDanger": "Kritické",
+      "showOnAuth": "Přihlašovací stránky",
+      "showOnDashboard": "Přehled",
+      "createdBy": "od {name}",
+      "unknownAuthor": "Neznámý",
+      "saveError": "Oznámení se nepodařilo uložit",
+      "deleteError": "Oznámení se nepodařilo smazat",
+      "createTitle": "Nové oznámení",
+      "editTitle": "Upravit oznámení",
+      "formDescription": "Titulek a text se zobrazí přesně tak, jak je zde zadáte — nepřekládají se.",
+      "fieldTitle": "Titulek",
+      "fieldTitlePlaceholder": "např. Údržba v sobotu",
+      "fieldBody": "Text",
+      "fieldBodyPlaceholder": "Nepovinný text s podrobnostmi",
+      "fieldTone": "Typ",
+      "showOnAuthHint": "Zobrazí se na přihlašovací a registrační stránce, i bez účtu.",
+      "showOnDashboardHint": "Zobrazí se nad kalendářem všem přihlášeným uživatelům i hostům.",
+      "enabled": "Aktivní",
+      "enabledHint": "Vypnuté oznámení se nikde nezobrazí, bez ohledu na časové okno.",
+      "startsAt": "Zobrazit od",
+      "endsAt": "Zobrazit do",
+      "windowHint": "Nepovinné. Bez okna rozhoduje jen přepínač Aktivní.",
+      "errorTitleRequired": "Zadejte titulek",
+      "errorNoPlacement": "Vyberte alespoň jedno místo zobrazení",
+      "errorWindow": "Konec musí být později než začátek",
+      "deleteTitle": "Smazat oznámení",
+      "deleteDescription": "Oznámení bude trvale odstraněno a okamžitě zmizí všem.",
+      "deleteWarning": "Tento krok nelze vrátit zpět.",
+      "deleteUnderstood": "Rozumím, že oznámení bude trvale odstraněno.",
+      "deleteConfirmationLabel": "Zadejte titulek pro potvrzení",
+      "deleteConfirmationHint": "Zadejte „{name}“ pro odemčení mazání.",
+      "deleteConfirm": "Trvale smazat"
     }
   },
   "appearance": {
@@ -1016,6 +1064,7 @@
   },
   "adminShell": {
     "logsShort": "Logy",
+    "announcementsShort": "Oznámení",
     "breadcrumb": "Drobečková navigace"
   },
   "adminDashboard": {
@@ -1065,6 +1114,9 @@
       "calendarsDeleted": "{count, plural, one {# kalendář smazán} few {# kalendáře smazány} other {# kalendářů smazáno}}",
       "logsDeleted": "{count, plural, one {# záznam protokolu smazán} few {# záznamy protokolu smazány} other {# záznamů protokolu smazáno}}",
       "systemSettingsUpdated": "Systémová nastavení změněna",
+      "announcementCreated": "Oznámení „{title}“ vytvořeno",
+      "announcementUpdated": "Oznámení „{title}“ upraveno",
+      "announcementDeleted": "Oznámení „{title}“ smazáno",
       "calendarUpdated": "Kalendář „{calendar}“ upraven",
       "calendarDeleted": "Kalendář „{calendar}“ smazán",
       "calendarCreated": "Kalendář „{calendar}“ vytvořen",
@@ -1292,5 +1344,8 @@
       "accept": "Odeslat",
       "decline": "Neodesílat"
     }
+  },
+  "announcements": {
+    "dismiss": "Skrýt oznámení"
   }
 }

@@ -558,6 +558,36 @@ export const calendarNotes = sqliteTable("calendar_notes", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const announcements = sqliteTable("announcements", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  body: text("body"),
+  tone: text("tone", { enum: ["info", "warning", "danger"] })
+    .notNull()
+    .default("info"),
+  showOnAuth: integer("show_on_auth", { mode: "boolean" }).notNull().default(true),
+  showOnDashboard: integer("show_on_dashboard", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  // Both null means the enabled flag alone decides visibility.
+  startsAt: integer("starts_at", { mode: "timestamp" }),
+  endsAt: integer("ends_at", { mode: "timestamp" }),
+  // null = no known creator, see calendarNotes.createdBy above.
+  createdBy: text("created_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
 export const syncLogs = sqliteTable("sync_logs", {
   id: text("id")
     .primaryKey()
@@ -911,6 +941,13 @@ export const userPreferencesRelations = relations(
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(user, {
     fields: [auditLogs.userId],
+    references: [user.id],
+  }),
+}));
+
+export const announcementsRelations = relations(announcements, ({ one }) => ({
+  createdByUser: one(user, {
+    fields: [announcements.createdBy],
     references: [user.id],
   }),
 }));

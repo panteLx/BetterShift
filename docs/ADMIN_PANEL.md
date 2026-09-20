@@ -10,7 +10,8 @@ This guide covers the admin panel features in BetterShift, including user manage
 4. [User Management](#user-management)
 5. [Calendar Management](#calendar-management)
 6. [Audit Logs](#audit-logs)
-7. [Rate Limiting](#rate-limiting)
+7. [Announcements](#announcements)
+8. [Rate Limiting](#rate-limiting)
 
 ---
 
@@ -28,8 +29,8 @@ Or navigate directly to `/admin`.
 
 ### Navigation
 
-- **Desktop**: a sidebar on the left links to Dashboard, Users, Calendars, and Audit Logs.
-- **Phone**: the same four areas are reached through a bottom tab bar instead of a sidebar.
+- **Desktop**: a sidebar on the left links to Dashboard, Users, Calendars, Audit Logs, and Announcements.
+- **Phone**: the same five areas are reached through a bottom tab bar instead of a sidebar.
 - Viewing or editing a single user or calendar opens as a side panel over the current list, not as a separate page — the list stays where you left it underneath.
 
 ---
@@ -256,6 +257,41 @@ Consider exporting logs before deletion for compliance purposes.
 
 ---
 
+## Announcements
+
+Location: `/admin/announcements`
+
+Announcements are short, admin-authored notices shown on the login/register pages and above the calendar. Unlike most content in BetterShift, a title and body are written once and shown as-is to every viewer — they are not translated per locale.
+
+### Managing Announcements
+
+Creating, editing and deleting announcements requires the same permission as system settings: **admin** or **superadmin** (`canManageSystemSettings`). There is no separate role tier for this section.
+
+### Placement
+
+Each announcement targets one or both of:
+
+- **Auth pages** — shown on the login and registration pages, for logged-out visitors
+- **Dashboard** — shown above the calendar, for signed-in users
+
+At least one placement must be selected; an announcement with neither is rejected as a mistake rather than saved.
+
+### Tone
+
+Three tones control the banner's icon and color: **Info**, **Warning**, and **Danger**.
+
+### Enabled Flag and Scheduling Window
+
+- The **Enabled** toggle takes an announcement out of rotation without deleting it.
+- An optional start and end date can further restrict visibility to a date range; either side may be left blank, and when both are set the end must be after the start.
+- The table shows each announcement's combined status: **Active**, **Scheduled** (before its start date), **Expired** (past its end date), or **Off** (disabled).
+
+### Dismissal
+
+Dismissing an announcement's banner (the × button) is stored per browser in `localStorage`, not on the server, as one shared list of dismissed ids covering both the auth and dashboard placements — dismissing on one surface hides that announcement on the other too. There is no admin-side way to see who dismissed an announcement or to reset dismissals centrally — a browser that already dismissed an announcement keeps it hidden even if the announcement is later edited, disabled and re-enabled, or temporarily outside its window, until local storage is cleared or the dismissed list (capped at the 100 most recent ids) evicts that id.
+
+---
+
 ## Rate Limiting
 
 Admin operations are rate-limited to prevent abuse:
@@ -276,6 +312,10 @@ RATE_LIMIT_ADMIN_BULK_OPERATIONS_WINDOW=300
 # Calendar mutations: 10 per minute
 RATE_LIMIT_ADMIN_CALENDAR_MUTATIONS=10
 RATE_LIMIT_ADMIN_CALENDAR_MUTATIONS_WINDOW=60
+
+# Announcement create/update/delete: 20 per minute
+RATE_LIMIT_ADMIN_ANNOUNCEMENT_MUTATIONS=20
+RATE_LIMIT_ADMIN_ANNOUNCEMENT_MUTATIONS_WINDOW=60
 ```
 
 ---

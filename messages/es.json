@@ -496,6 +496,7 @@
     "usersMenu": "Usuarios",
     "calendarsMenu": "Calendarios",
     "auditLogs": "Registros de auditoría",
+    "announcementsMenu": "Anuncios",
     "backToApp": "Volver a la App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Expandir barra lateral",
@@ -687,6 +688,53 @@
       "sendSuccess": "Telemetría enviada",
       "sendFailed": "Error al enviar. El servidor de telemetría no está accesible o rechazó la solicitud.",
       "sendUnavailable": "No se puede enviar: la telemetría está desactivada, el consentimiento está desactualizado o es una compilación de desarrollo."
+    },
+    "announcements": {
+      "title": "Anuncios",
+      "description": "Avisos que se muestran a todos en las páginas de inicio de sesión y en el tablero.",
+      "create": "Nuevo anuncio",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "empty": "Aún no hay anuncios",
+      "emptyHint": "Crea un anuncio para llegar a todos los usuarios de esta instancia.",
+      "statusActive": "Activo",
+      "statusScheduled": "Programado",
+      "statusExpired": "Caducado",
+      "statusOff": "Desactivado",
+      "toneInfo": "Información",
+      "toneWarning": "Advertencia",
+      "toneDanger": "Crítico",
+      "showOnAuth": "Páginas de inicio de sesión",
+      "showOnDashboard": "Tablero",
+      "createdBy": "por {name}",
+      "unknownAuthor": "Desconocido",
+      "saveError": "No se pudo guardar el anuncio",
+      "deleteError": "No se pudo eliminar el anuncio",
+      "createTitle": "Nuevo anuncio",
+      "editTitle": "Editar anuncio",
+      "formDescription": "El título y el texto aparecen exactamente como los escribes aquí: no se traducen.",
+      "fieldTitle": "Título",
+      "fieldTitlePlaceholder": "p. ej. Mantenimiento el sábado",
+      "fieldBody": "Texto",
+      "fieldBodyPlaceholder": "Texto opcional con los detalles",
+      "fieldTone": "Tipo",
+      "showOnAuthHint": "Visible en las páginas de inicio de sesión y registro, incluso sin cuenta.",
+      "showOnDashboardHint": "Visible sobre el calendario para todos los usuarios conectados y los invitados.",
+      "enabled": "Activo",
+      "enabledHint": "Desactivado, el anuncio no se muestra en ningún lugar, sea cual sea la ventana de tiempo.",
+      "startsAt": "Visible desde",
+      "endsAt": "Visible hasta",
+      "windowHint": "Opcional. Sin ventana, solo decide el interruptor de activo.",
+      "errorTitleRequired": "Introduce un título",
+      "errorNoPlacement": "Elige al menos un lugar donde mostrarlo",
+      "errorWindow": "El final debe ser posterior al inicio",
+      "deleteTitle": "Eliminar anuncio",
+      "deleteDescription": "El anuncio se elimina permanentemente y desaparece de inmediato para todos.",
+      "deleteWarning": "Esta acción no se puede deshacer.",
+      "deleteUnderstood": "Entiendo que el anuncio se eliminará de forma permanente.",
+      "deleteConfirmationLabel": "Escribe el título para confirmar",
+      "deleteConfirmationHint": "Escribe «{name}» para habilitar la eliminación.",
+      "deleteConfirm": "Eliminar definitivamente"
     }
   },
   "appearance": {
@@ -1016,6 +1064,7 @@
   },
   "adminShell": {
     "logsShort": "Registros",
+    "announcementsShort": "Anuncios",
     "breadcrumb": "Ruta de navegación"
   },
   "adminDashboard": {
@@ -1065,6 +1114,9 @@
       "calendarsDeleted": "{count, plural, one {# calendario eliminado} other {# calendarios eliminados}}",
       "logsDeleted": "{count, plural, one {# entrada de registro eliminada} other {# entradas de registro eliminadas}}",
       "systemSettingsUpdated": "Configuración del sistema modificada",
+      "announcementCreated": "Anuncio «{title}» creado",
+      "announcementUpdated": "Anuncio «{title}» editado",
+      "announcementDeleted": "Anuncio «{title}» eliminado",
       "calendarUpdated": "Calendario «{calendar}» editado",
       "calendarDeleted": "Calendario «{calendar}» eliminado",
       "calendarCreated": "Calendario «{calendar}» creado",
@@ -1292,5 +1344,8 @@
       "accept": "Enviar",
       "decline": "No enviar"
     }
+  },
+  "announcements": {
+    "dismiss": "Ocultar anuncio"
   }
 }

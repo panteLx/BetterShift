@@ -13,6 +13,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { CalendarDays, Eye, EyeOff } from "lucide-react";
+import { AnnouncementBanners } from "@/components/announcement-banners";
 import { Input } from "@/components/ui/input";
 import { useClientValue } from "@/hooks/useMediaQuery";
 import { useVersionInfo } from "@/hooks/useVersionInfo";
@@ -63,6 +64,7 @@ export function AuthShell({
 
       <main className="flex flex-1 justify-center px-4 py-8 sm:py-12 lg:items-center lg:p-9">
         <div className="flex w-full max-w-[380px] flex-col gap-[18px]">
+          <AnnouncementBanners placement="auth" />
           <div>
             <h1 className="text-[21px] font-semibold tracking-[-0.02em] text-fg-strong">
               {title}

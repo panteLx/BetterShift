@@ -22,6 +22,12 @@ function count(metadata: unknown, key: string): number {
   return Number.isFinite(value) ? value : 0;
 }
 
+// text() only reads a top-level key; announcement metadata nests fields under
+// "announcement"/"before"/"after", so this reaches one level down.
+function nested(metadata: unknown, outer: string, inner: string): string {
+  return text(field(metadata, outer), inner);
+}
+
 /**
  * Plain-language summary of an audit entry, built from its action and metadata.
  * Falls back to the raw action name when the metadata lacks what a sentence needs.
@@ -77,6 +83,16 @@ export function useAuditDescription() {
           return t("adminAudit.describe.logsDeleted", { count: count(m, "deletedCount") });
         case "admin.system_settings.update":
           return t("adminAudit.describe.systemSettingsUpdated");
+        case "admin.announcement.create":
+          return t("adminAudit.describe.announcementCreated", {
+            title: nested(m, "announcement", "title"),
+          });
+        case "admin.announcement.update":
+          return t("adminAudit.describe.announcementUpdated", {
+            title: nested(m, "after", "title"),
+          });
+        case "admin.announcement.delete":
+          return t("adminAudit.describe.announcementDeleted", { title: text(m, "title") });
         case "admin.telemetry_consent":
           return field(m, "after") === true
             ? t("adminAudit.describe.telemetryEnabled")

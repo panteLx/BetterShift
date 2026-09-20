@@ -496,6 +496,7 @@
     "usersMenu": "Users",
     "calendarsMenu": "Calendars",
     "auditLogs": "Audit Logs",
+    "announcementsMenu": "Announcements",
     "backToApp": "Back to App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Expand Sidebar",
@@ -687,6 +688,53 @@
       "sendSuccess": "Telemetry sent",
       "sendFailed": "Sending failed. The telemetry server is unreachable or rejected the request.",
       "sendUnavailable": "Cannot send: telemetry is off, the consent is outdated, or this is a development build."
+    },
+    "announcements": {
+      "title": "Announcements",
+      "description": "Notices shown to everyone on the sign-in pages and the dashboard.",
+      "create": "New announcement",
+      "edit": "Edit",
+      "delete": "Delete",
+      "empty": "No announcements yet",
+      "emptyHint": "Create an announcement to reach everyone on this instance.",
+      "statusActive": "Active",
+      "statusScheduled": "Scheduled",
+      "statusExpired": "Expired",
+      "statusOff": "Off",
+      "toneInfo": "Info",
+      "toneWarning": "Warning",
+      "toneDanger": "Critical",
+      "showOnAuth": "Sign-in pages",
+      "showOnDashboard": "Dashboard",
+      "createdBy": "by {name}",
+      "unknownAuthor": "Unknown",
+      "saveError": "Could not save the announcement",
+      "deleteError": "Could not delete the announcement",
+      "createTitle": "New announcement",
+      "editTitle": "Edit announcement",
+      "formDescription": "Title and text appear exactly as you type them — they are not translated.",
+      "fieldTitle": "Title",
+      "fieldTitlePlaceholder": "e.g. Maintenance on Saturday",
+      "fieldBody": "Text",
+      "fieldBodyPlaceholder": "Optional details",
+      "fieldTone": "Type",
+      "showOnAuthHint": "Visible on the sign-in and registration pages, even without an account.",
+      "showOnDashboardHint": "Visible above the calendar for everyone signed in, and for guests.",
+      "enabled": "Active",
+      "enabledHint": "Switched off, the announcement is shown nowhere, whatever the time window says.",
+      "startsAt": "Visible from",
+      "endsAt": "Visible until",
+      "windowHint": "Optional. Without a window, the active switch alone decides.",
+      "errorTitleRequired": "Please enter a title",
+      "errorNoPlacement": "Pick at least one place to show it",
+      "errorWindow": "The end must be after the start",
+      "deleteTitle": "Delete announcement",
+      "deleteDescription": "The announcement is removed permanently and disappears for everyone immediately.",
+      "deleteWarning": "This cannot be undone.",
+      "deleteUnderstood": "I understand the announcement will be permanently deleted.",
+      "deleteConfirmationLabel": "Type the title to confirm",
+      "deleteConfirmationHint": "Type “{name}” to unlock deletion.",
+      "deleteConfirm": "Delete permanently"
     }
   },
   "appearance": {
@@ -1016,6 +1064,7 @@
   },
   "adminShell": {
     "logsShort": "Logs",
+    "announcementsShort": "Announcements",
     "breadcrumb": "Breadcrumb"
   },
   "adminDashboard": {
@@ -1065,6 +1114,9 @@
       "calendarsDeleted": "{count, plural, one {# calendar} other {# calendars}} deleted",
       "logsDeleted": "{count, plural, one {# log entry} other {# log entries}} deleted",
       "systemSettingsUpdated": "System settings changed",
+      "announcementCreated": "Announcement “{title}” created",
+      "announcementUpdated": "Announcement “{title}” edited",
+      "announcementDeleted": "Announcement “{title}” deleted",
       "calendarUpdated": "Calendar “{calendar}” edited",
       "calendarDeleted": "Calendar “{calendar}” deleted",
       "calendarCreated": "Calendar “{calendar}” created",
@@ -1292,5 +1344,8 @@
       "accept": "Send",
       "decline": "Don't send"
     }
+  },
+  "announcements": {
+    "dismiss": "Dismiss announcement"
   }
 }

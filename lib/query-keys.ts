@@ -43,6 +43,10 @@ export const queryKeys = {
     byCalendar: (calendarId: string) => ["external-syncs", calendarId] as const,
     logs: (calendarId: string) => ["sync-logs", calendarId] as const,
   },
+  announcements: {
+    all: ["announcements"] as const,
+    byPlacement: (placement: string) => ["announcements", placement] as const,
+  },
 
   // Admin Data
   admin: {
@@ -65,6 +69,7 @@ export const queryKeys = {
     auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
     systemSettings: ["admin", "system-settings"] as const,
+    announcements: ["admin", "announcements"] as const,
     telemetryPayload: (profile: string) =>
       ["admin", "telemetry-payload", profile] as const,
   },

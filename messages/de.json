@@ -496,6 +496,7 @@
     "usersMenu": "Benutzer",
     "calendarsMenu": "Kalender",
     "auditLogs": "Audit-Logs",
+    "announcementsMenu": "Ankündigungen",
     "backToApp": "Zurück zur App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Seitenleiste ausklappen",
@@ -687,6 +688,53 @@
       "sendSuccess": "Telemetriedaten gesendet",
       "sendFailed": "Senden fehlgeschlagen. Der Telemetrie-Server ist nicht erreichbar oder hat die Anfrage abgelehnt.",
       "sendUnavailable": "Senden nicht möglich: Telemetrie ist aus, die Zustimmung ist veraltet oder dies ist ein Entwicklungs-Build."
+    },
+    "announcements": {
+      "title": "Ankündigungen",
+      "description": "Hinweise, die allen auf den Anmeldeseiten und im Dashboard angezeigt werden.",
+      "create": "Neue Ankündigung",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "empty": "Noch keine Ankündigungen",
+      "emptyHint": "Lege eine Ankündigung an, um alle Nutzer dieser Instanz zu erreichen.",
+      "statusActive": "Aktiv",
+      "statusScheduled": "Geplant",
+      "statusExpired": "Abgelaufen",
+      "statusOff": "Aus",
+      "toneInfo": "Info",
+      "toneWarning": "Warnung",
+      "toneDanger": "Kritisch",
+      "showOnAuth": "Anmeldeseiten",
+      "showOnDashboard": "Dashboard",
+      "createdBy": "von {name}",
+      "unknownAuthor": "Unbekannt",
+      "saveError": "Ankündigung konnte nicht gespeichert werden",
+      "deleteError": "Ankündigung konnte nicht gelöscht werden",
+      "createTitle": "Neue Ankündigung",
+      "editTitle": "Ankündigung bearbeiten",
+      "formDescription": "Titel und Text erscheinen genau so, wie du sie hier eingibst — sie werden nicht übersetzt.",
+      "fieldTitle": "Titel",
+      "fieldTitlePlaceholder": "z. B. Wartungsarbeiten am Samstag",
+      "fieldBody": "Text",
+      "fieldBodyPlaceholder": "Optionaler Fließtext mit den Details",
+      "fieldTone": "Art",
+      "showOnAuthHint": "Sichtbar auf der Anmelde- und Registrierungsseite, auch ohne Konto.",
+      "showOnDashboardHint": "Sichtbar über dem Kalender für alle angemeldeten Nutzer und Gäste.",
+      "enabled": "Aktiv",
+      "enabledHint": "Ausgeschaltet wird die Ankündigung nirgends angezeigt, unabhängig vom Zeitfenster.",
+      "startsAt": "Sichtbar ab",
+      "endsAt": "Sichtbar bis",
+      "windowHint": "Optional. Ohne Angabe entscheidet allein der Aktiv-Schalter.",
+      "errorTitleRequired": "Bitte gib einen Titel ein",
+      "errorNoPlacement": "Wähle mindestens einen Anzeigeort",
+      "errorWindow": "Das Ende muss nach dem Beginn liegen",
+      "deleteTitle": "Ankündigung löschen",
+      "deleteDescription": "Die Ankündigung wird dauerhaft entfernt und verschwindet sofort für alle.",
+      "deleteWarning": "Dieser Schritt kann nicht rückgängig gemacht werden.",
+      "deleteUnderstood": "Ich habe verstanden, dass die Ankündigung endgültig gelöscht wird.",
+      "deleteConfirmationLabel": "Titel zur Bestätigung eingeben",
+      "deleteConfirmationHint": "Gib „{name}“ ein, um das Löschen freizuschalten.",
+      "deleteConfirm": "Endgültig löschen"
     }
   },
   "appearance": {
@@ -1016,6 +1064,7 @@
   },
   "adminShell": {
     "logsShort": "Logs",
+    "announcementsShort": "Ankündigungen",
     "breadcrumb": "Navigationspfad"
   },
   "adminDashboard": {
@@ -1065,6 +1114,9 @@
       "calendarsDeleted": "{count, plural, one {# Kalender} other {# Kalender}} gelöscht",
       "logsDeleted": "{count, plural, one {# Protokolleintrag} other {# Protokolleinträge}} gelöscht",
       "systemSettingsUpdated": "Systemeinstellungen geändert",
+      "announcementCreated": "Ankündigung „{title}“ erstellt",
+      "announcementUpdated": "Ankündigung „{title}“ bearbeitet",
+      "announcementDeleted": "Ankündigung „{title}“ gelöscht",
       "calendarUpdated": "Kalender „{calendar}“ bearbeitet",
       "calendarDeleted": "Kalender „{calendar}“ gelöscht",
       "calendarCreated": "Kalender „{calendar}“ angelegt",
@@ -1292,5 +1344,8 @@
       "accept": "Senden",
       "decline": "Nicht senden"
     }
+  },
+  "announcements": {
+    "dismiss": "Ankündigung ausblenden"
   }
 }
