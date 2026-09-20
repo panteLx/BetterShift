@@ -103,8 +103,9 @@ jobs:
             # Exit-Status von gh selbst auswerten: ein 403 oder Netzwerkfehler darf
             # nicht wie "noch kein Lauf vorhanden" aussehen, sonst greift der Fallback.
             if ! runs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
-                    --jq '.check_runs[] | select(.name=="build-dev") | "\(.status) \(.conclusion)"' 2>&1); then
-              echo "::error::Abfrage der Check-Runs fehlgeschlagen: $runs"
+                    --jq '.check_runs[] | select(.name=="build-dev") | "\(.status) \(.conclusion)"' \
+                    2>"$RUNNER_TEMP/gh-err.txt"); then
+              echo "::error::Abfrage der Check-Runs fehlgeschlagen: $(cat "$RUNNER_TEMP/gh-err.txt")"
               exit 1
             fi
             run=$(printf '%s\n' "$runs" | head -1)
@@ -178,6 +179,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
           STALE_IMAGE: ${{ steps.image.outputs.stale }}
         run: |
+          set -o pipefail
           if [ "$STALE_IMAGE" = "true" ]; then
             commit_line="Image: aus einem früheren Commit dieses PRs — für \`$SHA\` wurde kein Image gebaut (paths-ignore)."
           else
@@ -198,7 +200,7 @@ jobs:
           EOF
           )
           existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq ".[] | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
+            --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
           if [ -n "$existing" ]; then
             gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -f body="$body"
           else
@@ -237,8 +239,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.number || inputs.pr_number }}
         run: |
+          set -o pipefail
           existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq ".[] | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
+            --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$STACK_COMMENT_MARKER\")) | .id" | tail -n 1)
           if [ -z "$existing" ]; then
             echo "Kein Preview-Kommentar vorhanden — nichts zu aktualisieren."
             exit 0
