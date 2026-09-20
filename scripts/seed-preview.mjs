@@ -10,7 +10,7 @@
 function requireEnv(name) {
   const value = process.env[name];
   if (!value) {
-    console.error(`Fehlende Konfiguration: ${name}`);
+    console.error(`Missing configuration: ${name}`);
     process.exit(1);
   }
   return value;
@@ -95,12 +95,12 @@ async function main() {
       // not JSON — falls through, code stays undefined, error propagates below
     }
     if (error.status === 422 && code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
-      console.log("Instanz ist bereits geseedet — nichts zu tun.");
+      console.log("Instance is already seeded — nothing to do.");
       return;
     }
     throw error;
   }
-  console.log(`Admin angelegt: ${ADMIN_EMAIL}`);
+  console.log(`Admin created: ${ADMIN_EMAIL}`);
 
   await signUp({ email: MEMBER_EMAIL, password: ADMIN_PASSWORD, name: "Max Mitarbeiter" });
   await signIn({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
@@ -113,7 +113,7 @@ async function main() {
     method: "POST",
     body: { name: "Urlaubsplanung", color: "#f59e0b" },
   });
-  console.log("Zwei Kalender angelegt.");
+  console.log("Two calendars created.");
 
   const bundles = await api(`/api/calendars/${team.id}/bundles`);
   const contribute = bundles.find((bundle) => bundle.name === "Contribute") || bundles[0];
@@ -126,10 +126,10 @@ async function main() {
       method: "POST",
       body: { userId: member.id, bundleId: contribute.id },
     });
-    console.log(`Kalender mit ${MEMBER_EMAIL} geteilt (Bundle ${contribute.name}).`);
+    console.log(`Calendar shared with ${MEMBER_EMAIL} (bundle ${contribute.name}).`);
   } else {
     console.warn(
-      `Kein Benutzer ${MEMBER_EMAIL} gefunden — Freigabe und Schicht-Anmeldungen werden übersprungen.`
+      `No user ${MEMBER_EMAIL} found — skipping the share and the shift signups.`
     );
   }
 
@@ -158,13 +158,13 @@ async function main() {
   for (const definition of presetDefinitions) {
     presets.push(await api("/api/presets", { method: "POST", body: { calendarId: team.id, ...definition } }));
   }
-  console.log(`${presets.length} Presets angelegt.`);
+  console.log(`${presets.length} presets created.`);
 
   const rotation = presets.slice(0, 3);
   let shiftCount = 0;
   for (const monthOffset of [0, 1]) {
     for (const day of daysOfMonth(monthOffset)) {
-      if (day.getDay() === 0) continue; // Sonntag bleibt frei, damit der Plan nicht flächendeckend gefüllt ist
+      if (day.getDay() === 0) continue; // Sundays stay empty so the plan does not look uniformly filled
       const preset = rotation[shiftCount % rotation.length];
       await api("/api/shifts", {
         method: "POST",
@@ -185,7 +185,7 @@ async function main() {
       shiftCount += 1;
     }
   }
-  console.log(`${shiftCount} Schichten angelegt.`);
+  console.log(`${shiftCount} shifts created.`);
 
   const [firstDay] = daysOfMonth(0);
   const notes = [
@@ -201,8 +201,8 @@ async function main() {
       body: { calendarId: team.id, date: iso(date), note: entry.note, type: entry.type, color: entry.color },
     });
   }
-  console.log(`${notes.length} Notizen angelegt.`);
-  console.log("Seed abgeschlossen.");
+  console.log(`${notes.length} notes created.`);
+  console.log("Seed complete.");
 }
 
 try {

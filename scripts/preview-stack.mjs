@@ -32,7 +32,7 @@ const REQUIRED = {
 function requireEnv(names) {
   const missing = names.filter((name) => !process.env[name]);
   if (missing.length > 0) {
-    console.error(`Fehlende Konfiguration: ${missing.join(", ")}`);
+    console.error(`Missing configuration: ${missing.join(", ")}`);
     process.exit(1);
   }
 }
@@ -44,9 +44,9 @@ function requireEnv(names) {
 function redact(text) {
   const masked = String(text ?? "").replace(
     /((?:BASIC_AUTH_HASH|BETTER_AUTH_SECRET)=)[^\s"',\\]*/g,
-    "$1<maskiert>"
+    "$1<redacted>"
   );
-  return masked.length > 2000 ? `${masked.slice(0, 2000)}… [gekürzt]` : masked;
+  return masked.length > 2000 ? `${masked.slice(0, 2000)}… [truncated]` : masked;
 }
 
 async function komodo(path, body) {
@@ -71,7 +71,7 @@ async function komodo(path, body) {
 
 /**
  * Komodo answers 200 even when the compose run failed; the outcome sits in the
- * returned Update. Returns a German message on a real failure, else null.
+ * returned Update. Returns a message on a real failure, else null.
  * A response without a `success` field is not a failure, and `success` is also
  * false while an update is still Queued or InProgress — so a `status` that is
  * present but not terminal is not a failure either.
@@ -88,7 +88,7 @@ function updateFailure(label, result) {
     .filter(Boolean)
     .join("\n---\n");
 
-  return `${label} fehlgeschlagen.${detail ? `\n${redact(detail)}` : " Komodo lieferte keine Details."}`;
+  return `${label} failed.${detail ? `\n${redact(detail)}` : " Komodo reported no details."}`;
 }
 
 function assertUpdateOk(label, result) {
@@ -191,7 +191,7 @@ async function deploy({ dryRun }) {
     console.log("--- compose ---");
     console.log(config.file_contents);
     console.log("--- config ---");
-    console.log(JSON.stringify({ ...config, environment: "<maskiert>", file_contents: "<oben>" }, null, 2));
+    console.log(JSON.stringify({ ...config, environment: "<redacted>", file_contents: "<shown above>" }, null, 2));
     return;
   }
 
@@ -201,10 +201,10 @@ async function deploy({ dryRun }) {
       "UpdateStack",
       await komodo("/write/UpdateStack", { id: stackId(existing, name), config })
     );
-    console.log(`Stack ${name} aktualisiert.`);
+    console.log(`Stack ${name} updated.`);
   } else {
     assertUpdateOk("CreateStack", await komodo("/write/CreateStack", { name, config }));
-    console.log(`Stack ${name} angelegt.`);
+    console.log(`Stack ${name} created.`);
   }
 
   assertUpdateOk("DeployStack", await komodo("/execute/DeployStack", { stack: name }));
@@ -215,13 +215,13 @@ async function destroy({ dryRun }) {
   const name = `bettershift-pr-${process.env.PR_NUMBER}`;
 
   if (dryRun) {
-    console.log(`Würde Stack ${name} zerstören und löschen.`);
+    console.log(`Would destroy and delete stack ${name}.`);
     return;
   }
 
   const existing = await findStack(name);
   if (!existing) {
-    console.log(`Stack ${name} existiert nicht — nichts zu tun.`);
+    console.log(`Stack ${name} does not exist — nothing to do.`);
     return;
   }
 
@@ -232,10 +232,10 @@ async function destroy({ dryRun }) {
     await komodo("/execute/DestroyStack", { stack: name, services: [], remove_orphans: true })
   );
   if (failure) {
-    console.error(`${failure}\nLösche den Stack-Eintrag trotzdem.`);
+    console.error(`${failure}\nDeleting the stack entry anyway.`);
   }
   await komodo("/write/DeleteStack", { id: stackId(existing, name) });
-  console.log(`Stack ${name} zerstört und gelöscht.`);
+  console.log(`Stack ${name} destroyed and deleted.`);
 }
 
 const command = process.argv[2];
