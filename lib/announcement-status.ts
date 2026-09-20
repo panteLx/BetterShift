@@ -16,14 +16,6 @@ interface VisibilityFields {
   endsAt: Date | null;
 }
 
-/** The single place the enabled flag and the window are evaluated. */
-export function isVisibleNow(row: VisibilityFields, now: Date = new Date()): boolean {
-  if (!row.enabled) return false;
-  if (row.startsAt && row.startsAt.getTime() > now.getTime()) return false;
-  if (row.endsAt && row.endsAt.getTime() <= now.getTime()) return false;
-  return true;
-}
-
 export function getAnnouncementStatus(
   row: VisibilityFields,
   now: Date = new Date()
@@ -33,3 +25,11 @@ export function getAnnouncementStatus(
   if (row.endsAt && row.endsAt.getTime() <= now.getTime()) return "expired";
   return "active";
 }
+
+/** The named single-rule form of the visibility check; expressed in JS, mirrored in SQL by getVisibleAnnouncements(). */
+export function isVisibleNow(row: VisibilityFields, now: Date = new Date()): boolean {
+  return getAnnouncementStatus(row, now) === "active";
+}
+
+export const ANNOUNCEMENT_PLACEMENTS = ["auth", "dashboard"] as const;
+export type AnnouncementPlacement = (typeof ANNOUNCEMENT_PLACEMENTS)[number];

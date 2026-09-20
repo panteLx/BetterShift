@@ -56,7 +56,7 @@ export function isActiveSection(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 }
 
-/** Desktop area list (13a–13f): account row, the four areas, back to the app. */
+/** Desktop area list (13a–13f): account row, the five areas, back to the app. */
 export function AdminSidebar() {
   const t = useTranslations();
   const locale = useLocale();

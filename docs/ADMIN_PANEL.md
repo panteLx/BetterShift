@@ -288,7 +288,7 @@ Three tones control the banner's icon and color: **Info**, **Warning**, and **Da
 
 ### Dismissal
 
-Dismissing an announcement's banner (the × button) is stored per browser in `localStorage`, not on the server. There is no admin-side way to see who dismissed an announcement or to reset dismissals centrally — a browser that already dismissed an announcement keeps it hidden even if the announcement is later edited or re-enabled, until local storage is cleared.
+Dismissing an announcement's banner (the × button) is stored per browser in `localStorage`, not on the server, as one shared list of dismissed ids covering both the auth and dashboard placements — dismissing on one surface hides that announcement on the other too. There is no admin-side way to see who dismissed an announcement or to reset dismissals centrally — a browser that already dismissed an announcement keeps it hidden even if the announcement is later edited, disabled and re-enabled, or temporarily outside its window, until local storage is cleared or the dismissed list (capped at the 100 most recent ids) evicts that id.
 
 ---
 

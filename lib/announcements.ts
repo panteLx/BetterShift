@@ -2,11 +2,13 @@ import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { announcements } from "@/lib/db/schema";
 import {
+  ANNOUNCEMENT_PLACEMENTS,
   ANNOUNCEMENT_TONES,
   BODY_MAX_LENGTH,
   TITLE_MAX_LENGTH,
   getAnnouncementStatus,
   isVisibleNow,
+  type AnnouncementPlacement,
   type AnnouncementStatus,
   type AnnouncementTone,
 } from "@/lib/announcement-status";
@@ -14,11 +16,15 @@ import {
 // Re-exported so existing server-side consumers keep importing from this
 // module; client components should import these from lib/announcement-status
 // directly to avoid pulling lib/db into the browser bundle.
-export { ANNOUNCEMENT_TONES, BODY_MAX_LENGTH, TITLE_MAX_LENGTH, getAnnouncementStatus, isVisibleNow };
-export type { AnnouncementStatus, AnnouncementTone };
-
-export const ANNOUNCEMENT_PLACEMENTS = ["auth", "dashboard"] as const;
-export type AnnouncementPlacement = (typeof ANNOUNCEMENT_PLACEMENTS)[number];
+export {
+  ANNOUNCEMENT_PLACEMENTS,
+  ANNOUNCEMENT_TONES,
+  BODY_MAX_LENGTH,
+  TITLE_MAX_LENGTH,
+  getAnnouncementStatus,
+  isVisibleNow,
+};
+export type { AnnouncementPlacement, AnnouncementStatus, AnnouncementTone };
 
 /** Exactly what the public route returns -- no creator, no timestamps. */
 export interface PublicAnnouncement {
