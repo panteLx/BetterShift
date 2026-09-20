@@ -127,6 +127,10 @@ async function main() {
       body: { userId: member.id, bundleId: contribute.id },
     });
     console.log(`Kalender mit ${MEMBER_EMAIL} geteilt (Bundle ${contribute.name}).`);
+  } else {
+    console.warn(
+      `Kein Benutzer ${MEMBER_EMAIL} gefunden — Freigabe und Schicht-Anmeldungen werden übersprungen.`
+    );
   }
 
   await api(`/api/calendars/${team.id}/custom-fields`, {
