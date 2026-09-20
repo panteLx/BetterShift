@@ -142,22 +142,32 @@ jobs:
           PREVIEW_IMAGE: ghcr.io/pantelx/bettershift:pr-${{ github.event.number }}
           PREVIEW_BASIC_AUTH_HASH: ${{ secrets.PREVIEW_BASIC_AUTH_HASH }}
           PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
+          PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/preview-stack.mjs deploy
 
       - name: Wait for the instance
         env:
           URL: https://pr-${{ github.event.number }}.${{ vars.PREVIEW_DOMAIN }}
           BASIC_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
+          CF_BYPASS: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: |
           # Has to cover a registry pull, the migration, the Next.js boot and Caddy's first ACME issuance.
           deadline=$(( $(date +%s) + 300 ))
           while [ "$(date +%s)" -lt "$deadline" ]; do
-            if curl -sf -u "preview:$BASIC_PASSWORD" "$URL/api/health" >/dev/null; then
+            if curl -sf -u "preview:$BASIC_PASSWORD" -H "X-Preview-CI-Bypass: $CF_BYPASS" \
+                 "$URL/api/health" >/dev/null; then
               echo "Instanz ist erreichbar."
               exit 0
             fi
             sleep 5
           done
+          # A Cloudflare challenge looks exactly like a dead instance to curl -f.
+          body=$(curl -s -u "preview:$BASIC_PASSWORD" -H "X-Preview-CI-Bypass: $CF_BYPASS" "$URL/api/health" || true)
+          case "$body" in
+            *"Just a moment"*|*"challenges.cloudflare.com"*)
+              echo "::error::Cloudflare is challenging $URL instead of passing the request through. The X-Preview-CI-Bypass header needs a matching WAF skip rule (see docs/PR_PREVIEWS.md)."
+              exit 1 ;;
+          esac
           echo "::error::$URL/api/health is not answering. The stack is left standing for debugging."
           exit 1
 
@@ -167,6 +177,7 @@ jobs:
           PREVIEW_BASIC_AUTH_PASSWORD: ${{ secrets.PREVIEW_BASIC_AUTH_PASSWORD }}
           PREVIEW_ADMIN_EMAIL: ${{ vars.PREVIEW_ADMIN_EMAIL }}
           PREVIEW_ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
+          PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/seed-preview.mjs
 
       - name: Comment on the PR
@@ -211,11 +222,14 @@ jobs:
     name: Tear the preview down
     # vars.KOMODO_URL as the switch: secrets are not readable in a job-level `if`,
     # repository variables are. With no configuration there is nothing to tear down.
+    # On `closed` the label is still on the payload, so it gates the run: without it
+    # this PR never had a preview and there is no stack to destroy.
     if: >-
       vars.KOMODO_URL != '' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.pull_request.head.repo.full_name == github.repository &&
-        (github.event.action == 'closed' ||
+        ((github.event.action == 'closed' &&
+          contains(github.event.pull_request.labels.*.name, 'preview')) ||
          (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -232,6 +246,7 @@ jobs:
           KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
           KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
           PR_NUMBER: ${{ github.event.number || inputs.pr_number }}
+          PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
         run: node scripts/preview-stack.mjs destroy
 
       - name: Update the comment

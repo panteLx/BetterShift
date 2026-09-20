@@ -8,10 +8,11 @@ This guide explains the automated preview environments BetterShift spins up for 
 2. [Prerequisites on the Server](#prerequisites-on-the-server)
 3. [Secrets](#secrets)
 4. [Variables](#variables)
-5. [How the Pieces Fit Together](#how-the-pieces-fit-together)
-6. [What's Different in a Preview](#whats-different-in-a-preview)
-7. [Manual Cleanup](#manual-cleanup)
-8. [Security Note](#security-note)
+5. [Cloudflare in Front](#cloudflare-in-front)
+6. [How the Pieces Fit Together](#how-the-pieces-fit-together)
+7. [What's Different in a Preview](#whats-different-in-a-preview)
+8. [Manual Cleanup](#manual-cleanup)
+9. [Security Note](#security-note)
 
 ---
 
@@ -19,7 +20,7 @@ This guide explains the automated preview environments BetterShift spins up for 
 
 Adding the `preview` label to a pull request from this repository gets it a running, seeded BetterShift instance at `https://pr-<number>.<PREVIEW_DOMAIN>`. Usually that takes a few minutes; in the worst case it takes considerably longer, because the deploy job first waits for the PR's image to finish building — that wait alone is allowed to run for up to 25 minutes. Every further push to the PR (a `synchronize` event) redeploys it from scratch: the old container and its data are destroyed first, so the instance always reflects the latest commit and starts from a clean, freshly seeded database.
 
-Closing the PR, or removing the `preview` label again, tears the instance down completely — container and data, nothing left behind. Reopening a closed PR that still carries the `preview` label deploys it again, the same way a `synchronize` push does: fresh container, freshly reseeded database.
+Closing a PR that carries the `preview` label, or removing the label again, tears the instance down completely — container and data, nothing left behind. Closing a PR that never had the label does nothing: the `teardown` job checks for the label on the `closed` event and skips itself otherwise, so it doesn't go looking for a stack that was never created. Reopening a closed PR that still carries the `preview` label deploys it again, the same way a `synchronize` push does: fresh container, freshly reseeded database.
 
 A pull request from a fork never gets a preview: `.github/workflows/pr-preview.yml` checks `head.repo.full_name` against the target repository and, for a fork PR that gets labeled `preview`, only writes an explanatory `::notice::` into the job log instead of deploying anything. It is a log line rather than a PR comment on purpose: a `pull_request` event from a fork gets a read-only `GITHUB_TOKEN` no matter what the workflow's `permissions:` block says, so posting a comment would simply fail with a 403. Whoever added the label has write access and can read the job. Fork PRs don't get repository secrets or a pushed image, so there would be nothing to deploy against anyway.
 
@@ -83,6 +84,7 @@ Repository secrets the `deploy` job in `.github/workflows/pr-preview.yml` requir
 | `PREVIEW_BASIC_AUTH_HASH` | bcrypt hash of the Basic Auth password |
 | `PREVIEW_BASIC_AUTH_PASSWORD` | the same password, in plain text |
 | `PREVIEW_ADMIN_PASSWORD` | password for the seed admin account |
+| `PREVIEW_CF_BYPASS_TOKEN` | optional — shared value for the `X-Preview-CI-Bypass` header, see [Cloudflare in Front](#cloudflare-in-front) |
 
 Generate the hash with:
 
@@ -100,7 +102,7 @@ The Basic Auth username is fixed to `preview` — it's hardcoded into the compos
 
 ## Variables
 
-Repository variables the `deploy` job reads. Same place, one tab over: **Settings → Secrets and variables → Actions → Variables**. `KOMODO_URL` doubles as the feature's on/off switch — while it is unset, the `teardown` job skips itself, so closing a PR on a repository that has no preview server configured doesn't produce a red job.
+Repository variables the `deploy` job reads. Same place, one tab over: **Settings → Secrets and variables → Actions → Variables**. `KOMODO_URL` doubles as the feature's on/off switch — while it is unset, the `teardown` job skips itself, so closing a PR on a repository that has no preview server configured doesn't produce a red job. The same job also skips a `closed` event on a PR that doesn't carry the `preview` label.
 
 | Variable | Example |
 | --- | --- |
@@ -109,6 +111,31 @@ Repository variables the `deploy` job reads. Same place, one tab over: **Setting
 | `PREVIEW_DOMAIN` | `preview.example.com` |
 | `PREVIEW_CADDY_NETWORK` | name of the Docker network Caddy is attached to (see [Prerequisites](#prerequisites-on-the-server)) |
 | `PREVIEW_ADMIN_EMAIL` | `preview@example.com` |
+
+## Cloudflare in Front
+
+If the Komodo instance or the preview domain sits behind Cloudflare, the runner's requests look like bot traffic: they arrive from Azure datacenter ranges, and Cloudflare answers them with a challenge page (`Just a moment…`) under status `403`, which no script can solve. The symptom is a deploy or teardown failing with `/read/GetStack -> 403` followed by a page of markup. The same request from a residential connection goes straight through, so this only ever shows up in CI.
+
+On this repository's own preview host the cause was Bot Fight Mode, and the fix was the zone toggle below — the header rule never came into play there. Don't assume that for another setup, though.
+
+**First find out which feature fired.** In the Cloudflare dashboard, open **Security → Events** for that hostname and look at the *Service* column of the blocked request. The fix differs:
+
+| Service | Fix |
+| --- | --- |
+| `Security Level`, `Browser Integrity Check`, `Custom rules`, `Managed rules` | the skip rule below |
+| `Bot Fight Mode` | turn it off for this zone under **Security → Bots** — a skip rule has no effect on it |
+
+Bot Fight Mode cannot be exempted: it doesn't run on the Ruleset Engine, so *Skip*, *Bypass* and *Allow* never reach it, and allowlisting the runners by IP is not an option either — GitHub Actions runs on thousands of rotating Azure ranges. Switching it off for a zone that only serves throwaway previews is the trade-off here; Komodo still requires its API key and secret, and every preview instance still sits behind Basic Auth.
+
+For everything else, a WAF custom rule lets CI through, keyed on a header only CI knows. Zone-level custom rules are included in the Free plan (5 per zone) — this is not the account-level WAF, which is an Enterprise feature and is not needed:
+
+1. Generate a random value (`openssl rand -hex 32`) and store it as the repository secret `PREVIEW_CF_BYPASS_TOKEN`. The workflow passes it as `X-Preview-CI-Bypass` on every request it makes — to Komodo, to the health check and from the seed script.
+2. In Cloudflare, per zone, under **Security → WAF → Custom rules**, add a rule for the Komodo hostname and one for `*.<PREVIEW_DOMAIN>` matching `http.request.headers["x-preview-ci-bypass"][0] eq "<the same value>"`, with the action **Skip** and all remaining security products ticked.
+3. Put that rule above any challenge rule — Cloudflare evaluates custom rules in order.
+
+Leaving `PREVIEW_CF_BYPASS_TOKEN` unset is fine for a host that isn't behind Cloudflare, or where the fix was a toggle rather than a rule: the scripts then send no extra header. Either way, a challenge that comes back anyway is now named as such by both scripts and the health check, instead of being reported as a bare `403` with a page of HTML attached.
+
+The header is a shared secret, not authentication — anyone who learns it can skip the WAF for those hostnames. Komodo's own API key and the Basic Auth in front of every preview instance still apply behind it.
 
 ## How the Pieces Fit Together
 
@@ -141,7 +168,7 @@ PR gets the label "preview"
             naming the head commit — or, on the fallback path above,
             saying that the image comes from an earlier commit
 
-PR is closed  /  the "preview" label is removed
+PR carrying the label is closed  /  the "preview" label is removed
   /  the workflow is started by hand (Run workflow, with a PR number)
         │
         ▼
@@ -176,7 +203,7 @@ KOMODO_URL=… KOMODO_API_KEY=… KOMODO_API_SECRET=… PR_NUMBER=<n> \
   node scripts/preview-stack.mjs destroy
 ```
 
-This is safe to run even if the stack is already gone — `scripts/preview-stack.mjs` checks for it first and does nothing if it can't find it.
+This is safe to run even if the stack is already gone — `scripts/preview-stack.mjs` checks for it first and does nothing if it can't find it. If Komodo is behind Cloudflare, add `PREVIEW_CF_BYPASS_TOKEN=…` to that line as well (see [Cloudflare in Front](#cloudflare-in-front)).
 
 Note that a health check that times out during deploy deliberately leaves the stack running instead of tearing it down: the whole point is to keep the container's logs inspectable in Komodo while you figure out what went wrong. The same is true if the seed step fails. In both cases nothing removes the stack automatically — use the command above once you're done investigating.
 

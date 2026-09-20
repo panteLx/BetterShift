@@ -28,6 +28,12 @@ const BASIC_HEADER = BASIC_PASSWORD
   ? { authorization: "Basic " + Buffer.from(`${BASIC_USER}:${BASIC_PASSWORD}`).toString("base64") }
   : {};
 
+// Lets a Cloudflare WAF rule skip its security checks for CI requests
+// (see docs/PR_PREVIEWS.md). Unset means no Cloudflare in front.
+const BYPASS_HEADER = process.env.PREVIEW_CF_BYPASS_TOKEN
+  ? { "x-preview-ci-bypass": process.env.PREVIEW_CF_BYPASS_TOKEN }
+  : {};
+
 let cookie = "";
 
 async function api(path, { method = "GET", body } = {}) {
@@ -35,6 +41,7 @@ async function api(path, { method = "GET", body } = {}) {
     method,
     headers: {
       ...BASIC_HEADER,
+      ...BYPASS_HEADER,
       "content-type": "application/json",
       // Node's fetch sends `sec-fetch-mode: cors` (unlike a browser it never adds
       // Origin itself), which trips better-auth's CSRF check unless we set it.
@@ -51,6 +58,12 @@ async function api(path, { method = "GET", body } = {}) {
 
   const text = await res.text();
   if (!res.ok) {
+    if (/Just a moment|challenges\.cloudflare\.com/i.test(text)) {
+      throw new Error(
+        `${method} ${path} -> ${res.status}: Cloudflare served a challenge instead of the app. ` +
+          "The X-Preview-CI-Bypass header needs a matching WAF skip rule (see docs/PR_PREVIEWS.md)."
+      );
+    }
     const error = new Error(`${method} ${path} -> ${res.status}: ${text}`);
     error.status = res.status;
     error.bodyText = text;
