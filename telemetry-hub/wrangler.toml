@@ -1,7 +1,10 @@
 name = "bettershift-telemetry-hub"
 main = "src/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-09-18"
 
 routes = [
-  { pattern = "telemetry.bettershift.app", custom_domain = true }
+  { pattern = "telemetry-bettershift.pantelx.com", custom_domain = true }
 ]
+
+[dev]
+ip = "0.0.0.0"

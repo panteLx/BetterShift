@@ -21,6 +21,8 @@ Telemetry is **opt-in and off by default**. A fresh instance sends nothing until
 
 The payload is anonymous in the sense that it carries no names, emails, URLs, or IP addresses (see [What Is Never Collected](#what-is-never-collected)) — it is not anonymous in the sense of being unlinkable to itself: a stable `instanceId` lets repeated pings from the same instance be grouped over time.
 
+Admins can also send the payload right away with the **Send now** button in Admin → System Settings instead of waiting for the daily timer. It follows the same rules as the daily send — it only works while telemetry is on, the consent covers the current `schemaVersion`, and the build is not a dev build — and it does not reset the daily schedule. It is rate limited (default 5 per hour, `RATE_LIMIT_TELEMETRY_SEND_REQUESTS` / `RATE_LIMIT_TELEMETRY_SEND_WINDOW`) and leaves an audit-log entry with only the outcome, never the endpoint URL. Every automatic send leaves the same kind of entry (`system.telemetry_send`), so the last outcome is visible in the audit log even though the timer itself stays silent.
+
 If a future release changes what is collected in a way that needs fresh consent, an instance that previously accepted is asked again once (governed by `schemaVersion` — see the field table below); an instance that declined is never re-prompted.
 
 ---
@@ -29,43 +31,43 @@ If a future release changes what is collected in a way that needs fresh consent,
 
 This table is generated from `TelemetryPayload` in [`lib/telemetry/schema.ts`](../lib/telemetry/schema.ts) — every field the type defines appears below, and nothing else does. Fields under `scale` are size buckets, not exact counts (see [Buckets](#buckets)); the [diagnostics export](#the-diagnostics-export) is the only path that ever carries exact numbers, and only on admin request.
 
-| Field | Example | Answers |
-| --- | --- | --- |
-| `schemaVersion` | `1` | Which version of this payload's shape was used, so a schema change can be handled or ignored correctly. |
-| `instanceId` | `"3f2a9c11-8b7d-4e2a-9c31-7a5e6d2b9f01"` or `null` | A random id generated once, the first time telemetry is turned on, so repeated pings from the same instance can be grouped. `null` before an instance has ever opted in. |
-| `sentAt` | `"2026-09-19T14:32:07.512Z"` | When this specific payload was generated. |
-| `app.version` | `"3.2.0"` | Which release is running. |
-| `app.isDev` | `false` | Is this a development build (a dev build never actually sends, but the admin preview still shows what it would look like). |
-| `app.migrations` | `42` | How many database migrations have been applied — a rough signal of how current the schema is. |
-| `runtime.node` | `"24.4.0"` | Which Node.js version the process is running on. |
-| `runtime.arch` | `"x64"` | Which CPU architecture (`x64`, `arm64`, …). |
-| `runtime.platform` | `"linux"` | Which OS family the process runs on. |
-| `runtime.sqlite` | `"3.45.1"` | Which SQLite version the database driver reports. |
-| `runtime.timezone` | `"Europe/Berlin"` or `"unknown"` | The value of the `TZ` environment variable, if set. |
-| `config.authEnabled` | `true` | Is authentication turned on for this instance. |
-| `config.guestAccess` | `false` | Is guest (no-login) access allowed. |
-| `config.registrationOpen` | `true` | Can new users self-register. |
-| `config.defaultLocale` | `"de"` | Which locale the instance defaults to. This is the instance-wide default only — there is deliberately no per-user locale field, because nothing in the app stores one per account. |
-| `config.updateCheckEnabled` | `true` | Has this admin turned off the update check described in [Other Outbound Requests](#other-outbound-requests). |
-| `config.rateLimitOverrides` | `2` | How many `RATE_LIMIT_*` environment variables are set — a count only, never which ones or what values. |
-| `scale.users` | `"6-20"` | Roughly how many user accounts exist. |
-| `scale.calendars` | `"1-5"` | Roughly how many calendars exist. |
-| `scale.shifts` | `"101-500"` | Roughly how many shifts exist. |
-| `scale.presets` | `"6-20"` | Roughly how many shift presets exist. |
-| `scale.notes` | `"1-5"` | Roughly how many calendar notes/events exist. |
-| `scale.bundles` | `"6-20"` | Roughly how many permission bundles exist across all calendars. |
-| `scale.shares` | `"1-5"` | Roughly how many calendar shares (invited users) exist. |
-| `scale.accessTokens` | `"0"` | Roughly how many share links (access tokens) exist. |
-| `scale.signups` | `"1-5"` | Roughly how many shift signups exist. |
-| `features.externalSyncs` | `"0"` | Roughly how many external calendar subscriptions are configured — never which calendars they sync to or their URLs. |
-| `features.calendarViewOverrides` | `"1-5"` | Roughly how many calendars pin their own view settings instead of using each viewer's personal one. |
-| `features.customFields.count` | `"1-5"` | Roughly how many custom field definitions exist across all calendars. |
-| `features.customFields.types` | `["text", "select"]` | Which custom field *types* are in use — never a field's key or label (see [What Is Never Collected](#what-is-never-collected)). |
-| `features.archivedPresets` | `true` | Does at least one archived preset exist. |
-| `features.splitShifts` | `false` | Does at least one calendar have split shifts enabled. |
-| `health.uptimeHours` | `168` | How many hours since the Node process last (re)started. |
-| `health.syncRuns24h` | `12` | How many external sync runs completed in the last 24 hours. |
-| `health.syncFailures24h` | `0` | How many of those runs failed. |
+| Field                            | Example                                            | Answers                                                                                                                                                                            |
+| -------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`                  | `1`                                                | Which version of this payload's shape was used, so a schema change can be handled or ignored correctly.                                                                            |
+| `instanceId`                     | `"3f2a9c11-8b7d-4e2a-9c31-7a5e6d2b9f01"` or `null` | A random id generated once, the first time telemetry is turned on, so repeated pings from the same instance can be grouped. `null` before an instance has ever opted in.           |
+| `sentAt`                         | `"2026-09-19T14:32:07.512Z"`                       | When this specific payload was generated.                                                                                                                                          |
+| `app.version`                    | `"3.2.0"`                                          | Which release is running.                                                                                                                                                          |
+| `app.isDev`                      | `false`                                            | Is this a development build (a dev build never actually sends, but the admin preview still shows what it would look like).                                                         |
+| `app.migrations`                 | `42`                                               | How many database migrations have been applied — a rough signal of how current the schema is.                                                                                      |
+| `runtime.node`                   | `"24.4.0"`                                         | Which Node.js version the process is running on.                                                                                                                                   |
+| `runtime.arch`                   | `"x64"`                                            | Which CPU architecture (`x64`, `arm64`, …).                                                                                                                                        |
+| `runtime.platform`               | `"linux"`                                          | Which OS family the process runs on.                                                                                                                                               |
+| `runtime.sqlite`                 | `"3.45.1"`                                         | Which SQLite version the database driver reports.                                                                                                                                  |
+| `runtime.timezone`               | `"Europe/Berlin"` or `"unknown"`                   | The value of the `TZ` environment variable, if set.                                                                                                                                |
+| `config.authEnabled`             | `true`                                             | Is authentication turned on for this instance.                                                                                                                                     |
+| `config.guestAccess`             | `false`                                            | Is guest (no-login) access allowed.                                                                                                                                                |
+| `config.registrationOpen`        | `true`                                             | Can new users self-register.                                                                                                                                                       |
+| `config.defaultLocale`           | `"de"`                                             | Which locale the instance defaults to. This is the instance-wide default only — there is deliberately no per-user locale field, because nothing in the app stores one per account. |
+| `config.updateCheckEnabled`      | `true`                                             | Has this admin turned off the update check described in [Other Outbound Requests](#other-outbound-requests).                                                                       |
+| `config.rateLimitOverrides`      | `2`                                                | How many `RATE_LIMIT_*` environment variables are set — a count only, never which ones or what values.                                                                             |
+| `scale.users`                    | `"6-20"`                                           | Roughly how many user accounts exist.                                                                                                                                              |
+| `scale.calendars`                | `"1-5"`                                            | Roughly how many calendars exist.                                                                                                                                                  |
+| `scale.shifts`                   | `"101-500"`                                        | Roughly how many shifts exist.                                                                                                                                                     |
+| `scale.presets`                  | `"6-20"`                                           | Roughly how many shift presets exist.                                                                                                                                              |
+| `scale.notes`                    | `"1-5"`                                            | Roughly how many calendar notes/events exist.                                                                                                                                      |
+| `scale.bundles`                  | `"6-20"`                                           | Roughly how many permission bundles exist across all calendars.                                                                                                                    |
+| `scale.shares`                   | `"1-5"`                                            | Roughly how many calendar shares (invited users) exist.                                                                                                                            |
+| `scale.accessTokens`             | `"0"`                                              | Roughly how many share links (access tokens) exist.                                                                                                                                |
+| `scale.signups`                  | `"1-5"`                                            | Roughly how many shift signups exist.                                                                                                                                              |
+| `features.externalSyncs`         | `"0"`                                              | Roughly how many external calendar subscriptions are configured — never which calendars they sync to or their URLs.                                                                |
+| `features.calendarViewOverrides` | `"1-5"`                                            | Roughly how many calendars pin their own view settings instead of using each viewer's personal one.                                                                                |
+| `features.customFields.count`    | `"1-5"`                                            | Roughly how many custom field definitions exist across all calendars.                                                                                                              |
+| `features.customFields.types`    | `["text", "select"]`                               | Which custom field _types_ are in use — never a field's key or label (see [What Is Never Collected](#what-is-never-collected)).                                                    |
+| `features.archivedPresets`       | `true`                                             | Does at least one archived preset exist.                                                                                                                                           |
+| `features.splitShifts`           | `false`                                            | Does at least one calendar have split shifts enabled.                                                                                                                              |
+| `health.uptimeHours`             | `168`                                              | How many hours since the Node process last (re)started.                                                                                                                            |
+| `health.syncRuns24h`             | `12`                                               | How many external sync runs completed in the last 24 hours.                                                                                                                        |
+| `health.syncFailures24h`         | `0`                                                | How many of those runs failed.                                                                                                                                                     |
 
 ---
 
@@ -75,7 +77,7 @@ Regardless of what's enabled, the payload never contains:
 
 - External sync URLs — they can reveal an employer or organization.
 - Calendar, shift, or note names/content.
-- Custom field keys or labels — only the field *types* (see `features.customFields.types` above).
+- Custom field keys or labels — only the field _types_ (see `features.customFields.types` above).
 - User names.
 - Email addresses.
 - IP addresses.
@@ -87,14 +89,14 @@ Regardless of what's enabled, the payload never contains:
 
 Every count under `scale` and `features.externalSyncs` / `features.calendarViewOverrides` / `features.customFields.count` is reported as one of six size buckets instead of an exact number, via `toBucket()` in `lib/telemetry/schema.ts`:
 
-| Bucket | Range |
-| --- | --- |
-| `0` | Exactly zero. |
-| `1-5` | 1 to 5. |
-| `6-20` | 6 to 20. |
-| `21-100` | 21 to 100. |
-| `101-500` | 101 to 500. |
-| `500+` | More than 500. |
+| Bucket    | Range          |
+| --------- | -------------- |
+| `0`       | Exactly zero.  |
+| `1-5`     | 1 to 5.        |
+| `6-20`    | 6 to 20.       |
+| `21-100`  | 21 to 100.     |
+| `101-500` | 101 to 500.    |
+| `500+`    | More than 500. |
 
 The comment in the source is explicit about why: an exact count can make a small instance recognisable (e.g. "exactly 3 users"); a bucket answers the same scale question without doing so.
 
@@ -110,7 +112,7 @@ Three independent controls, in order of precedence:
 
 Only the literal values `true` and `false` are recognised. Anything else (`1`, `yes`, `TRUE`, …) is treated as `false` — a hard off that also disables the admin toggle — so a typo fails closed rather than silently turning telemetry on.
 
-`TELEMETRY_ENDPOINT` (default `https://telemetry.bettershift.app/`) lets you point the daily send at your own receiver instead — useful if you'd rather run [`telemetry-hub/`](../telemetry-hub/) yourself, or something else entirely that accepts the same JSON body.
+`TELEMETRY_ENDPOINT` (default `https://telemetry-bettershift.pantelx.com`) lets you point the daily send at your own receiver instead — useful if you'd rather run [`telemetry-hub/`](../telemetry-hub/) yourself, or something else entirely that accepts the same JSON body.
 
 ---
 

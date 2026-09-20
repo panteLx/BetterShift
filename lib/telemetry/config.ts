@@ -1,4 +1,5 @@
-export const DEFAULT_TELEMETRY_ENDPOINT = "https://telemetry.bettershift.app/";
+export const DEFAULT_TELEMETRY_ENDPOINT =
+  "https://telemetry-bettershift.pantelx.com";
 
 /** Tri-state, mirroring the nullable column: unset means the instance decides. */
 function envOverride(): boolean | null {

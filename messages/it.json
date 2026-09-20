@@ -527,9 +527,13 @@
       "visibility": "Banner visibile a",
       "visibilityAll": "Tutti",
       "visibilityAdmins": "Solo amministratori",
-      "updateError": "Impossibile salvare le impostazioni",
-      "guestAccess": "Accesso ospite",
-      "guestAccessHint": "Consente di visualizzare i calendari senza accedere, se il calendario lo consente."
+      "updateError": "Impossibile salvare le impostazioni"
+    },
+    "guestAccess": {
+      "title": "Accesso ospite",
+      "description": "Controlla se i calendari possono essere visualizzati senza accedere.",
+      "toggleLabel": "Consenti accesso ospite",
+      "toggleHint": "Consente di visualizzare i calendari senza accedere, se il calendario lo consente."
     },
     "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
@@ -669,7 +673,7 @@
       "toggleLabel": "Invia telemetria",
       "notDecided": "Non ancora deciso",
       "envManaged": "Impostato dalla variabile d'ambiente TELEMETRY_ENABLED",
-      "previewTitle": "Dati inviati",
+      "previewTitle": "Anteprima dei dati da inviare",
       "diagnosticsPreviewTitle": "Dati esportati",
       "diagnosticsTitle": "Dati di diagnostica per le segnalazioni di bug",
       "diagnosticsDescription": "Include cifre esatte e le opzioni di configurazione attive. Pensato solo per le segnalazioni di bug.",
@@ -677,7 +681,12 @@
       "includeInstanceIdHint": "Collega la segnalazione di bug ai dati di telemetria di questa istanza.",
       "copy": "Copia come Markdown",
       "copied": "Copiato negli appunti",
-      "openIssue": "Apri una segnalazione di bug su GitHub"
+      "openIssue": "Apri una segnalazione di bug su GitHub",
+      "sendNow": "Invia ora",
+      "sendNowHint": "Disponibile solo quando la telemetria è attiva.",
+      "sendSuccess": "Telemetria inviata",
+      "sendFailed": "Invio non riuscito. Il server di telemetria non è raggiungibile o ha rifiutato la richiesta.",
+      "sendUnavailable": "Impossibile inviare: la telemetria è disattivata, il consenso non è aggiornato oppure si tratta di una build di sviluppo."
     }
   },
   "appearance": {
@@ -1076,7 +1085,13 @@
       "profileUpdated": "Profilo modificato",
       "passwordChanged": "Password cambiata",
       "accountDeleted": "Account personale eliminato",
-      "sessionsRevoked": "{count, plural, one {# sessione terminata} other {# sessioni terminate}}"
+      "sessionsRevoked": "{count, plural, one {# sessione terminata} other {# sessioni terminate}}",
+      "telemetryEnabled": "Telemetria attivata",
+      "telemetryDisabled": "Telemetria disattivata",
+      "telemetrySent": "Telemetria inviata manualmente",
+      "telemetrySendFailed": "Invio manuale della telemetria non riuscito",
+      "telemetryAutoSent": "Telemetria inviata automaticamente",
+      "telemetryAutoSendFailed": "Invio automatico della telemetria non riuscito"
     }
   },
   "adminUsers": {
@@ -1272,7 +1287,7 @@
       "pointAnonymous": "Nessun nome, indirizzo, email o contenuto dei calendari",
       "pointBuckets": "Le dimensioni sono indicate solo come intervallo, ad esempio «6-20 utenti»",
       "pointRevocable": "Revocabile in qualsiasi momento dal Pannello Admin",
-      "previewToggle": "Mostra i dati inviati",
+      "previewToggle": "Mostra l'anteprima dei dati da inviare",
       "docsLink": "Documentazione completa",
       "accept": "Invia",
       "decline": "Non inviare"

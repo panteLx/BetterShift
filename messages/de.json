@@ -527,9 +527,13 @@
       "visibility": "Banner sichtbar für",
       "visibilityAll": "Alle",
       "visibilityAdmins": "Nur Admins",
-      "updateError": "Einstellungen konnten nicht gespeichert werden",
-      "guestAccess": "Gastzugang",
-      "guestAccessHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt."
+      "updateError": "Einstellungen konnten nicht gespeichert werden"
+    },
+    "guestAccess": {
+      "title": "Gastzugang",
+      "description": "Steuert, ob Kalender ohne Anmeldung angesehen werden können.",
+      "toggleLabel": "Gastzugang erlauben",
+      "toggleHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt."
     },
     "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weise diese(n) Benutzern zu.",
@@ -669,7 +673,7 @@
       "toggleLabel": "Telemetrie senden",
       "notDecided": "Noch nicht entschieden",
       "envManaged": "Durch die Umgebungsvariable TELEMETRY_ENABLED festgelegt",
-      "previewTitle": "Gesendete Daten",
+      "previewTitle": "Vorschau der zu sendenden Daten",
       "diagnosticsPreviewTitle": "Exportierte Daten",
       "diagnosticsTitle": "Diagnosedaten für Fehlerberichte",
       "diagnosticsDescription": "Enthält genaue Zahlen und gesetzte Konfigurationsschalter. Nur für Fehlerberichte gedacht.",
@@ -677,7 +681,12 @@
       "includeInstanceIdHint": "Verknüpft den Fehlerbericht mit den Telemetriedaten dieser Instanz.",
       "copy": "Als Markdown kopieren",
       "copied": "In die Zwischenablage kopiert",
-      "openIssue": "Fehlerbericht auf GitHub öffnen"
+      "openIssue": "Fehlerbericht auf GitHub öffnen",
+      "sendNow": "Jetzt senden",
+      "sendNowHint": "Nur verfügbar, wenn Telemetrie aktiv ist.",
+      "sendSuccess": "Telemetriedaten gesendet",
+      "sendFailed": "Senden fehlgeschlagen. Der Telemetrie-Server ist nicht erreichbar oder hat die Anfrage abgelehnt.",
+      "sendUnavailable": "Senden nicht möglich: Telemetrie ist aus, die Zustimmung ist veraltet oder dies ist ein Entwicklungs-Build."
     }
   },
   "appearance": {
@@ -1076,7 +1085,13 @@
       "profileUpdated": "Profil bearbeitet",
       "passwordChanged": "Passwort geändert",
       "accountDeleted": "Eigenes Konto gelöscht",
-      "sessionsRevoked": "{count, plural, one {# Sitzung} other {# Sitzungen}} beendet"
+      "sessionsRevoked": "{count, plural, one {# Sitzung} other {# Sitzungen}} beendet",
+      "telemetryEnabled": "Telemetrie aktiviert",
+      "telemetryDisabled": "Telemetrie deaktiviert",
+      "telemetrySent": "Telemetriedaten manuell gesendet",
+      "telemetrySendFailed": "Manuelles Senden der Telemetriedaten fehlgeschlagen",
+      "telemetryAutoSent": "Telemetriedaten automatisch gesendet",
+      "telemetryAutoSendFailed": "Automatisches Senden der Telemetriedaten fehlgeschlagen"
     }
   },
   "adminUsers": {
@@ -1272,7 +1287,7 @@
       "pointAnonymous": "Keine Namen, Adressen, E-Mails oder Kalenderinhalte",
       "pointBuckets": "Größenangaben nur als Bereich, etwa „6-20 Nutzer“",
       "pointRevocable": "Jederzeit im Admin-Bereich widerrufbar",
-      "previewToggle": "Gesendete Daten anzeigen",
+      "previewToggle": "Vorschau der zu sendenden Daten anzeigen",
       "docsLink": "Vollständige Dokumentation",
       "accept": "Senden",
       "decline": "Nicht senden"

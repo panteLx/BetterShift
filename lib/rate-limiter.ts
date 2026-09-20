@@ -31,6 +31,8 @@
  * - RATE_LIMIT_BUNDLE_MUTATIONS_WINDOW
  * - RATE_LIMIT_TELEMETRY_PAYLOAD_REQUESTS - Admin telemetry payload preview
  * - RATE_LIMIT_TELEMETRY_PAYLOAD_WINDOW
+ * - RATE_LIMIT_TELEMETRY_SEND_REQUESTS - Admin "send telemetry now" button
+ * - RATE_LIMIT_TELEMETRY_SEND_WINDOW
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -211,6 +213,12 @@ const config = {
     windowMs:
       parseInt(process.env.RATE_LIMIT_TELEMETRY_PAYLOAD_WINDOW || "60", 10) * 1000,
   },
+  // Each call is an outbound request to the telemetry endpoint.
+  telemetrySend: {
+    requests: parseInt(process.env.RATE_LIMIT_TELEMETRY_SEND_REQUESTS || "5", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_TELEMETRY_SEND_WINDOW || "3600", 10) * 1000,
+  },
 };
 
 /**
@@ -240,6 +248,7 @@ const limitsByType = {
   "bundle-mutations": config.bundleMutations,
   "custom-field-mutations": config.customFieldMutations,
   "telemetry-payload": config.telemetryPayload,
+  "telemetry-send": config.telemetrySend,
 } as const;
 
 export type RateLimitType = keyof typeof limitsByType;

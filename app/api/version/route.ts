@@ -191,6 +191,8 @@ export async function GET(request: NextRequest) {
       "Cache-Control": telemetryPrompt
         ? "private, no-store"
         : `private, max-age=${CACHE_SECONDS}`,
+      // Without this the browser reuses a logged-out response after login and the admin never sees the prompt.
+      Vary: "Cookie",
     },
   });
 }

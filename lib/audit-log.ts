@@ -179,6 +179,13 @@ export interface AdminTelemetryConsentMetadata {
   schemaVersion: number;
 }
 
+// Outcome only: the endpoint URL can be private and must not reach an exportable log.
+// Shared by the admin button and the daily timer.
+export interface TelemetrySendMetadata {
+  result: "sent" | "failed";
+  reason?: "timeout" | "network" | "http";
+}
+
 export interface AdminUserCreateMetadata {
   createdUser: string;
   role: string;
@@ -259,6 +266,7 @@ export type AuditLogMetadata =
   | AdminPasswordResetMetadata
   | AdminSystemSettingsUpdatedMetadata
   | AdminTelemetryConsentMetadata
+  | TelemetrySendMetadata
   | CalendarBundleCreatedMetadata
   | CalendarBundleUpdatedMetadata
   | CalendarBundleClonedMetadata

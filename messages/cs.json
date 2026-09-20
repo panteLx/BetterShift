@@ -527,9 +527,13 @@
       "visibility": "Banner viditelný pro",
       "visibilityAll": "Všechny",
       "visibilityAdmins": "Pouze administrátory",
-      "updateError": "Nastavení se nepodařilo uložit",
-      "guestAccess": "Přístup pro hosty",
-      "guestAccessHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje."
+      "updateError": "Nastavení se nepodařilo uložit"
+    },
+    "guestAccess": {
+      "title": "Přístup pro hosty",
+      "description": "Určuje, zda lze kalendáře zobrazit bez přihlášení.",
+      "toggleLabel": "Povolit přístup pro hosty",
+      "toggleHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje."
     },
     "orphanedCalendarsWarning": "Zjištěny osiřelé kalendáře",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Existuje 1 kalendář bez vlastníka} few {Existují # kalendáře bez vlastníka} other {Existuje # kalendářů bez vlastníka}}. Přiřaďte je prosím uživatelům.",
@@ -669,7 +673,7 @@
       "toggleLabel": "Odesílat telemetrii",
       "notDecided": "Zatím nerozhodnuto",
       "envManaged": "Nastaveno proměnnou prostředí TELEMETRY_ENABLED",
-      "previewTitle": "Odesílaná data",
+      "previewTitle": "Náhled dat k odeslání",
       "diagnosticsPreviewTitle": "Exportovaná data",
       "diagnosticsTitle": "Diagnostická data pro hlášení chyb",
       "diagnosticsDescription": "Obsahuje přesná čísla a nastavené konfigurační přepínače. Určeno pouze pro hlášení chyb.",
@@ -677,7 +681,12 @@
       "includeInstanceIdHint": "Propojí hlášení chyby s telemetrickými daty této instance.",
       "copy": "Kopírovat jako Markdown",
       "copied": "Zkopírováno do schránky",
-      "openIssue": "Otevřít hlášení chyby na GitHubu"
+      "openIssue": "Otevřít hlášení chyby na GitHubu",
+      "sendNow": "Odeslat nyní",
+      "sendNowHint": "K dispozici pouze při zapnuté telemetrii.",
+      "sendSuccess": "Telemetrie odeslána",
+      "sendFailed": "Odeslání se nezdařilo. Telemetrický server je nedostupný nebo požadavek odmítl.",
+      "sendUnavailable": "Odeslání není možné: telemetrie je vypnutá, souhlas je zastaralý nebo jde o vývojové sestavení."
     }
   },
   "appearance": {
@@ -1076,7 +1085,13 @@
       "profileUpdated": "Profil upraven",
       "passwordChanged": "Heslo změněno",
       "accountDeleted": "Vlastní účet smazán",
-      "sessionsRevoked": "{count, plural, one {# relace ukončena} few {# relace ukončeny} other {# relací ukončeno}}"
+      "sessionsRevoked": "{count, plural, one {# relace ukončena} few {# relace ukončeny} other {# relací ukončeno}}",
+      "telemetryEnabled": "Telemetrie zapnuta",
+      "telemetryDisabled": "Telemetrie vypnuta",
+      "telemetrySent": "Telemetrie odeslána ručně",
+      "telemetrySendFailed": "Ruční odeslání telemetrie se nezdařilo",
+      "telemetryAutoSent": "Telemetrie odeslána automaticky",
+      "telemetryAutoSendFailed": "Automatické odeslání telemetrie se nezdařilo"
     }
   },
   "adminUsers": {
@@ -1272,7 +1287,7 @@
       "pointAnonymous": "Žádná jména, adresy, e-maily ani obsah kalendářů",
       "pointBuckets": "Velikosti se uvádějí pouze jako rozsah, například „6-20 uživatelů“",
       "pointRevocable": "Kdykoli odvolatelné v panelu správce",
-      "previewToggle": "Zobrazit odesílaná data",
+      "previewToggle": "Zobrazit náhled dat k odeslání",
       "docsLink": "Úplná dokumentace",
       "accept": "Odeslat",
       "decline": "Neodesílat"

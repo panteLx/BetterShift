@@ -77,6 +77,18 @@ export function useAuditDescription() {
           return t("adminAudit.describe.logsDeleted", { count: count(m, "deletedCount") });
         case "admin.system_settings.update":
           return t("adminAudit.describe.systemSettingsUpdated");
+        case "admin.telemetry_consent":
+          return field(m, "after") === true
+            ? t("adminAudit.describe.telemetryEnabled")
+            : t("adminAudit.describe.telemetryDisabled");
+        case "admin.telemetry_send":
+          return field(m, "result") === "failed"
+            ? t("adminAudit.describe.telemetrySendFailed")
+            : t("adminAudit.describe.telemetrySent");
+        case "system.telemetry_send":
+          return field(m, "result") === "failed"
+            ? t("adminAudit.describe.telemetryAutoSendFailed")
+            : t("adminAudit.describe.telemetryAutoSent");
         case "admin.calendar.update":
         case "calendar.updated":
           if (calendar) return t("adminAudit.describe.calendarUpdated", { calendar });

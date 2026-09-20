@@ -527,9 +527,13 @@
       "visibility": "Bannière visible pour",
       "visibilityAll": "Tout le monde",
       "visibilityAdmins": "Administrateurs uniquement",
-      "updateError": "Échec de l'enregistrement des paramètres",
-      "guestAccess": "Accès invité",
-      "guestAccessHint": "Permet de consulter les calendriers sans connexion, si le calendrier l'autorise."
+      "updateError": "Échec de l'enregistrement des paramètres"
+    },
+    "guestAccess": {
+      "title": "Accès invité",
+      "description": "Détermine si les calendriers peuvent être consultés sans connexion.",
+      "toggleLabel": "Autoriser l'accès invité",
+      "toggleHint": "Permet de consulter les calendriers sans connexion, si le calendrier l'autorise."
     },
     "orphanedCalendarsWarning": "Calendriers orphelins détectés",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {1 calendrier n'a pas de propriétaire} other {# calendriers n'ont pas de propriétaire}}. Veuillez les attribuer à des utilisateurs.",
@@ -669,7 +673,7 @@
       "toggleLabel": "Envoyer la télémétrie",
       "notDecided": "Pas encore décidé",
       "envManaged": "Défini par la variable d'environnement TELEMETRY_ENABLED",
-      "previewTitle": "Données envoyées",
+      "previewTitle": "Aperçu des données à envoyer",
       "diagnosticsPreviewTitle": "Données exportées",
       "diagnosticsTitle": "Données de diagnostic pour les rapports de bug",
       "diagnosticsDescription": "Comprend des chiffres exacts et les options de configuration activées. Destiné uniquement aux rapports de bug.",
@@ -677,7 +681,12 @@
       "includeInstanceIdHint": "Associe le rapport de bug aux données de télémétrie de cette instance.",
       "copy": "Copier au format Markdown",
       "copied": "Copié dans le presse-papiers",
-      "openIssue": "Ouvrir un rapport de bug sur GitHub"
+      "openIssue": "Ouvrir un rapport de bug sur GitHub",
+      "sendNow": "Envoyer maintenant",
+      "sendNowHint": "Disponible uniquement lorsque la télémétrie est activée.",
+      "sendSuccess": "Télémétrie envoyée",
+      "sendFailed": "Échec de l'envoi. Le serveur de télémétrie est injoignable ou a refusé la requête.",
+      "sendUnavailable": "Envoi impossible : la télémétrie est désactivée, le consentement est obsolète ou il s'agit d'une version de développement."
     }
   },
   "appearance": {
@@ -1076,7 +1085,13 @@
       "profileUpdated": "Profil modifié",
       "passwordChanged": "Mot de passe modifié",
       "accountDeleted": "Compte personnel supprimé",
-      "sessionsRevoked": "{count, plural, one {# session fermée} other {# sessions fermées}}"
+      "sessionsRevoked": "{count, plural, one {# session fermée} other {# sessions fermées}}",
+      "telemetryEnabled": "Télémétrie activée",
+      "telemetryDisabled": "Télémétrie désactivée",
+      "telemetrySent": "Télémétrie envoyée manuellement",
+      "telemetrySendFailed": "Échec de l'envoi manuel de la télémétrie",
+      "telemetryAutoSent": "Télémétrie envoyée automatiquement",
+      "telemetryAutoSendFailed": "Échec de l'envoi automatique de la télémétrie"
     }
   },
   "adminUsers": {
@@ -1272,7 +1287,7 @@
       "pointAnonymous": "Aucun nom, adresse, e-mail ni contenu de calendrier",
       "pointBuckets": "Les tailles ne sont indiquées que sous forme de plage, par exemple « 6-20 utilisateurs »",
       "pointRevocable": "Révocable à tout moment depuis le panneau d'administration",
-      "previewToggle": "Afficher les données envoyées",
+      "previewToggle": "Afficher l'aperçu des données à envoyer",
       "docsLink": "Documentation complète",
       "accept": "Envoyer",
       "decline": "Ne pas envoyer"

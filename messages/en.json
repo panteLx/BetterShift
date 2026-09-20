@@ -527,9 +527,13 @@
       "visibility": "Banner visible to",
       "visibilityAll": "Everyone",
       "visibilityAdmins": "Admins only",
-      "updateError": "Failed to save settings",
-      "guestAccess": "Guest access",
-      "guestAccessHint": "Allows viewing calendars without logging in, where the calendar permits it."
+      "updateError": "Failed to save settings"
+    },
+    "guestAccess": {
+      "title": "Guest access",
+      "description": "Controls whether calendars can be viewed without logging in.",
+      "toggleLabel": "Allow guest access",
+      "toggleHint": "Allows viewing calendars without logging in, where the calendar permits it."
     },
     "orphanedCalendarsWarning": "Orphaned Calendars Detected",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",
@@ -669,7 +673,7 @@
       "toggleLabel": "Send telemetry",
       "notDecided": "Not decided yet",
       "envManaged": "Set by the TELEMETRY_ENABLED environment variable",
-      "previewTitle": "Sent data",
+      "previewTitle": "Preview of data to be sent",
       "diagnosticsPreviewTitle": "Exported data",
       "diagnosticsTitle": "Diagnostic data for bug reports",
       "diagnosticsDescription": "Includes exact figures and enabled configuration switches. Intended only for bug reports.",
@@ -677,7 +681,12 @@
       "includeInstanceIdHint": "Links the bug report to this instance's telemetry data.",
       "copy": "Copy as Markdown",
       "copied": "Copied to clipboard",
-      "openIssue": "Open bug report on GitHub"
+      "openIssue": "Open bug report on GitHub",
+      "sendNow": "Send now",
+      "sendNowHint": "Only available while telemetry is on.",
+      "sendSuccess": "Telemetry sent",
+      "sendFailed": "Sending failed. The telemetry server is unreachable or rejected the request.",
+      "sendUnavailable": "Cannot send: telemetry is off, the consent is outdated, or this is a development build."
     }
   },
   "appearance": {
@@ -1076,7 +1085,13 @@
       "profileUpdated": "Profile edited",
       "passwordChanged": "Password changed",
       "accountDeleted": "Own account deleted",
-      "sessionsRevoked": "{count, plural, one {# session} other {# sessions}} ended"
+      "sessionsRevoked": "{count, plural, one {# session} other {# sessions}} ended",
+      "telemetryEnabled": "Telemetry enabled",
+      "telemetryDisabled": "Telemetry disabled",
+      "telemetrySent": "Telemetry sent manually",
+      "telemetrySendFailed": "Sending telemetry manually failed",
+      "telemetryAutoSent": "Telemetry sent automatically",
+      "telemetryAutoSendFailed": "Sending telemetry automatically failed"
     }
   },
   "adminUsers": {
@@ -1272,7 +1287,7 @@
       "pointAnonymous": "No names, addresses, emails, or calendar content",
       "pointBuckets": "Size figures only as a range, e.g. “6-20 users”",
       "pointRevocable": "Revocable at any time in the admin area",
-      "previewToggle": "Show sent data",
+      "previewToggle": "Show preview of data to be sent",
       "docsLink": "Full documentation",
       "accept": "Send",
       "decline": "Don't send"

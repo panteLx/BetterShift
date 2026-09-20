@@ -36,8 +36,9 @@ export default {
 
     try {
       await sendToPostHog(payload, env.POSTHOG_API_KEY);
-    } catch {
-      // Swallowed on purpose -- downstream failures must never surface to the sender.
+    } catch (error) {
+      // The sender still gets a 200. Only the message is logged (a status, never the payload).
+      console.error(error instanceof Error ? error.message : "PostHog forward failed");
     }
 
     return new Response(null, { status: 200 });

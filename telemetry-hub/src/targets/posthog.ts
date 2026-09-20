@@ -1,6 +1,6 @@
 import type { PayloadV1 } from "../schemas/v1";
 
-const POSTHOG_ENDPOINT = "https://eu.i.posthog.com/i/v0/e/";
+const POSTHOG_ENDPOINT = "https://us.i.posthog.com/i/v0/e/";
 
 // Enumerates target fields rather than spreading, so an unknown input field cannot pass through.
 export async function sendToPostHog(payload: PayloadV1, apiKey: string): Promise<void> {
@@ -52,9 +52,11 @@ export async function sendToPostHog(payload: PayloadV1, apiKey: string): Promise
     },
   };
 
-  await fetch(POSTHOG_ENDPOINT, {
+  const response = await fetch(POSTHOG_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  // fetch resolves on 4xx/5xx, so a rejected key or wrong region would otherwise vanish.
+  if (!response.ok) throw new Error(`PostHog responded with ${response.status}`);
 }
