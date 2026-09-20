@@ -171,20 +171,20 @@ npm run stats -- versions sizes   # just these two
 npm run stats -- --local          # against the local database
 ```
 
-| Report               | What it answers                                                    |
-| -------------------- | ------------------------------------------------------------------ |
-| `instances-daily`    | How many instances reported per day                                |
-| `instances-new`      | New installs per day (first time an instance id was seen)          |
-| `versions`           | Which app versions are in use                                      |
-| `environment`        | Node, platform, arch, SQLite and timezone distribution             |
-| `configuration`      | Auth, guest access, registration, locale, update check             |
-| `sizes`              | Instance size buckets across users, calendars, shifts, …           |
-| `features`           | Feature adoption                                                   |
-| `custom-field-types` | Which custom field types are actually used                         |
-| `health`             | Uptime and external-sync failures                                  |
-| `recent`             | The last 25 raw pings                                              |
+| Report               | What it answers                                                    | Window                    |
+| -------------------- | ------------------------------------------------------------------ | ------------------------- |
+| `instances-daily`    | How many instances reported per day                                | All history                |
+| `instances-new`      | New installs per day (first time an instance id was seen)          | All history                |
+| `versions`           | Which app versions are in use                                      | Last 30 days               |
+| `environment`        | Node, platform, arch, SQLite and timezone distribution             | Last 30 days               |
+| `configuration`      | Auth, guest access, registration, locale, update check             | Last 30 days               |
+| `sizes`              | Instance size buckets across users, calendars, shifts, …           | Last 30 days               |
+| `features`           | Feature adoption                                                   | Last 30 days               |
+| `custom-field-types` | Which custom field types are actually used                         | Last 30 days               |
+| `health`             | Uptime and external-sync failures                                  | Last 30 days               |
+| `recent`             | The last 25 raw pings                                              | All history                |
 
-Distribution reports read the `latest_pings` view — one row per instance, its newest ping — so a frequently restarting instance cannot outvote a quiet one.
+Distribution reports (`versions`, `environment`, `configuration`, `sizes`, `features`, `custom-field-types`, `health`) read the `latest_pings` view — one row per instance, its newest ping — bounded to instances whose newest ping is within the last 30 days, the same window `src/aggregate.ts` uses for the public page and `/data.json`. That keeps the reports and the page describing the same population instead of quietly diverging (an instance that stopped reporting 90 days ago drops out of both at once). `instances-daily`, `instances-new` and `recent` are genuinely historical or raw and stay unbounded, reading `instance_pings` directly.
 
 For anything ad hoc:
 
