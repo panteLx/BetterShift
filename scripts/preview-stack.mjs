@@ -116,6 +116,12 @@ function composeFile({ image, host, network, tz, locale }) {
     '      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET}"',
     `      TZ: "${tz}"`,
     `      DEFAULT_LOCALE: "${locale}"`,
+    // Cloudflare sits in front of Caddy, so the last X-Forwarded-For entry is
+    // Cloudflare's address, not the visitor's.
+    '      TRUSTED_PROXY_HEADER: "CF-Connecting-IP"',
+    // Rocket Loader strips the nonce off the hydration scripts; drop this once
+    // it is confirmed off for the preview domain.
+    '      CSP_STRICT_DYNAMIC_BYPASS: "true"',
     "    labels:",
     `      caddy: ${host}`,
     '      caddy.reverse_proxy: "{{upstreams 3000}}"',

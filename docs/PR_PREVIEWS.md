@@ -162,6 +162,8 @@ A few things distinguish a preview container from a normal deployment:
 - **`ALLOW_USER_REGISTRATION=true`** is set on the container so that `scripts/seed-preview.mjs` can register its accounts through the regular `/api/auth/sign-up/email` route, the same way a real user would.
 - **The first account the seed script registers becomes superadmin automatically** — that's standard BetterShift behaviour for the first user on any fresh instance (`lib/auth/first-user.ts`), not something specific to previews.
 - `AUTH_ENABLED=true`, `TZ=Europe/Berlin` and `DEFAULT_LOCALE=de` are also fixed on the container (overridable only by setting `PREVIEW_TZ` / `PREVIEW_LOCALE` in the workflow's own environment before it calls `scripts/preview-stack.mjs`, since the script falls back to those defaults itself).
+- **`TRUSTED_PROXY_HEADER=CF-Connecting-IP`** is set because previews are served through Cloudflare in front of Caddy. With two proxies in the chain, the last `X-Forwarded-For` entry is Cloudflare's address rather than the visitor's, which would make the rate limiter treat every visitor as the same client. If your preview host is not behind Cloudflare, drop this line from `composeFile()` — naming a header the proxy does not set is worse than naming none.
+- **`CSP_STRICT_DYNAMIC_BYPASS=true`** relaxes `script-src` to `'self' 'unsafe-inline'`. Cloudflare's Rocket Loader rewrites the page and reconstructs inline scripts without their nonce, which the strict policy then blocks — the app fails to load with no obvious cause. Once Rocket Loader is confirmed off for the preview domain, remove this line so previews exercise the same CSP as production.
 
 ## Manual Cleanup
 
