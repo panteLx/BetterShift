@@ -18,9 +18,16 @@ export async function register() {
       await initializeVersion();
 
       await autoSyncService.start();
-      telemetryService.start();
     } catch (error) {
       console.error("[Instrumentation] Startup task failed:", error);
+    }
+
+    // Separate from the block above: a failing auto-sync start must not keep
+    // the telemetry scheduler from being armed.
+    try {
+      telemetryService.start();
+    } catch (error) {
+      console.error("[Instrumentation] Telemetry scheduler failed:", error);
     }
 
     // Register shutdown handlers regardless of whether start() above

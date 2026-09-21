@@ -1,0 +1,1 @@
+ALTER TABLE `system_settings` ADD `telemetry_last_sent_at` integer;

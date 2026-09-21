@@ -15,6 +15,7 @@ export interface SystemSettings {
   telemetryInstanceId: string | null;
   telemetryConsentedSchema: number | null;
   telemetryDecidedAt: Date | null;
+  telemetryLastSentAt: Date | null;
 }
 
 // Neither the row nor (on upgrade) this specific column may exist yet, so
@@ -29,6 +30,7 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   telemetryInstanceId: null,
   telemetryConsentedSchema: null,
   telemetryDecidedAt: null,
+  telemetryLastSentAt: null,
 };
 
 // Settings are read on every /api/version request; a short cache avoids a DB
@@ -52,6 +54,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       telemetryInstanceId: systemSettings.telemetryInstanceId,
       telemetryConsentedSchema: systemSettings.telemetryConsentedSchema,
       telemetryDecidedAt: systemSettings.telemetryDecidedAt,
+      telemetryLastSentAt: systemSettings.telemetryLastSentAt,
     })
     .from(systemSettings)
     .where(eq(systemSettings.id, SETTINGS_ID))

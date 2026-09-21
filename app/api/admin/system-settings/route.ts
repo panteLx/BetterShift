@@ -17,6 +17,7 @@ import {
   resolveTelemetryEnabled,
 } from "@/lib/telemetry/config";
 import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
+import { sendTelemetryInBackground } from "@/lib/telemetry/sender";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
 
@@ -147,6 +148,12 @@ export async function PATCH(request: NextRequest) {
       request,
       metadata: { before: forAudit(before), after: forAudit(after) },
     });
+
+    // Opting in sends right away instead of waiting for the scheduler's next
+    // check; the stamp it writes is what starts the 24h rhythm.
+    if (patch.telemetryEnabled === true && before.telemetryEnabled !== true) {
+      void sendTelemetryInBackground();
+    }
 
     if ("telemetryEnabled" in patch) {
       await logAdminAction<AdminTelemetryConsentMetadata>({
