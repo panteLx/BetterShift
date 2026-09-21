@@ -293,6 +293,9 @@ export const systemSettings = sqliteTable("system_settings", {
   telemetryInstanceId: text("telemetry_instance_id"),
   telemetryConsentedSchema: integer("telemetry_consented_schema"),
   telemetryDecidedAt: integer("telemetry_decided_at", { mode: "timestamp" }),
+  // Drives the daily send: the scheduler compares it against now instead of
+  // counting 24h from server start, so restarts do not reset the rhythm.
+  telemetryLastSentAt: integer("telemetry_last_sent_at", { mode: "timestamp" }),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)
