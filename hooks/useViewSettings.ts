@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   hidePresetHeader: "hide-preset-header",
   highlightedWeekdays: "highlighted-weekdays",
   highlightColor: "highlight-color",
+  wrapShiftTitles: "wrap-shift-titles",
 } as const;
 
 function readStorage(key: string): string | null {
@@ -79,6 +80,7 @@ function readLocalViewSettings(): PersonalViewSettings {
     showStampBar: hidePresetHeader === undefined ? undefined : !hidePresetHeader,
     highlightedWeekdays: parseJson(readStorage(STORAGE_KEYS.highlightedWeekdays)),
     highlightColor: readStorage(STORAGE_KEYS.highlightColor) ?? undefined,
+    wrapShiftTitles: parseBoolean(readStorage(STORAGE_KEYS.wrapShiftTitles)),
   });
 }
 
@@ -93,6 +95,7 @@ function writeLocalViewSettings(settings: PersonalViewSettings) {
   writeStorage(STORAGE_KEYS.hidePresetHeader, String(!settings.showStampBar));
   writeStorage(STORAGE_KEYS.highlightedWeekdays, JSON.stringify(settings.highlightedWeekdays));
   writeStorage(STORAGE_KEYS.highlightColor, settings.highlightColor);
+  writeStorage(STORAGE_KEYS.wrapShiftTitles, String(settings.wrapShiftTitles));
 }
 
 async function fetchPersonalViewSettingsApi(): Promise<PersonalViewSettings | null> {

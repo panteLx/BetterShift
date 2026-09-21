@@ -53,6 +53,8 @@ interface CalendarWorkspaceProps {
   /** List view only: the personal sort, plus whether a calendar-pinned view locks it */
   listSort: ListSort;
   showShiftNotes: boolean;
+  /** Personal setting: month cells wrap a long title instead of cutting it */
+  wrapShiftTitles: boolean;
   highlightedWeekdays: number[];
   highlightColor: string;
   /** createShift — gates the manual "add a new shift" affordance only */
@@ -98,6 +100,7 @@ export function CalendarWorkspace({
   layout,
   listSort,
   showShiftNotes,
+  wrapShiftTitles,
   highlightedWeekdays,
   highlightColor,
   canCreateShift,
@@ -295,6 +298,7 @@ export function CalendarWorkspace({
         togglingDates={togglingDates}
         layout={layout}
         showShiftNotes={showShiftNotes}
+        wrapShiftTitles={wrapShiftTitles}
         highlightedWeekdays={highlightedWeekdays}
         highlightColor={highlightColor}
         onDayClick={onDayClick}

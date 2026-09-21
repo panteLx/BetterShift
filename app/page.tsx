@@ -551,6 +551,7 @@ function HomeContent() {
           onChange: viewSettings.updatePersonal,
         }}
         showShiftNotes={calendarView.showShiftNotes}
+        wrapShiftTitles={calendarView.wrapShiftTitles}
         highlightedWeekdays={calendarView.highlightedWeekdays}
         highlightColor={calendarView.highlightColor}
         canCreateShift={can("createShift")}

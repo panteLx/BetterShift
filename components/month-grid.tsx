@@ -17,6 +17,7 @@ import {
   NoteLine,
   ShiftChip,
   SignupBadge,
+  signupBadgeLabel,
   TODAY_BADGE,
   buildDayContents,
   useDayPress,
@@ -24,6 +25,7 @@ import {
 } from "@/components/day-cell-entries";
 import { hasVisibleCustomFields } from "@/components/custom-field-summary";
 import { useCustomFields } from "@/hooks/useCustomFields";
+import { cellFont, cellMonoFont, countWrappedLines, textWidth } from "@/lib/text-measure";
 
 const WEEKDAY_KEYS = [
   "monday",
@@ -44,17 +46,43 @@ const DESKTOP_ROW = 20;
 const DESKTOP_PLAIN_ROW = 18;
 const DESKTOP_SUB_LINE = 14;
 const DESKTOP_OVERFLOW = 14;
+const DESKTOP_TITLE_LINE = 16; // a second title line, leading-4
+// Horizontal chip geometry: cell px-2, chip pl-[5px]/pr-[7px], gap-1.5 between the columns
+const DESKTOP_CELL_PAD = 16;
+const DESKTOP_CHIP_PAD = 12;
+const DESKTOP_GAP_X = 6;
+const DESKTOP_RAIL = 3;
+const DESKTOP_SYNC_ICON = 12;
+const DESKTOP_SPLIT_ICON = 11; // size-[9px] plus its gap-0.5
+const DESKTOP_TIME_MAX = 0.45; // ChipTime is capped at max-w-[45%]
+const DESKTOP_BADGE_PAD = 8;
 
 const PHONE_MIN_ROW = 84; // two fields plus the counter
 const PHONE_CHROME = 30; // 5 padding, 22 head, 3 gap
 const PHONE_GAP = 2;
 const PHONE_FIELD = 19;
+const PHONE_FIELD_WRAP = 20; // py-[3px] plus one leading-[14px] line
+const PHONE_FIELD_WRAP_LINE = 14;
+const PHONE_FIELD_PAD = 12; // cell px-[2px], field px-1
 const PHONE_COUNTER = 12;
 const PHONE_MAX_FIELDS = 3;
 const PHONE_HEAD_FIXED = 32; // 4 cell padding, 3 head padding, 22 day number, 3 gap
 const PHONE_MARK = 10;
 const PHONE_MAX_MARKS = 3;
 const PHONE_FALLBACK_COL = 54; // 390px viewport, used until the grid is measured
+const MAX_TITLE_LINES = 2;
+
+/** Width left for the title beside the rail/icon, the optional signup badge and the time. */
+function desktopTitleWidth(
+  colWidth: number,
+  leading: number,
+  timeWidth: number,
+  badgeWidth: number
+): number {
+  const inner = colWidth - DESKTOP_CELL_PAD - DESKTOP_CHIP_PAD - leading - DESKTOP_GAP_X;
+  const time = Math.min(timeWidth, inner * DESKTOP_TIME_MAX);
+  return inner - DESKTOP_GAP_X - time - (badgeWidth > 0 ? badgeWidth + DESKTOP_GAP_X : 0);
+}
 
 type Variant = "desktop" | "phone" | "compare";
 
@@ -130,6 +158,8 @@ interface MonthGridProps {
   layout: DayLayoutOptions;
   /** Desktop only: a shift's own note as a second line */
   showShiftNotes?: boolean;
+  /** Personal setting: let a long title wrap instead of cutting it off */
+  wrapShiftTitles?: boolean;
   highlightedWeekdays?: number[];
   highlightColor?: string;
   onDayClick: (date: Date) => void;
@@ -153,6 +183,7 @@ export function MonthGrid({
   togglingDates,
   layout,
   showShiftNotes = false,
+  wrapShiftTitles = false,
   highlightedWeekdays = [],
   highlightColor,
   onDayClick,
@@ -180,6 +211,53 @@ export function MonthGrid({
     ? Math.max(PHONE_MIN_ROW, (gridSize.height - (rows - 1) * PHONE_GAP) / rows)
     : (gridSize.height - (rows - 1)) / rows;
   const colWidth = gridSize.width > 0 ? (gridSize.width - 8) / 7 : PHONE_FALLBACK_COL;
+
+  // Cell heights are computed in px, so a wrapped title has to be measured up front
+  const wrapTitles = wrapShiftTitles && variant !== "compare";
+  const fonts = useMemo(
+    () => ({
+      title: cellFont(500, 11.5),
+      time: cellMonoFont(400, 10.5),
+      badge: cellMonoFont(400, 10),
+      field: cellFont(600, 11),
+    }),
+    []
+  );
+
+  const desktopShiftLines = (shift: ShiftWithCalendar) => {
+    if (!wrapTitles) return 1;
+    const time = shift.isAllDay
+      ? t("calendarView.allDayShort")
+      : shift.startTime.slice(0, 5);
+    const split = !shift.isAllDay && (shift.segments?.length ?? 0) > 0;
+    const badge = signupBadgeLabel(shift, signupsEnabled(shift.calendarId));
+    const width = desktopTitleWidth(
+      colWidth,
+      DESKTOP_RAIL,
+      textWidth(time, fonts.time) + (split ? DESKTOP_SPLIT_ICON : 0),
+      badge ? textWidth(badge, fonts.badge) + DESKTOP_BADGE_PAD : 0
+    );
+    return countWrappedLines(shift.title, fonts.title, width, MAX_TITLE_LINES);
+  };
+
+  const desktopExternalLines = (shift: ShiftWithCalendar) => {
+    if (!wrapTitles) return 1;
+    const time = shift.isAllDay
+      ? t("calendarView.allDayShort")
+      : shift.startTime.slice(0, 5);
+    const width = desktopTitleWidth(
+      colWidth,
+      DESKTOP_SYNC_ICON,
+      textWidth(time, fonts.time),
+      0
+    );
+    return countWrappedLines(shift.title, fonts.title, width, MAX_TITLE_LINES);
+  };
+
+  const phoneFieldLines = (title: string) =>
+    wrapTitles
+      ? countWrappedLines(title, fonts.field, colWidth - PHONE_FIELD_PAD, MAX_TITLE_LINES)
+      : 1;
 
   // One pass over the month instead of scanning every shift and note per cell
   const { maxShifts, maxExternalShifts, sortType, sortOrder, combinedSort } = layout;
@@ -247,15 +325,24 @@ export function MonthGrid({
       ...content.events.map((note) => ({ kind: "event" as const, key: note.id, note })),
       ...content.notes.map((note) => ({ kind: "note" as const, key: note.id, note })),
     ];
-    const heights = entries.map((entry) => {
+    const titleLines = entries.map((entry) =>
+      entry.kind === "shift"
+        ? desktopShiftLines(entry.shift)
+        : entry.kind === "external"
+          ? desktopExternalLines(entry.shift)
+          : 1
+    );
+    const heights = entries.map((entry, index) => {
+      const extraTitle = (titleLines[index] - 1) * DESKTOP_TITLE_LINE;
       if (entry.kind === "shift") {
         const noteLine = showShiftNotes && entry.shift.notes ? DESKTOP_SUB_LINE : 0;
         const fieldLine = hasVisibleCustomFields(entry.shift.customFields, customFieldDefinitions)
           ? DESKTOP_SUB_LINE
           : 0;
-        return DESKTOP_ROW + noteLine + fieldLine;
+        return DESKTOP_ROW + extraTitle + noteLine + fieldLine;
       }
-      return entry.kind === "note" ? DESKTOP_PLAIN_ROW : DESKTOP_ROW;
+      if (entry.kind === "note") return DESKTOP_PLAIN_ROW;
+      return DESKTOP_ROW + extraTitle;
     });
     const shown = fitCount(
       heights,
@@ -285,7 +372,8 @@ export function MonthGrid({
 
     return (
       <>
-        {entries.slice(0, shown).map((entry) => {
+        {entries.slice(0, shown).map((entry, index) => {
+          const lines = titleLines[index] === 2 ? (2 as const) : (1 as const);
           switch (entry.kind) {
             case "shift":
               return (
@@ -295,10 +383,11 @@ export function MonthGrid({
                   showNote={showShiftNotes}
                   signupsEnabled={signupsEnabled(entry.shift.calendarId)}
                   customFieldDefinitions={customFieldDefinitions}
+                  titleLines={lines}
                 />
               );
             case "external":
-              return <ExternalShiftChip key={entry.key} shift={entry.shift} />;
+              return <ExternalShiftChip key={entry.key} shift={entry.shift} titleLines={lines} />;
             case "event":
               return <EventChip key={entry.key} note={entry.note} />;
             case "note":
@@ -328,8 +417,15 @@ export function MonthGrid({
         shift: undefined,
       })),
     ];
+    const fieldLines = fields.map((field) =>
+      field.shift ? phoneFieldLines(field.shift.title) : 1
+    );
     const shown = fitCount(
-      fields.map(() => PHONE_FIELD),
+      fields.map((_, index) =>
+        wrapTitles
+          ? PHONE_FIELD_WRAP + (fieldLines[index] - 1) * PHONE_FIELD_WRAP_LINE
+          : PHONE_FIELD
+      ),
       hiddenCount,
       rowHeight - PHONE_CHROME,
       PHONE_MAX_FIELDS,
@@ -341,14 +437,23 @@ export function MonthGrid({
     return (
       <span className="flex min-w-0 flex-col gap-[2px]">
         {fields.slice(0, shown).map((field) => (
-          // Cut hard at the field edge, no ellipsis: the first letters identify a shift
           <span
             key={field.key}
-            className="shift-field flex h-[19px] shrink-0 items-center gap-[2px] overflow-hidden whitespace-nowrap rounded-[4px] px-1 text-[11px] font-semibold leading-[19px]"
+            className={cn(
+              "shift-field flex shrink-0 items-center gap-[2px] overflow-hidden rounded-[4px] px-1 text-[11px] font-semibold",
+              wrapTitles
+                ? "min-h-[20px] py-[3px] leading-[14px]"
+                : "h-[19px] whitespace-nowrap leading-[19px]"
+            )}
             style={shiftVars(field.color)}
           >
             {field.shift ? (
-              field.shift.title
+              wrapTitles ? (
+                <span className="min-w-0 line-clamp-2 break-words">{field.shift.title}</span>
+              ) : (
+                // Cut hard at the field edge, no ellipsis: the first letters identify a shift
+                field.shift.title
+              )
             ) : (
               <>
                 <RefreshCw className="size-2.5 shrink-0" />

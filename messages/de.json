@@ -254,6 +254,8 @@
     "onlyMyShifts": "Nur meine Schichten",
     "onlyMyShiftsHint": "Zeigt im Kalender und in der Tagesansicht nur Schichten, denen du zugewiesen bist",
     "onlyMyShiftsSignupsDisabledHint": "Für diesen Kalender sind Zuweisungen deaktiviert, daher bleibt der Kalender leer.",
+    "wrapTitles": "Vollständige Titel anzeigen",
+    "wrapTitlesHint": "Lange Schichttitel in der Monatsansicht auf einer zweiten Zeile umbrechen statt abschneiden",
     "settingsDescriptionLocal": "Deine persönliche Ansicht auf diesem Gerät. Gilt für alle Kalender ohne eigene Ansicht.",
     "overriddenByCalendar": "„{calendar}“ hat eine eigene Ansicht. Die ausgegrauten Einstellungen unten gelten dort nicht; nur die Einstellungen oben bleiben immer persönlich.",
     "personalSection": "Immer persönlich",
