@@ -254,6 +254,8 @@
     "onlyMyShifts": "Seulement mes créneaux",
     "onlyMyShiftsHint": "N'affiche dans le calendrier et la vue journalière que les créneaux qui vous sont attribués",
     "onlyMyShiftsSignupsDisabledHint": "Les attributions sont désactivées pour ce calendrier, il restera donc vide.",
+    "wrapTitles": "Afficher les titres complets",
+    "wrapTitlesHint": "Renvoyer les titres de service longs à la ligne dans la vue mensuelle au lieu de les tronquer",
     "settingsDescriptionLocal": "Votre affichage personnel sur cet appareil. Il s’applique à tous les calendriers sans affichage propre.",
     "overriddenByCalendar": "« {calendar} » a son propre affichage. Les réglages grisés ci-dessous ne s’y appliquent pas ; seuls ceux du haut restent toujours personnels.",
     "personalSection": "Toujours personnel",

@@ -130,14 +130,25 @@ export function useDayPress(
   });
 }
 
-/** Compact "N" / "N/capacity" badge. */
-export function SignupBadge({ shift, enabled }: { shift: ShiftWithCalendar; enabled: boolean }) {
-  const t = useTranslations();
+/** The badge's text, or null when it stays hidden; the month grid measures it for its cell heights. */
+export function signupBadgeLabel(shift: ShiftWithCalendar, enabled: boolean): string | null {
   if (!enabled) return null;
   const count = shift.signups?.length ?? 0;
   const capacity = shift.signupCapacity ?? null;
   if (count === 0 && capacity == null) return null;
-  const label = capacity != null ? formatSignupCapacityLabel(t, count, capacity) : null;
+  return capacity != null ? `${count}/${capacity}` : String(count);
+}
+
+/** Compact "N" / "N/capacity" badge. */
+export function SignupBadge({ shift, enabled }: { shift: ShiftWithCalendar; enabled: boolean }) {
+  const t = useTranslations();
+  const text = signupBadgeLabel(shift, enabled);
+  if (text === null) return null;
+  const capacity = shift.signupCapacity ?? null;
+  const label =
+    capacity != null
+      ? formatSignupCapacityLabel(t, shift.signups?.length ?? 0, capacity)
+      : null;
   return (
     <span
       className={cn(
@@ -146,7 +157,7 @@ export function SignupBadge({ shift, enabled }: { shift: ShiftWithCalendar; enab
       )}
       title={label?.text}
     >
-      {capacity != null ? `${count}/${capacity}` : count}
+      {text}
     </span>
   );
 }
@@ -194,6 +205,9 @@ const CHIP =
   "shift-chip flex min-w-0 shrink-0 gap-1.5 rounded-[6px] py-0.5 pr-[7px] dark:[--shift-tint:14%]";
 // Month cells cut titles to one line; week and list let them wrap
 const lineClass = (wrap: boolean) => (wrap ? "block break-words" : "block truncate");
+// Month cells may instead wrap the title onto a second line (personal view setting)
+const titleClass = (wrap: boolean, lines: 1 | 2) =>
+  wrap || lines === 1 ? lineClass(wrap) : "line-clamp-2 break-words";
 
 function ChipTime({
   shift,
@@ -246,6 +260,7 @@ export function ShiftChip({
   signupsEnabled,
   customFieldDefinitions = [],
   wrap = false,
+  titleLines = 1,
   interactive = false,
 }: {
   shift: ShiftWithCalendar;
@@ -253,6 +268,8 @@ export function ShiftChip({
   signupsEnabled: boolean;
   customFieldDefinitions?: CustomFieldDefinition[];
   wrap?: boolean;
+  /** Month cells only: 2 lets a long title run onto a second line before the ellipsis */
+  titleLines?: 1 | 2;
   /** Week view only: the cell is a div, not a button, so a nested signup button is valid here */
   interactive?: boolean;
 }) {
@@ -292,7 +309,7 @@ export function ShiftChip({
     <span className={cn(CHIP, "pl-[5px]")} style={shiftVars(shift.color)} title={title}>
       <span className="shift-rail w-[3px] shrink-0 self-stretch rounded-full" />
       <span className="min-w-0 flex-1">
-        <span className={cn(lineClass(wrap), "text-[11.5px] font-medium leading-4")}>
+        <span className={cn(titleClass(wrap, titleLines), "text-[11.5px] font-medium leading-4")}>
           {shift.title}
         </span>
         {showNote && shift.notes && (
@@ -317,9 +334,12 @@ export function ShiftChip({
 export function ExternalShiftChip({
   shift,
   wrap = false,
+  titleLines = 1,
 }: {
   shift: ShiftWithCalendar;
   wrap?: boolean;
+  /** Month cells only: 2 lets a long title run onto a second line before the ellipsis */
+  titleLines?: 1 | 2;
 }) {
   // Wrap mode: title column stacks the time below itself instead of beside it
   if (wrap) {
@@ -339,7 +359,12 @@ export function ExternalShiftChip({
   return (
     <span className={cn(CHIP, "pl-[5px] items-center")} style={shiftVars(shift.color)} title={shift.title}>
       <RefreshCw className="size-3 shrink-0" />
-      <span className={cn("min-w-0 flex-1 text-[11.5px] font-medium leading-4", lineClass(wrap))}>
+      <span
+        className={cn(
+          "min-w-0 flex-1 text-[11.5px] font-medium leading-4",
+          titleClass(wrap, titleLines)
+        )}
+      >
         {shift.title}
       </span>
       <ChipTime shift={shift} full={wrap} />

@@ -254,6 +254,8 @@
     "onlyMyShifts": "Solo i miei turni",
     "onlyMyShiftsHint": "Mostra nel calendario e nella vista giornaliera solo i turni a te assegnati",
     "onlyMyShiftsSignupsDisabledHint": "Le assegnazioni sono disattivate per questo calendario, quindi rimarrà vuoto.",
+    "wrapTitles": "Mostra i titoli completi",
+    "wrapTitlesHint": "Manda a capo i titoli lunghi dei turni nella vista mensile invece di troncarli",
     "settingsDescriptionLocal": "La tua vista personale su questo dispositivo. Vale per tutti i calendari senza una vista propria.",
     "overriddenByCalendar": "«{calendar}» ha una vista propria. Le impostazioni in grigio qui sotto non valgono lì; solo quelle sopra restano sempre personali.",
     "personalSection": "Sempre personale",

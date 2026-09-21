@@ -95,6 +95,7 @@ function ViewFields({
   disabled = false,
   stampBar,
   onlyMyShifts,
+  wrapTitles,
 }: {
   value: CalendarViewSettings;
   onChange: (patch: Partial<CalendarViewSettings>) => void;
@@ -108,6 +109,8 @@ function ViewFields({
     /** The selected calendar has signups turned off, so the filter would show nothing */
     signupsDisabled?: boolean;
   };
+  /** Only the personal view carries the wrapped-title toggle */
+  wrapTitles?: { checked: boolean; onChange: (checked: boolean) => void };
 }) {
   const t = useTranslations();
   const id = useId();
@@ -122,8 +125,8 @@ function ViewFields({
     { day: 0, label: t("view.sunday") },
   ];
   const days = value.highlightedWeekdays;
-  // Neither is part of CalendarViewSettings, so a calendar's own view can never take them over
-  const hasPersonalSection = !!stampBar || !!onlyMyShifts;
+  // None of these is part of CalendarViewSettings, so a calendar's own view can never take them over
+  const hasPersonalSection = !!stampBar || !!onlyMyShifts || !!wrapTitles;
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,6 +155,15 @@ function ViewFields({
                 <InfoNote icon={Info}>{t("view.onlyMyShiftsSignupsDisabledHint")}</InfoNote>
               )}
             </>
+          )}
+          {wrapTitles && (
+            <ToggleRow
+              id={`${id}-wrap-titles`}
+              title={t("view.wrapTitles")}
+              description={t("view.wrapTitlesHint")}
+              checked={wrapTitles.checked}
+              onCheckedChange={wrapTitles.onChange}
+            />
           )}
         </section>
       )}
@@ -476,6 +488,10 @@ export function PersonalViewPanel({
                 }
               : undefined
           }
+          wrapTitles={{
+            checked: personal.wrapShiftTitles,
+            onChange: (wrapShiftTitles) => updatePersonal({ wrapShiftTitles }),
+          }}
         />
       </div>
     </PanelBody>

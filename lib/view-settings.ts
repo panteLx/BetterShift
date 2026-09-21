@@ -15,10 +15,12 @@ export interface CalendarViewSettings {
   highlightColor: string;
 }
 
-/** A user's own view; the stamp bar and the own-shifts filter are never taken over by a calendar. */
+/** A user's own view; these extra fields are never taken over by a calendar. */
 export interface PersonalViewSettings extends CalendarViewSettings {
   showStampBar: boolean;
   onlyMyShifts: boolean;
+  /** Month cells wrap a long shift title onto a second line instead of cutting it */
+  wrapShiftTitles: boolean;
 }
 
 export const SHIFTS_PER_DAY_MAX = 3;
@@ -46,6 +48,7 @@ export const DEFAULT_PERSONAL_VIEW_SETTINGS: PersonalViewSettings = {
   ...DEFAULT_CALENDAR_VIEW_SETTINGS,
   showStampBar: true,
   onlyMyShifts: false,
+  wrapShiftTitles: false,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -105,6 +108,10 @@ export function sanitizePersonalViewSettings(input: unknown): PersonalViewSettin
     ...sanitizeCalendarViewSettings(src),
     showStampBar: sanitizeBoolean(src.showStampBar, DEFAULT_PERSONAL_VIEW_SETTINGS.showStampBar),
     onlyMyShifts: sanitizeBoolean(src.onlyMyShifts, DEFAULT_PERSONAL_VIEW_SETTINGS.onlyMyShifts),
+    wrapShiftTitles: sanitizeBoolean(
+      src.wrapShiftTitles,
+      DEFAULT_PERSONAL_VIEW_SETTINGS.wrapShiftTitles
+    ),
   };
 }
 
@@ -118,7 +125,7 @@ export function calendarViewSettingsEqual(a: CalendarViewSettings, b: CalendarVi
   );
 }
 
-/** A calendar's own view replaces the personal one as a whole; the stamp bar stays personal. */
+/** A calendar's own view replaces the personal one as a whole; the personal-only fields stay. */
 export function resolveViewSettings(
   personal: PersonalViewSettings,
   calendarView: unknown
@@ -128,5 +135,6 @@ export function resolveViewSettings(
     ...sanitizeCalendarViewSettings(calendarView),
     showStampBar: personal.showStampBar,
     onlyMyShifts: personal.onlyMyShifts,
+    wrapShiftTitles: personal.wrapShiftTitles,
   };
 }

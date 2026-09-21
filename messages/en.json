@@ -254,6 +254,8 @@
     "onlyMyShifts": "Only my shifts",
     "onlyMyShiftsHint": "Shows only shifts you're assigned to in the calendar and day view",
     "onlyMyShiftsSignupsDisabledHint": "Assignments are turned off for this calendar, so the calendar stays empty.",
+    "wrapTitles": "Show full titles",
+    "wrapTitlesHint": "Wrap long shift titles onto a second line in the month view instead of cutting them off",
     "settingsDescriptionLocal": "Your personal view on this device. Applies to all calendars without their own view.",
     "overriddenByCalendar": "“{calendar}” has its own view. The grayed-out settings below don't apply there; only the settings above always stay personal.",
     "personalSection": "Always personal",
