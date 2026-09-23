@@ -885,7 +885,7 @@
     "permissions": "Oprávnění",
     "permissionsHint": "{count, plural, =0 {Skupiny, přiřazení, odkazy} one {Skupiny, přiřazení, # aktivní odkaz} few {Skupiny, přiřazení, # aktivní odkazy} other {Skupiny, přiřazení, # aktivních odkazů}}",
     "export": "Export",
-    "exportHint": "Soubor ICS nebo PDF",
+    "exportHint": "Soubor ICS, PDF nebo odběrový odkaz",
     "view": "Zobrazení kalendáře",
     "viewHint": "Vlastní zobrazení, hustota, řazení",
     "notifications": "Oznámení",

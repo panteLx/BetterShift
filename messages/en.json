@@ -885,7 +885,7 @@
     "permissions": "Permissions",
     "permissionsHint": "{count, plural, =0 {Groups, assignments, links} one {Groups, assignments, # active link} other {Groups, assignments, # active links}}",
     "export": "Export",
-    "exportHint": "ICS file or PDF",
+    "exportHint": "ICS file, PDF or subscription link",
     "view": "Calendar view",
     "viewHint": "Own view, density, sorting",
     "notifications": "Notifications",

@@ -885,7 +885,7 @@
     "permissions": "Permisos",
     "permissionsHint": "{count, plural, =0 {Grupos, asignaciones, enlaces} one {Grupos, asignaciones, # enlace activo} other {Grupos, asignaciones, # enlaces activos}}",
     "export": "Exportar",
-    "exportHint": "Archivo ICS o PDF",
+    "exportHint": "Archivo ICS, PDF o enlace de suscripción",
     "view": "Vista del calendario",
     "viewHint": "Vista propia, densidad, orden",
     "notifications": "Notificaciones",

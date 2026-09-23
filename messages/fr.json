@@ -367,7 +367,7 @@
     "selectAtLeastOne": "Veuillez sélectionner au moins un calendrier",
     "feed": {
       "title": "Lien d'abonnement",
-      "hint": "Lien secret à abonner depuis des applications de calendrier",
+      "hint": "Lien secret pour s'abonner depuis des applications de calendrier",
       "empty": "Créez un lien pour abonner ce calendrier dans Google Agenda, Calendrier Apple, Outlook ou Home Assistant.",
       "create": "Créer le lien",
       "created": "Lien d'abonnement créé",
@@ -885,7 +885,7 @@
     "permissions": "Autorisations",
     "permissionsHint": "{count, plural, =0 {Groupes, attributions, liens} one {Groupes, attributions, # lien actif} other {Groupes, attributions, # liens actifs}}",
     "export": "Exporter",
-    "exportHint": "Fichier ICS ou PDF",
+    "exportHint": "Fichier ICS, PDF ou lien d'abonnement",
     "view": "Affichage du calendrier",
     "viewHint": "Affichage propre, densité, tri",
     "notifications": "Notifications",

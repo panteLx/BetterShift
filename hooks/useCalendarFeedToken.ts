@@ -15,6 +15,9 @@ export interface CalendarFeed {
 
 const EMPTY_FEED: CalendarFeed = { token: null, createdAt: null, lastUsedAt: null };
 
+/** Marker so mutation `onError` handlers can skip the generic toast — `handleRateLimitError` already showed one. */
+class RateLimitedError extends Error {}
+
 async function fetchFeed(calendarId: string): Promise<CalendarFeed> {
   const response = await fetch(`/api/calendars/${calendarId}/feed-token`);
   if (!response.ok) throw new ApiError(`HTTP ${response.status}`, response.status);
@@ -32,11 +35,11 @@ export function useCalendarFeedToken(calendarId: string, enabled: boolean) {
     enabled,
   });
 
-  const run = async (method: "POST" | "DELETE"): Promise<CalendarFeed | null> => {
+  const run = async (method: "POST" | "DELETE"): Promise<CalendarFeed> => {
     const response = await fetch(`/api/calendars/${calendarId}/feed-token`, { method });
     if (isRateLimitError(response)) {
       await handleRateLimitError(response, t);
-      return null;
+      throw new RateLimitedError();
     }
     if (!response.ok) throw new ApiError(`HTTP ${response.status}`, response.status);
     return method === "POST" ? response.json() : EMPTY_FEED;
@@ -45,11 +48,13 @@ export function useCalendarFeedToken(calendarId: string, enabled: boolean) {
   const createMutation = useMutation({
     mutationFn: () => run("POST"),
     onSuccess: (data) => {
-      if (!data) return;
       queryClient.setQueryData(key, data);
       toast.success(t("export.feed.created"));
     },
-    onError: () => toast.error(t("common.error")),
+    onError: (error) => {
+      if (error instanceof RateLimitedError) return;
+      toast.error(t("common.error"));
+    },
   });
 
   const revokeMutation = useMutation({
@@ -60,12 +65,13 @@ export function useCalendarFeedToken(calendarId: string, enabled: boolean) {
       queryClient.setQueryData(key, EMPTY_FEED);
       return { previous };
     },
-    onError: (_err, _vars, context) => {
+    onError: (error, _vars, context) => {
       queryClient.setQueryData(key, context?.previous);
+      if (error instanceof RateLimitedError) return;
       toast.error(t("common.error"));
     },
-    onSuccess: (data) => {
-      if (data) toast.success(t("export.feed.revoked"));
+    onSuccess: () => {
+      toast.success(t("export.feed.revoked"));
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   });

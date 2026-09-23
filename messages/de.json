@@ -885,7 +885,7 @@
     "permissions": "Berechtigungen",
     "permissionsHint": "{count, plural, =0 {Gruppen, Zuweisungen, Links} one {Gruppen, Zuweisungen, # aktiver Link} other {Gruppen, Zuweisungen, # aktive Links}}",
     "export": "Exportieren",
-    "exportHint": "ICS-Datei oder PDF",
+    "exportHint": "ICS-Datei, PDF oder Abo-Link",
     "view": "Kalenderansicht",
     "viewHint": "Eigene Ansicht, Dichte, Sortierung",
     "notifications": "Benachrichtigungen",

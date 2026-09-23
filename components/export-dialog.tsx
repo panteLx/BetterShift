@@ -146,7 +146,7 @@ export function ExportPanel({
   const locale = useLocale();
   const { calendars } = useCalendars();
   const calendar = calendars.find((c) => c.id === calendarId);
-  const [format, setFormat] = useState<Format>("ics");
+  const [selectedFormat, setSelectedFormat] = useState<Format>("ics");
   const [range, setRange] = useState<Range>("all");
   const [month, setMonth] = useState(() => monthValue(new Date()));
   const [year, setYear] = useState(() => String(new Date().getFullYear()));
@@ -157,7 +157,7 @@ export function ExportPanel({
   const { isAuthenticated } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
   const canUseFeed = isAuthenticated || !isAuthEnabled;
-  const feed = useCalendarFeedToken(calendarId, canUseFeed && format === "feed");
+  const feed = useCalendarFeedToken(calendarId, canUseFeed && selectedFormat === "feed");
 
   const monthOptions = useMemo(() => {
     const today = new Date();
@@ -183,11 +183,11 @@ export function ExportPanel({
     try {
       const params = new URLSearchParams();
       params.append("locale", locale);
-      if (format === "pdf") {
+      if (selectedFormat === "pdf") {
         if (range === "month") params.append("month", month);
         if (range === "year") params.append("year", year);
       }
-      const url = `/api/export/${format}${params.toString() ? `?${params}` : ""}`;
+      const url = `/api/export/${selectedFormat}${params.toString() ? `?${params}` : ""}`;
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -213,7 +213,7 @@ export function ExportPanel({
       link.href = downloadUrl;
       link.download =
         match?.[1] ??
-        `${(calendar?.name ?? "calendar").replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${format}`;
+        `${(calendar?.name ?? "calendar").replace(/[^a-z0-9]/gi, "_").toLowerCase()}_export.${selectedFormat}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -235,8 +235,8 @@ export function ExportPanel({
         <div className="flex flex-col gap-5">
           <Field label={t("export.formatLabel")}>
             <OptionCards<Format>
-              value={format}
-              onChange={setFormat}
+              value={selectedFormat}
+              onChange={setSelectedFormat}
               columns={canUseFeed ? 3 : 2}
               options={[
                 { value: "ics", title: t("export.icsFormat"), description: t("export.icsHint") },
@@ -254,9 +254,9 @@ export function ExportPanel({
             />
           </Field>
 
-          {format === "feed" && <FeedSection feed={feed} />}
+          {selectedFormat === "feed" && <FeedSection feed={feed} />}
 
-          {format === "pdf" && (
+          {selectedFormat === "pdf" && (
             <Field label={t("export.rangeLabel")}>
               <ChoiceChips<Range>
                 value={range}
@@ -298,7 +298,7 @@ export function ExportPanel({
             </Field>
           )}
 
-          {format !== "feed" && calendars.length > 1 && (
+          {selectedFormat !== "feed" && calendars.length > 1 && (
             <div className="flex flex-col gap-2 border-t border-line pt-4">
               <ToggleRow
                 id="export-multi"
@@ -356,9 +356,9 @@ export function ExportPanel({
       </PanelBody>
       <PanelFooter>
         <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose} disabled={loading}>
-          {format === "feed" ? t("common.close") : t("common.cancel")}
+          {selectedFormat === "feed" ? t("common.close") : t("common.cancel")}
         </Button>
-        {format !== "feed" && (
+        {selectedFormat !== "feed" && (
           <Button className="h-10 flex-1 gap-2 font-semibold" onClick={handleExport} disabled={loading}>
             <Download className="size-4" />
             {loading ? t("common.loading") : t("export.download")}
