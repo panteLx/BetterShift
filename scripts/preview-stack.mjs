@@ -127,7 +127,7 @@ function assertUpdateOk(label, result) {
  * writes: a bcrypt hash contains `$`, which compose would read as a variable
  * if it sat in the compose file itself.
  */
-function composeFile({ image, host, network, tz, locale }) {
+function composeFile({ image, host, network, tz, locale, basicAuth }) {
   return [
     "services:",
     "  app:",
@@ -153,7 +153,7 @@ function composeFile({ image, host, network, tz, locale }) {
     // get its own certificate for a name that never resolves to it directly.
     `      caddy: http://${host}`,
     '      caddy.reverse_proxy: "{{upstreams 3000}}"',
-    '      caddy.basic_auth.preview: "${BASIC_AUTH_HASH}"',
+    ...(basicAuth ? ['      caddy.basic_auth.preview: "${BASIC_AUTH_HASH}"'] : []),
     "",
     "networks:",
     `  ${network}:`,
@@ -179,6 +179,7 @@ function stackConfig() {
       network: process.env.PREVIEW_CADDY_NETWORK,
       tz: process.env.PREVIEW_TZ || "Europe/Berlin",
       locale: process.env.PREVIEW_LOCALE || "de",
+      basicAuth: process.env.PREVIEW_PUBLIC !== "true",
     }),
     environment: [
       `BETTER_AUTH_SECRET=${escapeEnvValue(process.env.PREVIEW_BETTER_AUTH_SECRET)}`,
