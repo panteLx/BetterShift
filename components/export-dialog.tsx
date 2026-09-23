@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, Download } from "lucide-react";
+import { format } from "date-fns";
+import { Check, Copy, Download, Link } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Select,
   SelectContent,
@@ -17,10 +20,116 @@ import { ChoiceChips, Field, OptionCards, ToggleRow } from "@/components/form-ki
 import { isRateLimitError, handleRateLimitError } from "@/lib/rate-limit-client";
 import { CalendarWithCount } from "@/lib/types";
 import { useCalendars } from "@/hooks/useCalendars";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthFeatures } from "@/hooks/useAuthFeatures";
+import { useCalendarFeedToken } from "@/hooks/useCalendarFeedToken";
+import { getDateLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 
-type Format = "ics" | "pdf";
+type Format = "ics" | "pdf" | "feed";
 type Range = "all" | "month" | "year";
+
+/** The "Subscription link" card: create/copy/rotate/revoke a per-calendar ICS feed token. */
+function FeedSection({
+  feed,
+}: {
+  feed: ReturnType<typeof useCalendarFeedToken>;
+}) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false);
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+  const { feed: data, feedUrl, isMutating, createFeed, revokeFeed } = feed;
+
+  const copyLink = async () => {
+    if (!feedUrl) return;
+    await navigator.clipboard.writeText(feedUrl);
+    toast.success(t("export.feed.copied"));
+  };
+
+  if (!data.token) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-[13.5px] text-fg-secondary">{t("export.feed.empty")}</p>
+        <Button
+          className="h-10 gap-2 self-start font-semibold"
+          onClick={() => createFeed()}
+          disabled={isMutating}
+        >
+          <Link className="size-4" />
+          {t("export.feed.create")}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Input readOnly value={feedUrl ?? ""} className="h-10 flex-1 font-mono text-[12.5px]" />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          aria-label={t("export.feed.copy")}
+          title={t("export.feed.copy")}
+          onClick={copyLink}
+        >
+          <Copy className="size-4" />
+        </Button>
+      </div>
+      <p className="text-[12px] text-fg-tertiary">
+        {data.lastUsedAt
+          ? t("export.feed.lastUsed", {
+              date: format(new Date(data.lastUsedAt), "PPp", { locale: getDateLocale(locale) }),
+            })
+          : t("export.feed.neverUsed")}
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          className="h-10 flex-1 font-semibold"
+          onClick={() => setRotateConfirmOpen(true)}
+          disabled={isMutating}
+        >
+          {t("export.feed.rotate")}
+        </Button>
+        <Button
+          variant="destructive"
+          className="h-10 flex-1 font-semibold"
+          onClick={() => setRevokeConfirmOpen(true)}
+          disabled={isMutating}
+        >
+          {t("export.feed.revoke")}
+        </Button>
+      </div>
+      <p className="text-[12px] text-fg-tertiary">{t("export.feed.securityNote")}</p>
+
+      <ConfirmationDialog
+        open={rotateConfirmOpen}
+        onOpenChange={setRotateConfirmOpen}
+        onConfirm={async () => {
+          if (await createFeed()) setRotateConfirmOpen(false);
+        }}
+        title={t("export.feed.rotateConfirm")}
+        description={t("export.feed.rotateConfirmDescription")}
+        confirmText={t("export.feed.rotate")}
+      />
+      <ConfirmationDialog
+        open={revokeConfirmOpen}
+        onOpenChange={setRevokeConfirmOpen}
+        onConfirm={async () => {
+          if (await revokeFeed()) setRevokeConfirmOpen(false);
+        }}
+        title={t("export.feed.revokeConfirm")}
+        description={t("export.feed.revokeConfirmDescription")}
+        confirmText={t("export.feed.revoke")}
+        confirmVariant="destructive"
+      />
+    </div>
+  );
+}
 
 function monthValue(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -44,6 +153,11 @@ export function ExportPanel({
   const [multi, setMulti] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([calendarId]);
   const [loading, setLoading] = useState(false);
+
+  const { isAuthenticated } = useAuth();
+  const { isAuthEnabled } = useAuthFeatures();
+  const canUseFeed = isAuthenticated || !isAuthEnabled;
+  const feed = useCalendarFeedToken(calendarId, canUseFeed && format === "feed");
 
   const monthOptions = useMemo(() => {
     const today = new Date();
@@ -123,12 +237,24 @@ export function ExportPanel({
             <OptionCards<Format>
               value={format}
               onChange={setFormat}
+              columns={canUseFeed ? 3 : 2}
               options={[
                 { value: "ics", title: t("export.icsFormat"), description: t("export.icsHint") },
                 { value: "pdf", title: t("export.pdfFormat"), description: t("export.pdfHint") },
+                ...(canUseFeed
+                  ? [
+                      {
+                        value: "feed" as const,
+                        title: t("export.feed.title"),
+                        description: t("export.feed.hint"),
+                      },
+                    ]
+                  : []),
               ]}
             />
           </Field>
+
+          {format === "feed" && <FeedSection feed={feed} />}
 
           {format === "pdf" && (
             <Field label={t("export.rangeLabel")}>
@@ -172,7 +298,7 @@ export function ExportPanel({
             </Field>
           )}
 
-          {calendars.length > 1 && (
+          {format !== "feed" && calendars.length > 1 && (
             <div className="flex flex-col gap-2 border-t border-line pt-4">
               <ToggleRow
                 id="export-multi"
@@ -230,12 +356,14 @@ export function ExportPanel({
       </PanelBody>
       <PanelFooter>
         <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose} disabled={loading}>
-          {t("common.cancel")}
+          {format === "feed" ? t("common.close") : t("common.cancel")}
         </Button>
-        <Button className="h-10 flex-1 gap-2 font-semibold" onClick={handleExport} disabled={loading}>
-          <Download className="size-4" />
-          {loading ? t("common.loading") : t("export.download")}
-        </Button>
+        {format !== "feed" && (
+          <Button className="h-10 flex-1 gap-2 font-semibold" onClick={handleExport} disabled={loading}>
+            <Download className="size-4" />
+            {loading ? t("common.loading") : t("export.download")}
+          </Button>
+        )}
       </PanelFooter>
     </>
   );

@@ -364,7 +364,26 @@
     "multiCalendar": "Esporta più calendari",
     "multiCalendarHint": "Combina i turni da più calendari in un unico file di esportazione",
     "selectedCount": "{count, plural, =0 {Nessun calendario selezionato} =1 {1 calendario selezionato} other {# calendari selezionati}}",
-    "selectAtLeastOne": "Seleziona almeno un calendario"
+    "selectAtLeastOne": "Seleziona almeno un calendario",
+    "feed": {
+      "title": "Link di abbonamento",
+      "hint": "Link segreto per abbonarsi dalle app di calendario",
+      "empty": "Crea un link per abbonarti a questo calendario in Google Calendar, Calendario Apple, Outlook o Home Assistant.",
+      "create": "Crea link",
+      "created": "Link di abbonamento creato",
+      "copy": "Copia link",
+      "copied": "Link di abbonamento copiato",
+      "lastUsed": "Ultimo accesso: {date}",
+      "neverUsed": "Non ancora consultato",
+      "rotate": "Rigenera",
+      "rotateConfirm": "Rigenerare il link di abbonamento?",
+      "rotateConfirmDescription": "Il vecchio link smetterà di funzionare. Le app di calendario abbonate dovranno ricevere il nuovo link.",
+      "revoke": "Revoca",
+      "revokeConfirm": "Revocare il link di abbonamento?",
+      "revokeConfirmDescription": "Le app di calendario abbonate non riceveranno più i turni da questo calendario.",
+      "revoked": "Link di abbonamento revocato",
+      "securityNote": "Chiunque abbia questo link può leggere i turni di questo calendario. Google Calendar aggiorna gli abbonamenti solo ogni poche ore."
+    }
   },
   "update": {
     "newVersion": "Versione {version} è disponibile",

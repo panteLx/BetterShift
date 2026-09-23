@@ -364,7 +364,26 @@
     "multiCalendar": "Exportovat více kalendářů",
     "multiCalendarHint": "Zkombinujte směny z více kalendářů do jednoho souboru exportu",
     "selectedCount": "{count, plural, =0 {Nevybrány žádné kalendáře} =1 {Vybrán 1 kalendář} few {Vybrány # kalendáře} other {Vybráno # kalendářů}}",
-    "selectAtLeastOne": "Vyberte prosím alespoň jeden kalendář"
+    "selectAtLeastOne": "Vyberte prosím alespoň jeden kalendář",
+    "feed": {
+      "title": "Odběrový odkaz",
+      "hint": "Tajný odkaz pro odběr v kalendářových aplikacích",
+      "empty": "Vytvořte odkaz pro odběr tohoto kalendáře v Google Kalendáři, Apple Kalendáři, Outlooku nebo Home Assistant.",
+      "create": "Vytvořit odkaz",
+      "created": "Odběrový odkaz vytvořen",
+      "copy": "Kopírovat odkaz",
+      "copied": "Odběrový odkaz zkopírován",
+      "lastUsed": "Naposledy načteno: {date}",
+      "neverUsed": "Zatím nenačteno",
+      "rotate": "Vygenerovat nový",
+      "rotateConfirm": "Vygenerovat nový odběrový odkaz?",
+      "rotateConfirmDescription": "Starý odkaz poté přestane fungovat. Odebírající kalendářové aplikace musí dostat nový odkaz.",
+      "revoke": "Odvolat",
+      "revokeConfirm": "Odvolat odběrový odkaz?",
+      "revokeConfirmDescription": "Odebírající kalendářové aplikace pak už nebudou dostávat směny z tohoto kalendáře.",
+      "revoked": "Odběrový odkaz odvolán",
+      "securityNote": "Kdokoli s tímto odkazem může číst směny tohoto kalendáře. Google Kalendář aktualizuje odběry jen jednou za pár hodin."
+    }
   },
   "update": {
     "newVersion": "Je dostupná verze {version}",

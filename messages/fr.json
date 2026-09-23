@@ -364,7 +364,26 @@
     "multiCalendar": "Exporter plusieurs calendriers",
     "multiCalendarHint": "Combiner les créneaux de plusieurs calendriers dans un seul fichier d'export",
     "selectedCount": "{count, plural, =0 {Aucun calendrier sélectionné} =1 {1 calendrier sélectionné} other {# calendriers sélectionnés}}",
-    "selectAtLeastOne": "Veuillez sélectionner au moins un calendrier"
+    "selectAtLeastOne": "Veuillez sélectionner au moins un calendrier",
+    "feed": {
+      "title": "Lien d'abonnement",
+      "hint": "Lien secret à abonner depuis des applications de calendrier",
+      "empty": "Créez un lien pour abonner ce calendrier dans Google Agenda, Calendrier Apple, Outlook ou Home Assistant.",
+      "create": "Créer le lien",
+      "created": "Lien d'abonnement créé",
+      "copy": "Copier le lien",
+      "copied": "Lien d'abonnement copié",
+      "lastUsed": "Dernière consultation : {date}",
+      "neverUsed": "Pas encore consulté",
+      "rotate": "Régénérer",
+      "rotateConfirm": "Régénérer le lien d'abonnement ?",
+      "rotateConfirmDescription": "L'ancien lien cessera de fonctionner. Les applications de calendrier abonnées devront recevoir le nouveau lien.",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer le lien d'abonnement ?",
+      "revokeConfirmDescription": "Les applications de calendrier abonnées ne recevront plus les créneaux de ce calendrier.",
+      "revoked": "Lien d'abonnement révoqué",
+      "securityNote": "Toute personne disposant de ce lien peut lire les créneaux de ce calendrier. Google Agenda n'actualise les abonnements que toutes les quelques heures."
+    }
   },
   "update": {
     "newVersion": "La version {version} est disponible",
