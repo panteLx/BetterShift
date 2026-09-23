@@ -29,7 +29,7 @@ export function useCalendarFeedToken(calendarId: string, enabled: boolean) {
   const queryClient = useQueryClient();
   const key = queryKeys.feedToken.byCalendar(calendarId);
 
-  const { data: feed = EMPTY_FEED, isLoading } = useQuery({
+  const { data: feed = EMPTY_FEED, isLoading, isError } = useQuery({
     queryKey: key,
     queryFn: () => fetchFeed(calendarId),
     enabled,
@@ -85,6 +85,7 @@ export function useCalendarFeedToken(calendarId: string, enabled: boolean) {
     feed,
     feedUrl,
     isLoading,
+    isError,
     isMutating: createMutation.isPending || revokeMutation.isPending,
     createFeed: async () => !!(await createMutation.mutateAsync().catch(() => null)),
     revokeFeed: async () => !!(await revokeMutation.mutateAsync().catch(() => null)),

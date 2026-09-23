@@ -39,13 +39,22 @@ function FeedSection({
   const locale = useLocale();
   const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false);
   const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
-  const { feed: data, feedUrl, isMutating, createFeed, revokeFeed } = feed;
+  const { feed: data, feedUrl, isLoading, isError, isMutating, createFeed, revokeFeed } = feed;
 
   const copyLink = async () => {
     if (!feedUrl) return;
     await navigator.clipboard.writeText(feedUrl);
     toast.success(t("export.feed.copied"));
   };
+
+  // Offering "create" before the GET succeeded would silently rotate an existing link.
+  if (isLoading || (isError && !data.token)) {
+    return (
+      <p className="text-[13.5px] text-fg-secondary">
+        {isLoading ? t("common.loading") : t("common.fetchError", { item: t("export.feed.title") })}
+      </p>
+    );
+  }
 
   if (!data.token) {
     return (
