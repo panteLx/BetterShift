@@ -480,6 +480,8 @@ export function rateLimit(
     resourceId
   ) {
     identifier = `calendar:${resourceId}`;
+  } else if (type === "calendar-feed" && resourceId) {
+    identifier = `feed:${resourceId}`;
   } else {
     identifier = getClientIdentifier(req, userId);
   }

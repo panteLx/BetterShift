@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { calendarFeedTokens } from "@/lib/db/schema";
-import { hasCapability } from "@/lib/auth/permissions";
-import { isAuthEnabled } from "@/lib/auth/feature-flags";
 import { rateLimit } from "@/lib/rate-limiter";
-import { findFeedToken } from "@/lib/calendar-feed";
+import { canReadFeed, findFeedToken } from "@/lib/calendar-feed";
 import { buildIcsCalendar } from "@/lib/ics";
 import { defaultLocale } from "@/lib/locales";
 
@@ -23,15 +21,16 @@ export async function GET(
     const feedToken = await findFeedToken(token);
     if (!feedToken) return notFound();
 
-    const rateLimitResponse = rateLimit(request, feedToken.userId, "calendar-feed");
+    // Tokens minted with auth off have no user; key those on the token so the limit doesn't depend on the proxy's IP.
+    const rateLimitResponse = rateLimit(
+      request,
+      feedToken.userId,
+      "calendar-feed",
+      feedToken.userId ? undefined : feedToken.id
+    );
     if (rateLimitResponse) return rateLimitResponse;
 
-    // A token minted while auth was off must die once auth is on, not fall through to guest-bundle access.
-    if (feedToken.userId === null && isAuthEnabled()) return notFound();
-
-    if (!(await hasCapability(feedToken.userId, feedToken.calendarId, "viewShifts"))) {
-      return notFound();
-    }
+    if (!(await canReadFeed(feedToken.userId, feedToken.calendarId))) return notFound();
 
     const calendar = await db.query.calendars.findFirst({
       where: (c, { eq }) => eq(c.id, feedToken.calendarId),

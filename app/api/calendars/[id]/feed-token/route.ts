@@ -4,11 +4,10 @@ import { db } from "@/lib/db";
 import { calendarFeedTokens, calendars } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
-import { hasCapability } from "@/lib/auth/permissions";
 import { generateAccessToken } from "@/lib/auth/token-auth";
 import { logUserAction, type CalendarFeedTokenMetadata } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
-import { feedOwnerCondition, getFeedToken } from "@/lib/calendar-feed";
+import { canReadFeed, feedOwnerCondition, getFeedToken } from "@/lib/calendar-feed";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,7 +21,7 @@ async function resolveFeedOwner(
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
   const userId = user?.id ?? null;
-  if (!(await hasCapability(userId, calendarId, "viewShifts"))) {
+  if (!(await canReadFeed(userId, calendarId))) {
     return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
   }
   return { userId };
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const owner = await resolveFeedOwner(request, calendarId);
     if (owner instanceof NextResponse) return owner;
 
-    const rateLimitResponse = rateLimit(request, owner.userId, "token-creation", calendarId);
+    const rateLimitResponse = rateLimit(request, owner.userId, "token-creation");
     if (rateLimitResponse) return rateLimitResponse;
 
     const ownerWhere = and(
