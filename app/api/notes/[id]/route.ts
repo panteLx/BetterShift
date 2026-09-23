@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withCalendarDay } from "@/lib/date-utils";
 import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
@@ -52,7 +53,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(result[0]);
+    return NextResponse.json(withCalendarDay(result[0]));
   } catch (error) {
     console.error("Failed to fetch calendar note:", error);
     return NextResponse.json(
@@ -157,7 +158,7 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json(updated);
+    return NextResponse.json(withCalendarDay(updated));
   } catch (error) {
     console.error("Failed to update calendar note:", error);
     return NextResponse.json(

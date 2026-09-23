@@ -5,7 +5,7 @@ import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, getCalendarAccess } from "@/lib/auth/permissions";
 import { addShiftSignup, withSignups } from "@/lib/shift-signups";
-import { parseLocalDate } from "@/lib/date-utils";
+import { parseLocalDate, withCalendarDay } from "@/lib/date-utils";
 import type { CalendarMember } from "@/lib/types";
 import { withShiftSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
@@ -117,7 +117,9 @@ export async function GET(request: Request) {
         ? await withShiftSegments(withSigs)
         : withSigs;
       const definitions = await getCalendarCustomFields(calendarId);
-      return NextResponse.json(await withShiftCustomFields(withSegs, definitions));
+      return NextResponse.json(
+      (await withShiftCustomFields(withSegs, definitions)).map(withCalendarDay)
+    );
     }
 
     const result = await query.where(
@@ -132,7 +134,9 @@ export async function GET(request: Request) {
       ? await withShiftSegments(withSigs)
       : withSigs;
     const definitions = await getCalendarCustomFields(calendarId);
-    return NextResponse.json(await withShiftCustomFields(withSegs, definitions));
+    return NextResponse.json(
+      (await withShiftCustomFields(withSegs, definitions)).map(withCalendarDay)
+    );
   } catch (error) {
     console.error("Failed to fetch shifts:", error);
     return NextResponse.json(
@@ -388,7 +392,7 @@ export async function POST(request: Request) {
     const [withCustomFields] = await withShiftCustomFields([shift], customFieldDefinitions);
     return NextResponse.json(
       {
-        ...withCustomFields,
+        ...withCalendarDay(withCustomFields),
         calendar,
         signups,
         segments: segmentsToPersist,

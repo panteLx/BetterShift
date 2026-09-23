@@ -4,7 +4,7 @@ import { calendarNotes, calendars } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
-import { parseLocalDate } from "@/lib/date-utils";
+import { parseLocalDate, withCalendarDay } from "@/lib/date-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
 export async function GET(request: Request) {
@@ -73,11 +73,11 @@ export async function GET(request: Request) {
             lte(calendarNotes.date, endOfDay)
           )
         );
-      return NextResponse.json(result);
+      return NextResponse.json(result.map(withCalendarDay));
     }
 
     const result = await query;
-    return NextResponse.json(result);
+    return NextResponse.json(result.map(withCalendarDay));
   } catch (error) {
     console.error("Failed to fetch calendar notes:", error);
     return NextResponse.json(
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    return NextResponse.json(calendarNote);
+    return NextResponse.json(withCalendarDay(calendarNote));
   } catch (error) {
     console.error("Failed to create calendar note:", error);
     return NextResponse.json(
