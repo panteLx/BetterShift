@@ -73,6 +73,16 @@ export function formatPeriodCaption(
   return formatWeekRange(start, end, locale, withYear);
 }
 
+/**
+ * Shift and note days are stored as server-local midnight; sending that instant
+ * would let each browser re-read it in its own timezone and land on the previous day.
+ */
+export function withCalendarDay<T extends { date: Date }>(
+  row: T
+): Omit<T, "date"> & { date: string } {
+  return { ...row, date: formatDateToLocal(row.date) };
+}
+
 const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
