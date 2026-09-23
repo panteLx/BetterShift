@@ -18,17 +18,17 @@ This guide explains the subscribable ICS feed link for a calendar — what it is
 
 ## What the Link Is
 
-Every calendar can have one feed link per user: a secret URL of the form `https://<your-instance>/api/feed/<token>.ics` (the `.ics` suffix is optional — clients that require it, and clients that don't, both work). Anyone who has the URL can fetch the calendar's shifts as an ICS calendar, read-only; calendar notes and events are not included.
+Every calendar can have one feed link per user: a secret URL of the form `https://<your-instance>/api/feed/<token>.ics` (the `.ics` suffix is optional — clients that require it, and clients that don't, both work). Anyone who has the URL can fetch the calendar's shifts as an ICS calendar, read-only; calendar notes are not included.
 
 The link is not a separate grant of access — it follows whatever access you currently have to the calendar. Every fetch re-checks it: if your share is removed, your account is deleted or banned, or (for a link created while `AUTH_ENABLED=false`) the instance later turns auth on, the feed starts returning `404` immediately, with no separate step to revoke it. Guests without an account cannot create a feed link.
 
 ## Creating, Rotating, and Revoking
 
-Feed links live in the calendar's **Export** dialog (Settings → Export), under the "Abo-Link" option alongside the ICS and PDF export formats. From there:
+Feed links live in the calendar's **Export** dialog (Settings → Export), under the "Subscription Link" option alongside the ICS and PDF export formats. From there:
 
-- **Create** generates the link for you, for this calendar, if you don't already have one.
-- **Neu erzeugen** (rotate) replaces it with a new token; the old URL stops working immediately, so any app already subscribed needs the new link re-entered.
-- **Widerrufen** (revoke) deletes it outright.
+- **Create Link** generates the link for you, for this calendar, if you don't already have one.
+- **Regenerate** (rotate) replaces it with a new token; the old URL stops working immediately, so any app already subscribed needs the new link re-entered.
+- **Revoke** deletes it outright.
 
 There is exactly one link per user and calendar — creating again after a revoke issues a fresh token, it does not reuse the old one.
 
@@ -72,4 +72,4 @@ An app that polls one feed on a normal schedule stays well under the default; th
 
 ## Times and Locale
 
-Event times in the feed are written in UTC, computed from the server's `TZ` environment variable — the same conversion the regular ICS/PDF export uses. Custom field labels in event descriptions are rendered in the instance's `DEFAULT_LOCALE`, not the subscriber's own locale, since the feed has no per-request user to localize for.
+Event times in the feed are written in UTC, computed from the server's `TZ` environment variable — the same conversion the regular ICS export uses. Custom field labels in event descriptions are rendered in the instance's `DEFAULT_LOCALE`, not the subscriber's own locale, since the feed has no per-request user to localize for.
