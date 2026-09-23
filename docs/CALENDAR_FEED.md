@@ -20,7 +20,7 @@ This guide explains the subscribable ICS feed link for a calendar — what it is
 
 Every calendar can have one feed link per user: a secret URL of the form `https://<your-instance>/api/feed/<token>.ics` (the `.ics` suffix is optional — clients that require it, and clients that don't, both work). Anyone who has the URL can fetch the calendar's shifts as an ICS calendar, read-only; calendar notes are not included.
 
-The link is not a separate grant of access — it follows whatever access you currently have to the calendar. Every fetch re-checks it: if your share is removed, your account is deleted or banned, or (for a link created while `AUTH_ENABLED=false`) the instance later turns auth on, the feed starts returning `404` immediately, with no separate step to revoke it. Guests without an account cannot create a feed link.
+The link is not a separate grant of access — it follows whatever access you currently have to the calendar. Every fetch re-checks it: if your share is removed, your account is deleted or banned, or (for a link created while `AUTH_ENABLED=false`) the instance later turns auth on, the feed returns `404` from the next fetch on, with no separate step to revoke it. Links created with auth off therefore stop working once auth is on; each user recreates theirs after signing in. Guests without an account cannot create a feed link.
 
 ## Creating, Rotating, and Revoking
 
