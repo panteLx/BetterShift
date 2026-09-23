@@ -225,6 +225,13 @@
       "when": 1790012837841,
       "tag": "0031_tearful_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790165253212,
+      "tag": "0032_heavy_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

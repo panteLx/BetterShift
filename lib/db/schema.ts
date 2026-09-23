@@ -687,6 +687,31 @@ export const calendarAccessTokens = sqliteTable(
   ]
 );
 
+export const calendarFeedTokens = sqliteTable(
+  "calendar_feed_tokens",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    calendarId: text("calendar_id")
+      .notNull()
+      .references(() => calendars.id, { onDelete: "cascade" }),
+    // null only while AUTH_ENABLED=false, where there are no accounts
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    index("calendar_feed_tokens_calendarId_userId_idx").on(
+      table.calendarId,
+      table.userId
+    ),
+  ]
+);
+
 export const shiftSignups = sqliteTable(
   "shift_signups",
   {
@@ -723,6 +748,8 @@ export type NewCalendar = typeof calendars.$inferInsert;
 
 export type CalendarAccessToken = typeof calendarAccessTokens.$inferSelect;
 export type NewCalendarAccessToken = typeof calendarAccessTokens.$inferInsert;
+
+export type CalendarFeedToken = typeof calendarFeedTokens.$inferSelect;
 
 export type CalendarPermissionBundle =
   typeof calendarPermissionBundles.$inferSelect;
@@ -774,6 +801,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   ownedCalendars: many(calendars),
   calendarShares: many(calendarShares),
   calendarSubscriptions: many(userCalendarSubscriptions),
+  feedTokens: many(calendarFeedTokens),
   auditLogs: many(auditLogs),
 }));
 
@@ -799,6 +827,7 @@ export const calendarsRelations = relations(calendars, ({ one, many }) => ({
   shares: many(calendarShares),
   subscriptions: many(userCalendarSubscriptions),
   accessTokens: many(calendarAccessTokens),
+  feedTokens: many(calendarFeedTokens),
   permissionBundles: many(calendarPermissionBundles),
   guestBundle: one(calendarPermissionBundles, {
     fields: [calendars.guestBundleId],
@@ -969,6 +998,20 @@ export const calendarAccessTokensRelations = relations(
     bundle: one(calendarPermissionBundles, {
       fields: [calendarAccessTokens.bundleId],
       references: [calendarPermissionBundles.id],
+    }),
+  })
+);
+
+export const calendarFeedTokensRelations = relations(
+  calendarFeedTokens,
+  ({ one }) => ({
+    calendar: one(calendars, {
+      fields: [calendarFeedTokens.calendarId],
+      references: [calendars.id],
+    }),
+    user: one(user, {
+      fields: [calendarFeedTokens.userId],
+      references: [user.id],
     }),
   })
 );
