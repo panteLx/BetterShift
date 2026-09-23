@@ -68,19 +68,16 @@ export function ShiftFormFields({
 
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
-      {/* Creating uses the day shown in the header; editing may move the shift */}
-      {isEditing && (
-        <Field label={t("shift.date")} htmlFor="date">
-          <Input
-            id="date"
-            type="date"
-            value={formData.date}
-            onChange={(e) => onFormDataChange({ ...formData, date: e.target.value })}
-            disabled={readOnly}
-            className={cn(inputClass, "font-mono")}
-          />
-        </Field>
-      )}
+      <Field label={t("shift.date")} htmlFor="date">
+        <Input
+          id="date"
+          type="date"
+          value={formData.date}
+          onChange={(e) => onFormDataChange({ ...formData, date: e.target.value })}
+          disabled={readOnly}
+          className={cn(inputClass, "font-mono")}
+        />
+      </Field>
 
       <div className="flex flex-col gap-2.5 lg:gap-3">
         <div className="flex gap-2.5">
