@@ -114,6 +114,11 @@ export interface CalendarTokenCreatedMetadata {
   expiresAt: string | null;
 }
 
+export interface CalendarFeedTokenMetadata {
+  calendarName: string;
+  rotated?: boolean;
+}
+
 export interface SyncCreatedMetadata {
   calendarName: string;
   syncUrl: string;
@@ -280,6 +285,7 @@ export type AuditLogMetadata =
   | CalendarPermissionChangedMetadata
   | CalendarGuestBundleChangedMetadata
   | CalendarTokenCreatedMetadata
+  | CalendarFeedTokenMetadata
   | SyncCreatedMetadata
   | SyncDeletedMetadata
   | SyncExecutedMetadata

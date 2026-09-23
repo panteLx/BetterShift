@@ -364,7 +364,26 @@
     "multiCalendar": "Mehrere Kalender exportieren",
     "multiCalendarHint": "Schichten aus mehreren Kalendern in einer Export-Datei kombinieren",
     "selectedCount": "{count, plural, =0 {Keine Kalender ausgewählt} =1 {1 Kalender ausgewählt} other {# Kalender ausgewählt}}",
-    "selectAtLeastOne": "Bitte wähle mindestens einen Kalender aus"
+    "selectAtLeastOne": "Bitte wähle mindestens einen Kalender aus",
+    "feed": {
+      "title": "Abo-Link",
+      "hint": "Geheimer Link zum Abonnieren in Kalender-Apps",
+      "empty": "Erstelle einen Link, um diesen Kalender in Google Kalender, Apple Kalender, Outlook oder Home Assistant zu abonnieren.",
+      "create": "Link erstellen",
+      "created": "Abo-Link erstellt",
+      "copy": "Link kopieren",
+      "copied": "Abo-Link kopiert",
+      "lastUsed": "Zuletzt abgerufen: {date}",
+      "neverUsed": "Noch nicht abgerufen",
+      "rotate": "Neu erzeugen",
+      "rotateConfirm": "Abo-Link neu erzeugen?",
+      "rotateConfirmDescription": "Der bisherige Link funktioniert danach nicht mehr. Abonnierte Kalender-Apps müssen den neuen Link erhalten.",
+      "revoke": "Widerrufen",
+      "revokeConfirm": "Abo-Link widerrufen?",
+      "revokeConfirmDescription": "Abonnierte Kalender-Apps erhalten danach keine Schichten mehr aus diesem Kalender.",
+      "revoked": "Abo-Link widerrufen",
+      "securityNote": "Jeder mit diesem Link kann die Schichten dieses Kalenders lesen. Google Kalender aktualisiert Abos nur alle paar Stunden."
+    }
   },
   "update": {
     "newVersion": "Version {version} ist verfügbar",
@@ -866,7 +885,7 @@
     "permissions": "Berechtigungen",
     "permissionsHint": "{count, plural, =0 {Gruppen, Zuweisungen, Links} one {Gruppen, Zuweisungen, # aktiver Link} other {Gruppen, Zuweisungen, # aktive Links}}",
     "export": "Exportieren",
-    "exportHint": "ICS-Datei oder PDF",
+    "exportHint": "ICS-Datei, PDF oder Abo-Link",
     "view": "Kalenderansicht",
     "viewHint": "Eigene Ansicht, Dichte, Sortierung",
     "notifications": "Benachrichtigungen",

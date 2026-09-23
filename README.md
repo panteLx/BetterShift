@@ -51,7 +51,7 @@ _BetterShift is a self-hosted shift management application for teams and individ
 | **Authentication** | Email/password, OAuth (Google, GitHub, Discord), or custom OIDC |
 | **Admin Panel**    | User management, calendar administration, audit logging         |
 | **Statistics**     | Real-time shift tracking with visual charts                     |
-| **Export**         | Download calendars as ICS or PDF                                |
+| **Export**         | Download calendars as ICS or PDF, or subscribe via a live ICS link |
 | **Localization**   | English, French, German, Italian, Spanish, Czech                |
 | **PWA**            | Installable on mobile and desktop                               |
 
@@ -105,6 +105,7 @@ npm run dev
 | [Authentication Setup](docs/AUTH_SETUP.md)                     | Email/password, OAuth, OIDC configuration                           |
 | [Admin Panel](docs/ADMIN_PANEL.md)                             | User management, calendar administration                            |
 | [Permissions](docs/PERMISSIONS.md)                             | Sharing, access tokens, guest access                                |
+| [Calendar Feed](docs/CALENDAR_FEED.md)                         | Subscribe to a calendar from Google, Apple, Outlook or Home Assistant |
 | [Telemetry](docs/TELEMETRY.md)                                 | What data is collected and how to disable it                        |
 | [Enabling Auth on an Existing Instance](docs/ENABLING_AUTH.md) | Turn on accounts for an instance that ran with `AUTH_ENABLED=false` |
 | [Upgrade Guide](docs/UPGRADING.md)                             | Breaking changes between versions and the steps to get through them |

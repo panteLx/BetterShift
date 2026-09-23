@@ -115,6 +115,11 @@ const config = {
     windowMs:
       parseInt(process.env.RATE_LIMIT_EXPORT_ICS_WINDOW || "600", 10) * 1000, // 10 minutes
   },
+  calendarFeed: {
+    requests: parseInt(process.env.RATE_LIMIT_CALENDAR_FEED_REQUESTS || "60", 10),
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_CALENDAR_FEED_WINDOW || "600", 10) * 1000, // 10 minutes
+  },
   tokenValidation: {
     requests: parseInt(
       process.env.RATE_LIMIT_TOKEN_VALIDATION_REQUESTS || "10",
@@ -250,6 +255,7 @@ const limitsByType = {
   "external-sync": config.externalSync,
   "export-pdf": config.exportPdf,
   "export-ics": config.exportIcs,
+  "calendar-feed": config.calendarFeed,
   "token-validation": config.tokenValidation,
   "token-creation": config.tokenCreation,
   "user-search": config.userSearch,
@@ -474,6 +480,8 @@ export function rateLimit(
     resourceId
   ) {
     identifier = `calendar:${resourceId}`;
+  } else if (type === "calendar-feed" && resourceId) {
+    identifier = `feed:${resourceId}`;
   } else {
     identifier = getClientIdentifier(req, userId);
   }

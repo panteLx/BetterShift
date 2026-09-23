@@ -64,6 +64,11 @@ function bundleAccess(
   };
 }
 
+export interface AccessOptions {
+  /** Skip the requester's share-link cookie, for callers acting as someone else (calendar feeds). */
+  ignoreTokenCookie?: boolean;
+}
+
 /**
  * Resolves what a caller may do on a calendar: owner (everything), or the
  * capability set of whichever bundle they hold (share > token > guest bundle
@@ -72,7 +77,8 @@ function bundleAccess(
  */
 async function resolveCalendarAccess(
   userId: string | null | undefined,
-  calendarId: string
+  calendarId: string,
+  options: AccessOptions = {}
 ): Promise<ResolvedCalendarAccess | null> {
   // guestBundle fetched alongside the calendar (one hop via the relation)
   // since almost every branch below may need it.
@@ -94,7 +100,7 @@ async function resolveCalendarAccess(
   const guestBundle = calendar.guestBundle ? sanitizeBundle(calendar.guestBundle) : null;
 
   if (!userId) {
-    const tokenBundleId = await getTokenBundleId(calendarId);
+    const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId);
     if (tokenBundleId) {
       const bundle = await getBundleById(tokenBundleId);
       if (bundle) return bundleAccess(calendar, "token", bundle);
@@ -121,7 +127,7 @@ async function resolveCalendarAccess(
     return bundleAccess(calendar, "share", sanitizeBundle(share.bundle));
   }
 
-  const tokenBundleId = await getTokenBundleId(calendarId);
+  const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId);
   if (tokenBundleId) {
     const bundle = await getBundleById(tokenBundleId);
     if (bundle) return bundleAccess(calendar, "token", bundle);
@@ -183,9 +189,10 @@ function ceilingFilteredCapabilities(access: ResolvedCalendarAccess): Capability
  */
 export async function getCalendarAccess(
   userId: string | null | undefined,
-  calendarId: string
+  calendarId: string,
+  options?: AccessOptions
 ): Promise<CalendarAccess | null> {
-  const access = await resolveCalendarAccess(userId, calendarId);
+  const access = await resolveCalendarAccess(userId, calendarId, options);
   if (!access) return null;
 
   const effective = ceilingFilteredCapabilities(access);
@@ -242,9 +249,10 @@ export async function getEffectiveAccessSummary(
 export async function hasCapability(
   userId: string | null | undefined,
   calendarId: string,
-  capability: Capability
+  capability: Capability,
+  options?: AccessOptions
 ): Promise<boolean> {
-  const access = await getCalendarAccess(userId, calendarId);
+  const access = await getCalendarAccess(userId, calendarId, options);
   return access ? access.can(capability) : false;
 }
 

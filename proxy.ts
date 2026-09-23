@@ -299,6 +299,7 @@ export async function proxy(request: NextRequest) {
     "/api/releases", // Changelog/releases (always public)
     "/api/announcements", // Instance announcements (shown on the logged-out auth pages)
     "/api/health", // Health check endpoint
+    "/api/feed/", // Calendar feed subscriptions (secret token in the URL, no cookies)
     "/manifest.json", // Browsers fetch the PWA manifest without cookies
   ];
 

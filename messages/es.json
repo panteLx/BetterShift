@@ -364,7 +364,26 @@
     "multiCalendar": "Exportar múltiples calendarios",
     "multiCalendarHint": "Combina turnos de varios calendarios en un solo archivo",
     "selectedCount": "{count, plural, =0 {Sin calendarios seleccionados} =1 {1 calendario seleccionado} other {# calendarios seleccionados}}",
-    "selectAtLeastOne": "Por favor, selecciona al menos un calendario"
+    "selectAtLeastOne": "Por favor, selecciona al menos un calendario",
+    "feed": {
+      "title": "Enlace de suscripción",
+      "hint": "Enlace secreto para suscribirse desde apps de calendario",
+      "empty": "Crea un enlace para suscribirte a este calendario en Google Calendar, Apple Calendar, Outlook o Home Assistant.",
+      "create": "Crear enlace",
+      "created": "Enlace de suscripción creado",
+      "copy": "Copiar enlace",
+      "copied": "Enlace de suscripción copiado",
+      "lastUsed": "Última consulta: {date}",
+      "neverUsed": "Aún no consultado",
+      "rotate": "Regenerar",
+      "rotateConfirm": "¿Regenerar el enlace de suscripción?",
+      "rotateConfirmDescription": "El enlace anterior dejará de funcionar. Las apps de calendario suscritas necesitarán el nuevo enlace.",
+      "revoke": "Revocar",
+      "revokeConfirm": "¿Revocar el enlace de suscripción?",
+      "revokeConfirmDescription": "Las apps de calendario suscritas dejarán de recibir turnos de este calendario.",
+      "revoked": "Enlace de suscripción revocado",
+      "securityNote": "Cualquiera con este enlace puede leer los turnos de este calendario. Google Calendar solo actualiza las suscripciones cada pocas horas."
+    }
   },
   "update": {
     "newVersion": "La versión {version} está disponible",
@@ -866,7 +885,7 @@
     "permissions": "Permisos",
     "permissionsHint": "{count, plural, =0 {Grupos, asignaciones, enlaces} one {Grupos, asignaciones, # enlace activo} other {Grupos, asignaciones, # enlaces activos}}",
     "export": "Exportar",
-    "exportHint": "Archivo ICS o PDF",
+    "exportHint": "Archivo ICS, PDF o enlace de suscripción",
     "view": "Vista del calendario",
     "viewHint": "Vista propia, densidad, orden",
     "notifications": "Notificaciones",
