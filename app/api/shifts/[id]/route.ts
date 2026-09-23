@@ -4,7 +4,7 @@ import { calendars, shiftPresets, shifts } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
-import { parseLocalDate } from "@/lib/date-utils";
+import { parseLocalDate, withCalendarDay } from "@/lib/date-utils";
 import { replaceShiftSegments, withShiftSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
 import {
@@ -68,10 +68,10 @@ export async function GET(
     }
 
     if (!result[0].calendar?.splitShiftsEnabled) {
-      return NextResponse.json(result[0]);
+      return NextResponse.json(withCalendarDay(result[0]));
     }
     const [withSegments] = await withShiftSegments([result[0]]);
-    return NextResponse.json(withSegments);
+    return NextResponse.json(withCalendarDay(withSegments));
   } catch (error) {
     console.error("Failed to fetch shift:", error);
     return NextResponse.json(
@@ -293,7 +293,7 @@ export async function PUT(
 
     const [withSegments] = await withShiftSegments([updatedShift]);
     const [withCustomFields] = await withShiftCustomFields([withSegments], customFieldDefinitions);
-    return NextResponse.json(withCustomFields);
+    return NextResponse.json(withCalendarDay(withCustomFields));
   } catch (error) {
     console.error("Failed to update shift:", error);
     return NextResponse.json(

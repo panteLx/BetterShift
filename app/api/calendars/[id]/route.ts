@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { withCalendarDay } from "@/lib/date-utils";
 import {
   calendars,
   shifts,
@@ -66,7 +67,7 @@ export async function GET(
       .where(eq(shifts.calendarId, id))
       .orderBy(shifts.date);
 
-    return NextResponse.json({ ...calendar, shifts: calendarShifts });
+    return NextResponse.json({ ...calendar, shifts: calendarShifts.map(withCalendarDay) });
   } catch (error) {
     console.error("Failed to fetch calendar:", error);
     return NextResponse.json(

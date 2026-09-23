@@ -5,6 +5,7 @@ This guide explains the automated preview environments BetterShift spins up for 
 ## Table of Contents
 
 1. [What It Does](#what-it-does)
+   - [Public Previews Without Basic Auth](#public-previews-without-basic-auth)
 2. [Prerequisites on the Server](#prerequisites-on-the-server)
 3. [Secrets](#secrets)
 4. [Variables](#variables)
@@ -23,6 +24,16 @@ Adding the `preview` label to a pull request from this repository gets it a runn
 Closing a PR that carries the `preview` label, or removing the label again, tears the instance down completely — container and data, nothing left behind. Closing a PR that never had the label does nothing: the `teardown` job checks for the label on the `closed` event and skips itself otherwise, so it doesn't go looking for a stack that was never created. Reopening a closed PR that still carries the `preview` label deploys it again, the same way a `synchronize` push does: fresh container, freshly reseeded database.
 
 A pull request from a fork never gets a preview: `.github/workflows/pr-preview.yml` checks `head.repo.full_name` against the target repository and, for a fork PR that gets labeled `preview`, only writes an explanatory `::notice::` into the job log instead of deploying anything. It is a log line rather than a PR comment on purpose: a `pull_request` event from a fork gets a read-only `GITHUB_TOKEN` no matter what the workflow's `permissions:` block says, so posting a comment would simply fail with a 403. Whoever added the label has write access and can read the job. Fork PRs don't get repository secrets or a pushed image, so there would be nothing to deploy against anyway.
+
+### Public Previews Without Basic Auth
+
+Adding the `preview-public` label as well deploys the preview without the Basic Auth prompt, for example to show it to someone who shouldn't get the shared password. Adding or removing that label on a PR that has `preview` redeploys the instance right away, with the same reset and reseed as a push. Removing it puts Basic Auth back.
+
+Not everyone who can set labels gets this: anyone with triage access can apply a label. On every deploy the `Decide on basic auth` step looks up who applied `preview-public` most recently (in the PR's issue events) and checks that account's repository role. Only `admin` or `maintain` switch Basic Auth off. Otherwise the job writes a warning, keeps Basic Auth on and says so in the sticky comment. If a lookup fails, Basic Auth also stays on.
+
+The workflow runs from the PR's own branch, so anyone who can push to this repository could edit the check out of it. The role check stops triagers. It does not stop people with write access, but they can read the repository secrets anyway.
+
+A public preview is reachable by anyone who has the URL, and the sticky comment names the seeded superadmin login along with its password. Only use it for PRs whose preview you are happy for anyone to click through.
 
 ## Prerequisites on the Server
 
@@ -160,6 +171,7 @@ PR gets the label "preview"
         │               ├─ tag pr-<n> exists from an earlier push → carry on,
         │               │   and mark the deploy as running an older image
         │               └─ no tag at all → job fails
+        ├─ check who set "preview-public" (admin/maintain → no Basic Auth)
         ├─ node scripts/preview-stack.mjs deploy
         │       ├─ Komodo /read/GetStack, then /write/CreateStack or /write/UpdateStack
         │       └─ Komodo /execute/DeployStack (destroy_before_deploy: true)
@@ -190,6 +202,7 @@ PR carrying the label is closed  /  the "preview" label is removed
 
 A few things distinguish a preview container from a normal deployment:
 
+- **Basic Auth** in front of the instance, unless `preview-public` is set by an admin or maintainer (see [Public Previews Without Basic Auth](#public-previews-without-basic-auth)). `scripts/preview-stack.mjs` then leaves the `caddy.basic_auth.preview` label out of the compose file when `PREVIEW_PUBLIC=true`.
 - **No volumes.** The compose file `preview-stack.mjs` generates has no `volumes:` section at all — SQLite and any uploads live in the container's own writable layer. Combined with `destroy_before_deploy: true`, that means every push resets the instance completely and the seed script runs again from an empty database. This is deliberate, not a gap: state is meant to be disposable here.
 - **`ALLOW_USER_REGISTRATION=true`** is set on the container so that `scripts/seed-preview.mjs` can register its accounts through the regular `/api/auth/sign-up/email` route, the same way a real user would.
 - **The first account the seed script registers becomes superadmin automatically** — that's standard BetterShift behaviour for the first user on any fresh instance (`lib/auth/first-user.ts`), not something specific to previews.

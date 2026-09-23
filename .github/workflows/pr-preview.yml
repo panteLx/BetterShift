@@ -18,6 +18,7 @@ permissions:
 
 env:
   PREVIEW_LABEL: preview
+  PUBLIC_LABEL: preview-public
   STACK_COMMENT_MARKER: "<!-- pr-preview -->"
   # Hostname prefix, not the image tag: previews live at
   # <prefix>-<n>.<PREVIEW_DOMAIN>, while ghcr.io keeps its pr-<n> tags.
@@ -45,7 +46,9 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'preview') &&
       (github.event.action == 'synchronize' ||
        github.event.action == 'reopened' ||
-       (github.event.action == 'labeled' && github.event.label.name == 'preview'))
+       (github.event.action == 'labeled' && github.event.label.name == 'preview') ||
+       ((github.event.action == 'labeled' || github.event.action == 'unlabeled') &&
+        github.event.label.name == 'preview-public'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     # Job level, not workflow level: a skipped job must not cancel a running
@@ -83,6 +86,37 @@ jobs:
             echo "::error::Missing secrets or variables:$missing"
             exit 1
           fi
+
+      # Anyone with triage access can set a label, so the label alone is not
+      # enough: whoever applied it last must hold admin or maintain.
+      - name: Decide on basic auth
+        id: access
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.number }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'preview-public') }}
+        run: |
+          set -o pipefail
+          if [ "$HAS_LABEL" != "true" ]; then
+            echo "public=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          actor=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/events" \
+            --jq ".[] | select(.event == \"labeled\" and .label.name == \"$PUBLIC_LABEL\") | .actor.login" | tail -n 1)
+          role=""
+          if [ -n "$actor" ]; then
+            # Fails closed: an API error leaves basic auth on.
+            role=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$actor/permission" --jq '.role_name') || role=""
+          fi
+          case "$role" in
+            admin|maintain)
+              echo "::notice::Basic auth disabled: $PUBLIC_LABEL was set by $actor ($role)."
+              echo "public=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::warning::Ignoring $PUBLIC_LABEL: set by ${actor:-unknown} (role: ${role:-none}), which needs admin or maintain. Basic auth stays on."
+              echo "public=false" >> "$GITHUB_OUTPUT"
+              echo "ignored_by=${actor:-unknown}" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       # Only needed for the imagetools fallback in the next step.
       - name: Log in to ghcr.io
@@ -146,6 +180,7 @@ jobs:
           PREVIEW_BASIC_AUTH_HASH: ${{ secrets.PREVIEW_BASIC_AUTH_HASH }}
           PREVIEW_BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
           PREVIEW_CF_BYPASS_TOKEN: ${{ secrets.PREVIEW_CF_BYPASS_TOKEN }}
+          PREVIEW_PUBLIC: ${{ steps.access.outputs.public }}
         run: node scripts/preview-stack.mjs deploy
 
       - name: Wait for the instance
@@ -202,12 +237,22 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.PREVIEW_ADMIN_PASSWORD }}
           SHA: ${{ github.event.pull_request.head.sha }}
           STALE_IMAGE: ${{ steps.image.outputs.stale }}
+          PUBLIC: ${{ steps.access.outputs.public }}
+          IGNORED_BY: ${{ steps.access.outputs.ignored_by }}
         run: |
           set -o pipefail
           if [ "$STALE_IMAGE" = "true" ]; then
             commit_line="Image: from an earlier commit of this PR — no image was built for \`$SHA\` (paths-ignore)."
           else
             commit_line="Commit: \`$SHA\`"
+          fi
+          if [ "$PUBLIC" = "true" ]; then
+            access_line="The instance is **public** (\`$PUBLIC_LABEL\`) — no basic auth in front of it."
+          else
+            access_line="The instance sits behind basic auth (user \`preview\`)."
+            if [ -n "$IGNORED_BY" ]; then
+              access_line="$access_line \`$PUBLIC_LABEL\` was ignored: $IGNORED_BY lacks admin or maintain access."
+            fi
           fi
           body=$(cat <<EOF
           $STACK_COMMENT_MARKER
@@ -220,7 +265,7 @@ jobs:
           | Admin (superadmin, owns both calendars) | \`$ADMIN_EMAIL\` | \`$ADMIN_PASSWORD\` |
           | Member (Contribute bundle on "Dienstplan Team A") | \`$MEMBER_EMAIL\` | \`$ADMIN_PASSWORD\` |
 
-          The instance sits behind basic auth (user \`preview\`). Every further push resets
+          $access_line Every further push resets
           it and seeds the demo data again.
 
           $commit_line
