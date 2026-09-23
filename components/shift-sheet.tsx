@@ -143,7 +143,9 @@ export function ShiftSheet({
     }
 
     // For new shifts, check if user has entered any data
+    const defaultDate = formatDateToLocal(selectedDate ?? new Date());
     return (
+      formData.date !== defaultDate ||
       formData.title.trim() !== "" ||
       formData.notes?.trim() !== "" ||
       saveAsPreset ||
@@ -203,7 +205,8 @@ export function ShiftSheet({
     (definition) => !validateFieldValue(definition, formData.customFields?.[definition.key]).ok
   );
 
-  const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(formData.date)
+  const hasValidDate = /^\d{4}-\d{2}-\d{2}$/.test(formData.date);
+  const dateLabel = hasValidDate
     ? formatLongDate(parseLocalDate(formData.date), locale, { year: true })
     : undefined;
 
@@ -219,6 +222,7 @@ export function ShiftSheet({
       isSaving={isSaving}
       saveDisabled={
         !formData.title.trim() ||
+        !hasValidDate ||
         (shift && !hasChanges()) ||
         (!formData.isAllDay && !!validateTimeRanges(toTimeRanges(formData))) ||
         missingRequiredCustomField
