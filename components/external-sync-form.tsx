@@ -12,7 +12,6 @@ import {
   AUTO_SYNC_INTERVALS,
   ExternalSyncFormValues,
   SyncDisplayMode,
-  SyncImportType,
 } from "@/hooks/useExternalSyncForm";
 import { cn } from "@/lib/utils";
 
@@ -53,33 +52,8 @@ export function ExternalSyncForm({
         />
       </Field>
 
-      {adding && (
-        <Field
-          label={t("externalSync.importMethod")}
-          hint={
-            fileImport
-              ? t("externalSync.importMethodFileHint")
-              : t("externalSync.importMethodUrlHint")
-          }
-        >
-          <SegmentedControl<SyncImportType>
-            label={t("externalSync.importMethod")}
-            value={values.importType}
-            onChange={(next) => {
-              setField("importType", next);
-              setField("url", "");
-              setField("file", null);
-            }}
-            options={[
-              { value: "url", label: t("syncSheet.sourceUrl") },
-              { value: "file", label: t("syncSheet.sourceFile") },
-            ]}
-          />
-        </Field>
-      )}
-
       {adding && fileImport ? (
-        <Field label={t("externalSync.fileLabel")}>
+        <Field label={t("externalSync.fileLabel")} hint={t("externalSync.importMethodFileHint")}>
           <label
             className={cn(
               "flex h-10 cursor-pointer items-center gap-2.5 rounded-[9px] border border-dashed px-3 text-[13px] transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 hover:bg-surface-panel",
