@@ -24,7 +24,7 @@ The link is not a separate grant of access — it follows whatever access you cu
 
 ## Creating, Rotating, and Revoking
 
-Feed links live in the calendar's **Export** dialog (Settings → Export), under the "Subscription Link" option alongside the ICS and PDF export formats. From there:
+Feed links live in the calendar settings under **Import & Export**, in the **Export** tab, as the "Subscription Link" option alongside the ICS and PDF export formats. From there:
 
 - **Create Link** generates the link for you, for this calendar, if you don't already have one.
 - **Regenerate** (rotate) replaces it with a new token; the old URL stops working immediately, so any app already subscribed needs the new link re-entered.

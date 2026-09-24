@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ExternalSync } from "@/lib/db/schema";
-import { syncToFormValues, useExternalSyncForm } from "@/hooks/useExternalSyncForm";
+import {
+  EMPTY_SYNC_FORM,
+  SyncImportType,
+  syncToFormValues,
+  useExternalSyncForm,
+} from "@/hooks/useExternalSyncForm";
 import { useExternalSync } from "@/hooks/useExternalSync";
 import { isRateLimitError, handleRateLimitError } from "@/lib/rate-limit-client";
 import { isValidCalendarUrl, detectCalendarSyncType } from "@/lib/external-calendar-utils";
@@ -64,9 +69,9 @@ export function useExternalSyncPanel({
     reset();
   };
 
-  const startAdd = () => {
+  const startAdd = (importType: SyncImportType) => {
     setMode({ kind: "add" });
-    reset();
+    reset({ ...EMPTY_SYNC_FORM, importType });
   };
 
   const startEdit = (sync: ExternalSync) => {

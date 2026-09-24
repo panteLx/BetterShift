@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Loader2, Plus } from "lucide-react";
+import { FileUp, Link, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { PanelBody, PanelFooter } from "@/components/panel-dialog";
@@ -11,7 +11,6 @@ import { useExternalSyncPanel } from "@/hooks/useExternalSyncPanel";
 
 interface ExternalSyncPanelProps {
   calendarId: string;
-  onClose: () => void;
   onSyncComplete?: () => void;
   /** Lets the surrounding frame guard its close button against unsaved changes */
   onDirtyChange?: (dirty: boolean) => void;
@@ -19,7 +18,6 @@ interface ExternalSyncPanelProps {
 
 export function ExternalSyncPanel({
   calendarId,
-  onClose,
   onSyncComplete,
   onDirtyChange,
 }: ExternalSyncPanelProps) {
@@ -124,17 +122,25 @@ export function ExternalSyncPanel({
                 ? t("common.saving")
                 : editingSync
                   ? t("common.save")
-                  : t("syncSheet.addSubscription")}
+                  : values.importType === "file"
+                    ? t("syncSheet.sourceFile")
+                    : t("syncSheet.addSubscription")}
             </Button>
           </>
         ) : (
           <>
-            <Button variant="outline" className="h-10 flex-1 font-semibold" onClick={onClose}>
-              {t("common.close")}
+            <Button
+              variant="outline"
+              className="h-10 flex-1 font-semibold"
+              onClick={() => startAdd("file")}
+              disabled={busy}
+            >
+              <FileUp className="size-4" />
+              {t("syncSheet.sourceFile")}
             </Button>
-            <Button className="h-10 flex-1 font-semibold" onClick={startAdd} disabled={busy}>
-              <Plus className="size-4" />
-              {t("syncSheet.addSubscription")}
+            <Button className="h-10 flex-1 font-semibold" onClick={() => startAdd("url")} disabled={busy}>
+              <Link className="size-4" />
+              {t("syncSheet.sourceUrl")}
             </Button>
           </>
         )}

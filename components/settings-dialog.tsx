@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Bell,
-  Download,
+  ArrowDownUp,
   Layers,
   ListChecks,
   Palette,
-  RefreshCw,
   SlidersHorizontal,
   TriangleAlert,
   Users,
@@ -19,12 +17,10 @@ import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import { ColorSwatches, DangerZone, Field, inputClass } from "@/components/form-kit";
-import { ExportPanel } from "@/components/export-dialog";
+import { ImportExportPanel } from "@/components/import-export-panel";
 import { CalendarViewPanel, ViewSettingsState } from "@/components/view-settings-sheet";
 import { PresetsPanel } from "@/components/preset-manage-sheet";
 import { CustomFieldsPanel } from "@/components/custom-fields-panel";
-import { ExternalSyncPanel } from "@/components/external-sync-manage-sheet";
-import { SyncNotificationsPanel } from "@/components/sync-notification-dialog";
 import { PermissionsPanel } from "@/components/calendar-permissions-panel";
 import { isUsableToken } from "@/components/calendar-token-list";
 import { useCalendars } from "@/hooks/useCalendars";
@@ -40,11 +36,9 @@ import { useGuardedAction, useReportDirty } from "@/hooks/useDirtyState";
 export type SettingsSection =
   | "general"
   | "presets"
-  | "external"
   | "permissions"
-  | "export"
+  | "importExport"
   | "view"
-  | "notifications"
   | "customFields";
 
 export interface SettingsItem {
@@ -211,14 +205,6 @@ export function useCalendarSettings(calendarId: string | null) {
       description: t("settings.presetsHint", { count: presets.length }),
       meta: presets.length,
     });
-  if (canOpenExternal)
-    items.push({
-      id: "external",
-      icon: RefreshCw,
-      title: t("settings.external"),
-      description: t("settings.externalHint", { count: externalSyncs.length }),
-      meta: externalSyncs.length,
-    });
   if (permission.can("manageCustomFields"))
     items.push({
       id: "customFields",
@@ -235,12 +221,23 @@ export function useCalendarSettings(calendarId: string | null) {
       title: t("settings.permissions"),
       description: t("settings.permissionsHint", { count: tokens.filter(isUsableToken).length }),
     });
+  // Everyone who can see the calendar may export; import and the sync log need manageExternalSync.
   items.push(
     {
-      id: "export",
-      icon: Download,
-      title: t("settings.export"),
-      description: t("settings.exportHint"),
+      id: "importExport",
+      icon: ArrowDownUp,
+      title: t("settings.importExport"),
+      description: !canOpenExternal
+        ? t("settings.exportHint")
+        : hasSyncErrors
+          ? t("settings.syncError")
+          : t("settings.importExportHint", { count: externalSyncs.length }),
+      meta: !canOpenExternal
+        ? undefined
+        : hasSyncErrors
+          ? t("common.error")
+          : externalSyncs.length,
+      metaTone: canOpenExternal && hasSyncErrors ? "danger" : undefined,
     },
     {
       id: "view",
@@ -250,17 +247,6 @@ export function useCalendarSettings(calendarId: string | null) {
       meta: calendar.viewSettings ? t("settings.viewOn") : t("settings.viewOff"),
     }
   );
-  // Sync notifications manage external syncs, so they need the same permission
-  // tier as that section — guests only ever get read/write, never manage.
-  if (canOpenExternal)
-    items.push({
-      id: "notifications",
-      icon: Bell,
-      title: t("settings.notifications"),
-      description: hasSyncErrors ? t("settings.notificationsError") : t("settings.notificationsHint"),
-      meta: hasSyncErrors ? t("common.error") : undefined,
-      metaTone: hasSyncErrors ? "danger" : undefined,
-    });
   return { calendar, items };
 }
 
@@ -302,19 +288,17 @@ export function CalendarSettingsPanel({
       );
     case "presets":
       return <PresetsPanel calendarId={calendarId} onClose={onClose} onDirtyChange={onDirtyChange} />;
-    case "external":
-      return (
-        <ExternalSyncPanel
-          calendarId={calendarId}
-          onClose={onClose}
-          onSyncComplete={onSyncComplete}
-          onDirtyChange={onDirtyChange}
-        />
-      );
     case "permissions":
       return <PermissionsPanel calendarId={calendarId} onClose={onCancel} onDirtyChange={onDirtyChange} />;
-    case "export":
-      return <ExportPanel calendarId={calendarId} onClose={onClose} />;
+    case "importExport":
+      return (
+        <ImportExportPanel
+          calendarId={calendarId}
+          onClose={onClose}
+          onDirtyChange={onDirtyChange}
+          onSyncComplete={onSyncComplete}
+        />
+      );
     case "view":
       return (
         <CalendarViewPanel
@@ -326,8 +310,6 @@ export function CalendarSettingsPanel({
           onDirtyChange={onDirtyChange}
         />
       );
-    case "notifications":
-      return <SyncNotificationsPanel calendarId={calendarId} onClose={onClose} />;
     case "customFields":
       return <CustomFieldsPanel calendarId={calendarId} onDirtyChange={onDirtyChange} />;
   }
