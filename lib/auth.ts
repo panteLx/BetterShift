@@ -1,10 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { genericOAuth, admin } from "better-auth/plugins";
+import { genericOAuth, admin, organization } from "better-auth/plugins";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { auditLogPlugin } from "@/lib/auth/audit-plugin";
 import { handleFirstUserPromotion } from "@/lib/auth/first-user";
+import { handleSingleTenantMembership } from "@/lib/auth/workspace-membership";
 import { ac, roles } from "@/lib/auth/access-control";
 import {
   GOOGLE_CLIENT_ID,
@@ -81,6 +82,14 @@ export const auth = betterAuth({
       roles,
     }),
 
+    // Workspaces. Creation stays instance-admin-only until self-service
+    // lands (sub-project 3, see the spec).
+    organization({
+      disableOrganizationDeletion: true,
+      allowUserToCreateOrganization: async (user) =>
+        user.role === "admin" || user.role === "superadmin",
+    }),
+
     // Custom OIDC
     genericOAuth({
       config: [
@@ -131,8 +140,9 @@ export const auth = betterAuth({
       enabled: true,
       updateEmailWithoutVerification: true,
     },
+    // Off: better-auth's /delete-user would bypass app/api/auth/delete-account's cleanup.
     deleteUser: {
-      enabled: true,
+      enabled: false,
     },
     additionalFields: {
       // Set on admin-created accounts (see POST /api/admin/users); input: false
@@ -179,6 +189,15 @@ export const auth = betterAuth({
             handleFirstUserPromotion(user.id).catch((error) => {
               console.error("Failed to promote first user:", error);
             });
+            // TODO(Task 2): replace with the typed MULTI_TENANT from lib/auth/env.ts.
+            if (process.env.MULTI_TENANT !== "true") {
+              handleSingleTenantMembership(user.id).catch((error) => {
+                console.error(
+                  "Failed to create default workspace membership:",
+                  error
+                );
+              });
+            }
           }
         },
       },

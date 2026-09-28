@@ -239,6 +239,8 @@ export async function POST(request: NextRequest) {
           name,
           color: color || "#3b82f6",
           ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
+          // TODO(Task 6): replace with the request workspace (requireRequestWorkspace).
+          workspaceId: "default",
         })
         .returning()
         .get();
