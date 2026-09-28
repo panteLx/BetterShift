@@ -773,7 +773,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 400,
     },
     {
-      name: "admin transfer of alpha's calendar to an alpha member is allowed",
+      name: "admin transfer of alpha's calendar back to its alpha owner is allowed, even via beta's host",
       as: seeded.users.admin,
       host: betaHost,
       method: "POST",
@@ -791,7 +791,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 400,
     },
     {
-      name: "admin bulk transfer of alpha's calendar to an alpha member is allowed",
+      name: "admin bulk transfer of alpha's calendar back to its alpha owner is allowed",
       as: seeded.users.admin,
       host: alphaHost,
       method: "POST",

@@ -60,11 +60,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const workspace = await getRequestWorkspace();
-    if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-    }
-
     // Search users by name or email (case-insensitive), members of this workspace only
     const pattern = `%${escapeLikePattern(query)}%`;
     const conditions = and(
@@ -80,15 +75,22 @@ export async function GET(request: NextRequest) {
       email: userTable.email,
       image: userTable.image,
     };
-    // Single-tenant keeps the old unfiltered search: a missing member row must not hide a user.
-    let users = MULTI_TENANT
-      ? await db
-          .select(columns)
-          .from(userTable)
-          .innerJoin(member, eq(member.userId, userTable.id))
-          .where(and(eq(member.organizationId, workspace.id), conditions))
-          .limit(10)
-      : await db.select(columns).from(userTable).where(conditions).limit(10);
+    let users;
+    if (MULTI_TENANT) {
+      const workspace = await getRequestWorkspace();
+      if (!workspace) {
+        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      }
+      users = await db
+        .select(columns)
+        .from(userTable)
+        .innerJoin(member, eq(member.userId, userTable.id))
+        .where(and(eq(member.organizationId, workspace.id), conditions))
+        .limit(10);
+    } else {
+      // Single-tenant keeps the old unfiltered search: a missing member row must not hide a user.
+      users = await db.select(columns).from(userTable).where(conditions).limit(10);
+    }
 
     // Exclude users who already have access to this calendar
     const existingShares = await db.query.calendarShares.findMany({

@@ -243,6 +243,9 @@ async function deleteUserApi(
     if (response.status === 404) {
       throw new Error(t("admin.userNotFound"));
     }
+    if (response.status === 409) {
+      throw new Error(t("admin.deleteUserSoleOwner"));
+    }
     throw new Error(t("common.deleteError", { item: t("common.labels.user") }));
   }
 }
