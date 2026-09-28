@@ -281,6 +281,7 @@ export async function proxy(request: NextRequest) {
     if (resolution.kind === "unknown") {
       // Container health probes hit localhost, which is never a workspace host.
       if (isHealthCheckExempt) return nextWithNonce(request);
+      // Next turns a loopback HOSTNAME into "localhost" and then proxies this rewrite externally; see docs/MULTI_TENANCY.md.
       return NextResponse.rewrite(new URL("/workspace-not-found", request.url), {
         status: 404,
       });

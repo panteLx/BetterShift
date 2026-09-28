@@ -172,7 +172,6 @@ export const invitation = sqliteTable(
   (table) => [index("invitation_organizationId_idx").on(table.organizationId)]
 );
 
-// New workspaces module (docs/superpowers/specs/2026-09-28-workspaces-core-design.md).
 // Mirrors systemSettings but per workspace; getWorkspaceSettings() in lib/workspace-settings.ts.
 export const workspaceSettings = sqliteTable("workspace_settings", {
   workspaceId: text("workspace_id")
