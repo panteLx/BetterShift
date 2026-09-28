@@ -25,9 +25,22 @@ Breaking changes between BetterShift releases and the steps to get through them.
 
 ## Versions
 
+- [3.4.0](#340-from-330) — from `3.3.0`
 - [3.3.0](#330-from-320) — from `3.2.0`
 - [3.1.0](#310-from-300) — from `3.0.0`
 - [3.0.0](#300-from-22x) — from `2.2.x`
+
+---
+
+## 3.4.0 (from 3.3.0)
+
+BetterShift 3.4.0 adds optional multi-tenancy — one shared instance serving several isolated **workspaces**, each on its own subdomain. See the [Multi-Tenancy Guide](MULTI_TENANCY.md) for the full picture.
+
+### What to expect (3.4.0)
+
+The migration is automatic and additive: it creates a `default` workspace and backfills every existing calendar, announcement and audit log into it, with no manual step. `MULTI_TENANT` defaults to `false`, so a self-hosted instance that doesn't set it sees no behavior change at all — ignore the new "MULTI-TENANCY" section in `.env.example` entirely. Only an instance that deliberately sets `MULTI_TENANT=true` (and `TENANT_BASE_DOMAIN`) opts into the new subdomain-per-workspace behavior.
+
+No database backup or manual migration step is needed for this release.
 
 ---
 

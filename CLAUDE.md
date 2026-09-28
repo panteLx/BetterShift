@@ -68,6 +68,10 @@ Two independent questions, easy to conflate:
 
 Access tokens (`calendarAccessTokens`) are shareable links, each carrying a `bundleId` (guest-eligible bundles only — checked at assignment time). `lib/auth/token-auth.ts` validates them and stores grants in a cookie that both the middleware and the API routes read back.
 
+### Workspaces (multi-tenancy)
+
+Behind `MULTI_TENANT=true`, a workspace is a better-auth `organization`, resolved purely from the request's `Host` header (`lib/workspace.ts`) — never from a client header or the session's `activeOrganizationId`. `resolveCalendarAccess()`/`findCalendarInWorkspace()` are the single choke point that reject a calendar outside the request's workspace as nonexistent (404, not 403), and everything reached through a calendar inherits that isolation. `getRequestWorkspace()` throws outside request scope, so background code (auto-sync, scripts) must pass `workspaceId` explicitly instead of reading it ambiently; `allowGuestAccess(workspaceId?)` follows the same rule. `MULTI_TENANT=false` (the default) makes every request resolve to the single `default` workspace with no behavior change. `scripts/tenant-isolation-check.ts` (`npm run test:tenancy`) is the executable regression check. See `docs/MULTI_TENANCY.md` for the full picture.
+
 ### Admin
 
 Two separate permission layers, deliberately:
@@ -108,7 +112,7 @@ UI strings and log output are product text in the project's locales; code commen
 
 ## Reference
 
-`docs/AUTH_SETUP.md`, `docs/PERMISSIONS.md`, `docs/ADMIN_PANEL.md`, `docs/ENABLING_AUTH.md`, `docs/UPGRADING.md`, `docs/PR_PREVIEWS.md`; `.env.example` documents every environment variable with its default.
+`docs/AUTH_SETUP.md`, `docs/PERMISSIONS.md`, `docs/ADMIN_PANEL.md`, `docs/ENABLING_AUTH.md`, `docs/UPGRADING.md`, `docs/PR_PREVIEWS.md`, `docs/MULTI_TENANCY.md`; `.env.example` documents every environment variable with its default.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
