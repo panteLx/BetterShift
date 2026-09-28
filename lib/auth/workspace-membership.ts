@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
 import { member } from "@/lib/db/schema";
 import { isFirstUser } from "@/lib/auth/first-user";
-
-const DEFAULT_WORKSPACE_ID = "default";
+import { DEFAULT_WORKSPACE_ID } from "@/lib/workspace";
 
 /**
  * Single-tenant mode only: every new account joins the `default` workspace,

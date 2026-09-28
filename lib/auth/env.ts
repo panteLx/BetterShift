@@ -42,6 +42,14 @@ export const ALLOW_USER_REGISTRATION =
 export const ALLOW_GUEST_ACCESS = process.env.ALLOW_GUEST_ACCESS === "true"; // Default: false
 
 // =============================================================================
+// Multi-Tenancy (Workspaces)
+// =============================================================================
+
+export const MULTI_TENANT = process.env.MULTI_TENANT === "true"; // Default: false
+
+export const TENANT_BASE_DOMAIN = process.env.TENANT_BASE_DOMAIN || "";
+
+// =============================================================================
 // Session Settings
 // =============================================================================
 

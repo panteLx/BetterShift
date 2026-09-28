@@ -24,6 +24,7 @@ import {
   BETTER_AUTH_TRUSTED_ORIGINS,
   BETTER_AUTH_URL,
   ALLOW_USER_REGISTRATION,
+  MULTI_TENANT,
 } from "@/lib/auth/env";
 
 export const auth = betterAuth({
@@ -189,8 +190,7 @@ export const auth = betterAuth({
             handleFirstUserPromotion(user.id).catch((error) => {
               console.error("Failed to promote first user:", error);
             });
-            // TODO(Task 2): replace with the typed MULTI_TENANT from lib/auth/env.ts.
-            if (process.env.MULTI_TENANT !== "true") {
+            if (!MULTI_TENANT) {
               handleSingleTenantMembership(user.id).catch((error) => {
                 console.error(
                   "Failed to create default workspace membership:",
