@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { auditLogs } from "@/lib/db/schema";
+import { auditLogs, calendars } from "@/lib/db/schema";
 import { getClientIp } from "@/lib/ip-utils";
+import { getRequestWorkspace, resolveWorkspaceFromHost } from "@/lib/workspace";
 
 // =====================================================
 // Typed Metadata Interfaces
@@ -323,6 +325,8 @@ export interface LogAuditEventOptions<T = AuditLogMetadata> {
   request?: NextRequest | Request; // Support both types
   severity?: AuditLogSeverity;
   isUserVisible?: boolean;
+  /** Explicit workspace (null = instance-level); resolved automatically when omitted. */
+  workspaceId?: string | null;
 }
 
 // =====================================================
@@ -345,11 +349,18 @@ export async function logAuditEvent<T = AuditLogMetadata>(
     request,
     severity = "info",
     isUserVisible = false,
+    workspaceId: explicitWorkspaceId,
   } = options;
 
   // Extract IP and user agent from request if provided
   const ipAddress = request ? getClientIp(request) : null;
   const userAgent = request ? request.headers.get("user-agent") : null;
+  const workspaceId = await resolveAuditWorkspaceId(
+    explicitWorkspaceId,
+    resourceType,
+    resourceId,
+    request
+  );
 
   // Fire-and-forget: don't block the request
   queueMicrotask(async () => {
@@ -364,6 +375,7 @@ export async function logAuditEvent<T = AuditLogMetadata>(
         userAgent,
         severity,
         isUserVisible,
+        workspaceId,
         timestamp: new Date(),
       });
     } catch (error) {
@@ -371,6 +383,39 @@ export async function logAuditEvent<T = AuditLogMetadata>(
       console.error("Failed to log audit event:", error);
     }
   });
+}
+
+/**
+ * Explicit option → workspace of a calendar-typed resourceId → request host → null.
+ * Never throws: audit logging must not break a request or a background job.
+ */
+async function resolveAuditWorkspaceId(
+  explicit: string | null | undefined,
+  resourceType: string | null,
+  resourceId: string | null,
+  request: NextRequest | Request | undefined
+): Promise<string | null> {
+  if (explicit !== undefined) return explicit;
+
+  try {
+    if (resourceType === "calendar" && resourceId) {
+      const [row] = await db
+        .select({ workspaceId: calendars.workspaceId })
+        .from(calendars)
+        .where(eq(calendars.id, resourceId))
+        .limit(1);
+      if (row) return row.workspaceId;
+    }
+
+    // headers() is unavailable in proxy.ts and background jobs, so prefer the passed request.
+    if (request) {
+      const resolution = await resolveWorkspaceFromHost(request.headers.get("host"));
+      return resolution.kind === "workspace" ? resolution.workspace.id : null;
+    }
+    return (await getRequestWorkspace())?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // =====================================================

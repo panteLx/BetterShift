@@ -219,6 +219,10 @@ export interface SeedData {
     /** alphaOwner's ICS feed token for alpha's calendar. */
     alphaFeed: string;
   };
+  /** Titles of the seeded dashboard announcements, one per scope. */
+  announcements: { alphaOnly: string; betaOnly: string; everywhere: string };
+  /** Actions of user-visible audit rows seeded for alphaOwner, one per scope. */
+  auditActions: { alpha: string; beta: string; instance: string };
 }
 
 /** A calendar plus one of each calendar-owned child resource, all in one workspace. */
@@ -338,6 +342,25 @@ export async function seed(): Promise<SeedData> {
   const alphaCalendar = await seedCalendar(alpha.id, alphaOwner.id, "Alpha Calendar", sharedMember.id);
   const betaCalendar = await seedCalendar(beta.id, betaOwner.id, "Beta Calendar", sharedMember.id);
 
+  const announcementTitles = { alphaOnly: "Alpha only", betaOnly: "Beta only", everywhere: "Everywhere" };
+  await db.insert(announcements).values([
+    { title: announcementTitles.alphaOnly, showOnDashboard: true, workspaceId: alpha.id },
+    { title: announcementTitles.betaOnly, showOnDashboard: true, workspaceId: beta.id },
+    { title: announcementTitles.everywhere, showOnDashboard: true, workspaceId: null },
+  ]);
+
+  // The beta row is alphaOwner's own and user-visible, so only the workspace filter can hide it on alpha.
+  const auditActions = {
+    alpha: "calendar.tenancy_alpha",
+    beta: "calendar.tenancy_beta",
+    instance: "security.tenancy_instance",
+  };
+  await db.insert(auditLogs).values([
+    { action: auditActions.alpha, userId: alphaOwner.id, isUserVisible: true, workspaceId: alpha.id },
+    { action: auditActions.beta, userId: alphaOwner.id, isUserVisible: true, workspaceId: beta.id },
+    { action: auditActions.instance, userId: alphaOwner.id, isUserVisible: true, workspaceId: null },
+  ]);
+
   return {
     workspaces: { alpha, beta },
     users: { alphaOwner, betaOwner, sharedMember, noMembership, alphaMember, admin },
@@ -347,6 +370,8 @@ export async function seed(): Promise<SeedData> {
       alphaShareRevoked: await seedShareToken(alphaCalendar, alphaOwner.id, false),
       alphaFeed: await seedFeedToken(alphaCalendar.id, alphaOwner.id),
     },
+    announcements: announcementTitles,
+    auditActions,
   };
 }
 
@@ -861,7 +886,80 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     { ...feedNotFound, name: "alpha's feed 404s on beta's host", host: betaHost, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
     { ...feedNotFound, name: "alpha's feed 404s on the apex", host: BASE_DOMAIN, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
     { ...feedNotFound, name: "an unknown feed token 404s the same way on alpha's host", host: alphaHost, path: "/api/feed/does-not-exist.ics" },
+    ...announcementRows(seeded),
+    ...auditLogRows(seeded),
   ];
+}
+
+function announcementRows(seeded: SeedData): MatrixRow[] {
+  const { alphaOnly, betaOnly, everywhere } = seeded.announcements;
+  const titles = (body: unknown): string[] =>
+    ((body as { announcements?: Array<{ title: string }> })?.announcements ?? []).map((a) => a.title);
+  const row = (name: string, host: string, expect: (t: string[]) => boolean): MatrixRow => ({
+    name,
+    as: "anonymous",
+    host,
+    method: "GET",
+    path: "/api/announcements?placement=dashboard",
+    expectStatus: 200,
+    expectBody: (body) => expect(titles(body)),
+  });
+  return [
+    row("alpha's host shows alpha's and instance-wide announcements, not beta's", `alpha.${BASE_DOMAIN}`, (t) =>
+      t.includes(alphaOnly) && t.includes(everywhere) && !t.includes(betaOnly)
+    ),
+    row("an alpha-scoped announcement is invisible on beta's host", `beta.${BASE_DOMAIN}`, (t) =>
+      t.includes(betaOnly) && t.includes(everywhere) && !t.includes(alphaOnly)
+    ),
+    row("the apex shows only instance-wide announcements", BASE_DOMAIN, (t) =>
+      t.includes(everywhere) && !t.includes(alphaOnly) && !t.includes(betaOnly)
+    ),
+  ];
+}
+
+function auditLogRows(seeded: SeedData): MatrixRow[] {
+  const { alpha, beta, instance } = seeded.auditActions;
+  const actions = (body: unknown): string[] =>
+    ((body as { logs?: Array<{ action: string }> })?.logs ?? []).map((l) => l.action);
+  return [
+    {
+      name: "alpha's activity log shows alpha and instance-level entries but not beta's",
+      as: seeded.users.alphaOwner,
+      host: `alpha.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/api/activity-logs?limit=100",
+      expectStatus: 200,
+      expectBody: (body) => {
+        const a = actions(body);
+        return a.includes(alpha) && a.includes(instance) && !a.includes(beta);
+      },
+    },
+  ];
+}
+
+/** Rows written by logAuditEvent itself during the stages above, checked straight in the DB. */
+async function checkAuditWorkspaceResolution(seeded: SeedData): Promise<void> {
+  console.log("\nStage 2c: audit-log workspace resolution");
+  // logAuditEvent inserts in a microtask after the response; give the last writes a moment.
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const alphaCalId = seeded.calendars.alpha.id;
+  const calendarRows = await db.select().from(auditLogs).where(eq(auditLogs.resourceId, alphaCalId));
+  check(
+    `every audit row naming alpha's calendar is stamped with alpha's workspace (${calendarRows.length} rows)`,
+    calendarRows.length > 0 && calendarRows.every((r) => r.workspaceId === seeded.workspaces.alpha.id)
+  );
+  const invalidToken = await db
+    .select()
+    .from(auditLogs)
+    .where(eq(auditLogs.action, "calendar_token_invalid"));
+  check(
+    "a proxy audit row without a calendar falls back to the request host's workspace",
+    invalidToken.length > 0 &&
+      invalidToken.every((r) =>
+        [seeded.workspaces.alpha.id, seeded.workspaces.beta.id].includes(r.workspaceId ?? "")
+      ) &&
+      invalidToken.some((r) => r.workspaceId === seeded.workspaces.beta.id)
+  );
 }
 
 // Stateful (the grant cookie from one response feeds the next), so kept out of the matrix.
@@ -1071,6 +1169,8 @@ async function main(): Promise<void> {
   }
 
   await checkShareTokens(seeded);
+
+  await checkAuditWorkspaceResolution(seeded);
 
   await checkAccountDeletion(seeded);
 

@@ -18,6 +18,8 @@ import {
 } from "@/lib/telemetry/config";
 import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 import { sendTelemetryInBackground } from "@/lib/telemetry/sender";
+import { updateWorkspaceSettings } from "@/lib/workspace-settings";
+import { DEFAULT_WORKSPACE_ID } from "@/lib/workspace";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
 
@@ -141,6 +143,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { before, after } = await updateSystemSettings(patch);
+
+    // allowGuestAccess() reads workspace settings; mirror this toggle into the default workspace.
+    if (patch.allowGuestAccess !== undefined) {
+      await updateWorkspaceSettings(DEFAULT_WORKSPACE_ID, {
+        allowGuestAccess: patch.allowGuestAccess,
+      });
+    }
 
     await logAdminAction<AdminSystemSettingsUpdatedMetadata>({
       action: "admin.system_settings.update",

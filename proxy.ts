@@ -16,6 +16,7 @@ import { member, user } from "@/lib/db/schema";
 import {
   resolveWorkspaceFromHost,
   getTenancyConfigError,
+  DEFAULT_WORKSPACE_ID,
 } from "@/lib/workspace";
 import {
   BETTER_AUTH_URL,
@@ -242,6 +243,9 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Single-tenant requests always belong to the default workspace.
+  let requestWorkspaceId = DEFAULT_WORKSPACE_ID;
+
   // =====================================================
   // Multi-Tenant Workspace Routing (only when MULTI_TENANT=true)
   // =====================================================
@@ -316,6 +320,8 @@ export async function proxy(request: NextRequest) {
       }
       return new NextResponse(null, { status: 404 });
     }
+
+    requestWorkspaceId = resolution.workspace.id;
 
     // Sign-in lives on the apex; hand it the absolute workspace URL to come back to.
     if (pathname === "/login" || pathname === "/register") {
@@ -499,7 +505,7 @@ export async function proxy(request: NextRequest) {
   // If no session token, check guest access
   if (!sessionToken) {
     // If guest access is enabled, allow viewing without login
-    if (await allowGuestAccess()) {
+    if (await allowGuestAccess(requestWorkspaceId)) {
       return nextWithNonce(request);
     }
 

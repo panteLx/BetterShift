@@ -121,7 +121,7 @@ async function resolveCalendarAccess(
       if (bundle) return bundleAccess(calendar, "token", bundle);
     }
     // Guest access only works when explicitly enabled
-    if ((await allowGuestAccess()) && guestBundle) {
+    if ((await allowGuestAccess(workspaceId)) && guestBundle) {
       return bundleAccess(calendar, "guestBundle", guestBundle);
     }
     return null;
@@ -426,7 +426,7 @@ export async function getUserAccessibleCalendars(
     // other, so resolve them concurrently instead of one after another.
     const [tokens, guestAccessEnabled] = await Promise.all([
       getTokensFromCookie(workspace.id),
-      allowGuestAccess(),
+      allowGuestAccess(workspace.id),
     ]);
 
     // First, check for token-based access (always works, regardless of allowGuestAccess)
