@@ -309,6 +309,8 @@ export interface MatrixRow {
   expectStatus: number | number[];
   /** Checked against the response's Location header (redirects are never followed). */
   expectLocation?: (location: string | null) => boolean;
+  /** Optional extra assertion on the parsed JSON body, in addition to the status. */
+  expectBody?: (body: unknown) => boolean;
 }
 
 interface HttpResponse {
@@ -384,9 +386,19 @@ export async function runRow(row: MatrixRow): Promise<boolean> {
       row.body !== undefined ? JSON.stringify(row.body) : undefined
     );
     const location = res.headers.location ?? null;
-    const ok =
+    let ok =
       expected.includes(res.status) &&
       (!row.expectLocation || row.expectLocation(location));
+    if (ok && row.expectBody) {
+      const body = ((): unknown => {
+        try {
+          return JSON.parse(res.text);
+        } catch {
+          return null;
+        }
+      })();
+      ok = row.expectBody(body);
+    }
     const locationNote = row.expectLocation ? `, location ${location}` : "";
     check(`${row.name} (got ${res.status}${locationNote}, want ${expected.join("|")})`, ok);
     return ok;
@@ -546,6 +558,30 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     foreign("POST", "/api/export/ics", { calendarIds: [betaCal.id] }),
     foreign("POST", "/api/export/pdf", { calendarIds: [betaCal.id] }),
     foreign("DELETE", `/api/calendars/${betaCal.id}/shares/${betaCal.shareId}`),
+    foreign("POST", "/api/calendars/subscriptions", { calendarId: betaCal.id }),
+    foreign("DELETE", `/api/calendars/subscriptions/${betaCal.id}`),
+    {
+      name: "GET /api/calendars on alpha only returns alpha's calendar",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars",
+      expectStatus: 200,
+      expectBody: (body) =>
+        Array.isArray(body) &&
+        body.every((c: { id: string }) => c.id === alphaCal.id),
+    },
+    {
+      name: "GET /api/calendars on beta only returns beta's calendar",
+      as: betaOwner,
+      host: betaHost,
+      method: "GET",
+      path: "/api/calendars",
+      expectStatus: 200,
+      expectBody: (body) =>
+        Array.isArray(body) &&
+        body.every((c: { id: string }) => c.id === betaCal.id),
+    },
     {
       name: "shared member gets 404 for a beta calendar shared with them via alpha's host",
       as: seeded.users.sharedMember,
@@ -585,6 +621,31 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       method: "GET",
       path: `/api/shifts/${betaCal.shiftId}`,
       expectStatus: 200,
+    },
+    // Proves the Step 7 workspace filter on the dismissed-calendar lookup: the shared
+    // member's dismissal of beta's calendar (via a real share, not a hypothetical one --
+    // they're a member of both workspaces) must not surface beta's calendar name/owner
+    // into a subscriptions view fetched from alpha's host.
+    {
+      name: "shared member dismisses the beta calendar via beta's host",
+      as: seeded.users.sharedMember,
+      host: betaHost,
+      method: "DELETE",
+      path: `/api/calendars/subscriptions/${betaCal.id}`,
+      expectStatus: 200,
+    },
+    {
+      name: "dismissed beta calendar does not leak into alpha's subscriptions view",
+      as: seeded.users.sharedMember,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => {
+        if (!body || typeof body !== "object") return false;
+        const dismissed = (body as { dismissed?: Array<{ id: string }> }).dismissed;
+        return Array.isArray(dismissed) && !dismissed.some((c) => c.id === betaCal.id);
+      },
     },
   ];
 }

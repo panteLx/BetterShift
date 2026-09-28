@@ -7,7 +7,7 @@ import {
   type Calendar,
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, isNotNull } from "drizzle-orm";
 import { getRequestWorkspace } from "@/lib/workspace";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 import {
@@ -23,6 +23,13 @@ import {
   type BundleDefinition,
   type Capability,
 } from "@/lib/permission-bundles";
+
+export class CalendarNotFoundError extends Error {
+  constructor() {
+    super("Calendar not found");
+    this.name = "CalendarNotFoundError";
+  }
+}
 
 async function getBundleById(
   bundleId: string
@@ -381,8 +388,12 @@ async function existingBundleIds(
 export async function getUserAccessibleCalendars(
   userId: string | null | undefined
 ): Promise<Array<{ id: string; isOwner: boolean }>> {
+  const workspace = await getRequestWorkspace();
+  if (!workspace) return [];
+
   if (!isAuthEnabled()) {
     const allCalendars = await db.query.calendars.findMany({
+      where: eq(calendars.workspaceId, workspace.id),
       columns: { id: true },
     });
     return allCalendars.map((cal) => ({ id: cal.id, isOwner: true }));
@@ -411,7 +422,10 @@ export async function getUserAccessibleCalendars(
     // Then, check for guest bundle access (only if guest access is enabled)
     if (guestAccessEnabled) {
       const guestAccessibleCalendars = await db.query.calendars.findMany({
-        where: (calendars, { isNotNull }) => isNotNull(calendars.guestBundleId),
+        where: and(
+          isNotNull(calendars.guestBundleId),
+          eq(calendars.workspaceId, workspace.id)
+        ),
         columns: { id: true, guestBundleId: true },
       });
       const liveBundleIds = await existingBundleIds(
@@ -432,7 +446,7 @@ export async function getUserAccessibleCalendars(
 
   const [ownedCalendars, subscriptions, sharedCalendars] = await Promise.all([
     db.query.calendars.findMany({
-      where: eq(calendars.ownerId, userId),
+      where: and(eq(calendars.ownerId, userId), eq(calendars.workspaceId, workspace.id)),
       columns: { id: true },
     }),
     db.query.userCalendarSubscriptions.findMany({
@@ -514,12 +528,10 @@ export async function dismissCalendar(
   userId: string,
   calendarId: string
 ): Promise<void> {
-  const calendar = await db.query.calendars.findFirst({
-    where: eq(calendars.id, calendarId),
-  });
+  const calendar = await findCalendarInWorkspace(calendarId);
 
   if (!calendar) {
-    throw new Error("Calendar not found");
+    throw new CalendarNotFoundError();
   }
 
   if (calendar.ownerId === userId) {
@@ -568,12 +580,10 @@ export async function undismissCalendar(
   userId: string,
   calendarId: string
 ): Promise<void> {
-  const calendar = await db.query.calendars.findFirst({
-    where: eq(calendars.id, calendarId),
-  });
+  const calendar = await findCalendarInWorkspace(calendarId);
 
   if (!calendar) {
-    throw new Error("Calendar not found");
+    throw new CalendarNotFoundError();
   }
 
   if (calendar.ownerId === userId) {

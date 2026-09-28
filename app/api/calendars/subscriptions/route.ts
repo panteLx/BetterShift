@@ -7,13 +7,14 @@ import {
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { eq, and, or, ne, isNotNull, isNull, inArray } from "drizzle-orm";
-import { undismissCalendar } from "@/lib/auth/permissions";
+import { CalendarNotFoundError, undismissCalendar } from "@/lib/auth/permissions";
 import {
   applyGuestCeiling,
   sanitizeCapabilities,
   type Capability,
 } from "@/lib/permission-bundles";
 import type { CalendarBundleRef } from "@/lib/types";
+import { requireRequestWorkspace } from "@/lib/workspace";
 
 /**
  * A guest bundle's capabilities, ceiling-filtered like every other guest/link
@@ -43,11 +44,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const workspace = await requireRequestWorkspace();
+
     // Get all public calendars (guestBundleId set, not owned by user)
     const allPublicCalendars = await db.query.calendars.findMany({
       where: and(
         isNotNull(calendars.guestBundleId),
-        or(isNull(calendars.ownerId), ne(calendars.ownerId, user.id))
+        or(isNull(calendars.ownerId), ne(calendars.ownerId, user.id)),
+        eq(calendars.workspaceId, workspace.id)
       ),
       with: {
         owner: {
@@ -187,7 +191,10 @@ export async function GET(request: NextRequest) {
     const dismissedCalendarRows =
       dismissedCalendarIds.length > 0
         ? await db.query.calendars.findMany({
-            where: inArray(calendars.id, dismissedCalendarIds),
+            where: and(
+              inArray(calendars.id, dismissedCalendarIds),
+              eq(calendars.workspaceId, workspace.id)
+            ),
             with: {
               owner: {
                 columns: {
@@ -287,6 +294,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
+    if (error instanceof CalendarNotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     console.error("Error subscribing to calendar:", error);
     const message =
       error instanceof Error ? error.message : "Failed to subscribe";

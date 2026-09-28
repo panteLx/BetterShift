@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
+import { requireRequestWorkspace } from "@/lib/workspace";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
 import {
@@ -32,6 +33,7 @@ import type { CalendarBundleRef } from "@/lib/types";
 export async function GET(request: Request) {
   try {
     const user = await getSessionUser(request.headers);
+    const workspace = await requireRequestWorkspace();
 
     // Get accessible calendar IDs with permissions
     const accessible = await getUserAccessibleCalendars(user?.id);
@@ -60,7 +62,12 @@ export async function GET(request: Request) {
           ),
       })
       .from(calendars)
-      .where(or(...accessibleIds.map((id) => eq(calendars.id, id))))
+      .where(
+        and(
+          or(...accessibleIds.map((id) => eq(calendars.id, id))),
+          eq(calendars.workspaceId, workspace.id)
+        )
+      )
       .orderBy(calendars.createdAt);
 
     // If user is authenticated, fetch additional metadata
@@ -204,6 +211,7 @@ export async function GET(request: Request) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser(request.headers);
+    const workspace = await requireRequestWorkspace();
 
     // Rate limiting: 10 calendars per hour
     const rateLimitResponse = rateLimit(request, user?.id, "calendar-create");
@@ -239,8 +247,7 @@ export async function POST(request: NextRequest) {
           name,
           color: color || "#3b82f6",
           ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
-          // TODO(Task 6): replace with the request workspace (requireRequestWorkspace).
-          workspaceId: "default",
+          workspaceId: workspace.id,
         })
         .returning()
         .get();
