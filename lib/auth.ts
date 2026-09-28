@@ -1,12 +1,14 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth, admin, organization } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { auditLogPlugin } from "@/lib/auth/audit-plugin";
 import { handleFirstUserPromotion } from "@/lib/auth/first-user";
 import { handleSingleTenantMembership } from "@/lib/auth/workspace-membership";
 import { ac, roles } from "@/lib/auth/access-control";
+import { isReservedSlug, isValidSlugFormat } from "@/lib/workspace-slugs";
 import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -92,12 +94,26 @@ export const auth = betterAuth({
       roles,
     }),
 
-    // Workspaces. Creation stays instance-admin-only until self-service
-    // lands (sub-project 3, see the spec).
+    // Workspaces. Creation stays instance-admin-only until self-service lands (sub-project 3).
     organization({
       disableOrganizationDeletion: true,
+      requireEmailVerificationOnInvitation: true,
       allowUserToCreateOrganization: async (user) =>
         user.role === "admin" || user.role === "superadmin",
+      organizationHooks: {
+        beforeCreateOrganization: async ({ organization }) => {
+          const slug = organization.slug ?? "";
+          if (!isValidSlugFormat(slug) || isReservedSlug(slug)) {
+            throw new APIError("BAD_REQUEST", { message: "Invalid workspace slug" });
+          }
+        },
+        // The slug is the workspace's subdomain; renaming it would strand every link to it.
+        beforeUpdateOrganization: async ({ organization }) => {
+          if ("slug" in organization) {
+            throw new APIError("BAD_REQUEST", { message: "Workspace slug cannot be changed" });
+          }
+        },
+      },
     }),
 
     // Custom OIDC

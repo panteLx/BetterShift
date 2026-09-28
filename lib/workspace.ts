@@ -22,12 +22,7 @@ export type HostParseResult =
   | { kind: "workspace"; slug: string }
   | { kind: "invalid" };
 
-/**
- * Pure host → {apex, workspace slug, invalid} classification. No DB access,
- * so it's directly unit-checkable by scripts/tenant-isolation-check.ts
- * without a running server. Strips the port, lowercases, and requires
- * exactly one label left after stripping the base domain.
- */
+// Pure (no DB) so the isolation harness can check it without a server.
 export function parseWorkspaceHost(
   hostHeader: string | null,
   baseDomain: string
@@ -55,21 +50,30 @@ interface CacheEntry {
 const HIT_TTL_MS = 30_000;
 const MISS_TTL_MS = 5_000;
 const slugCache = new Map<string, CacheEntry>();
+// ":" never appears in a valid slug, so this key can't collide with one.
+const DEFAULT_CACHE_KEY = "id:default";
 
-async function getWorkspaceBySlug(slug: string): Promise<Workspace | null> {
-  const cached = slugCache.get(slug);
+async function cachedWorkspace(
+  key: string,
+  where: ReturnType<typeof eq>
+): Promise<Workspace | null> {
+  const cached = slugCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
   const row = await db.query.organization.findFirst({
-    where: eq(organization.slug, slug),
+    where,
     columns: { id: true, name: true, slug: true },
   });
   const value = row ?? null;
-  slugCache.set(slug, {
+  slugCache.set(key, {
     value,
     expiresAt: Date.now() + (value ? HIT_TTL_MS : MISS_TTL_MS),
   });
   return value;
+}
+
+function getWorkspaceBySlug(slug: string): Promise<Workspace | null> {
+  return cachedWorkspace(slug, eq(organization.slug, slug));
 }
 
 /** Call after any change that could make a cached slug stale (e.g. a workspace is deleted). */
@@ -77,14 +81,7 @@ export function invalidateWorkspaceCache(slug: string): void {
   slugCache.delete(slug);
 }
 
-/**
- * MULTI_TENANT=true requires AUTH_ENABLED=true and a non-empty
- * TENANT_BASE_DOMAIN. Never throws — instrumentation.ts logs this as a
- * startup warning, and proxy.ts treats a non-null result like an unhealthy
- * database (redirect everything to /system-unavailable), because failing
- * open here would let the AUTH_ENABLED=false "everyone is owner" path leak
- * across workspaces.
- */
+// Never throws: proxy.ts fails closed on a non-null result instead of serving without isolation.
 export function getTenancyConfigError(): string | null {
   if (!MULTI_TENANT) return null;
   if (!AUTH_ENABLED) return "MULTI_TENANT=true requires AUTH_ENABLED=true";
@@ -95,16 +92,15 @@ export function getTenancyConfigError(): string | null {
   return null;
 }
 
-/**
- * Resolves the workspace for a given Host header value. With MULTI_TENANT
- * off, or when tenancy is misconfigured, this always fails closed to
- * "unknown" except the single-tenant default-workspace lookup.
- */
 export async function resolveWorkspaceFromHost(
   hostHeader: string | null
 ): Promise<WorkspaceResolution> {
   if (!MULTI_TENANT) {
-    const workspace = await getWorkspaceBySlug(DEFAULT_WORKSPACE_ID);
+    // By id, not slug, so a renamed default workspace can't take the instance down.
+    const workspace = await cachedWorkspace(
+      DEFAULT_CACHE_KEY,
+      eq(organization.id, DEFAULT_WORKSPACE_ID)
+    );
     return workspace ? { kind: "workspace", workspace } : { kind: "unknown" };
   }
   if (getTenancyConfigError()) return { kind: "unknown" };
@@ -117,14 +113,7 @@ export async function resolveWorkspaceFromHost(
   return workspace ? { kind: "workspace", workspace } : { kind: "unknown" };
 }
 
-/**
- * Request-scoped workspace lookup via next/headers (Next 16: headers() is
- * async). Throws when called outside a request (no headers() context) — a
- * background caller that forgets to pass a workspace explicitly must fail
- * loudly, not silently see every workspace. Route handlers holding a
- * `request` may call resolveWorkspaceFromHost(request.headers.get("host"))
- * directly instead.
- */
+// Throws outside a request on purpose: background callers must pass a workspace explicitly.
 export async function getRequestWorkspace(): Promise<Workspace | null> {
   const headersList = await headers();
   const result = await resolveWorkspaceFromHost(headersList.get("host"));
@@ -144,11 +133,7 @@ export async function requireRequestWorkspace(): Promise<Workspace> {
   return workspace;
 }
 
-/**
- * Single-tenant instances have exactly one workspace, so membership always
- * holds even if a fire-and-forget membership insert (handleSingleTenantMembership)
- * failed — a missing `member` row must not hide an otherwise valid user.
- */
+// Single-tenant: always true, since the fire-and-forget default membership insert may have failed.
 export async function isWorkspaceMember(
   userId: string,
   workspaceId: string
