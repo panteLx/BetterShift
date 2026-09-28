@@ -611,6 +611,7 @@
     "roleChangeWarning": "Změna role uživatele okamžitě ovlivní jeho oprávnění",
     "calendars": {
       "owner": "Vlastník",
+      "workspace": "Pracovní prostor",
       "updated": "Aktualizováno",
       "guestPermission": "Oprávnění hosta",
       "orphaned": "Osiřelé",

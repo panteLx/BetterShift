@@ -611,6 +611,7 @@
     "roleChangeWarning": "Eine Änderung der Benutzerrolle wirkt sich sofort auf die Berechtigungen aus",
     "calendars": {
       "owner": "Besitzer",
+      "workspace": "Workspace",
       "updated": "Aktualisiert",
       "guestPermission": "Gastberechtigung",
       "orphaned": "Verwaist",

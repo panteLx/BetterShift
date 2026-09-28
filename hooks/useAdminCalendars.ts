@@ -43,6 +43,7 @@ export interface CalendarOwner {
 export interface AdminCalendar {
   id: string;
   name: string;
+  workspaceName: string;
   color: string;
   guestBundle: BundleRef | null;
   createdAt: Date;

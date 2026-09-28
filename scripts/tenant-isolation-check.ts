@@ -361,6 +361,15 @@ export async function seed(): Promise<SeedData> {
     { action: auditActions.instance, userId: alphaOwner.id, isUserVisible: true, workspaceId: null },
   ]);
 
+  // Named distinctly from seedCalendar()'s own sync log, so GET /api/activity-logs?type=sync
+  // (workspace-scoped via getUserAccessibleCalendars, not the audit-log workspaceId column) can be proven isolated.
+  // externalSyncId reuses each calendar's already-seeded sync row: better-sqlite3 enforces
+  // foreign keys by default here, so a fresh randomUUID() would violate the FK constraint.
+  await db.insert(syncLogs).values([
+    { calendarId: alphaCalendar.id, externalSyncId: alphaCalendar.syncId, externalSyncName: "Alpha Sync", status: "success", syncType: "manual", shiftsCreated: 0, shiftsUpdated: 0, shiftsDeleted: 0 },
+    { calendarId: betaCalendar.id, externalSyncId: betaCalendar.syncId, externalSyncName: "Beta Sync", status: "success", syncType: "manual", shiftsCreated: 0, shiftsUpdated: 0, shiftsDeleted: 0 },
+  ]);
+
   return {
     workspaces: { alpha, beta },
     users: { alphaOwner, betaOwner, sharedMember, noMembership, alphaMember, admin },
@@ -736,6 +745,18 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
         const ids = [...(available ?? []), ...(dismissed ?? [])].map((c) => c.id);
         return !ids.includes(betaCal.id);
       },
+    },
+    // Must run before the activity-logs clear below, which deletes every sync log
+    // visible on alpha's host (including this seeded one) as part of its own proof.
+    {
+      name: "alpha's activity log never shows beta's sync log",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/activity-logs?type=sync",
+      expectStatus: 200,
+      expectBody: (body) =>
+        !JSON.stringify(body).includes("Beta Sync") && JSON.stringify(body).includes("Alpha Sync"),
     },
     // sharedMember's share into beta is still active here (run before the dismissal
     // below), so this proves the DELETE itself is workspace-scoped, not just that a

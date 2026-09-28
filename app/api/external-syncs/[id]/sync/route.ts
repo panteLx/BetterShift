@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs, shifts, syncLogs } from "@/lib/db/schema";
+import { calendars, externalSyncs, shifts, syncLogs } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
@@ -42,6 +42,14 @@ export async function syncExternalCalendar(
   if (!externalSync) {
     throw new Error("External sync configuration not found");
   }
+
+  const [calendar] = await db
+    .select({ workspaceId: calendars.workspaceId })
+    .from(calendars)
+    .where(eq(calendars.id, externalSync.calendarId));
+  // Fail closed: a sync whose calendar vanished mid-run logs as an
+  // instance-level event rather than guessing a workspace.
+  const workspaceId = calendar?.workspaceId ?? null;
 
   let stats;
   let errorMessage: string | null = null;
@@ -389,6 +397,7 @@ export async function syncExternalCalendar(
       userId: userId || null,
       resourceType: "sync",
       resourceId: syncId,
+      workspaceId,
       metadata: {
         calendarName: externalSync.calendarId, // Will be enriched with actual name in UI
         syncName: externalSync.name,
@@ -425,6 +434,7 @@ export async function syncExternalCalendar(
       userId: userId || null,
       resourceType: "sync",
       resourceId: syncId,
+      workspaceId,
       metadata: {
         calendarName: externalSync.calendarId,
         syncName: externalSync.name,

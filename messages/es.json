@@ -611,6 +611,7 @@
     "roleChangeWarning": "Cambiar el rol de un usuario afectará a sus permisos inmediatamente",
     "calendars": {
       "owner": "Propietario",
+      "workspace": "Espacio de trabajo",
       "updated": "Actualizado",
       "guestPermission": "Permiso de invitado",
       "orphaned": "Huérfano",

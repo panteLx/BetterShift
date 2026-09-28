@@ -10,6 +10,7 @@ import {
   calendarAccessTokens,
   calendarPermissionBundles,
   externalSyncs,
+  organization,
 } from "@/lib/db/schema";
 import { and, asc, count, desc, eq, or, sql, type SQL } from "drizzle-orm";
 import {
@@ -158,6 +159,7 @@ export async function GET(request: NextRequest) {
       .select({
         id: calendars.id,
         name: calendars.name,
+        workspaceName: organization.name,
         color: calendars.color,
         ownerId: calendars.ownerId,
         guestBundleRowId: guestBundleTable.id,
@@ -180,6 +182,7 @@ export async function GET(request: NextRequest) {
       .from(calendars)
       .leftJoin(user, eq(calendars.ownerId, user.id))
       .leftJoin(guestBundleTable, eq(calendars.guestBundleId, guestBundleTable.id))
+      .leftJoin(organization, eq(calendars.workspaceId, organization.id))
       .where(where)
       .orderBy(
         asc(sql`case when ${orphaned} then 0 else 1 end`),
@@ -192,6 +195,7 @@ export async function GET(request: NextRequest) {
     const items = rows.map((row) => ({
       id: row.id,
       name: row.name,
+      workspaceName: row.workspaceName ?? "—",
       color: row.color,
       ownerId: row.ownerId,
       owner: row.ownerUserId
