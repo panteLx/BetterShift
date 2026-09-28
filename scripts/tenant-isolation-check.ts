@@ -103,6 +103,13 @@ let organization: SchemaModule["organization"];
 let member: SchemaModule["member"];
 let user: SchemaModule["user"];
 let account: SchemaModule["account"];
+let calendars: SchemaModule["calendars"];
+let shifts: SchemaModule["shifts"];
+let calendarNotes: SchemaModule["calendarNotes"];
+let shiftPresets: SchemaModule["shiftPresets"];
+let externalSyncs: SchemaModule["externalSyncs"];
+let calendarPermissionBundles: SchemaModule["calendarPermissionBundles"];
+let calendarShares: SchemaModule["calendarShares"];
 let parseWorkspaceHost: WorkspaceModule["parseWorkspaceHost"];
 
 async function loadDbBackedModules(): Promise<void> {
@@ -112,7 +119,19 @@ async function loadDbBackedModules(): Promise<void> {
     import("../lib/workspace"),
   ]);
   db = dbModule.db;
-  ({ organization, member, user, account } = schemaModule);
+  ({
+    organization,
+    member,
+    user,
+    account,
+    calendars,
+    shifts,
+    calendarNotes,
+    shiftPresets,
+    externalSyncs,
+    calendarPermissionBundles,
+    calendarShares,
+  } = schemaModule);
   parseWorkspaceHost = workspaceModule.parseWorkspaceHost;
 }
 
@@ -171,6 +190,21 @@ export interface SeedData {
     sharedMember: SeedUser;
     noMembership: SeedUser;
   };
+  calendars: {
+    alpha: SeedCalendar;
+    beta: SeedCalendar;
+  };
+}
+
+/** A calendar plus one of each calendar-owned child resource, all in one workspace. */
+export interface SeedCalendar {
+  id: string;
+  shiftId: string;
+  noteId: string;
+  presetId: string;
+  syncId: string;
+  /** Read-only share of this calendar with the sharedMember user. */
+  shareId: string;
 }
 
 const PASSWORD = "tenancy-check-password-1!";
@@ -191,6 +225,42 @@ async function seedUser(email: string): Promise<SeedUser> {
     password: await hashPassword(PASSWORD),
   });
   return { id, email, password: PASSWORD };
+}
+
+async function seedCalendar(
+  workspaceId: string,
+  ownerId: string,
+  name: string,
+  shareWithUserId: string
+): Promise<SeedCalendar> {
+  const id = crypto.randomUUID();
+  await db.insert(calendars).values({ id, name, ownerId, workspaceId });
+  const [shift] = await db
+    .insert(shifts)
+    .values({ calendarId: id, date: new Date(), startTime: "08:00", endTime: "16:00", title: `${name} shift`, createdBy: ownerId })
+    .returning({ id: shifts.id });
+  const [note] = await db
+    .insert(calendarNotes)
+    .values({ calendarId: id, date: new Date(), note: `${name} note`, createdBy: ownerId })
+    .returning({ id: calendarNotes.id });
+  const [preset] = await db
+    .insert(shiftPresets)
+    .values({ calendarId: id, title: `${name} preset`, startTime: "08:00", endTime: "16:00", createdBy: ownerId })
+    .returning({ id: shiftPresets.id });
+  // Unreachable URL: the manual-sync row must never get as far as fetching it.
+  const [sync] = await db
+    .insert(externalSyncs)
+    .values({ calendarId: id, name: `${name} sync`, calendarUrl: "http://127.0.0.1:9/never.ics" })
+    .returning({ id: externalSyncs.id });
+  const [bundle] = await db
+    .insert(calendarPermissionBundles)
+    .values({ calendarId: id, name: "Read", seedKey: "read", capabilities: ["viewShifts", "viewNotesEvents", "viewStats"] })
+    .returning({ id: calendarPermissionBundles.id });
+  const [share] = await db
+    .insert(calendarShares)
+    .values({ calendarId: id, userId: shareWithUserId, bundleId: bundle.id, sharedBy: ownerId })
+    .returning({ id: calendarShares.id });
+  return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, shareId: share.id };
 }
 
 async function seedWorkspace(slug: string): Promise<{ id: string; slug: string }> {
@@ -214,9 +284,13 @@ export async function seed(): Promise<SeedData> {
     { id: crypto.randomUUID(), organizationId: beta.id, userId: sharedMember.id, role: "member" },
   ]);
 
+  const alphaCalendar = await seedCalendar(alpha.id, alphaOwner.id, "Alpha Calendar", sharedMember.id);
+  const betaCalendar = await seedCalendar(beta.id, betaOwner.id, "Beta Calendar", sharedMember.id);
+
   return {
     workspaces: { alpha, beta },
     users: { alphaOwner, betaOwner, sharedMember, noMembership },
+    calendars: { alpha: alphaCalendar, beta: betaCalendar },
   };
 }
 
@@ -266,16 +340,24 @@ function httpRequest(
 const sessionCookies = new Map<string, string>();
 
 async function signIn(email: string, password: string, host: string): Promise<string> {
-  const key = `${host}:${email}`;
+  // Keyed by email alone: sessions are host-independent, and every extra sign-in eats into
+  // better-auth's own sign-in limiter (3 per 10s per IP), which is retried below.
+  const key = email;
   const cached = sessionCookies.get(key);
   if (cached) return cached;
 
-  const res = await httpRequest(
-    "/api/auth/sign-in/email",
-    "POST",
-    { "content-type": "application/json", host, origin: `http://${host}` },
-    JSON.stringify({ email, password })
-  );
+  let res: HttpResponse;
+  for (let attempt = 0; ; attempt++) {
+    res = await httpRequest(
+      "/api/auth/sign-in/email",
+      "POST",
+      { "content-type": "application/json", host, origin: `http://${host}` },
+      JSON.stringify({ email, password })
+    );
+    if (res.status !== 429 || attempt >= 3) break;
+    const retryAfter = Number(res.headers["x-retry-after"]) || 10;
+    await new Promise((resolve) => setTimeout(resolve, (retryAfter + 1) * 1000));
+  }
   if (res.status < 200 || res.status >= 300) {
     throw new Error(`Sign-in failed for ${email}@${host}: ${res.status} ${res.text}`);
   }
@@ -315,84 +397,197 @@ export async function runRow(row: MatrixRow): Promise<boolean> {
   }
 }
 
-// Later tasks push more rows onto this array (and extend seed()/SeedData for
+// Later tasks append rows to the returned array (and extend seed()/SeedData for
 // the fixtures those rows need) rather than replacing the matrix wholesale.
-export const matrix: MatrixRow[] = [
-  {
-    name: "unknown subdomain returns 404",
-    as: "anonymous",
-    host: `doesnotexist.${BASE_DOMAIN}`,
-    method: "GET",
-    path: "/",
+export function buildMatrix(seeded: SeedData): MatrixRow[] {
+  const alphaHost = `alpha.${BASE_DOMAIN}`;
+  const betaHost = `beta.${BASE_DOMAIN}`;
+  const alphaOwner = seeded.users.alphaOwner;
+  const betaOwner = seeded.users.betaOwner;
+  const alphaCal = seeded.calendars.alpha;
+  const betaCal = seeded.calendars.beta;
+
+  // Every calendar-owned id lookup: foreign-workspace ids must 404 exactly like nonexistent ones.
+  const foreign = (method: string, path: string, body?: unknown): MatrixRow => ({
+    name: `alpha owner gets 404 for beta's ${method} ${path.replace(/[0-9a-f-]{36}/g, ":id")} via alpha's host`,
+    as: alphaOwner,
+    host: alphaHost,
+    method,
+    path,
+    body,
     expectStatus: 404,
-  },
-  {
-    name: "GET /api/workspace on an unknown subdomain is 404",
-    as: "anonymous",
-    host: `doesnotexist.${BASE_DOMAIN}`,
+  });
+  const own = (path: string): MatrixRow => ({
+    name: `alpha owner can GET own ${path.replace(/[0-9a-f-]{36}/g, ":id")} via alpha's host`,
+    as: alphaOwner,
+    host: alphaHost,
     method: "GET",
-    path: "/api/workspace",
-    expectStatus: 404,
-  },
-  {
-    name: "GET /api/workspace on a known workspace returns that workspace",
-    as: "anonymous",
-    host: `alpha.${BASE_DOMAIN}`,
-    method: "GET",
-    path: "/api/workspace",
+    path,
     expectStatus: 200,
-  },
-  {
-    name: "apex / without a session redirects toward login",
-    as: "anonymous",
-    host: BASE_DOMAIN,
-    method: "GET",
-    path: "/",
-    expectStatus: [307, 308],
-    expectLocation: (location) =>
-      !!location && new URL(location, `http://${BASE_DOMAIN}`).pathname === "/login",
-  },
-  {
-    name: "apex / for a signed-in user without any workspace renders the no-workspace page",
-    as: { email: "no-membership@tenancy.test", password: PASSWORD },
-    host: BASE_DOMAIN,
-    method: "GET",
-    path: "/",
-    expectStatus: 200,
-  },
-  {
-    name: "container health probe on localhost bypasses workspace resolution",
-    as: "anonymous",
-    host: "localhost",
-    method: "GET",
-    path: "/api/health",
-    expectStatus: 200,
-  },
-  {
-    name: "workspace /login forwards to apex login with the absolute workspace target",
-    as: "anonymous",
-    host: `alpha.${BASE_DOMAIN}`,
-    method: "GET",
-    path: "/login?returnUrl=/foo",
-    expectStatus: [307, 308],
-    expectLocation: (location) =>
-      location ===
-      `http://${BASE_DOMAIN}/login?returnUrl=${encodeURIComponent(`http://alpha.${BASE_DOMAIN}/foo`)}`,
-  },
-  {
-    name: "workspace /login drops an off-site returnUrl",
-    as: "anonymous",
-    host: `alpha.${BASE_DOMAIN}`,
-    method: "GET",
-    path: "/login?returnUrl=//evil.example",
-    expectStatus: [307, 308],
-    expectLocation: (location) => {
-      if (!location) return false;
-      const target = new URL(location).searchParams.get("returnUrl") ?? "";
-      return target.endsWith(`alpha.${BASE_DOMAIN}/`);
+  });
+
+  return [
+    {
+      name: "unknown subdomain returns 404",
+      as: "anonymous",
+      host: `doesnotexist.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/",
+      expectStatus: 404,
     },
-  },
-];
+    {
+      name: "GET /api/workspace on an unknown subdomain is 404",
+      as: "anonymous",
+      host: `doesnotexist.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/api/workspace",
+      expectStatus: 404,
+    },
+    {
+      name: "GET /api/workspace on a known workspace returns that workspace",
+      as: "anonymous",
+      host: `alpha.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/api/workspace",
+      expectStatus: 200,
+    },
+    {
+      name: "apex / without a session redirects toward login",
+      as: "anonymous",
+      host: BASE_DOMAIN,
+      method: "GET",
+      path: "/",
+      expectStatus: [307, 308],
+      expectLocation: (location) =>
+        !!location && new URL(location, `http://${BASE_DOMAIN}`).pathname === "/login",
+    },
+    {
+      name: "apex / for a signed-in user without any workspace renders the no-workspace page",
+      as: { email: "no-membership@tenancy.test", password: PASSWORD },
+      host: BASE_DOMAIN,
+      method: "GET",
+      path: "/",
+      expectStatus: 200,
+    },
+    {
+      name: "container health probe on localhost bypasses workspace resolution",
+      as: "anonymous",
+      host: "localhost",
+      method: "GET",
+      path: "/api/health",
+      expectStatus: 200,
+    },
+    {
+      name: "workspace /login forwards to apex login with the absolute workspace target",
+      as: "anonymous",
+      host: `alpha.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/login?returnUrl=/foo",
+      expectStatus: [307, 308],
+      expectLocation: (location) =>
+        location ===
+        `http://${BASE_DOMAIN}/login?returnUrl=${encodeURIComponent(`http://alpha.${BASE_DOMAIN}/foo`)}`,
+    },
+    {
+      name: "workspace /login drops an off-site returnUrl",
+      as: "anonymous",
+      host: `alpha.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/login?returnUrl=//evil.example",
+      expectStatus: [307, 308],
+      expectLocation: (location) => {
+        if (!location) return false;
+        const target = new URL(location).searchParams.get("returnUrl") ?? "";
+        return target.endsWith(`alpha.${BASE_DOMAIN}/`);
+      },
+    },
+    own(`/api/calendars/${alphaCal.id}`),
+    foreign("GET", `/api/calendars/${betaCal.id}`),
+    foreign("PATCH", `/api/calendars/${betaCal.id}`, { name: "pwned" }),
+    foreign("DELETE", `/api/calendars/${betaCal.id}`),
+    own(`/api/shifts?calendarId=${alphaCal.id}`),
+    foreign("GET", `/api/shifts?calendarId=${betaCal.id}`),
+    foreign("POST", "/api/shifts", { calendarId: betaCal.id, date: "2026-09-28", startTime: "08:00", endTime: "16:00", title: "x" }),
+    foreign("GET", `/api/shifts/stats?calendarId=${betaCal.id}`),
+    own(`/api/shifts/${alphaCal.shiftId}`),
+    foreign("GET", `/api/shifts/${betaCal.shiftId}`),
+    foreign("PUT", `/api/shifts/${betaCal.shiftId}`, { title: "pwned" }),
+    foreign("DELETE", `/api/shifts/${betaCal.shiftId}`),
+    foreign("GET", `/api/shifts/${betaCal.shiftId}/signups`),
+    foreign("POST", `/api/shifts/${betaCal.shiftId}/signups`, {}),
+    foreign("DELETE", `/api/shifts/${betaCal.shiftId}/signups/${alphaOwner.id}`),
+    own(`/api/notes?calendarId=${alphaCal.id}`),
+    foreign("GET", `/api/notes?calendarId=${betaCal.id}`),
+    foreign("POST", "/api/notes", { calendarId: betaCal.id, date: "2026-09-28", note: "x" }),
+    own(`/api/notes/${alphaCal.noteId}`),
+    foreign("GET", `/api/notes/${betaCal.noteId}`),
+    foreign("PUT", `/api/notes/${betaCal.noteId}`, { note: "pwned" }),
+    foreign("DELETE", `/api/notes/${betaCal.noteId}`),
+    own(`/api/presets?calendarId=${alphaCal.id}`),
+    foreign("GET", `/api/presets?calendarId=${betaCal.id}`),
+    foreign("POST", "/api/presets", { calendarId: betaCal.id, title: "x", startTime: "08:00", endTime: "16:00" }),
+    foreign("PATCH", "/api/presets/reorder", { calendarId: betaCal.id, presetOrders: [] }),
+    own(`/api/presets/${alphaCal.presetId}`),
+    foreign("GET", `/api/presets/${betaCal.presetId}`),
+    foreign("PATCH", `/api/presets/${betaCal.presetId}`, { title: "pwned" }),
+    foreign("DELETE", `/api/presets/${betaCal.presetId}`),
+    own(`/api/external-syncs?calendarId=${alphaCal.id}`),
+    foreign("GET", `/api/external-syncs?calendarId=${betaCal.id}`),
+    foreign("POST", "/api/external-syncs", { calendarId: betaCal.id, name: "x", calendarUrl: "http://127.0.0.1:9/x.ics" }),
+    own(`/api/external-syncs/${alphaCal.syncId}`),
+    foreign("GET", `/api/external-syncs/${betaCal.syncId}`),
+    foreign("PATCH", `/api/external-syncs/${betaCal.syncId}`, { name: "pwned" }),
+    foreign("DELETE", `/api/external-syncs/${betaCal.syncId}`),
+    foreign("POST", `/api/external-syncs/${betaCal.syncId}/sync`),
+    own(`/api/sync-logs?calendarId=${alphaCal.id}`),
+    foreign("GET", `/api/sync-logs?calendarId=${betaCal.id}`),
+    foreign("PATCH", `/api/sync-logs?calendarId=${betaCal.id}&action=markErrorsAsRead`),
+    foreign("DELETE", `/api/sync-logs?calendarId=${betaCal.id}`),
+    foreign("POST", "/api/export/ics", { calendarIds: [betaCal.id] }),
+    foreign("POST", "/api/export/pdf", { calendarIds: [betaCal.id] }),
+    foreign("DELETE", `/api/calendars/${betaCal.id}/shares/${betaCal.shareId}`),
+    {
+      name: "shared member gets 404 for a beta calendar shared with them via alpha's host",
+      as: seeded.users.sharedMember,
+      host: alphaHost,
+      method: "GET",
+      path: `/api/calendars/${betaCal.id}`,
+      expectStatus: 404,
+    },
+    {
+      name: "shared member can GET the beta calendar shared with them via beta's host",
+      as: seeded.users.sharedMember,
+      host: betaHost,
+      method: "GET",
+      path: `/api/calendars/${betaCal.id}`,
+      expectStatus: 200,
+    },
+    {
+      name: "beta owner gets 404 for their own calendar via alpha's host",
+      as: betaOwner,
+      host: alphaHost,
+      method: "GET",
+      path: `/api/calendars/${betaCal.id}`,
+      expectStatus: 404,
+    },
+    {
+      name: "beta owner can GET their own calendar via beta's host",
+      as: betaOwner,
+      host: betaHost,
+      method: "GET",
+      path: `/api/calendars/${betaCal.id}`,
+      expectStatus: 200,
+    },
+    {
+      name: "beta's shift survived every cross-workspace write attempt",
+      as: betaOwner,
+      host: betaHost,
+      method: "GET",
+      path: `/api/shifts/${betaCal.shiftId}`,
+      expectStatus: 200,
+    },
+  ];
+}
 
 async function main(): Promise<void> {
   await loadDbBackedModules();
@@ -400,10 +595,10 @@ async function main(): Promise<void> {
   runPureChecks();
 
   console.log("\nSeeding two workspaces via Drizzle...");
-  await seed();
+  const seeded = await seed();
 
   console.log("\nStage 2: HTTP isolation matrix");
-  for (const row of matrix) {
+  for (const row of buildMatrix(seeded)) {
     await runRow(row);
   }
 
