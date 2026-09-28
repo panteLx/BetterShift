@@ -438,7 +438,9 @@
   },
   "system": {
     "unavailable": "Système indisponible",
-    "unavailableDescription": "Le système est actuellement indisponible en raison d'une erreur critique. Veuillez réessayer ultérieurement ou contacter un administrateur."
+    "unavailableDescription": "Le système est actuellement indisponible en raison d'une erreur critique. Veuillez réessayer ultérieurement ou contacter un administrateur.",
+    "workspaceNotFound": "Espace de travail introuvable",
+    "workspaceNotFoundDescription": "Ce sous-domaine n'est associé à aucun espace de travail."
   },
   "guest": {
     "viewingAsGuest": "Vous consultez en tant qu'invité",

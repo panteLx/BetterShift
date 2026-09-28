@@ -45,6 +45,7 @@
  * import-time side effect; the DB-backed modules are therefore loaded with
  * a dynamic import after the check instead of a static one.
  */
+import http from "node:http";
 import path from "node:path";
 import { hashPassword } from "better-auth/crypto";
 import { isValidSlugFormat, isReservedSlug } from "../lib/workspace-slugs";
@@ -230,6 +231,34 @@ export interface MatrixRow {
   path: string;
   body?: unknown;
   expectStatus: number | number[];
+  /** Checked against the response's Location header (redirects are never followed). */
+  expectLocation?: (location: string | null) => boolean;
+}
+
+interface HttpResponse {
+  status: number;
+  headers: http.IncomingHttpHeaders;
+  text: string;
+}
+
+// node:http, not fetch: undici silently replaces a caller-set Host header. Redirects are never followed.
+function httpRequest(
+  path: string,
+  method: string,
+  headers: Record<string, string>,
+  body?: string
+): Promise<HttpResponse> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(new URL(path, APP_URL), { method, headers }, (res) => {
+      let text = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => (text += chunk));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, headers: res.headers, text }));
+    });
+    req.on("error", reject);
+    if (body !== undefined) req.write(body);
+    req.end();
+  });
 }
 
 const sessionCookies = new Map<string, string>();
@@ -239,15 +268,16 @@ async function signIn(email: string, password: string, host: string): Promise<st
   const cached = sessionCookies.get(key);
   if (cached) return cached;
 
-  const res = await fetch(`${APP_URL}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: { "content-type": "application/json", host, origin: `http://${host}` },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) {
-    throw new Error(`Sign-in failed for ${email}@${host}: ${res.status} ${await res.text()}`);
+  const res = await httpRequest(
+    "/api/auth/sign-in/email",
+    "POST",
+    { "content-type": "application/json", host, origin: `http://${host}` },
+    JSON.stringify({ email, password })
+  );
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Sign-in failed for ${email}@${host}: ${res.status} ${res.text}`);
   }
-  const cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+  const cookie = (res.headers["set-cookie"] ?? []).map((c) => c.split(";")[0]).join("; ");
   sessionCookies.set(key, cookie);
   return cookie;
 }
@@ -263,13 +293,18 @@ export async function runRow(row: MatrixRow): Promise<boolean> {
     }
     if (row.body !== undefined) headers["content-type"] = "application/json";
 
-    const res = await fetch(`${APP_URL}${row.path}`, {
-      method: row.method,
+    const res = await httpRequest(
+      row.path,
+      row.method,
       headers,
-      body: row.body !== undefined ? JSON.stringify(row.body) : undefined,
-    });
-    const ok = expected.includes(res.status);
-    check(`${row.name} (got ${res.status}, want ${expected.join("|")})`, ok);
+      row.body !== undefined ? JSON.stringify(row.body) : undefined
+    );
+    const location = res.headers.location ?? null;
+    const ok =
+      expected.includes(res.status) &&
+      (!row.expectLocation || row.expectLocation(location));
+    const locationNote = row.expectLocation ? `, location ${location}` : "";
+    check(`${row.name} (got ${res.status}${locationNote}, want ${expected.join("|")})`, ok);
     return ok;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -296,6 +331,48 @@ export const matrix: MatrixRow[] = [
     method: "GET",
     path: "/api/workspace",
     expectStatus: 404,
+  },
+  {
+    name: "GET /api/workspace on a known workspace returns that workspace",
+    as: "anonymous",
+    host: `alpha.${BASE_DOMAIN}`,
+    method: "GET",
+    path: "/api/workspace",
+    expectStatus: 200,
+  },
+  {
+    name: "apex / without a session redirects toward login",
+    as: "anonymous",
+    host: BASE_DOMAIN,
+    method: "GET",
+    path: "/",
+    expectStatus: [307, 308],
+    expectLocation: (location) =>
+      !!location && new URL(location, `http://${BASE_DOMAIN}`).pathname === "/login",
+  },
+  {
+    name: "workspace /login forwards to apex login with the absolute workspace target",
+    as: "anonymous",
+    host: `alpha.${BASE_DOMAIN}`,
+    method: "GET",
+    path: "/login?returnUrl=/foo",
+    expectStatus: [307, 308],
+    expectLocation: (location) =>
+      location ===
+      `http://${BASE_DOMAIN}/login?returnUrl=${encodeURIComponent(`http://alpha.${BASE_DOMAIN}/foo`)}`,
+  },
+  {
+    name: "workspace /login drops an off-site returnUrl",
+    as: "anonymous",
+    host: `alpha.${BASE_DOMAIN}`,
+    method: "GET",
+    path: "/login?returnUrl=//evil.example",
+    expectStatus: [307, 308],
+    expectLocation: (location) => {
+      if (!location) return false;
+      const target = new URL(location).searchParams.get("returnUrl") ?? "";
+      return target.endsWith(`alpha.${BASE_DOMAIN}/`);
+    },
   },
 ];
 

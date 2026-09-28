@@ -11,8 +11,18 @@ import { rateLimit } from "@/lib/rate-limiter";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/auth/admin";
 import { db } from "@/lib/db";
-import { sql } from "drizzle-orm";
-import { user } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { member, user } from "@/lib/db/schema";
+import {
+  resolveWorkspaceFromHost,
+  getTenancyConfigError,
+} from "@/lib/workspace";
+import {
+  BETTER_AUTH_URL,
+  MULTI_TENANT,
+  TENANT_BASE_DOMAIN,
+} from "@/lib/auth/env";
+import { safeReturnUrl } from "@/lib/safe-return-url";
 
 // =====================================================
 // Health Check Cache (In-Memory)
@@ -84,6 +94,22 @@ function redirectToLogin(request: NextRequest) {
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("returnUrl", pathname + search);
   return NextResponse.redirect(loginUrl);
+}
+
+// Scheme/port come from BETTER_AUTH_URL: behind a TLS-terminating proxy the request itself looks like plain http.
+const APEX = new URL(BETTER_AUTH_URL);
+
+function workspaceOrigin(slug: string): string {
+  return `${APEX.protocol}//${slug}.${TENANT_BASE_DOMAIN}${APEX.port ? `:${APEX.port}` : ""}`;
+}
+
+async function earliestMembershipSlug(userId: string): Promise<string | null> {
+  const row = await db.query.member.findFirst({
+    where: eq(member.userId, userId),
+    orderBy: (m, { asc }) => [asc(m.createdAt)],
+    with: { organization: { columns: { slug: true } } },
+  });
+  return row?.organization.slug ?? null;
 }
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -175,8 +201,9 @@ export async function proxy(request: NextRequest) {
     try {
       const status = await getCachedHealthStatus();
 
-      // Only redirect to home if we have a definitive healthy result
-      if (status === "healthy") {
+      // Only redirect to home if we have a definitive healthy result; a tenancy
+      // misconfiguration redirects back here, so stay put to avoid a loop.
+      if (status === "healthy" && !getTenancyConfigError()) {
         return NextResponse.redirect(new URL("/", request.url));
       }
 
@@ -213,6 +240,87 @@ export async function proxy(request: NextRequest) {
       );
       // Continue to authentication/authorization checks below
     }
+  }
+
+  // =====================================================
+  // Multi-Tenant Workspace Routing (only when MULTI_TENANT=true)
+  // =====================================================
+  if (MULTI_TENANT) {
+    const configError = getTenancyConfigError();
+    if (configError) {
+      console.error(`[Proxy] Multi-tenant misconfiguration: ${configError}`);
+      if (!isHealthCheckExempt) {
+        return NextResponse.redirect(
+          new URL("/system-unavailable", request.url)
+        );
+      }
+      return nextWithNonce(request);
+    }
+
+    const publicExemptRoutes = [
+      "/api/auth",
+      "/api/version",
+      "/api/releases",
+      "/api/announcements",
+      "/api/health",
+      "/api/feed/",
+      "/manifest.json",
+    ];
+    const isPublicExempt = publicExemptRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    const resolution = await resolveWorkspaceFromHost(
+      request.headers.get("host")
+    );
+
+    if (resolution.kind === "unknown") {
+      return NextResponse.rewrite(new URL("/workspace-not-found", request.url), {
+        status: 404,
+      });
+    }
+
+    if (resolution.kind === "apex") {
+      if (isPublicExempt || pathname === "/login" || pathname === "/register") {
+        return nextWithNonce(request);
+      }
+      if (pathname === "/") {
+        const sessionToken =
+          request.cookies.get("__Secure-better-auth.session_token") ||
+          request.cookies.get("better-auth.session_token");
+        if (sessionToken) {
+          try {
+            const session = await auth.api.getSession({
+              headers: request.headers,
+            });
+            if (session?.user) {
+              const slug = await earliestMembershipSlug(session.user.id);
+              if (slug) {
+                return NextResponse.redirect(`${workspaceOrigin(slug)}/`);
+              }
+            }
+          } catch (error) {
+            console.error("[Proxy] Apex session check failed:", error);
+          }
+        }
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      return new NextResponse(null, { status: 404 });
+    }
+
+    // Sign-in lives on the apex; hand it the absolute workspace URL to come back to.
+    if (pathname === "/login" || pathname === "/register") {
+      const target = safeReturnUrl(
+        request.nextUrl.searchParams.get("returnUrl")
+      );
+      const apexUrl = new URL(pathname, APEX);
+      apexUrl.searchParams.set(
+        "returnUrl",
+        `${workspaceOrigin(resolution.workspace.slug)}${target}`
+      );
+      return NextResponse.redirect(apexUrl);
+    }
+    // Other workspace paths fall through to the auth guard; non-members get role: null from GET /api/workspace.
   }
 
   // =====================================================
@@ -304,9 +412,9 @@ export async function proxy(request: NextRequest) {
   ];
 
   // Check if the current route is public
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isPublicRoute =
+    publicRoutes.some((route) => pathname.startsWith(route)) ||
+    pathname === "/api/workspace"; // exact: anonymous callers get role: null
 
   // Allow public routes
   if (isPublicRoute) {

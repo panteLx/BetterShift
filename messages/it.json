@@ -438,7 +438,9 @@
   },
   "system": {
     "unavailable": "Sistema non disponibile",
-    "unavailableDescription": "Il sistema è attualmente non disponibile a causa di un errore critico. Riprova più tardi o contatta un amministratore."
+    "unavailableDescription": "Il sistema è attualmente non disponibile a causa di un errore critico. Riprova più tardi o contatta un amministratore.",
+    "workspaceNotFound": "Workspace non trovato",
+    "workspaceNotFoundDescription": "Questo sottodominio non è collegato a nessun workspace."
   },
   "guest": {
     "viewingAsGuest": "Stai visualizzando come ospite",

@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/client";
 import { useAuth } from "@/hooks/useAuth";
-import { safeReturnUrl } from "@/lib/safe-return-url";
+import { safeWorkspaceReturnUrl } from "@/lib/safe-return-url";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,19 @@ const SOCIAL_ICONS = {
 const secondaryButtonClass =
   "h-10 rounded-[9px] text-[13.5px] font-medium text-fg-body";
 
+function getReturnUrl(searchParams: URLSearchParams): string {
+  return safeWorkspaceReturnUrl(
+    searchParams.get("returnUrl"),
+    window.__PUBLIC_CONFIG__?.tenantBaseDomain ?? null
+  );
+}
+
+// Absolute return URLs point at a workspace subdomain, which the Next router cannot navigate to.
+function navigateTo(url: string, router: ReturnType<typeof useRouter>): void {
+  if (/^https?:\/\//.test(url)) window.location.assign(url);
+  else router.replace(url);
+}
+
 
 export default function LoginPage() {
   const t = useTranslations();
@@ -69,8 +82,7 @@ export default function LoginPage() {
   // Redirect authenticated users to home or returnUrl
   useEffect(() => {
     if (mounted && isAuthenticated) {
-      const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
-      router.replace(returnUrl);
+      navigateTo(getReturnUrl(searchParams), router);
     }
   }, [mounted, isAuthenticated, searchParams, router]);
 
@@ -176,7 +188,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
+      const returnUrl = getReturnUrl(searchParams);
       await signIn.social({
         provider,
         callbackURL: returnUrl,
@@ -192,7 +204,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
+      const returnUrl = getReturnUrl(searchParams);
       await signIn.oauth2({
         providerId: "custom-oidc",
         callbackURL: returnUrl,
@@ -336,9 +348,8 @@ export default function LoginPage() {
             type="button"
             className="flex h-10 items-center justify-center rounded-[9px] border border-dashed border-control text-[13.5px] font-medium text-fg-secondary transition-colors hover:bg-surface-panel disabled:pointer-events-none disabled:opacity-50"
             onClick={() => {
-              const returnUrl = safeReturnUrl(searchParams.get("returnUrl"));
               // replace, not push, so Back does not loop into the login redirect
-              router.replace(returnUrl);
+              navigateTo(getReturnUrl(searchParams), router);
             }}
             disabled={isLoading}
           >

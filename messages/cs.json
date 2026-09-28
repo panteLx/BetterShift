@@ -438,7 +438,9 @@
   },
   "system": {
     "unavailable": "Systém není dostupný",
-    "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce."
+    "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce.",
+    "workspaceNotFound": "Pracovní prostor nenalezen",
+    "workspaceNotFoundDescription": "Tato subdoména nepatří k žádnému pracovnímu prostoru."
   },
   "guest": {
     "viewingAsGuest": "Prohlížíte si jako host",

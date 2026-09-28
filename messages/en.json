@@ -438,7 +438,9 @@
   },
   "system": {
     "unavailable": "System Unavailable",
-    "unavailableDescription": "The system is currently unavailable due to a critical error. Please try again later or contact an administrator."
+    "unavailableDescription": "The system is currently unavailable due to a critical error. Please try again later or contact an administrator.",
+    "workspaceNotFound": "Workspace not found",
+    "workspaceNotFoundDescription": "This subdomain isn't connected to any workspace."
   },
   "guest": {
     "viewingAsGuest": "You are viewing as guest",

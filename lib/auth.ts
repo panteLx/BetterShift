@@ -25,7 +25,14 @@ import {
   BETTER_AUTH_URL,
   ALLOW_USER_REGISTRATION,
   MULTI_TENANT,
+  TENANT_BASE_DOMAIN,
 } from "@/lib/auth/env";
+
+// Scheme and port follow BETTER_AUTH_URL, matching the workspace URLs proxy.ts redirects to.
+function workspaceOriginPattern(): string {
+  const apex = new URL(BETTER_AUTH_URL);
+  return `${apex.protocol}//*.${TENANT_BASE_DOMAIN}${apex.port ? `:${apex.port}` : ""}`;
+}
 
 export const auth = betterAuth({
   // Base URL configuration (critical for reverse proxy setups)
@@ -132,6 +139,9 @@ export const auth = betterAuth({
       secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
       httpOnly: true, // Prevent XSS attacks (already default, but explicit)
     },
+    ...(MULTI_TENANT && TENANT_BASE_DOMAIN
+      ? { crossSubDomainCookies: { enabled: true, domain: TENANT_BASE_DOMAIN } }
+      : {}),
   },
 
   // User registration settings
@@ -205,7 +215,10 @@ export const auth = betterAuth({
   },
 
   // Trust host for deployment
-  trustedOrigins: BETTER_AUTH_TRUSTED_ORIGINS,
+  trustedOrigins:
+    MULTI_TENANT && TENANT_BASE_DOMAIN
+      ? [...BETTER_AUTH_TRUSTED_ORIGINS, workspaceOriginPattern()]
+      : BETTER_AUTH_TRUSTED_ORIGINS,
 });
 
 export type Session = typeof auth.$Infer.Session.session;
