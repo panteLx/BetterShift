@@ -30,6 +30,7 @@ import { InfoDialog } from "@/components/info-dialog";
 import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items";
 import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getUserInitials } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isAdmin = useIsAdmin();
+  const { data: workspace } = useWorkspace();
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
@@ -102,6 +104,9 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
               {user.name}
             </p>
             <p className="truncate text-xs text-fg-tertiary">{user.email}</p>
+            {workspace?.multiTenant && (
+              <p className="truncate text-xs text-fg-tertiary">{workspace.name}</p>
+            )}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => router.push("/profile")}>

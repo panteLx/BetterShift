@@ -1040,6 +1040,8 @@
     "browseShared": "Browse shared calendars",
     "guestTitle": "No calendar is shared publicly",
     "guestDescription": "Without an account you only see calendars that were explicitly opened to guests. If you received an access link, open it directly – the link carries the access.",
+    "noWorkspaceAccessTitle": "No access to this workspace",
+    "noWorkspaceAccessDescription": "You're signed in at {workspace}, but don't belong to any workspace here yet. Please ask for an invitation.",
     "pasteAccessLink": "Paste access link",
     "accessLinkDescription": "Paste the link you received – or just the token from it.",
     "accessLinkLabel": "Access link",

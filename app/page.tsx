@@ -19,6 +19,7 @@ import { useNoteActions } from "@/hooks/useNoteActions";
 import { useExternalSync } from "@/hooks/useExternalSync";
 import { useDialogStates } from "@/hooks/useDialogStates";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
@@ -26,6 +27,7 @@ import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { CalendarViewMode, useCalendarViewMode } from "@/hooks/useCalendarViewMode";
 import { EmptyCalendarState } from "@/components/empty-calendar-state";
 import { GuestEmptyState } from "@/components/guest-empty-state";
+import { NoWorkspaceAccessState } from "@/components/no-workspace-access-state";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { CalendarCompareSheet } from "@/components/calendar-compare-sheet";
 import { CompareWorkspace } from "@/components/compare-workspace";
@@ -56,6 +58,7 @@ function HomeContent() {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
   const { isGuest } = useAuth();
+  const { data: workspace } = useWorkspace();
 
   const { versionInfo } = useVersionUpdateCheck();
   const telemetryPrompt = versionInfo?.telemetryPrompt;
@@ -487,6 +490,9 @@ function HomeContent() {
 
   if (calendars.length === 0) {
     if (isGuest) return <GuestEmptyState />;
+    if (workspace?.multiTenant && workspace.role === null) {
+      return <NoWorkspaceAccessState workspaceName={workspace.name} />;
+    }
     return (
       <>
         <EmptyCalendarState

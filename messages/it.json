@@ -1040,6 +1040,8 @@
     "browseShared": "Sfoglia condivisi",
     "guestTitle": "Nessun calendario condiviso pubblicamente",
     "guestDescription": "Senza account vedi solo i calendari aperti esplicitamente agli ospiti. Se hai ricevuto un link di accesso, aprilo direttamente: il link contiene l'accesso.",
+    "noWorkspaceAccessTitle": "Nessun accesso a questo spazio di lavoro",
+    "noWorkspaceAccessDescription": "Hai effettuato l'accesso su {workspace}, ma non appartieni ancora a nessuno spazio di lavoro qui. Richiedi un invito.",
     "pasteAccessLink": "Incolla link di accesso",
     "accessLinkDescription": "Incolla il link che hai ricevuto, oppure solo il token che contiene.",
     "accessLinkLabel": "Link di accesso",

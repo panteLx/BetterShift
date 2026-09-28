@@ -104,4 +104,7 @@ export const queryKeys = {
 
   // App version / update check
   version: ["version"] as const,
+
+  // Multi-tenancy: current request's workspace
+  workspace: ["workspace"] as const,
 } as const;
