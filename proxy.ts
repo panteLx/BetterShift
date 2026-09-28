@@ -343,8 +343,14 @@ export async function proxy(request: NextRequest) {
       const rateLimitResponse = rateLimit(request, null, "token-validation");
       if (rateLimitResponse) return rateLimitResponse;
 
-      // Validate the token
-      const validation = await validateAccessToken(token);
+      // Unknown, foreign-workspace and revoked tokens all take the invalid path below.
+      const resolution = await resolveWorkspaceFromHost(
+        request.headers.get("host")
+      );
+      const validation =
+        resolution.kind === "workspace"
+          ? await validateAccessToken(token, resolution.workspace.id)
+          : null;
 
       if (validation) {
         // Token is valid - store in cookie and redirect to calendar

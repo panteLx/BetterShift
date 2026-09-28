@@ -115,7 +115,7 @@ async function resolveCalendarAccess(
   const guestBundle = calendar.guestBundle ? sanitizeBundle(calendar.guestBundle) : null;
 
   if (!userId) {
-    const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId);
+    const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId, workspaceId);
     if (tokenBundleId) {
       const bundle = await getBundleById(tokenBundleId);
       if (bundle) return bundleAccess(calendar, "token", bundle);
@@ -142,7 +142,7 @@ async function resolveCalendarAccess(
     return bundleAccess(calendar, "share", sanitizeBundle(share.bundle));
   }
 
-  const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId);
+  const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId, workspaceId);
   if (tokenBundleId) {
     const bundle = await getBundleById(tokenBundleId);
     if (bundle) return bundleAccess(calendar, "token", bundle);
@@ -361,10 +361,10 @@ export async function getShiftSignupPermission(
 }
 
 /**
- * Safety net for getUserAccessibleCalendars: shares, subscriptions and access-token
- * cookies can each point at a calendar in a workspace other than the one being
- * browsed (a user can belong to several) — restricts a candidate id set to those
- * whose calendar actually lives in the given workspace.
+ * Safety net for getUserAccessibleCalendars: shares and subscriptions can point at
+ * a calendar in a workspace other than the one being browsed (a user can belong to
+ * several). Token-cookie ids are already scoped by validateAccessToken's workspace
+ * check; this re-check keeps them covered should that ever regress.
  */
 async function filterIdsToWorkspace(
   ids: Iterable<string>,
@@ -425,13 +425,13 @@ export async function getUserAccessibleCalendars(
     // Token-based access and the guest-access flag don't depend on each
     // other, so resolve them concurrently instead of one after another.
     const [tokens, guestAccessEnabled] = await Promise.all([
-      getTokensFromCookie(),
+      getTokensFromCookie(workspace.id),
       allowGuestAccess(),
     ]);
 
     // First, check for token-based access (always works, regardless of allowGuestAccess)
     for (const tokenData of tokens) {
-      const validation = await validateAccessToken(tokenData.token);
+      const validation = await validateAccessToken(tokenData.token, workspace.id);
       if (validation && validation.calendarId === tokenData.calendarId) {
         results.push({ id: tokenData.calendarId, isOwner: false });
         existingIds.add(tokenData.calendarId);
@@ -458,8 +458,8 @@ export async function getUserAccessibleCalendars(
       }
     }
 
-    // Safety net: a token cookie can name any calendar id regardless of workspace
-    // (see filterIdsToWorkspace above) — the guest-bundle branch is already scoped.
+    // Tokens are workspace-scoped by validateAccessToken and guest bundles by the
+    // query above; this is the belt-and-braces re-check (see filterIdsToWorkspace).
     const workspaceIds = await filterIdsToWorkspace(
       results.map((r) => r.id),
       workspace.id
@@ -512,18 +512,18 @@ export async function getUserAccessibleCalendars(
     existingIds.add(sub.calendarId);
   }
 
-  const tokens = await getTokensFromCookie();
+  const tokens = await getTokensFromCookie(workspace.id);
   for (const tokenData of tokens) {
     if (existingIds.has(tokenData.calendarId)) continue;
-    const validation = await validateAccessToken(tokenData.token);
+    const validation = await validateAccessToken(tokenData.token, workspace.id);
     if (validation && validation.calendarId === tokenData.calendarId) {
       results.push({ id: tokenData.calendarId, isOwner: false });
       existingIds.add(tokenData.calendarId);
     }
   }
 
-  // Safety net: shares, subscriptions and tokens can each name a calendar in a
-  // workspace other than the one being browsed — owned ids are already scoped above.
+  // Shares and subscriptions can name a calendar in another workspace; owned ids and
+  // tokens (validateAccessToken) are already scoped — see filterIdsToWorkspace.
   const workspaceIds = await filterIdsToWorkspace(
     results.filter((r) => !r.isOwner).map((r) => r.id),
     workspace.id

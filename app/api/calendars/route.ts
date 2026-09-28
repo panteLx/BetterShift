@@ -77,11 +77,11 @@ export async function GET(request: Request) {
 
     // Get token bundles (works for both guests and authenticated users)
     const tokens: Map<string, string> = new Map(); // calendarId -> bundleId
-    const userTokens = await getTokensFromCookie();
+    const userTokens = await getTokensFromCookie(workspace.id);
     for (const tokenData of userTokens) {
       // Validate token is still valid — use the freshly validated bundle,
       // not the cookie's own (possibly stale) copy
-      const validation = await validateAccessToken(tokenData.token);
+      const validation = await validateAccessToken(tokenData.token, workspace.id);
       if (validation && validation.calendarId === tokenData.calendarId) {
         tokens.set(tokenData.calendarId, validation.bundleId);
       }

@@ -110,6 +110,8 @@ let shiftPresets: SchemaModule["shiftPresets"];
 let externalSyncs: SchemaModule["externalSyncs"];
 let calendarPermissionBundles: SchemaModule["calendarPermissionBundles"];
 let calendarShares: SchemaModule["calendarShares"];
+let calendarAccessTokens: SchemaModule["calendarAccessTokens"];
+let calendarFeedTokens: SchemaModule["calendarFeedTokens"];
 let syncLogs: SchemaModule["syncLogs"];
 let announcements: SchemaModule["announcements"];
 let auditLogs: SchemaModule["auditLogs"];
@@ -137,6 +139,8 @@ async function loadDbBackedModules(): Promise<void> {
     externalSyncs,
     calendarPermissionBundles,
     calendarShares,
+    calendarAccessTokens,
+    calendarFeedTokens,
     syncLogs,
     announcements,
     auditLogs,
@@ -206,6 +210,14 @@ export interface SeedData {
   calendars: {
     alpha: SeedCalendar;
     beta: SeedCalendar;
+  };
+  tokens: {
+    /** Active share link for alpha's calendar. */
+    alphaShare: string;
+    /** Deactivated share link for alpha's calendar. */
+    alphaShareRevoked: string;
+    /** alphaOwner's ICS feed token for alpha's calendar. */
+    alphaFeed: string;
   };
 }
 
@@ -285,6 +297,20 @@ async function seedCalendar(
   return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, syncLogId: syncLog.id, shareId: share.id, bundleId: bundle.id };
 }
 
+async function seedShareToken(calendar: SeedCalendar, createdBy: string, isActive = true): Promise<string> {
+  const token = crypto.randomUUID().replace(/-/g, "");
+  await db
+    .insert(calendarAccessTokens)
+    .values({ calendarId: calendar.id, token, bundleId: calendar.bundleId, createdBy, isActive });
+  return token;
+}
+
+async function seedFeedToken(calendarId: string, userId: string): Promise<string> {
+  const token = crypto.randomUUID().replace(/-/g, "");
+  await db.insert(calendarFeedTokens).values({ calendarId, userId, token, createdAt: new Date() });
+  return token;
+}
+
 async function seedWorkspace(slug: string): Promise<{ id: string; slug: string }> {
   const id = crypto.randomUUID();
   await db.insert(organization).values({ id, slug, name: slug });
@@ -316,6 +342,11 @@ export async function seed(): Promise<SeedData> {
     workspaces: { alpha, beta },
     users: { alphaOwner, betaOwner, sharedMember, noMembership, alphaMember, admin },
     calendars: { alpha: alphaCalendar, beta: betaCalendar },
+    tokens: {
+      alphaShare: await seedShareToken(alphaCalendar, alphaOwner.id),
+      alphaShareRevoked: await seedShareToken(alphaCalendar, alphaOwner.id, false),
+      alphaFeed: await seedFeedToken(alphaCalendar.id, alphaOwner.id),
+    },
   };
 }
 
@@ -465,6 +496,17 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     path,
     expectStatus: 200,
   });
+
+  // Unknown, foreign-workspace and wrong-host feed tokens must be indistinguishable.
+  const feedNotFound: MatrixRow = {
+    name: "",
+    as: "anonymous",
+    host: alphaHost,
+    method: "GET",
+    path: "",
+    expectStatus: 404,
+    expectBody: (body) => JSON.stringify(body) === JSON.stringify({ error: "Not found" }),
+  };
 
   return [
     {
@@ -807,7 +849,90 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       path: `/api/calendars/${betaCal.id}`,
       expectStatus: 200,
     },
+    // After the transfers above alpha's calendar is back with alphaOwner, whose feed this is.
+    {
+      name: "alpha's feed is served on alpha's host",
+      as: "anonymous",
+      host: alphaHost,
+      method: "GET",
+      path: `/api/feed/${seeded.tokens.alphaFeed}.ics`,
+      expectStatus: 200,
+    },
+    { ...feedNotFound, name: "alpha's feed 404s on beta's host", host: betaHost, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
+    { ...feedNotFound, name: "alpha's feed 404s on the apex", host: BASE_DOMAIN, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
+    { ...feedNotFound, name: "an unknown feed token 404s the same way on alpha's host", host: alphaHost, path: "/api/feed/does-not-exist.ics" },
   ];
+}
+
+// Stateful (the grant cookie from one response feeds the next), so kept out of the matrix.
+// Share-token requests share one 10/min IP bucket ("token-validation"): keep this stage under it.
+async function checkShareTokens(seeded: SeedData): Promise<void> {
+  console.log("\nStage 2b: share links vs. workspace");
+  const alphaHost = `alpha.${BASE_DOMAIN}`;
+  const betaHost = `beta.${BASE_DOMAIN}`;
+  const alphaCalId = seeded.calendars.alpha.id;
+  const grantCookie = (res: HttpResponse): string | null =>
+    (res.headers["set-cookie"] ?? []).find((c) => c.startsWith("calendar_access_tokens=")) ?? null;
+  const landing = (res: HttpResponse) => {
+    const url = new URL(res.headers.location ?? "", "http://placeholder");
+    return `${res.status} ${url.pathname}${url.search}`;
+  };
+  const share = (token: string, host: string) => httpRequest(`/share/token/${token}`, "GET", { host });
+  const tryCheck = async (name: string, fn: () => Promise<boolean>) => {
+    try {
+      check(name, await fn());
+    } catch (error) {
+      check(`${name} (threw: ${error instanceof Error ? error.message : String(error)})`, false);
+    }
+  };
+
+  let grant: string | null = null;
+  await tryCheck("alpha share link on alpha's host redirects to the calendar and sets a host-only grant", async () => {
+    const res = await share(seeded.tokens.alphaShare, alphaHost);
+    const cookie = grantCookie(res);
+    console.log(`        -> ${landing(res)}`);
+    grant = cookie ? cookie.split(";")[0] : null;
+    return landing(res) === `307 /?id=${alphaCalId}` && !!cookie && !/;\s*domain=/i.test(cookie);
+  });
+
+  let unknownOnBeta = "";
+  await tryCheck("an unknown share token on beta's host redirects home without a grant", async () => {
+    const res = await share("does-not-exist", betaHost);
+    unknownOnBeta = landing(res);
+    return unknownOnBeta === "307 /" && !grantCookie(res);
+  });
+  await tryCheck("alpha share link on beta's host looks exactly like an unknown token", async () => {
+    const res = await share(seeded.tokens.alphaShare, betaHost);
+    return landing(res) === unknownOnBeta && !grantCookie(res);
+  });
+  await tryCheck("a revoked alpha share link on alpha's host looks exactly like an unknown token", async () => {
+    const res = await share(seeded.tokens.alphaShareRevoked, alphaHost);
+    return landing(res) === unknownOnBeta && !grantCookie(res);
+  });
+
+  // Fresh user: the matrix above already shares alpha's calendar with alphaMember.
+  const grantHolder = await seedUser("grant-holder@tenancy.test");
+  await seedMemberships(seeded.workspaces.alpha.id, [[grantHolder, "member"]]);
+  const withGrant = async (as: SeedUser, host: string, path: string, useGrant: boolean) => {
+    const session = await signIn(as.email, as.password, host);
+    const cookie = useGrant && grant ? `${session}; ${grant}` : session;
+    return httpRequest(path, "GET", { host, cookie });
+  };
+  await tryCheck("control: a fresh alpha member without the grant cannot open alpha's calendar", async () =>
+    (await withGrant(grantHolder, alphaHost, `/api/calendars/${alphaCalId}`, false)).status !== 200
+  );
+  await tryCheck("the grant opens alpha's calendar for that member on alpha's host", async () =>
+    !!grant && (await withGrant(grantHolder, alphaHost, `/api/calendars/${alphaCalId}`, true)).status === 200
+  );
+  await tryCheck("the same grant replayed on beta's host 404s alpha's calendar", async () =>
+    !!grant && (await withGrant(seeded.users.betaOwner, betaHost, `/api/calendars/${alphaCalId}`, true)).status === 404
+  );
+  await tryCheck("the same grant replayed on beta's host keeps alpha's calendar out of the list", async () => {
+    if (!grant) return false;
+    const res = await withGrant(seeded.users.betaOwner, betaHost, "/api/calendars", true);
+    const list = JSON.parse(res.text) as Array<{ id: string }>;
+    return res.status === 200 && list.length > 0 && !list.some((c) => c.id === alphaCalId);
+  });
 }
 
 // Destructive, so kept out of the shared matrix: every case seeds its own workspace and users.
@@ -944,6 +1069,8 @@ async function main(): Promise<void> {
   for (const row of buildMatrix(seeded)) {
     await runRow(row);
   }
+
+  await checkShareTokens(seeded);
 
   await checkAccountDeletion(seeded);
 

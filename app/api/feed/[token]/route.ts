@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/rate-limiter";
 import { canReadFeed, findFeedToken } from "@/lib/calendar-feed";
 import { buildIcsCalendar } from "@/lib/ics";
 import { defaultLocale } from "@/lib/locales";
+import { resolveWorkspaceFromHost } from "@/lib/workspace";
 
 const notFound = () => NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -30,13 +31,21 @@ export async function GET(
     );
     if (rateLimitResponse) return rateLimitResponse;
 
-    if (!(await canReadFeed(feedToken.userId, feedToken.calendarId))) return notFound();
-
     const calendar = await db.query.calendars.findFirst({
       where: (c, { eq }) => eq(c.id, feedToken.calendarId),
-      columns: { id: true, name: true, splitShiftsEnabled: true },
+      columns: { id: true, name: true, splitShiftsEnabled: true, workspaceId: true },
     });
     if (!calendar) return notFound();
+
+    // Feed URLs are minted on the calendar's own workspace host; any other host gets the unknown-token 404.
+    const resolution = await resolveWorkspaceFromHost(request.headers.get("host"));
+    if (resolution.kind !== "workspace" || resolution.workspace.id !== calendar.workspaceId) {
+      return notFound();
+    }
+
+    if (!(await canReadFeed(feedToken.userId, calendar.id, calendar.workspaceId))) {
+      return notFound();
+    }
 
     void db
       .update(calendarFeedTokens)

@@ -3,6 +3,7 @@ import { calendarAccessTokens, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getRequestWorkspace } from "@/lib/workspace";
 
 /**
  * Cookie name for storing validated access tokens
@@ -31,14 +32,16 @@ export interface TokenCookieData {
 
 /**
  * Validate an access token
- * Checks: exists, active, not expired
+ * Checks: exists, calendar lives in the given workspace, active, not expired
  *
  * @param token - The token string to validate
+ * @param workspaceId - Workspace the token's calendar must belong to
  * @param skipActiveCheck - If true, only checks expiration (for cookie cleanup)
  * @returns Token data if valid, null otherwise
  */
 export async function validateAccessToken(
   token: string,
+  workspaceId: string,
   skipActiveCheck = false
 ): Promise<{
   id: string;
@@ -55,6 +58,7 @@ export async function validateAccessToken(
         expiresAt: calendarAccessTokens.expiresAt,
         isActive: calendarAccessTokens.isActive,
         calendarName: calendars.name,
+        calendarWorkspaceId: calendars.workspaceId,
       })
       .from(calendarAccessTokens)
       .innerJoin(calendars, eq(calendarAccessTokens.calendarId, calendars.id))
@@ -62,6 +66,11 @@ export async function validateAccessToken(
       .limit(1);
 
     if (!tokenData) {
+      return null;
+    }
+
+    // A foreign-workspace token must look exactly like an unknown one.
+    if (tokenData.calendarWorkspaceId !== workspaceId) {
       return null;
     }
 
@@ -167,9 +176,12 @@ export function storeTokenInCookie(
  * Get all validated tokens from cookie (for Server Components)
  * Also removes expired tokens from the cookie (but keeps inactive ones)
  *
+ * @param workspaceId - Defaults to the request workspace; tokens of other workspaces are dropped
  * @returns Array of token data
  */
-export async function getTokensFromCookie(): Promise<TokenCookieData[]> {
+export async function getTokensFromCookie(
+  workspaceId?: string
+): Promise<TokenCookieData[]> {
   try {
     const cookieStore = await cookies();
     const tokenCookie = cookieStore.get(TOKEN_COOKIE_NAME);
@@ -192,6 +204,9 @@ export async function getTokensFromCookie(): Promise<TokenCookieData[]> {
         typeof t.bundleId === "string"
     );
 
+    const wsId = workspaceId ?? (await getRequestWorkspace())?.id;
+    if (!wsId) return [];
+
     // Validate each token against the database
     // Note: We skip the isActive check - only remove expired tokens
     // This allows owners to reactivate tokens without users losing access
@@ -200,7 +215,7 @@ export async function getTokensFromCookie(): Promise<TokenCookieData[]> {
 
     for (const tokenData of validTokens) {
       // skipActiveCheck = true: Only check expiration, not isActive
-      const validation = await validateAccessToken(tokenData.token, true);
+      const validation = await validateAccessToken(tokenData.token, wsId, true);
       if (validation) {
         validatedTokens.push(tokenData);
       } else {
@@ -312,13 +327,18 @@ export function generateAccessToken(): string {
  * Used by permission checks to grant token-based access.
  *
  * @param calendarId - The calendar ID to check
+ * @param workspaceId - Defaults to the request workspace
  * @returns Bundle id or null if no token grants access
  */
 export async function getTokenBundleId(
-  calendarId: string
+  calendarId: string,
+  workspaceId?: string
 ): Promise<string | null> {
   try {
-    const tokens = await getTokensFromCookie();
+    const wsId = workspaceId ?? (await getRequestWorkspace())?.id;
+    if (!wsId) return null;
+
+    const tokens = await getTokensFromCookie(wsId);
 
     // Find ALL tokens for this calendar
     const calendarTokens = tokens.filter((t) => t.calendarId === calendarId);
@@ -330,7 +350,7 @@ export async function getTokenBundleId(
     // Try to validate each token - use the first valid one
     // This handles the case where expired tokens are in the cookie
     for (const tokenData of calendarTokens) {
-      const validation = await validateAccessToken(tokenData.token);
+      const validation = await validateAccessToken(tokenData.token, wsId);
 
       if (validation && validation.calendarId === calendarId) {
         // Found a valid token - return its bundle
