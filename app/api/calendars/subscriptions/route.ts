@@ -7,14 +7,18 @@ import {
 } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { eq, and, or, ne, isNotNull, isNull, inArray } from "drizzle-orm";
-import { CalendarNotFoundError, undismissCalendar } from "@/lib/auth/permissions";
+import {
+  CalendarNotFoundError,
+  canReachPublicCalendars,
+  undismissCalendar,
+} from "@/lib/auth/permissions";
 import {
   applyGuestCeiling,
   sanitizeCapabilities,
   type Capability,
 } from "@/lib/permission-bundles";
 import type { CalendarBundleRef } from "@/lib/types";
-import { requireRequestWorkspace } from "@/lib/workspace";
+import { requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
 
 /**
  * A guest bundle's capabilities, ceiling-filtered like every other guest/link
@@ -45,27 +49,30 @@ export async function GET(request: NextRequest) {
 
   try {
     const workspace = await requireRequestWorkspace();
+    const reachPublic = await canReachPublicCalendars(user.id, workspace.id);
 
     // Get all public calendars (guestBundleId set, not owned by user)
-    const allPublicCalendars = await db.query.calendars.findMany({
-      where: and(
-        isNotNull(calendars.guestBundleId),
-        or(isNull(calendars.ownerId), ne(calendars.ownerId, user.id)),
-        eq(calendars.workspaceId, workspace.id)
-      ),
-      with: {
-        owner: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
+    const allPublicCalendars = reachPublic
+      ? await db.query.calendars.findMany({
+          where: and(
+            isNotNull(calendars.guestBundleId),
+            or(isNull(calendars.ownerId), ne(calendars.ownerId, user.id)),
+            eq(calendars.workspaceId, workspace.id)
+          ),
+          with: {
+            owner: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            guestBundle: {
+              columns: { id: true, name: true, seedKey: true, capabilities: true },
+            },
           },
-        },
-        guestBundle: {
-          columns: { id: true, name: true, seedKey: true, capabilities: true },
-        },
-      },
-    });
+        })
+      : [];
 
     // A user can belong to several workspaces, so subscriptions are filtered post-fetch.
     const userSubscriptionsAll = await db.query.userCalendarSubscriptions.findMany({
@@ -229,6 +236,7 @@ export async function GET(request: NextRequest) {
 
       // Check if it's also a shared calendar
       const share = userShares.find((s) => s.calendarId === sub.calendarId);
+      if (!share && !reachPublic) return null;
       const access = share ? shareAccess(share) : null;
 
       const capabilities = access
@@ -264,6 +272,9 @@ export async function GET(request: NextRequest) {
       dismissed: validDismissedCalendars,
     });
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Error fetching subscription calendars:", error);
     return NextResponse.json(
       { error: "Failed to fetch calendars" },

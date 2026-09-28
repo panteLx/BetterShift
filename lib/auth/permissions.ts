@@ -8,7 +8,7 @@ import {
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
 import { eq, and, isNull, isNotNull, inArray } from "drizzle-orm";
-import { getRequestWorkspace } from "@/lib/workspace";
+import { getRequestWorkspace, isWorkspaceMember } from "@/lib/workspace";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 import {
   getTokenBundleId,
@@ -23,6 +23,14 @@ import {
   type BundleDefinition,
   type Capability,
 } from "@/lib/permission-bundles";
+
+// A signed-in non-member reaches public calendars only where a guest could; always true single-tenant.
+export async function canReachPublicCalendars(
+  userId: string,
+  workspaceId: string
+): Promise<boolean> {
+  return (await isWorkspaceMember(userId, workspaceId)) || (await allowGuestAccess(workspaceId));
+}
 
 export class CalendarNotFoundError extends Error {
   constructor() {
@@ -148,8 +156,8 @@ async function resolveCalendarAccess(
     if (bundle) return bundleAccess(calendar, "token", bundle);
   }
 
-  // Authenticated users can always access public calendars they're
-  // subscribed to, regardless of the allowGuestAccess() setting.
+  // Members reach subscribed public calendars regardless of allowGuestAccess(); non-members don't.
+  if (!guestBundle || !(await canReachPublicCalendars(userId, workspaceId))) return null;
   const subscription = await db.query.userCalendarSubscriptions.findFirst({
     where: and(
       eq(userCalendarSubscriptions.calendarId, calendarId),
@@ -157,7 +165,7 @@ async function resolveCalendarAccess(
       eq(userCalendarSubscriptions.status, "subscribed")
     ),
   });
-  if (subscription && guestBundle) {
+  if (subscription) {
     return bundleAccess(calendar, "guestBundle", guestBundle);
   }
 
@@ -360,12 +368,7 @@ export async function getShiftSignupPermission(
   };
 }
 
-/**
- * Safety net for getUserAccessibleCalendars: shares and subscriptions can point at
- * a calendar in a workspace other than the one being browsed (a user can belong to
- * several). Token-cookie ids are already scoped by validateAccessToken's workspace
- * check; this re-check keeps them covered should that ever regress.
- */
+// Shares and subscriptions can name another workspace's calendar; also re-checks token ids.
 async function filterIdsToWorkspace(
   ids: Iterable<string>,
   workspaceId: string
@@ -497,12 +500,14 @@ export async function getUserAccessibleCalendars(
     }
   }
 
+  const reachPublic = await canReachPublicCalendars(userId, workspace.id);
   const subscriptionGuestBundleIds = await existingBundleIds(
     subscriptions
       .map((sub) => sub.calendar.guestBundleId)
       .filter((id): id is string => id !== null)
   );
   for (const sub of subscriptions) {
+    if (!reachPublic) break;
     if (existingIds.has(sub.calendarId)) continue;
     if (!sub.calendar.guestBundleId) continue;
     if (!subscriptionGuestBundleIds.has(sub.calendar.guestBundleId)) continue;
@@ -627,6 +632,10 @@ export async function undismissCalendar(
       eq(calendarShares.userId, userId)
     ),
   });
+
+  if (!share && !(await canReachPublicCalendars(userId, calendar.workspaceId))) {
+    throw new CalendarNotFoundError();
+  }
 
   const hasLiveGuestBundle =
     !!calendar.guestBundleId &&
