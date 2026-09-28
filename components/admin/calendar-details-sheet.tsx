@@ -16,6 +16,7 @@ import {
   useCanDeleteCalendar,
   useCanTransferCalendar,
 } from "@/hooks/useAdminAccess";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { getDateLocale } from "@/lib/locales";
 import { queryKeys } from "@/lib/query-keys";
 import { shiftVars } from "@/lib/shift-display";
@@ -39,6 +40,7 @@ export function CalendarDetailsSheet({
 }: CalendarDetailsSheetProps) {
   const t = useTranslations();
   const dateLocale = getDateLocale(useLocale());
+  const showWorkspace = usePublicConfig().auth.multiTenant;
   const { data: calendar = null, isError: loadFailed } = useQuery({
     queryKey: queryKeys.admin.calendars.detail(calendarId),
     queryFn: () => fetchAdminCalendarDetails(calendarId),
@@ -121,6 +123,11 @@ export function CalendarDetailsSheet({
                 <div>
                   {t("admin.calendars.updated")} {date(calendar.updatedAt)}
                 </div>
+                {showWorkspace && (
+                  <div>
+                    {t("admin.calendars.workspace")}: {calendar.workspaceName}
+                  </div>
+                )}
               </div>
             </div>
 

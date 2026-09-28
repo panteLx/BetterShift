@@ -11,6 +11,7 @@ import {
   syncLogs as syncLogsTable,
   userCalendarSubscriptions as subscriptionsTable,
   calendarAccessTokens as tokensTable,
+  organization,
 } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import {
@@ -70,6 +71,7 @@ export async function GET(
       .select({
         id: calendarsTable.id,
         name: calendarsTable.name,
+        workspaceName: organization.name,
         color: calendarsTable.color,
         ownerId: calendarsTable.ownerId,
         guestBundleId: calendarsTable.guestBundleId,
@@ -81,6 +83,7 @@ export async function GET(
       })
       .from(calendarsTable)
       .leftJoin(userTable, eq(calendarsTable.ownerId, userTable.id))
+      .leftJoin(organization, eq(calendarsTable.workspaceId, organization.id))
       .where(eq(calendarsTable.id, calendarId));
 
     if (!calendar) {
@@ -203,6 +206,7 @@ export async function GET(
     return NextResponse.json({
       id: calendar.id,
       name: calendar.name,
+      workspaceName: calendar.workspaceName ?? "—",
       color: calendar.color,
       ownerId: calendar.ownerId,
       owner: calendar.ownerId
