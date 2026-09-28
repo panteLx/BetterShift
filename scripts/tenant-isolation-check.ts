@@ -169,6 +169,7 @@ export interface SeedData {
     alphaOwner: SeedUser;
     betaOwner: SeedUser;
     sharedMember: SeedUser;
+    noMembership: SeedUser;
   };
 }
 
@@ -204,6 +205,7 @@ export async function seed(): Promise<SeedData> {
   const alphaOwner = await seedUser("alpha-owner@tenancy.test");
   const betaOwner = await seedUser("beta-owner@tenancy.test");
   const sharedMember = await seedUser("shared-member@tenancy.test");
+  const noMembership = await seedUser("no-membership@tenancy.test");
 
   await db.insert(member).values([
     { id: crypto.randomUUID(), organizationId: alpha.id, userId: alphaOwner.id, role: "owner" },
@@ -214,7 +216,7 @@ export async function seed(): Promise<SeedData> {
 
   return {
     workspaces: { alpha, beta },
-    users: { alphaOwner, betaOwner, sharedMember },
+    users: { alphaOwner, betaOwner, sharedMember, noMembership },
   };
 }
 
@@ -349,6 +351,22 @@ export const matrix: MatrixRow[] = [
     expectStatus: [307, 308],
     expectLocation: (location) =>
       !!location && new URL(location, `http://${BASE_DOMAIN}`).pathname === "/login",
+  },
+  {
+    name: "apex / for a signed-in user without any workspace renders the no-workspace page",
+    as: { email: "no-membership@tenancy.test", password: PASSWORD },
+    host: BASE_DOMAIN,
+    method: "GET",
+    path: "/",
+    expectStatus: 200,
+  },
+  {
+    name: "container health probe on localhost bypasses workspace resolution",
+    as: "anonymous",
+    host: "localhost",
+    method: "GET",
+    path: "/api/health",
+    expectStatus: 200,
   },
   {
     name: "workspace /login forwards to apex login with the absolute workspace target",

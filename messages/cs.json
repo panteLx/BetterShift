@@ -440,7 +440,9 @@
     "unavailable": "Systém není dostupný",
     "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce.",
     "workspaceNotFound": "Pracovní prostor nenalezen",
-    "workspaceNotFoundDescription": "Tato subdoména nepatří k žádnému pracovnímu prostoru."
+    "workspaceNotFoundDescription": "Tato subdoména nepatří k žádnému pracovnímu prostoru.",
+    "noWorkspace": "Zatím žádný pracovní prostor",
+    "noWorkspaceDescription": "Zatím nejste členem žádného pracovního prostoru. Požádejte správce o pozvánku."
   },
   "guest": {
     "viewingAsGuest": "Prohlížíte si jako host",

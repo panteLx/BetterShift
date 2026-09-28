@@ -2,7 +2,12 @@ import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { organization, member } from "@/lib/db/schema";
-import { AUTH_ENABLED, MULTI_TENANT, TENANT_BASE_DOMAIN } from "@/lib/auth/env";
+import {
+  AUTH_ENABLED,
+  BETTER_AUTH_URL,
+  MULTI_TENANT,
+  TENANT_BASE_DOMAIN,
+} from "@/lib/auth/env";
 
 export const DEFAULT_WORKSPACE_ID = "default";
 
@@ -85,6 +90,8 @@ export function getTenancyConfigError(): string | null {
   if (!AUTH_ENABLED) return "MULTI_TENANT=true requires AUTH_ENABLED=true";
   if (!TENANT_BASE_DOMAIN)
     return "MULTI_TENANT=true requires TENANT_BASE_DOMAIN to be set";
+  if (!URL.canParse(BETTER_AUTH_URL))
+    return "MULTI_TENANT=true requires BETTER_AUTH_URL to be a valid URL";
   return null;
 }
 

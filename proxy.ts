@@ -97,10 +97,10 @@ function redirectToLogin(request: NextRequest) {
 }
 
 // Scheme/port come from BETTER_AUTH_URL: behind a TLS-terminating proxy the request itself looks like plain http.
-const APEX = new URL(BETTER_AUTH_URL);
-
+// Parsed lazily, only after getTenancyConfigError() has vetted the URL, so a bad value can't break single-tenant imports.
 function workspaceOrigin(slug: string): string {
-  return `${APEX.protocol}//${slug}.${TENANT_BASE_DOMAIN}${APEX.port ? `:${APEX.port}` : ""}`;
+  const apex = new URL(BETTER_AUTH_URL);
+  return `${apex.protocol}//${slug}.${TENANT_BASE_DOMAIN}${apex.port ? `:${apex.port}` : ""}`;
 }
 
 async function earliestMembershipSlug(userId: string): Promise<string | null> {
@@ -275,13 +275,20 @@ export async function proxy(request: NextRequest) {
     );
 
     if (resolution.kind === "unknown") {
+      // Container health probes hit localhost, which is never a workspace host.
+      if (isHealthCheckExempt) return nextWithNonce(request);
       return NextResponse.rewrite(new URL("/workspace-not-found", request.url), {
         status: 404,
       });
     }
 
     if (resolution.kind === "apex") {
-      if (isPublicExempt || pathname === "/login" || pathname === "/register") {
+      if (
+        isPublicExempt ||
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/no-workspace"
+      ) {
         return nextWithNonce(request);
       }
       if (pathname === "/") {
@@ -298,6 +305,8 @@ export async function proxy(request: NextRequest) {
               if (slug) {
                 return NextResponse.redirect(`${workspaceOrigin(slug)}/`);
               }
+              // Signed in without any workspace: bouncing to /login would loop straight back here.
+              return NextResponse.rewrite(new URL("/no-workspace", request.url));
             }
           } catch (error) {
             console.error("[Proxy] Apex session check failed:", error);
@@ -313,7 +322,7 @@ export async function proxy(request: NextRequest) {
       const target = safeReturnUrl(
         request.nextUrl.searchParams.get("returnUrl")
       );
-      const apexUrl = new URL(pathname, APEX);
+      const apexUrl = new URL(pathname, BETTER_AUTH_URL);
       apexUrl.searchParams.set(
         "returnUrl",
         `${workspaceOrigin(resolution.workspace.slug)}${target}`

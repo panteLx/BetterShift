@@ -29,9 +29,11 @@ import {
 } from "@/lib/auth/env";
 
 // Scheme and port follow BETTER_AUTH_URL, matching the workspace URLs proxy.ts redirects to.
-function workspaceOriginPattern(): string {
+// An unparsable URL adds nothing here; getTenancyConfigError() reports it and the proxy fails closed.
+function workspaceOriginPatterns(): string[] {
+  if (!URL.canParse(BETTER_AUTH_URL)) return [];
   const apex = new URL(BETTER_AUTH_URL);
-  return `${apex.protocol}//*.${TENANT_BASE_DOMAIN}${apex.port ? `:${apex.port}` : ""}`;
+  return [`${apex.protocol}//*.${TENANT_BASE_DOMAIN}${apex.port ? `:${apex.port}` : ""}`];
 }
 
 export const auth = betterAuth({
@@ -217,7 +219,7 @@ export const auth = betterAuth({
   // Trust host for deployment
   trustedOrigins:
     MULTI_TENANT && TENANT_BASE_DOMAIN
-      ? [...BETTER_AUTH_TRUSTED_ORIGINS, workspaceOriginPattern()]
+      ? [...BETTER_AUTH_TRUSTED_ORIGINS, ...workspaceOriginPatterns()]
       : BETTER_AUTH_TRUSTED_ORIGINS,
 });
 

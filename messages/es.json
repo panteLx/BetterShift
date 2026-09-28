@@ -440,7 +440,9 @@
     "unavailable": "Sistema no disponible",
     "unavailableDescription": "El sistema no está disponible actualmente debido a un error crítico. Por favor, inténtalo más tarde o contacta con un administrador.",
     "workspaceNotFound": "Espacio de trabajo no encontrado",
-    "workspaceNotFoundDescription": "Este subdominio no está vinculado a ningún espacio de trabajo."
+    "workspaceNotFoundDescription": "Este subdominio no está vinculado a ningún espacio de trabajo.",
+    "noWorkspace": "Aún no hay espacio de trabajo",
+    "noWorkspaceDescription": "Todavía no eres miembro de ningún espacio de trabajo. Pide una invitación a un administrador."
   },
   "guest": {
     "viewingAsGuest": "Estás viendo como invitado",

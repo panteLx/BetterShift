@@ -440,7 +440,9 @@
     "unavailable": "System Unavailable",
     "unavailableDescription": "The system is currently unavailable due to a critical error. Please try again later or contact an administrator.",
     "workspaceNotFound": "Workspace not found",
-    "workspaceNotFoundDescription": "This subdomain isn't connected to any workspace."
+    "workspaceNotFoundDescription": "This subdomain isn't connected to any workspace.",
+    "noWorkspace": "No workspace yet",
+    "noWorkspaceDescription": "You're not a member of any workspace yet. Ask a workspace admin for an invitation."
   },
   "guest": {
     "viewingAsGuest": "You are viewing as guest",
