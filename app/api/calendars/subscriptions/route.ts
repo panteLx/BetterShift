@@ -67,9 +67,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get all user's subscriptions (both subscribed and dismissed), filtered to the
-    // request workspace post-fetch — a user can belong to several workspaces, so a
-    // subscription row can point at a calendar outside the one being browsed.
+    // A user can belong to several workspaces, so subscriptions are filtered post-fetch.
     const userSubscriptionsAll = await db.query.userCalendarSubscriptions.findMany({
       where: eq(userCalendarSubscriptions.userId, user.id),
       with: { calendar: { columns: { workspaceId: true } } },

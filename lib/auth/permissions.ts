@@ -361,12 +361,6 @@ export async function getShiftSignupPermission(
 }
 
 /**
- * Resolves which of the given bundle ids still exist. guestBundleId has no
- * DB-level FK (see lib/db/schema.ts), so a bundle deletion (Stufe 2) can
- * leave it pointing at nothing — callers must treat that the same as "no
- * guest access" rather than resolving it anyway (4.2/4.3 of the design doc).
- */
-/**
  * Safety net for getUserAccessibleCalendars: shares, subscriptions and access-token
  * cookies can each point at a calendar in a workspace other than the one being
  * browsed (a user can belong to several) — restricts a candidate id set to those
@@ -385,6 +379,12 @@ async function filterIdsToWorkspace(
   return new Set(rows.map((row) => row.id));
 }
 
+/**
+ * Resolves which of the given bundle ids still exist. guestBundleId has no
+ * DB-level FK (see lib/db/schema.ts), so a bundle deletion (Stufe 2) can
+ * leave it pointing at nothing — callers must treat that the same as "no
+ * guest access" rather than resolving it anyway (4.2/4.3 of the design doc).
+ */
 async function existingBundleIds(
   ids: Iterable<string>
 ): Promise<Set<string>> {

@@ -652,32 +652,9 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
         return !ids.includes(betaCal.id);
       },
     },
-    // A calendar dismissed via one workspace must not surface into another's view.
-    {
-      name: "shared member dismisses the beta calendar via beta's host",
-      as: sharedMember,
-      host: betaHost,
-      method: "DELETE",
-      path: `/api/calendars/subscriptions/${betaCal.id}`,
-      expectStatus: 200,
-    },
-    {
-      name: "dismissed beta calendar does not leak into alpha's subscriptions view",
-      as: sharedMember,
-      host: alphaHost,
-      method: "GET",
-      path: "/api/calendars/subscriptions",
-      expectStatus: 200,
-      expectBody: (body) => {
-        if (!body || typeof body !== "object") return false;
-        const dismissed = (body as { dismissed?: Array<{ id: string }> }).dismissed;
-        return Array.isArray(dismissed) && !dismissed.some((c) => c.id === betaCal.id);
-      },
-    },
-    // sharedMember has deleteSyncLogs via a share into both alpha's and beta's calendar
-    // (seedCalendar's bundle) -- clearing activity logs from alpha's host must only
-    // touch alpha's sync logs, never beta's, even though the same user could clear
-    // beta's from beta's host.
+    // sharedMember's share into beta is still active here (run before the dismissal
+    // below), so this proves the DELETE itself is workspace-scoped, not just that a
+    // dismissed share was already excluded.
     {
       name: "shared member clears activity logs via alpha's host",
       as: sharedMember,
@@ -705,6 +682,28 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectBody: (body) =>
         Array.isArray(body) &&
         body.some((log: { id: string }) => log.id === betaCal.syncLogId),
+    },
+    // A calendar dismissed via one workspace must not surface into another's view.
+    {
+      name: "shared member dismisses the beta calendar via beta's host",
+      as: sharedMember,
+      host: betaHost,
+      method: "DELETE",
+      path: `/api/calendars/subscriptions/${betaCal.id}`,
+      expectStatus: 200,
+    },
+    {
+      name: "dismissed beta calendar does not leak into alpha's subscriptions view",
+      as: sharedMember,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => {
+        if (!body || typeof body !== "object") return false;
+        const dismissed = (body as { dismissed?: Array<{ id: string }> }).dismissed;
+        return Array.isArray(dismissed) && !dismissed.some((c) => c.id === betaCal.id);
+      },
     },
   ];
 }

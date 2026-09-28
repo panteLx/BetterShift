@@ -284,9 +284,7 @@ export async function DELETE(request: NextRequest) {
     // deleteSyncLogs is guest-ineligible (GUEST_INELIGIBLE in
     // lib/permission-bundles.ts), so only owner and share sources can ever
     // grant it — batch the share/bundle lookup instead of resolving access
-    // per calendar. Explicitly re-checked against the request workspace, not just
-    // accessibleIds (already workspace-scoped), so this stays correct even if
-    // getUserAccessibleCalendars's scoping ever changes.
+    // per calendar. Workspace re-checked explicitly, not just via accessibleIds.
     const shareRows = await db.query.calendarShares.findMany({
       where: (shares, { eq: eqOp }) => eqOp(shares.userId, user.id),
       columns: { calendarId: true },
