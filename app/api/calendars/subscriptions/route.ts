@@ -67,11 +67,15 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get all user's subscriptions (both subscribed and dismissed)
-    const userSubscriptions = await db.query.userCalendarSubscriptions.findMany(
-      {
-        where: eq(userCalendarSubscriptions.userId, user.id),
-      }
+    // Get all user's subscriptions (both subscribed and dismissed), filtered to the
+    // request workspace post-fetch — a user can belong to several workspaces, so a
+    // subscription row can point at a calendar outside the one being browsed.
+    const userSubscriptionsAll = await db.query.userCalendarSubscriptions.findMany({
+      where: eq(userCalendarSubscriptions.userId, user.id),
+      with: { calendar: { columns: { workspaceId: true } } },
+    });
+    const userSubscriptions = userSubscriptionsAll.filter(
+      (sub) => sub.calendar.workspaceId === workspace.id
     );
 
     const subscribedIds = new Set(
@@ -84,8 +88,9 @@ export async function GET(request: NextRequest) {
       (sub) => sub.status === "dismissed"
     );
 
-    // Get user's explicit shares (not dismissed)
-    const userShares = await db.query.calendarShares.findMany({
+    // Get user's explicit shares (not dismissed), filtered to the request workspace
+    // post-fetch for the same reason as userSubscriptions above.
+    const userSharesAll = await db.query.calendarShares.findMany({
       where: eq(calendarShares.userId, user.id),
       with: {
         bundle: {
@@ -106,6 +111,9 @@ export async function GET(request: NextRequest) {
         },
       },
     });
+    const userShares = userSharesAll.filter(
+      (share) => share.calendar.workspaceId === workspace.id
+    );
 
     // A share's capabilities come straight from its bundle — shares are never
     // ceilinged (5.2) — so this avoids a getEffectiveAccessSummary() /

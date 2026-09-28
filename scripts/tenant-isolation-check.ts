@@ -110,6 +110,7 @@ let shiftPresets: SchemaModule["shiftPresets"];
 let externalSyncs: SchemaModule["externalSyncs"];
 let calendarPermissionBundles: SchemaModule["calendarPermissionBundles"];
 let calendarShares: SchemaModule["calendarShares"];
+let syncLogs: SchemaModule["syncLogs"];
 let parseWorkspaceHost: WorkspaceModule["parseWorkspaceHost"];
 
 async function loadDbBackedModules(): Promise<void> {
@@ -131,6 +132,7 @@ async function loadDbBackedModules(): Promise<void> {
     externalSyncs,
     calendarPermissionBundles,
     calendarShares,
+    syncLogs,
   } = schemaModule);
   parseWorkspaceHost = workspaceModule.parseWorkspaceHost;
 }
@@ -203,6 +205,7 @@ export interface SeedCalendar {
   noteId: string;
   presetId: string;
   syncId: string;
+  syncLogId: string;
   /** Read-only share of this calendar with the sharedMember user. */
   shareId: string;
 }
@@ -252,15 +255,21 @@ async function seedCalendar(
     .insert(externalSyncs)
     .values({ calendarId: id, name: `${name} sync`, calendarUrl: "http://127.0.0.1:9/never.ics" })
     .returning({ id: externalSyncs.id });
+  const [syncLog] = await db
+    .insert(syncLogs)
+    .values({ calendarId: id, externalSyncId: sync.id, externalSyncName: `${name} sync`, status: "success" })
+    .returning({ id: syncLogs.id });
+  // deleteSyncLogs included so the shared member (a member of both workspaces) can
+  // exercise the cross-workspace DELETE /api/activity-logs isolation check.
   const [bundle] = await db
     .insert(calendarPermissionBundles)
-    .values({ calendarId: id, name: "Read", seedKey: "read", capabilities: ["viewShifts", "viewNotesEvents", "viewStats"] })
+    .values({ calendarId: id, name: "Read", seedKey: "read", capabilities: ["viewShifts", "viewNotesEvents", "viewStats", "deleteSyncLogs"] })
     .returning({ id: calendarPermissionBundles.id });
   const [share] = await db
     .insert(calendarShares)
     .values({ calendarId: id, userId: shareWithUserId, bundleId: bundle.id, sharedBy: ownerId })
     .returning({ id: calendarShares.id });
-  return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, shareId: share.id };
+  return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, syncLogId: syncLog.id, shareId: share.id };
 }
 
 async function seedWorkspace(slug: string): Promise<{ id: string; slug: string }> {
@@ -416,6 +425,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
   const betaHost = `beta.${BASE_DOMAIN}`;
   const alphaOwner = seeded.users.alphaOwner;
   const betaOwner = seeded.users.betaOwner;
+  const sharedMember = seeded.users.sharedMember;
   const alphaCal = seeded.calendars.alpha;
   const betaCal = seeded.calendars.beta;
 
@@ -622,13 +632,30 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       path: `/api/shifts/${betaCal.shiftId}`,
       expectStatus: 200,
     },
-    // Proves the Step 7 workspace filter on the dismissed-calendar lookup: the shared
-    // member's dismissal of beta's calendar (via a real share, not a hypothetical one --
-    // they're a member of both workspaces) must not surface beta's calendar name/owner
-    // into a subscriptions view fetched from alpha's host.
+    // sharedMember holds an active share into both alpha's and beta's calendar (a real
+    // multi-workspace membership, not a hypothetical one) -- before any dismissal, beta's
+    // calendar must not surface in a subscriptions view fetched from alpha's host.
+    {
+      name: "shared member's alpha subscriptions view excludes beta's calendar before any dismissal",
+      as: sharedMember,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => {
+        if (!body || typeof body !== "object") return false;
+        const { available, dismissed } = body as {
+          available?: Array<{ id: string }>;
+          dismissed?: Array<{ id: string }>;
+        };
+        const ids = [...(available ?? []), ...(dismissed ?? [])].map((c) => c.id);
+        return !ids.includes(betaCal.id);
+      },
+    },
+    // A calendar dismissed via one workspace must not surface into another's view.
     {
       name: "shared member dismisses the beta calendar via beta's host",
-      as: seeded.users.sharedMember,
+      as: sharedMember,
       host: betaHost,
       method: "DELETE",
       path: `/api/calendars/subscriptions/${betaCal.id}`,
@@ -636,7 +663,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     },
     {
       name: "dismissed beta calendar does not leak into alpha's subscriptions view",
-      as: seeded.users.sharedMember,
+      as: sharedMember,
       host: alphaHost,
       method: "GET",
       path: "/api/calendars/subscriptions",
@@ -646,6 +673,38 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
         const dismissed = (body as { dismissed?: Array<{ id: string }> }).dismissed;
         return Array.isArray(dismissed) && !dismissed.some((c) => c.id === betaCal.id);
       },
+    },
+    // sharedMember has deleteSyncLogs via a share into both alpha's and beta's calendar
+    // (seedCalendar's bundle) -- clearing activity logs from alpha's host must only
+    // touch alpha's sync logs, never beta's, even though the same user could clear
+    // beta's from beta's host.
+    {
+      name: "shared member clears activity logs via alpha's host",
+      as: sharedMember,
+      host: alphaHost,
+      method: "DELETE",
+      path: "/api/activity-logs",
+      expectStatus: 200,
+    },
+    {
+      name: "alpha's sync log was deleted by the alpha-host activity-logs clear",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "GET",
+      path: `/api/sync-logs?calendarId=${alphaCal.id}`,
+      expectStatus: 200,
+      expectBody: (body) => Array.isArray(body) && body.length === 0,
+    },
+    {
+      name: "beta's sync log survived the alpha-host activity-logs clear",
+      as: betaOwner,
+      host: betaHost,
+      method: "GET",
+      path: `/api/sync-logs?calendarId=${betaCal.id}`,
+      expectStatus: 200,
+      expectBody: (body) =>
+        Array.isArray(body) &&
+        body.some((log: { id: string }) => log.id === betaCal.syncLogId),
     },
   ];
 }

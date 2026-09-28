@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 import { auditLogs, syncLogs } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
-import { eq, and, desc, gte, lte, inArray, sql } from "drizzle-orm";
+import { eq, and, or, isNull, desc, gte, lte, inArray, sql } from "drizzle-orm";
 import { parseLocalDate } from "@/lib/date-utils";
+import { requireRequestWorkspace } from "@/lib/workspace";
 
 // Unified activity log format
 interface UnifiedActivityLog {
@@ -58,6 +59,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const workspace = await requireRequestWorkspace();
+
     // Fetch all logs and merge them before pagination
     const allLogs: UnifiedActivityLog[] = [];
 
@@ -68,6 +71,8 @@ export async function GET(request: NextRequest) {
       const auditConditions = [
         eq(auditLogs.isUserVisible, true),
         eq(auditLogs.userId, user.id),
+        // null workspaceId = instance-level event (sign-in, rate limit, system), always visible.
+        or(eq(auditLogs.workspaceId, workspace.id), isNull(auditLogs.workspaceId)),
       ];
 
       // Filter by action type prefix (but exclude sync if type is specified)
@@ -122,7 +127,7 @@ export async function GET(request: NextRequest) {
     // 2. Fetch syncLogs (if not filtering by non-sync types)
     // ============================================
     if (!type || type === "sync") {
-      // Get all calendars user has access to
+      // Get all calendars user has access to (workspace-scoped by getUserAccessibleCalendars).
       const accessibleCalendars = await getUserAccessibleCalendars(user.id);
       const calendarIds = accessibleCalendars.map((cal) => cal.id);
 
@@ -249,11 +254,18 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    // Delete user-visible audit logs
+    const workspace = await requireRequestWorkspace();
+
+    // Delete user-visible audit logs. null workspaceId = instance-level event,
+    // always deletable by its owning user regardless of the browsed workspace.
     await db
       .delete(auditLogs)
       .where(
-        and(eq(auditLogs.userId, user.id), eq(auditLogs.isUserVisible, true))
+        and(
+          eq(auditLogs.userId, user.id),
+          eq(auditLogs.isUserVisible, true),
+          or(eq(auditLogs.workspaceId, workspace.id), isNull(auditLogs.workspaceId))
+        )
       );
 
     // Delete sync logs only for calendars the user can edit (write or better) -
@@ -272,16 +284,22 @@ export async function DELETE(request: NextRequest) {
     // deleteSyncLogs is guest-ineligible (GUEST_INELIGIBLE in
     // lib/permission-bundles.ts), so only owner and share sources can ever
     // grant it — batch the share/bundle lookup instead of resolving access
-    // per calendar.
+    // per calendar. Explicitly re-checked against the request workspace, not just
+    // accessibleIds (already workspace-scoped), so this stays correct even if
+    // getUserAccessibleCalendars's scoping ever changes.
     const shareRows = await db.query.calendarShares.findMany({
       where: (shares, { eq: eqOp }) => eqOp(shares.userId, user.id),
       columns: { calendarId: true },
-      with: { bundle: { columns: { capabilities: true } } },
+      with: {
+        bundle: { columns: { capabilities: true } },
+        calendar: { columns: { workspaceId: true } },
+      },
     });
     const shareCalendarIds = shareRows
       .filter(
         (share) =>
           accessibleIds.has(share.calendarId) &&
+          share.calendar.workspaceId === workspace.id &&
           share.bundle.capabilities.includes("deleteSyncLogs")
       )
       .map((share) => share.calendarId);

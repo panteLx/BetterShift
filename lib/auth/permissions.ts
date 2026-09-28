@@ -7,7 +7,7 @@ import {
   type Calendar,
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
-import { eq, and, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, inArray } from "drizzle-orm";
 import { getRequestWorkspace } from "@/lib/workspace";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 import {
@@ -366,6 +366,25 @@ export async function getShiftSignupPermission(
  * leave it pointing at nothing — callers must treat that the same as "no
  * guest access" rather than resolving it anyway (4.2/4.3 of the design doc).
  */
+/**
+ * Safety net for getUserAccessibleCalendars: shares, subscriptions and access-token
+ * cookies can each point at a calendar in a workspace other than the one being
+ * browsed (a user can belong to several) — restricts a candidate id set to those
+ * whose calendar actually lives in the given workspace.
+ */
+async function filterIdsToWorkspace(
+  ids: Iterable<string>,
+  workspaceId: string
+): Promise<Set<string>> {
+  const idList = Array.from(new Set(ids));
+  if (idList.length === 0) return new Set();
+  const rows = await db.query.calendars.findMany({
+    where: and(inArray(calendars.id, idList), eq(calendars.workspaceId, workspaceId)),
+    columns: { id: true },
+  });
+  return new Set(rows.map((row) => row.id));
+}
+
 async function existingBundleIds(
   ids: Iterable<string>
 ): Promise<Set<string>> {
@@ -439,7 +458,13 @@ export async function getUserAccessibleCalendars(
       }
     }
 
-    return results;
+    // Safety net: a token cookie can name any calendar id regardless of workspace
+    // (see filterIdsToWorkspace above) — the guest-bundle branch is already scoped.
+    const workspaceIds = await filterIdsToWorkspace(
+      results.map((r) => r.id),
+      workspace.id
+    );
+    return results.filter((r) => workspaceIds.has(r.id));
   }
 
   const results: Array<{ id: string; isOwner: boolean }> = [];
@@ -497,7 +522,13 @@ export async function getUserAccessibleCalendars(
     }
   }
 
-  return results;
+  // Safety net: shares, subscriptions and tokens can each name a calendar in a
+  // workspace other than the one being browsed — owned ids are already scoped above.
+  const workspaceIds = await filterIdsToWorkspace(
+    results.filter((r) => !r.isOwner).map((r) => r.id),
+    workspace.id
+  );
+  return results.filter((r) => r.isOwner || workspaceIds.has(r.id));
 }
 
 /**
