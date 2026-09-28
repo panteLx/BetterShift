@@ -12,6 +12,7 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
+import { isWorkspaceMember } from "@/lib/workspace";
 
 /**
  * Admin Calendar Transfer API
@@ -98,6 +99,13 @@ export async function POST(
       return NextResponse.json(
         { error: "Calendar not found" },
         { status: 404 }
+      );
+    }
+
+    if (!(await isWorkspaceMember(newOwnerId, calendar.workspaceId))) {
+      return NextResponse.json(
+        { error: "Target user is not a member of this calendar's workspace" },
+        { status: 400 }
       );
     }
 

@@ -111,15 +111,20 @@ let externalSyncs: SchemaModule["externalSyncs"];
 let calendarPermissionBundles: SchemaModule["calendarPermissionBundles"];
 let calendarShares: SchemaModule["calendarShares"];
 let syncLogs: SchemaModule["syncLogs"];
+let announcements: SchemaModule["announcements"];
+let auditLogs: SchemaModule["auditLogs"];
+let eq: typeof import("drizzle-orm")["eq"];
 let parseWorkspaceHost: WorkspaceModule["parseWorkspaceHost"];
 
 async function loadDbBackedModules(): Promise<void> {
-  const [dbModule, schemaModule, workspaceModule] = await Promise.all([
+  const [dbModule, schemaModule, workspaceModule, drizzleModule] = await Promise.all([
     import("../lib/db"),
     import("../lib/db/schema"),
     import("../lib/workspace"),
+    import("drizzle-orm"),
   ]);
   db = dbModule.db;
+  eq = drizzleModule.eq;
   ({
     organization,
     member,
@@ -133,6 +138,8 @@ async function loadDbBackedModules(): Promise<void> {
     calendarPermissionBundles,
     calendarShares,
     syncLogs,
+    announcements,
+    auditLogs,
   } = schemaModule);
   parseWorkspaceHost = workspaceModule.parseWorkspaceHost;
 }
@@ -191,6 +198,10 @@ export interface SeedData {
     betaOwner: SeedUser;
     sharedMember: SeedUser;
     noMembership: SeedUser;
+    /** Plain alpha member with no share: the positive control for search and sharing. */
+    alphaMember: SeedUser;
+    /** Instance admin with no workspace membership at all. */
+    admin: SeedUser;
   };
   calendars: {
     alpha: SeedCalendar;
@@ -208,17 +219,19 @@ export interface SeedCalendar {
   syncLogId: string;
   /** Read-only share of this calendar with the sharedMember user. */
   shareId: string;
+  bundleId: string;
 }
 
 const PASSWORD = "tenancy-check-password-1!";
 
-async function seedUser(email: string): Promise<SeedUser> {
+async function seedUser(email: string, role?: string): Promise<SeedUser> {
   const id = crypto.randomUUID();
   await db.insert(user).values({
     id,
     name: email.split("@")[0],
     email,
     emailVerified: true,
+    role,
   });
   await db.insert(account).values({
     id: crypto.randomUUID(),
@@ -269,7 +282,7 @@ async function seedCalendar(
     .insert(calendarShares)
     .values({ calendarId: id, userId: shareWithUserId, bundleId: bundle.id, sharedBy: ownerId })
     .returning({ id: calendarShares.id });
-  return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, syncLogId: syncLog.id, shareId: share.id };
+  return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, syncLogId: syncLog.id, shareId: share.id, bundleId: bundle.id };
 }
 
 async function seedWorkspace(slug: string): Promise<{ id: string; slug: string }> {
@@ -285,12 +298,15 @@ export async function seed(): Promise<SeedData> {
   const betaOwner = await seedUser("beta-owner@tenancy.test");
   const sharedMember = await seedUser("shared-member@tenancy.test");
   const noMembership = await seedUser("no-membership@tenancy.test");
+  const alphaMember = await seedUser("alpha-member@tenancy.test");
+  const admin = await seedUser("instance-admin@tenancy.test", "superadmin");
 
   await db.insert(member).values([
     { id: crypto.randomUUID(), organizationId: alpha.id, userId: alphaOwner.id, role: "owner" },
     { id: crypto.randomUUID(), organizationId: beta.id, userId: betaOwner.id, role: "owner" },
     { id: crypto.randomUUID(), organizationId: alpha.id, userId: sharedMember.id, role: "member" },
     { id: crypto.randomUUID(), organizationId: beta.id, userId: sharedMember.id, role: "member" },
+    { id: crypto.randomUUID(), organizationId: alpha.id, userId: alphaMember.id, role: "member" },
   ]);
 
   const alphaCalendar = await seedCalendar(alpha.id, alphaOwner.id, "Alpha Calendar", sharedMember.id);
@@ -298,7 +314,7 @@ export async function seed(): Promise<SeedData> {
 
   return {
     workspaces: { alpha, beta },
-    users: { alphaOwner, betaOwner, sharedMember, noMembership },
+    users: { alphaOwner, betaOwner, sharedMember, noMembership, alphaMember, admin },
     calendars: { alpha: alphaCalendar, beta: betaCalendar },
   };
 }
@@ -335,6 +351,8 @@ function httpRequest(
   headers: Record<string, string>,
   body?: string
 ): Promise<HttpResponse> {
+  // node:http neither chunks nor length-frames a DELETE body by default, so the server would never see it.
+  if (body !== undefined) headers = { ...headers, "content-length": String(Buffer.byteLength(body)) };
   return new Promise((resolve, reject) => {
     const req = http.request(new URL(path, APP_URL), { method, headers }, (res) => {
       let text = "";
@@ -705,7 +723,213 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
         return Array.isArray(dismissed) && !dismissed.some((c) => c.id === betaCal.id);
       },
     },
+    {
+      name: "user search on alpha's host never returns the beta-only owner",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "GET",
+      path: `/api/users/search?calendarId=${alphaCal.id}&q=beta-owner`,
+      expectStatus: 200,
+      expectBody: (body) => Array.isArray(body) && body.length === 0,
+    },
+    {
+      name: "user search on alpha's host finds an alpha member",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "GET",
+      path: `/api/users/search?calendarId=${alphaCal.id}&q=alpha-member`,
+      expectStatus: 200,
+      expectBody: (body) =>
+        Array.isArray(body) &&
+        body.length === 1 &&
+        (body[0] as { id: string }).id === seeded.users.alphaMember.id,
+    },
+    {
+      name: "sharing alpha's calendar with the beta-only owner 404s (not a workspace member)",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "POST",
+      path: `/api/calendars/${alphaCal.id}/shares`,
+      body: { userId: betaOwner.id, bundleId: alphaCal.bundleId },
+      expectStatus: 404,
+    },
+    {
+      name: "sharing alpha's calendar with an alpha member succeeds",
+      as: alphaOwner,
+      host: alphaHost,
+      method: "POST",
+      path: `/api/calendars/${alphaCal.id}/shares`,
+      body: { userId: seeded.users.alphaMember.id, bundleId: alphaCal.bundleId },
+      expectStatus: 201,
+    },
+    // Admin routes stay instance-wide: the admin is a member of no workspace at all.
+    {
+      name: "admin transfer of alpha's calendar to the beta-only owner is refused",
+      as: seeded.users.admin,
+      host: alphaHost,
+      method: "POST",
+      path: `/api/admin/calendars/${alphaCal.id}/transfer`,
+      body: { newOwnerId: betaOwner.id },
+      expectStatus: 400,
+    },
+    {
+      name: "admin transfer of alpha's calendar to an alpha member is allowed",
+      as: seeded.users.admin,
+      host: betaHost,
+      method: "POST",
+      path: `/api/admin/calendars/${alphaCal.id}/transfer`,
+      body: { newOwnerId: alphaOwner.id },
+      expectStatus: 200,
+    },
+    {
+      name: "admin bulk transfer across workspaces to an alpha-only owner is refused",
+      as: seeded.users.admin,
+      host: alphaHost,
+      method: "POST",
+      path: "/api/admin/calendars/bulk-transfer",
+      body: { calendarIds: [alphaCal.id, betaCal.id], newOwnerId: alphaOwner.id },
+      expectStatus: 400,
+    },
+    {
+      name: "admin bulk transfer of alpha's calendar to an alpha member is allowed",
+      as: seeded.users.admin,
+      host: alphaHost,
+      method: "POST",
+      path: "/api/admin/calendars/bulk-transfer",
+      body: { calendarIds: [alphaCal.id], newOwnerId: alphaOwner.id },
+      expectStatus: 200,
+    },
+    {
+      name: "beta's calendar still belongs to the beta owner after the refused bulk transfer",
+      as: betaOwner,
+      host: betaHost,
+      method: "GET",
+      path: `/api/calendars/${betaCal.id}`,
+      expectStatus: 200,
+    },
   ];
+}
+
+// Destructive, so kept out of the shared matrix: every case seeds its own workspace and users.
+async function deleteAccount(account: SeedUser, host: string): Promise<number> {
+  const status = await deleteAccountRequest(account, host);
+  console.log(`        delete-account ${account.email} via ${host} -> ${status}`);
+  return status;
+}
+
+async function deleteAccountRequest(account: SeedUser, host: string): Promise<number> {
+  const res = await httpRequest(
+    "/api/auth/delete-account",
+    "DELETE",
+    {
+      host,
+      origin: `http://${host}`,
+      cookie: await signIn(account.email, account.password, host),
+      "content-type": "application/json",
+    },
+    JSON.stringify({ password: account.password })
+  );
+  return res.status;
+}
+
+async function seedMemberships(
+  workspaceId: string,
+  entries: Array<[SeedUser, "owner" | "member"]>
+): Promise<void> {
+  await db.insert(member).values(
+    entries.map(([u, role]) => ({ id: crypto.randomUUID(), organizationId: workspaceId, userId: u.id, role }))
+  );
+}
+
+async function checkAccountDeletion(seeded: SeedData): Promise<void> {
+  console.log("\nStage 3: account deletion vs. workspace membership");
+  const tryCheck = async (name: string, fn: () => Promise<boolean>) => {
+    try {
+      check(name, await fn());
+    } catch (error) {
+      check(`${name} (threw: ${error instanceof Error ? error.message : String(error)})`, false);
+    }
+  };
+
+  // Only member of a workspace: the workspace and everything in it goes with the account,
+  // while its audit history survives as instance-level rows.
+  const solo = await seedWorkspace("solo-delete-check");
+  const soloHost = `${solo.slug}.${BASE_DOMAIN}`;
+  const soloOwner = await seedUser("solo-owner@tenancy.test");
+  await seedMemberships(solo.id, [[soloOwner, "owner"]]);
+  const soloCalendarId = crypto.randomUUID();
+  await db.insert(calendars).values({ id: soloCalendarId, name: "Solo", ownerId: null, workspaceId: solo.id });
+  const [soloAnnouncement] = await db
+    .insert(announcements)
+    .values({ title: "Solo notice", workspaceId: solo.id })
+    .returning({ id: announcements.id });
+  const [soloAudit] = await db
+    .insert(auditLogs)
+    .values({ action: "tenancy.check", workspaceId: solo.id })
+    .returning({ id: auditLogs.id });
+
+  await tryCheck("solo workspace owner can delete their account", async () =>
+    (await deleteAccount(soloOwner, soloHost)) === 200
+  );
+  await tryCheck("the solo workspace is gone after that deletion", async () =>
+    (await db.select().from(organization).where(eq(organization.id, solo.id))).length === 0
+  );
+  await tryCheck("the solo workspace's ownerless calendar is gone (workspace cascade)", async () =>
+    (await db.select().from(calendars).where(eq(calendars.id, soloCalendarId))).length === 0
+  );
+  await tryCheck("the solo workspace's announcement is gone", async () =>
+    (await db.select().from(announcements).where(eq(announcements.id, soloAnnouncement.id))).length === 0
+  );
+  await tryCheck("the solo workspace's audit row survives with a NULL workspace", async () => {
+    const [row] = await db.select().from(auditLogs).where(eq(auditLogs.id, soloAudit.id));
+    return !!row && row.workspaceId === null;
+  });
+  await tryCheck("the deleted workspace's host now 404s (slug cache invalidated)", async () =>
+    (await httpRequest("/api/workspace", "GET", { host: soloHost })).status === 404
+  );
+
+  // Only owner of a workspace that has other members: blocked for self-service and admin alike.
+  const shared = await seedWorkspace("shared-delete-check");
+  const sharedHost = `${shared.slug}.${BASE_DOMAIN}`;
+  const blockedOwner = await seedUser("blocked-owner@tenancy.test");
+  const otherMember = await seedUser("other-member@tenancy.test");
+  await seedMemberships(shared.id, [[blockedOwner, "owner"], [otherMember, "member"]]);
+
+  await tryCheck("sole owner of a workspace with other members is blocked from deleting", async () =>
+    (await deleteAccount(blockedOwner, sharedHost)) === 409
+  );
+  await tryCheck("admin delete of that sole owner is blocked too", async () => {
+    const res = await httpRequest(`/api/admin/users/${blockedOwner.id}`, "DELETE", {
+      host: sharedHost,
+      origin: `http://${sharedHost}`,
+      cookie: await signIn(seeded.users.admin.email, seeded.users.admin.password, sharedHost),
+    });
+    console.log(`        admin delete ${blockedOwner.email} -> ${res.status} ${res.text}`);
+    return res.status === 409;
+  });
+  await tryCheck("the blocked owner and their workspace still exist", async () => {
+    const users = await db.select().from(user).where(eq(user.id, blockedOwner.id));
+    const orgs = await db.select().from(organization).where(eq(organization.id, shared.id));
+    return users.length === 1 && orgs.length === 1;
+  });
+  await tryCheck("a plain member of a shared workspace can delete their account", async () =>
+    (await deleteAccount(otherMember, sharedHost)) === 200
+  );
+  await tryCheck("the shared workspace survives a member's deletion", async () =>
+    (await db.select().from(organization).where(eq(organization.id, shared.id))).length === 1
+  );
+
+  // A co-owner is not the only owner, so leaving is allowed and the workspace stays.
+  const coOwned = await seedWorkspace("co-owned-delete-check");
+  const coOwnerA = await seedUser("co-owner-a@tenancy.test");
+  const coOwnerB = await seedUser("co-owner-b@tenancy.test");
+  await seedMemberships(coOwned.id, [[coOwnerA, "owner"], [coOwnerB, "owner"]]);
+  await tryCheck("a co-owner can delete their account", async () =>
+    (await deleteAccount(coOwnerA, `${coOwned.slug}.${BASE_DOMAIN}`)) === 200
+  );
+  await tryCheck("the co-owned workspace survives", async () =>
+    (await db.select().from(organization).where(eq(organization.id, coOwned.id))).length === 1
+  );
 }
 
 async function main(): Promise<void> {
@@ -720,6 +944,8 @@ async function main(): Promise<void> {
   for (const row of buildMatrix(seeded)) {
     await runRow(row);
   }
+
+  await checkAccountDeletion(seeded);
 
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);

@@ -12,6 +12,7 @@ import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
+import { isWorkspaceMember } from "@/lib/workspace";
 
 /**
  * Admin Calendar Bulk Transfer API
@@ -91,6 +92,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { error: "No calendars found with provided IDs" },
         { status: 404 }
       );
+    }
+
+    const workspaceIds = Array.from(new Set(calendars.map((c) => c.workspaceId)));
+    for (const workspaceId of workspaceIds) {
+      if (!(await isWorkspaceMember(newOwnerId, workspaceId))) {
+        return NextResponse.json(
+          { error: "Target user is not a member of every selected calendar's workspace" },
+          { status: 400 }
+        );
+      }
     }
 
     // Transfer ownership for all calendars
