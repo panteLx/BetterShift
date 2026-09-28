@@ -7,26 +7,72 @@
  * Drizzle on the DB file the server was started against, then asserts
  * cross-workspace HTTP requests 404 and same-workspace ones succeed.
  *
- * Start the server first:
+ * Build and start the server first. `next start` does NOT work with this
+ * project's `output: "standalone"` config (it warns and serves a broken
+ * build) -- start the standalone entrypoint directly instead, after copying
+ * the static assets next to it the way the Dockerfile does. DATABASE_URL
+ * must be an ABSOLUTE path: server.js calls process.chdir(__dirname) into
+ * .next/standalone/, so a relative path resolves differently for the server
+ * than for this script, silently pointing them at two different DB files.
+ * HOSTNAME must be set explicitly too -- server.js binds to
+ * `process.env.HOSTNAME || "0.0.0.0"`, and an inherited shell HOSTNAME (e.g.
+ * a machine hostname that resolves to a VPN/Tailscale address) silently
+ * binds it off localhost.
+ *
  *   npm run build
- *   MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 \
- *     DATABASE_URL=file:./data/tenancy-check.sqlite.db \
+ *   cp -r .next/static .next/standalone/.next/static
+ *   cp -r public .next/standalone/public
+ *   PORT=3107 HOSTNAME=0.0.0.0 MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test \
+ *     AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 \
+ *     DATABASE_URL="file:$(pwd)/data/tenancy-check.sqlite.db" \
  *     BETTER_AUTH_URL=http://tenancy.test BETTER_AUTH_SECRET=tenancy-check-secret \
- *     npm start &
- * (or `next dev` with the same env for faster iteration). Then:
- *   DATABASE_URL=file:./data/tenancy-check.sqlite.db npm run test:tenancy
+ *     node .next/standalone/server.js &
+ * (or `next dev` with the same env, skipping the standalone-only steps
+ * above, for faster iteration). Then:
+ *   DATABASE_URL="file:$(pwd)/data/tenancy-check.sqlite.db" TENANCY_CHECK_URL=http://localhost:3107 \
+ *     npm run test:tenancy
  *
  * The harness needs the SAME DATABASE_URL as the running server (it seeds
  * directly into that file) and talks to the server over HTTP at
  * TENANCY_CHECK_URL (default http://localhost:3000), sending a `Host` header
  * of `<slug>.tenancy.test` per request — no real DNS or TLS needed since
  * Next reads the Host header, not the socket's actual destination.
+ *
+ * Refuses to run unless DATABASE_URL points somewhere other than the
+ * default ./data/sqlite.db -- see assertSafeDatabaseUrl() below. That check
+ * must run before anything that imports lib/db (directly, or transitively
+ * via lib/workspace) is loaded, since lib/db opens its SQLite file as an
+ * import-time side effect; the DB-backed modules are therefore loaded with
+ * a dynamic import after the check instead of a static one.
  */
+import path from "node:path";
 import { hashPassword } from "better-auth/crypto";
-import { db } from "../lib/db";
-import { organization, member, user, account } from "../lib/db/schema";
-import { parseWorkspaceHost } from "../lib/workspace";
 import { isValidSlugFormat, isReservedSlug } from "../lib/workspace-slugs";
+
+function assertSafeDatabaseUrl(): void {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) {
+    console.error(
+      "Refusing to run: DATABASE_URL is not set. This script destructively seeds two " +
+        "workspaces and three users straight into whatever DB lib/db/index.ts opens, and " +
+        "that module defaults to ./data/sqlite.db when DATABASE_URL is unset. Point it at a " +
+        'throwaway file first, e.g. DATABASE_URL="file:$(pwd)/data/tenancy-check.sqlite.db"'
+    );
+    process.exit(1);
+  }
+  const resolved = path.resolve(raw.replace("file:", ""));
+  const defaultPath = path.resolve(process.cwd(), "data", "sqlite.db");
+  if (resolved === defaultPath) {
+    console.error(
+      `Refusing to run: DATABASE_URL resolves to the default DB path (${defaultPath}), which ` +
+        'is likely a real database. Point it at a throwaway file instead, e.g. ' +
+        'DATABASE_URL="file:$(pwd)/data/tenancy-check.sqlite.db"'
+    );
+    process.exit(1);
+  }
+}
+
+assertSafeDatabaseUrl();
 
 const BASE_DOMAIN = "tenancy.test";
 const APP_URL = process.env.TENANCY_CHECK_URL || "http://localhost:3000";
@@ -45,7 +91,32 @@ function check(name: string, condition: boolean): void {
 }
 
 // =====================================================
-// Stage 1: pure checks, no server, no DB
+// DB-backed modules, loaded only after assertSafeDatabaseUrl() passes
+// =====================================================
+type DbModule = typeof import("../lib/db");
+type SchemaModule = typeof import("../lib/db/schema");
+type WorkspaceModule = typeof import("../lib/workspace");
+
+let db: DbModule["db"];
+let organization: SchemaModule["organization"];
+let member: SchemaModule["member"];
+let user: SchemaModule["user"];
+let account: SchemaModule["account"];
+let parseWorkspaceHost: WorkspaceModule["parseWorkspaceHost"];
+
+async function loadDbBackedModules(): Promise<void> {
+  const [dbModule, schemaModule, workspaceModule] = await Promise.all([
+    import("../lib/db"),
+    import("../lib/db/schema"),
+    import("../lib/workspace"),
+  ]);
+  db = dbModule.db;
+  ({ organization, member, user, account } = schemaModule);
+  parseWorkspaceHost = workspaceModule.parseWorkspaceHost;
+}
+
+// =====================================================
+// Stage 1: pure checks, no server, no seeded DB content
 // =====================================================
 function runPureChecks(): void {
   console.log("Stage 1: pure host/slug checks (no server)");
@@ -182,21 +253,29 @@ async function signIn(email: string, password: string, host: string): Promise<st
 }
 
 export async function runRow(row: MatrixRow): Promise<boolean> {
-  const headers: Record<string, string> = { host: row.host, origin: `http://${row.host}` };
-  if (row.as !== "anonymous") {
-    headers.cookie = await signIn(row.as.email, row.as.password, row.host);
-  }
-  if (row.body !== undefined) headers["content-type"] = "application/json";
-
-  const res = await fetch(`${APP_URL}${row.path}`, {
-    method: row.method,
-    headers,
-    body: row.body !== undefined ? JSON.stringify(row.body) : undefined,
-  });
   const expected = Array.isArray(row.expectStatus) ? row.expectStatus : [row.expectStatus];
-  const ok = expected.includes(res.status);
-  check(`${row.name} (got ${res.status}, want ${expected.join("|")})`, ok);
-  return ok;
+  // Any failure here (bad sign-in, network error, ...) is reported as this row's
+  // failure rather than aborting the rest of the matrix.
+  try {
+    const headers: Record<string, string> = { host: row.host, origin: `http://${row.host}` };
+    if (row.as !== "anonymous") {
+      headers.cookie = await signIn(row.as.email, row.as.password, row.host);
+    }
+    if (row.body !== undefined) headers["content-type"] = "application/json";
+
+    const res = await fetch(`${APP_URL}${row.path}`, {
+      method: row.method,
+      headers,
+      body: row.body !== undefined ? JSON.stringify(row.body) : undefined,
+    });
+    const ok = expected.includes(res.status);
+    check(`${row.name} (got ${res.status}, want ${expected.join("|")})`, ok);
+    return ok;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    check(`${row.name} (want ${expected.join("|")}, threw: ${message})`, false);
+    return false;
+  }
 }
 
 // Later tasks push more rows onto this array (and extend seed()/SeedData for
@@ -221,6 +300,8 @@ export const matrix: MatrixRow[] = [
 ];
 
 async function main(): Promise<void> {
+  await loadDbBackedModules();
+
   runPureChecks();
 
   console.log("\nSeeding two workspaces via Drizzle...");
