@@ -174,7 +174,7 @@ export function storeTokenInCookie(
 
 /**
  * Get all validated tokens from cookie (for Server Components)
- * Also removes expired tokens from the cookie (but keeps inactive ones)
+ * Prunes expired, unknown and foreign-workspace tokens from the cookie (keeps inactive ones)
  *
  * @param workspaceId - Defaults to the request workspace; tokens of other workspaces are dropped
  * @returns Array of token data
@@ -208,24 +208,21 @@ export async function getTokensFromCookie(
     if (!wsId) return [];
 
     // Validate each token against the database
-    // Note: We skip the isActive check - only remove expired tokens
-    // This allows owners to reactivate tokens without users losing access
+    // isActive is skipped so owners can reactivate a token without users losing access
     const validatedTokens: TokenCookieData[] = [];
-    let hasExpiredTokens = false;
+    let hasStaleTokens = false;
 
     for (const tokenData of validTokens) {
-      // skipActiveCheck = true: Only check expiration, not isActive
       const validation = await validateAccessToken(tokenData.token, wsId, true);
       if (validation) {
         validatedTokens.push(tokenData);
       } else {
-        // Token is expired or doesn't exist - remove from cookie
-        hasExpiredTokens = true;
+        // Expired, unknown or another workspace's token
+        hasStaleTokens = true;
       }
     }
 
-    // If we found expired tokens, update the cookie to remove them
-    if (hasExpiredTokens && validatedTokens.length !== validTokens.length) {
+    if (hasStaleTokens && validatedTokens.length !== validTokens.length) {
       cookieStore.set(
         TOKEN_COOKIE_NAME,
         JSON.stringify(validatedTokens),
@@ -348,7 +345,6 @@ export async function getTokenBundleId(
     }
 
     // Try to validate each token - use the first valid one
-    // This handles the case where expired tokens are in the cookie
     for (const tokenData of calendarTokens) {
       const validation = await validateAccessToken(tokenData.token, wsId);
 

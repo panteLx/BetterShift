@@ -69,9 +69,7 @@ export async function register() {
       console.error("[Instrumentation] Auth config validation failed:", error);
     }
 
-    // Same contract as the auth-env warning above: never throws, so a
-    // misconfigured MULTI_TENANT still starts (proxy.ts is the real gate,
-    // since it must apply even to a route outside this module's reach).
+    // Warning only; proxy.ts is the real gate for a misconfigured MULTI_TENANT.
     try {
       const { getTenancyConfigError } = await import("@/lib/workspace");
       const tenancyError = getTenancyConfigError();

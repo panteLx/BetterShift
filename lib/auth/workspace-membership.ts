@@ -3,12 +3,7 @@ import { member } from "@/lib/db/schema";
 import { isFirstUser } from "@/lib/auth/first-user";
 import { DEFAULT_WORKSPACE_ID } from "@/lib/workspace";
 
-/**
- * Single-tenant mode only: every new account joins the `default` workspace,
- * as its owner if it's the very first account on the instance (mirrors
- * handleFirstUserPromotion's superadmin rule). Multi-tenant mode gives a new
- * user no membership at all — sub-project 3 creates their own workspace.
- */
+// Single-tenant only: the first account becomes owner of `default`, mirroring the superadmin rule.
 export async function handleSingleTenantMembership(
   userId: string
 ): Promise<void> {
