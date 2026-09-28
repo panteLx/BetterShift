@@ -17,7 +17,9 @@
  * HOSTNAME must be set explicitly too -- server.js binds to
  * `process.env.HOSTNAME || "0.0.0.0"`, and an inherited shell HOSTNAME (e.g.
  * a machine hostname that resolves to a VPN/Tailscale address) silently
- * binds it off localhost.
+ * binds it off localhost. Don't use HOSTNAME=127.0.0.1 either: Next reports a
+ * loopback bind as "localhost" to the proxy and then fails its internal rewrites
+ * (the workspace-not-found and no-workspace rows go 500), see docs/MULTI_TENANCY.md.
  *
  *   npm run build
  *   cp -r .next/static .next/standalone/.next/static
@@ -115,6 +117,9 @@ let calendarFeedTokens: SchemaModule["calendarFeedTokens"];
 let syncLogs: SchemaModule["syncLogs"];
 let announcements: SchemaModule["announcements"];
 let auditLogs: SchemaModule["auditLogs"];
+let workspaceSettings: SchemaModule["workspaceSettings"];
+let userCalendarSubscriptions: SchemaModule["userCalendarSubscriptions"];
+let calendarCustomFields: SchemaModule["calendarCustomFields"];
 let eq: typeof import("drizzle-orm")["eq"];
 let parseWorkspaceHost: WorkspaceModule["parseWorkspaceHost"];
 
@@ -144,6 +149,9 @@ async function loadDbBackedModules(): Promise<void> {
     syncLogs,
     announcements,
     auditLogs,
+    workspaceSettings,
+    userCalendarSubscriptions,
+    calendarCustomFields,
   } = schemaModule);
   parseWorkspaceHost = workspaceModule.parseWorkspaceHost;
 }
@@ -223,6 +231,10 @@ export interface SeedData {
   announcements: { alphaOnly: string; betaOnly: string; everywhere: string };
   /** Actions of user-visible audit rows seeded for alphaOwner, one per scope. */
   auditActions: { alpha: string; beta: string; instance: string };
+  /** Calendars with a guest bundle; guest access is ON in alpha and OFF in beta. */
+  publicCalendars: { alpha: string; beta: string };
+  /** Beta-owned child ids for the foreign-vs-missing identity checks. */
+  betaChildren: { tokenId: string; customFieldId: string };
 }
 
 /** A calendar plus one of each calendar-owned child resource, all in one workspace. */
@@ -301,6 +313,20 @@ async function seedCalendar(
   return { id, shiftId: shift.id, noteId: note.id, presetId: preset.id, syncId: sync.id, syncLogId: syncLog.id, shareId: share.id, bundleId: bundle.id };
 }
 
+// Owned by a dedicated member so the owners' own calendar lists stay single-calendar.
+async function seedPublicCalendar(workspaceId: string, ownerEmail: string, name: string): Promise<string> {
+  const owner = await seedUser(ownerEmail);
+  await db.insert(member).values({ id: crypto.randomUUID(), organizationId: workspaceId, userId: owner.id, role: "member" });
+  const id = crypto.randomUUID();
+  await db.insert(calendars).values({ id, name, ownerId: owner.id, workspaceId });
+  const [bundle] = await db
+    .insert(calendarPermissionBundles)
+    .values({ calendarId: id, name: "Read", seedKey: "read", capabilities: ["viewShifts", "viewNotesEvents", "viewStats"] })
+    .returning({ id: calendarPermissionBundles.id });
+  await db.update(calendars).set({ guestBundleId: bundle.id }).where(eq(calendars.id, id));
+  return id;
+}
+
 async function seedShareToken(calendar: SeedCalendar, createdBy: string, isActive = true): Promise<string> {
   const token = crypto.randomUUID().replace(/-/g, "");
   await db
@@ -370,7 +396,34 @@ export async function seed(): Promise<SeedData> {
     { calendarId: betaCalendar.id, externalSyncId: betaCalendar.syncId, externalSyncName: "Beta Sync", status: "success", syncType: "manual", shiftsCreated: 0, shiftsUpdated: 0, shiftsDeleted: 0 },
   ]);
 
+  const publicCalendars = {
+    alpha: await seedPublicCalendar(alpha.id, "alpha-publisher@tenancy.test", "Alpha Public"),
+    beta: await seedPublicCalendar(beta.id, "beta-publisher@tenancy.test", "Beta Public"),
+  };
+  await db.insert(workspaceSettings).values([
+    { workspaceId: alpha.id, allowGuestAccess: true },
+    { workspaceId: beta.id, allowGuestAccess: false },
+  ]);
+  // A pre-existing subscription, so only the membership rule can keep it closed.
+  await db.insert(userCalendarSubscriptions).values({
+    userId: noMembership.id,
+    calendarId: publicCalendars.beta,
+    status: "subscribed",
+    source: "guest",
+  });
+
+  const [betaToken] = await db
+    .insert(calendarAccessTokens)
+    .values({ calendarId: betaCalendar.id, token: crypto.randomUUID().replace(/-/g, ""), bundleId: betaCalendar.bundleId, createdBy: betaOwner.id })
+    .returning({ id: calendarAccessTokens.id });
+  const [betaField] = await db
+    .insert(calendarCustomFields)
+    .values({ calendarId: betaCalendar.id, key: "beta_field", label: "Beta field", type: "text" })
+    .returning({ id: calendarCustomFields.id });
+
   return {
+    publicCalendars,
+    betaChildren: { tokenId: betaToken.id, customFieldId: betaField.id },
     workspaces: { alpha, beta },
     users: { alphaOwner, betaOwner, sharedMember, noMembership, alphaMember, admin },
     calendars: { alpha: alphaCalendar, beta: betaCalendar },
@@ -401,6 +454,9 @@ export interface MatrixRow {
   expectLocation?: (location: string | null) => boolean;
   /** Optional extra assertion on the parsed JSON body, in addition to the status. */
   expectBody?: (body: unknown) => boolean;
+  /** Optional assertion on the raw response text (HTML pages). */
+  expectText?: (text: string) => boolean;
+  headers?: Record<string, string>;
 }
 
 interface HttpResponse {
@@ -465,7 +521,7 @@ export async function runRow(row: MatrixRow): Promise<boolean> {
   // Any failure here (bad sign-in, network error, ...) is reported as this row's
   // failure rather than aborting the rest of the matrix.
   try {
-    const headers: Record<string, string> = { host: row.host, origin: `http://${row.host}` };
+    const headers: Record<string, string> = { host: row.host, origin: `http://${row.host}`, ...row.headers };
     if (row.as !== "anonymous") {
       headers.cookie = await signIn(row.as.email, row.as.password, row.host);
     }
@@ -481,6 +537,7 @@ export async function runRow(row: MatrixRow): Promise<boolean> {
     let ok =
       expected.includes(res.status) &&
       (!row.expectLocation || row.expectLocation(location));
+    if (ok && row.expectText) ok = row.expectText(res.text);
     if (ok && row.expectBody) {
       const body = ((): unknown => {
         try {
@@ -583,7 +640,9 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       host: BASE_DOMAIN,
       method: "GET",
       path: "/",
+      headers: { "accept-language": "en" },
       expectStatus: 200,
+      expectText: (text) => text.includes("No workspace yet"),
     },
     {
       name: "container health probe on localhost bypasses workspace resolution",
@@ -909,6 +968,156 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     { ...feedNotFound, name: "an unknown feed token 404s the same way on alpha's host", host: alphaHost, path: "/api/feed/does-not-exist.ics" },
     ...announcementRows(seeded),
     ...auditLogRows(seeded),
+    ...publicCalendarRows(seeded),
+  ];
+}
+
+function publicCalendarRows(seeded: SeedData): MatrixRow[] {
+  const alphaHost = `alpha.${BASE_DOMAIN}`;
+  const betaHost = `beta.${BASE_DOMAIN}`;
+  const { alpha: alphaPublic, beta: betaPublic } = seeded.publicCalendars;
+  const nonMember = seeded.users.noMembership;
+  const listIds = (body: unknown): string[] =>
+    Array.isArray(body) ? body.map((c: { id: string }) => c.id) : [];
+  const availableIds = (body: unknown): string[] =>
+    ((body as { available?: Array<{ id: string }> })?.available ?? []).map((c) => c.id);
+  const onlyIds = (ids: string[], allowed: string[]) => ids.every((id) => allowed.includes(id));
+
+  return [
+    {
+      name: "proxy guest gate lets an anonymous visitor into alpha (guest access on)",
+      as: "anonymous",
+      host: alphaHost,
+      method: "GET",
+      path: "/",
+      expectStatus: 200,
+    },
+    {
+      name: "proxy guest gate sends an anonymous visitor on beta (guest access off) to login",
+      as: "anonymous",
+      host: betaHost,
+      method: "GET",
+      path: "/",
+      expectStatus: [307, 308],
+      expectLocation: (location) =>
+        !!location && new URL(location, `http://${betaHost}`).pathname === "/login",
+    },
+    {
+      name: "anonymous GET /api/calendars on alpha lists alpha's public calendar and nothing of beta's",
+      as: "anonymous",
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars",
+      expectStatus: 200,
+      expectBody: (body) => {
+        const ids = listIds(body);
+        return ids.includes(alphaPublic) && onlyIds(ids, [alphaPublic]);
+      },
+    },
+    {
+      name: "anonymous GET /api/calendars on beta (guest access off) is sent to login",
+      as: "anonymous",
+      host: betaHost,
+      method: "GET",
+      path: "/api/calendars",
+      expectStatus: [307, 308],
+      expectLocation: (location) =>
+        !!location && new URL(location, `http://${betaHost}`).pathname === "/login",
+    },
+    {
+      name: "anonymous GET of beta's public calendar via alpha's host 404s",
+      as: "anonymous",
+      host: alphaHost,
+      method: "GET",
+      path: `/api/calendars/${betaPublic}`,
+      expectStatus: 404,
+    },
+    {
+      name: "alpha member's discovery lists alpha's public calendar, never beta's",
+      as: seeded.users.alphaMember,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => {
+        const ids = availableIds(body);
+        return ids.includes(alphaPublic) && !ids.includes(betaPublic);
+      },
+    },
+    {
+      name: "beta member keeps discovering beta's public calendar with guest access off",
+      as: seeded.users.sharedMember,
+      host: betaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => availableIds(body).includes(betaPublic),
+    },
+    {
+      name: "non-member on beta (guest access off) discovers no public calendar",
+      as: nonMember,
+      host: betaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => !JSON.stringify(body).includes(betaPublic) && !JSON.stringify(body).includes(alphaPublic),
+    },
+    {
+      name: "non-member on beta cannot subscribe to beta's public calendar",
+      as: nonMember,
+      host: betaHost,
+      method: "POST",
+      path: "/api/calendars/subscriptions",
+      body: { calendarId: betaPublic },
+      expectStatus: 404,
+    },
+    {
+      name: "non-member's existing subscription does not open beta's public calendar",
+      as: nonMember,
+      host: betaHost,
+      method: "GET",
+      path: `/api/calendars/${betaPublic}`,
+      // Same-workspace calendar without access: the route's usual 403, as for any member.
+      expectStatus: 403,
+    },
+    {
+      name: "non-member's existing subscription keeps beta's public calendar out of their list",
+      as: nonMember,
+      host: betaHost,
+      method: "GET",
+      path: "/api/calendars",
+      expectStatus: 200,
+      expectBody: (body) => !listIds(body).includes(betaPublic),
+    },
+    {
+      name: "non-member on alpha (guest access on) discovers alpha's public calendar",
+      as: nonMember,
+      host: alphaHost,
+      method: "GET",
+      path: "/api/calendars/subscriptions",
+      expectStatus: 200,
+      expectBody: (body) => {
+        const ids = availableIds(body);
+        return ids.includes(alphaPublic) && !ids.includes(betaPublic);
+      },
+    },
+    {
+      name: "non-member on alpha can subscribe to alpha's public calendar",
+      as: nonMember,
+      host: alphaHost,
+      method: "POST",
+      path: "/api/calendars/subscriptions",
+      body: { calendarId: alphaPublic },
+      expectStatus: 200,
+    },
+    {
+      name: "non-member on alpha can open the subscribed public calendar",
+      as: nonMember,
+      host: alphaHost,
+      method: "GET",
+      path: `/api/calendars/${alphaPublic}`,
+      expectStatus: 200,
+    },
   ];
 }
 
@@ -1054,6 +1263,111 @@ async function checkShareTokens(seeded: SeedData): Promise<void> {
   });
 }
 
+// A foreign id must be indistinguishable from one that never existed: same status, same body.
+async function checkForeignVsMissing(seeded: SeedData): Promise<void> {
+  console.log("\nStage 2d: foreign vs. nonexistent ids look identical");
+  const alphaHost = `alpha.${BASE_DOMAIN}`;
+  const beta = seeded.calendars.beta;
+  const missing = () => crypto.randomUUID();
+  const send = async (method: string, path: string, body?: unknown) => {
+    const res = await httpRequest(
+      path,
+      method,
+      {
+        host: alphaHost,
+        origin: `http://${alphaHost}`,
+        cookie: await signIn(seeded.users.alphaOwner.email, seeded.users.alphaOwner.password, alphaHost),
+        ...(body !== undefined ? { "content-type": "application/json" } : {}),
+      },
+      body !== undefined ? JSON.stringify(body) : undefined
+    );
+    return { status: res.status, text: res.text };
+  };
+  const cases: Array<[string, string, (cal: string, child: string) => string, string, unknown?]> = [
+    ["PATCH", "tokens/[tokenId]", (c, t) => `/api/calendars/${c}/tokens/${t}`, seeded.betaChildren.tokenId, { isActive: false }],
+    ["DELETE", "tokens/[tokenId]", (c, t) => `/api/calendars/${c}/tokens/${t}`, seeded.betaChildren.tokenId],
+    ["GET", "bundles", (c) => `/api/calendars/${c}/bundles`, ""],
+    ["PATCH", "bundles/[bundleId]", (c, b) => `/api/calendars/${c}/bundles/${b}`, beta.bundleId, { name: "pwned" }],
+    ["DELETE", "bundles/[bundleId]", (c, b) => `/api/calendars/${c}/bundles/${b}`, beta.bundleId],
+    ["GET", "custom-fields", (c) => `/api/calendars/${c}/custom-fields`, ""],
+    ["PATCH", "custom-fields/[fieldId]", (c, f) => `/api/calendars/${c}/custom-fields/${f}`, seeded.betaChildren.customFieldId, { label: "pwned" }],
+    ["DELETE", "custom-fields/[fieldId]", (c, f) => `/api/calendars/${c}/custom-fields/${f}`, seeded.betaChildren.customFieldId],
+    ["GET", "members", (c) => `/api/calendars/${c}/members`, ""],
+    ["GET", "feed-token", (c) => `/api/calendars/${c}/feed-token`, ""],
+    ["GET", "tokens", (c) => `/api/calendars/${c}/tokens`, ""],
+  ];
+  for (const [method, label, path, child, body] of cases) {
+    try {
+      const foreign = await send(method, path(beta.id, child), body);
+      const absent = await send(method, path(missing(), missing()), body);
+      console.log(`        ${method} ${label}: foreign ${foreign.status} ${foreign.text} | missing ${absent.status} ${absent.text}`);
+      check(
+        `${method} calendars/[id]/${label}: beta's ids via alpha's host match nonexistent ones`,
+        foreign.status >= 400 && foreign.status === absent.status && foreign.text === absent.text
+      );
+    } catch (error) {
+      check(`${method} calendars/[id]/${label} (threw: ${error instanceof Error ? error.message : String(error)})`, false);
+    }
+  }
+}
+
+// Slugs are subdomains: validated on create, immutable afterwards (checked in the DB, not just the status).
+async function checkWorkspaceSlugs(seeded: SeedData): Promise<void> {
+  console.log("\nStage 2e: workspace slug validation and immutability");
+  const alphaHost = `alpha.${BASE_DOMAIN}`;
+  const alphaId = seeded.workspaces.alpha.id;
+  const orgCall = async (as: SeedUser, endpoint: string, body: unknown) => {
+    const res = await httpRequest(
+      `/api/auth/organization/${endpoint}`,
+      "POST",
+      {
+        host: alphaHost,
+        origin: `http://${alphaHost}`,
+        cookie: await signIn(as.email, as.password, alphaHost),
+        "content-type": "application/json",
+      },
+      JSON.stringify(body)
+    );
+    console.log(`        ${endpoint} ${JSON.stringify(body)} -> ${res.status}`);
+    return res.status;
+  };
+  const alphaRow = async () =>
+    (await db.select().from(organization).where(eq(organization.id, alphaId)))[0];
+  const slugExists = async (slug: string) =>
+    (await db.select().from(organization).where(eq(organization.slug, slug))).length > 0;
+  const tryCheck = async (name: string, fn: () => Promise<boolean>) => {
+    try {
+      check(name, await fn());
+    } catch (error) {
+      check(`${name} (threw: ${error instanceof Error ? error.message : String(error)})`, false);
+    }
+  };
+  const owner = seeded.users.alphaOwner;
+  const admin = seeded.users.admin;
+
+  await tryCheck("alpha owner's slug update is refused", async () =>
+    (await orgCall(owner, "update", { organizationId: alphaId, data: { slug: "admin" } })) === 400
+  );
+  await tryCheck("alpha's slug is unchanged in the DB", async () => (await alphaRow())?.slug === "alpha");
+  await tryCheck("control: alpha owner can still rename the workspace", async () =>
+    (await orgCall(owner, "update", { organizationId: alphaId, data: { name: "Alpha renamed" } })) === 200 &&
+    (await alphaRow())?.name === "Alpha renamed" &&
+    (await alphaRow())?.slug === "alpha"
+  );
+  await tryCheck("admin create with a reserved slug is refused", async () =>
+    (await orgCall(admin, "create", { name: "Reserved", slug: "admin" })) === 400 && !(await slugExists("admin"))
+  );
+  await tryCheck("admin create with an invalid slug is refused", async () =>
+    (await orgCall(admin, "create", { name: "Invalid", slug: "Bad_Slug" })) === 400 && !(await slugExists("Bad_Slug"))
+  );
+  await tryCheck("admin create with a bs-pr- preview slug is refused", async () =>
+    (await orgCall(admin, "create", { name: "Preview", slug: "bs-pr-42" })) === 400 && !(await slugExists("bs-pr-42"))
+  );
+  await tryCheck("control: admin create with a valid slug succeeds", async () =>
+    (await orgCall(admin, "create", { name: "Gamma", slug: "gamma-check" })) === 200 && (await slugExists("gamma-check"))
+  );
+}
+
 // Destructive, so kept out of the shared matrix: every case seeds its own workspace and users.
 async function deleteAccount(account: SeedUser, host: string): Promise<number> {
   const status = await deleteAccountRequest(account, host);
@@ -1192,6 +1506,10 @@ async function main(): Promise<void> {
   await checkShareTokens(seeded);
 
   await checkAuditWorkspaceResolution(seeded);
+
+  await checkForeignVsMissing(seeded);
+
+  await checkWorkspaceSlugs(seeded);
 
   await checkAccountDeletion(seeded);
 
