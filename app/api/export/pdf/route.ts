@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, shifts } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { requireRequestWorkspace } from "@/lib/workspace";
+import { requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
 import { jsPDF } from "jspdf";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
@@ -355,6 +355,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Error exporting calendars as PDF:", error);
     return NextResponse.json(
       { error: "Failed to export calendars" },

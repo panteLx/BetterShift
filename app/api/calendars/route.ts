@@ -13,7 +13,7 @@ import {
 } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
-import { requireRequestWorkspace } from "@/lib/workspace";
+import { requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
 import {
@@ -199,6 +199,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(enrichedCalendars);
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Failed to fetch calendars:", error);
     return NextResponse.json(
       { error: "Failed to fetch calendars" },
@@ -283,6 +286,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(calendar, { status: 201 });
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Failed to create calendar:", error);
     return NextResponse.json(
       { error: "Failed to create calendar" },

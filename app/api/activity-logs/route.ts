@@ -5,7 +5,7 @@ import { getSessionUser } from "@/lib/auth/sessions";
 import { getUserAccessibleCalendars } from "@/lib/auth/permissions";
 import { eq, and, or, isNull, desc, gte, lte, inArray, sql } from "drizzle-orm";
 import { parseLocalDate } from "@/lib/date-utils";
-import { requireRequestWorkspace } from "@/lib/workspace";
+import { requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
 
 // Unified activity log format
 interface UnifiedActivityLog {
@@ -225,6 +225,9 @@ export async function GET(request: NextRequest) {
       hasMore: offset + paginatedLogs.length < total,
     });
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Error fetching activity logs:", error);
     return NextResponse.json(
       { error: "Failed to fetch activity logs" },
@@ -317,6 +320,9 @@ export async function DELETE(request: NextRequest) {
       message: "Activity logs cleared",
     });
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Error clearing activity logs:", error);
     return NextResponse.json(
       { error: "Failed to clear activity logs" },
