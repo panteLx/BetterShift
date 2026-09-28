@@ -4,9 +4,11 @@ import {
   calendarShares,
   calendarPermissionBundles,
   userCalendarSubscriptions,
+  type Calendar,
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { getRequestWorkspace } from "@/lib/workspace";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 import {
   getTokenBundleId,
@@ -67,6 +69,8 @@ function bundleAccess(
 export interface AccessOptions {
   /** Skip the requester's share-link cookie, for callers acting as someone else (calendar feeds). */
   ignoreTokenCookie?: boolean;
+  /** Explicit workspace, for callers outside a request (background jobs). Defaults to getRequestWorkspace(). */
+  workspaceId?: string;
 }
 
 /**
@@ -80,6 +84,9 @@ async function resolveCalendarAccess(
   calendarId: string,
   options: AccessOptions = {}
 ): Promise<ResolvedCalendarAccess | null> {
+  const workspaceId = options.workspaceId ?? (await getRequestWorkspace())?.id;
+  if (!workspaceId) return null;
+
   // guestBundle fetched alongside the calendar (one hop via the relation)
   // since almost every branch below may need it.
   const calendar = await db.query.calendars.findFirst({
@@ -87,6 +94,7 @@ async function resolveCalendarAccess(
     with: { guestBundle: true },
   });
   if (!calendar) return null;
+  if (calendar.workspaceId !== workspaceId) return null;
 
   // If auth is disabled, grant full owner access (backwards compatibility)
   if (!isAuthEnabled()) {
@@ -147,6 +155,20 @@ async function resolveCalendarAccess(
   }
 
   return null;
+}
+
+/** Workspace-scoped calendar lookup: a foreign-workspace id must 404 before any 403 can prove it exists. */
+export async function findCalendarInWorkspace(
+  calendarId: string,
+  workspaceId?: string
+): Promise<Calendar | null> {
+  const wsId = workspaceId ?? (await getRequestWorkspace())?.id;
+  if (!wsId) return null;
+  const [calendar] = await db
+    .select()
+    .from(calendars)
+    .where(and(eq(calendars.id, calendarId), eq(calendars.workspaceId, wsId)));
+  return calendar ?? null;
 }
 
 export interface CalendarAccess {

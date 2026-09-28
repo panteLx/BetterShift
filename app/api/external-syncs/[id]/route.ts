@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs, shifts, calendars } from "@/lib/db/schema";
+import { externalSyncs, shifts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import {
   isValidCalendarUrl,
   type CalendarSyncType,
@@ -32,14 +32,11 @@ export async function GET(
     }
 
     // Fetch calendar to verify it exists
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, externalSync.calendarId));
+    const calendar = await findCalendarInWorkspace(externalSync.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "External sync not found" },
         { status: 404 }
       );
     }
@@ -101,14 +98,11 @@ export async function PATCH(
     }
 
     // Fetch calendar to verify it exists
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, existingSync.calendarId));
+    const calendar = await findCalendarInWorkspace(existingSync.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "External sync not found" },
         { status: 404 }
       );
     }
@@ -231,14 +225,11 @@ export async function DELETE(
     }
 
     // Fetch calendar to verify it exists
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, existingSync.calendarId));
+    const calendar = await findCalendarInWorkspace(existingSync.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "External sync not found" },
         { status: 404 }
       );
     }

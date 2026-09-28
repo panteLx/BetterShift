@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs, shifts, syncLogs, calendars } from "@/lib/db/schema";
+import { externalSyncs, shifts, syncLogs } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import ICAL from "ical.js";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import {
   expandRecurringEvents,
   splitMultiDayEvent,
@@ -456,7 +456,8 @@ export async function POST(
       .from(externalSyncs)
       .where(eq(externalSyncs.id, syncId));
 
-    if (!externalSync) {
+    // Workspace check before rate limiting, so a foreign sync id can't consume or probe the bucket.
+    if (!externalSync || !(await findCalendarInWorkspace(externalSync.calendarId))) {
       return NextResponse.json(
         { error: "External sync not found" },
         { status: 404 }
@@ -475,19 +476,6 @@ export async function POST(
       externalSync.calendarId
     );
     if (rateLimitResponse) return rateLimitResponse;
-
-    // Fetch calendar to verify it exists
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, externalSync.calendarId));
-
-    if (!calendar) {
-      return NextResponse.json(
-        { error: "Calendar not found" },
-        { status: 404 }
-      );
-    }
 
     // Check edit permissions (works for both authenticated users and guests)
     const hasAccess = await hasCapability(

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { shiftSignups } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { getShiftSignupPermission } from "@/lib/auth/permissions";
+import { getShiftSignupPermission, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { canActOnSignup, getShiftOrNull } from "@/lib/shift-signups";
 
 // DELETE withdraw a user from a shift's signup list
@@ -20,7 +20,7 @@ export async function DELETE(
     }
 
     const shift = await getShiftOrNull(shiftId);
-    if (!shift) {
+    if (!shift || !(await findCalendarInWorkspace(shift.calendarId))) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 

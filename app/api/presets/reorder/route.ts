@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shiftPresets, calendars } from "@/lib/db/schema";
+import { shiftPresets } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 
 // PATCH reorder presets
 export async function PATCH(request: NextRequest) {
@@ -37,10 +37,7 @@ export async function PATCH(request: NextRequest) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(

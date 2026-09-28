@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars } from "@/lib/db/schema";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { requireRequestWorkspace } from "@/lib/workspace";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
 import { formatDateToLocal } from "@/lib/date-utils";
@@ -28,9 +29,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all requested calendars
+    // Scoped to the request workspace so a foreign id can't be probed via the "no calendars found" 404.
+    const workspace = await requireRequestWorkspace();
     const requestedCalendars = await db.query.calendars.findMany({
-      where: inArray(calendars.id, calendarIds),
+      where: and(inArray(calendars.id, calendarIds), eq(calendars.workspaceId, workspace.id)),
     });
 
     if (requestedCalendars.length === 0) {

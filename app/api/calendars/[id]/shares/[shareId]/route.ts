@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendarShares, calendars } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { getCalendarAccess, hasCapability } from "@/lib/auth/permissions";
+import { getCalendarAccess, hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import {
   assertBundleWithinCallerCapabilities,
   getBundleForCalendar,
@@ -148,6 +148,10 @@ export async function DELETE(
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!(await findCalendarInWorkspace(calendarId))) {
+      return NextResponse.json({ error: "Share not found" }, { status: 404 });
     }
 
     // Fetch the share first
