@@ -1185,7 +1185,11 @@
       "workspaceJoinLinkCreated": "Einladungslink erstellt",
       "workspaceJoinLinkRevoked": "Einladungslink widerrufen",
       "adminWorkspaceMemberAdded": "{user} als {role} zu „{workspace}“ hinzugefügt",
-      "adminWorkspaceMemberRemoved": "{count, plural, =0 {{user} aus „{workspace}“ entfernt} other {{user} aus „{workspace}“ entfernt, # Kalender übertragen}}"
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {{user} aus „{workspace}“ entfernt} other {{user} aus „{workspace}“ entfernt, # Kalender übertragen}}",
+      "role": {
+        "admin": "Admin",
+        "member": "Mitglied"
+      }
     }
   },
   "adminUsers": {

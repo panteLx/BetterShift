@@ -1185,7 +1185,11 @@
       "workspaceJoinLinkCreated": "Created a workspace join link",
       "workspaceJoinLinkRevoked": "Revoked a workspace join link",
       "adminWorkspaceMemberAdded": "Added {user} to “{workspace}” as {role}",
-      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Removed {user} from “{workspace}”} other {Removed {user} from “{workspace}”, transferring # calendars}}"
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Removed {user} from “{workspace}”} other {Removed {user} from “{workspace}”, transferring # calendars}}",
+      "role": {
+        "admin": "Admin",
+        "member": "Member"
+      }
     }
   },
   "adminUsers": {

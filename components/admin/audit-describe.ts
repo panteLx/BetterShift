@@ -95,10 +95,18 @@ export function useAuditDescription() {
           return t("adminAudit.describe.announcementDeleted", { title: text(m, "title") });
         case "admin.workspace_member_add":
           if (target && text(m, "workspaceSlug")) {
+            const rawRole = text(m, "role");
+            // One literal t() call per branch: the i18n checker only sees literal keys.
+            const role =
+              rawRole === "admin"
+                ? t("adminAudit.describe.role.admin")
+                : rawRole === "member"
+                  ? t("adminAudit.describe.role.member")
+                  : rawRole;
             return t("adminAudit.describe.adminWorkspaceMemberAdded", {
               user: target,
               workspace: text(m, "workspaceSlug"),
-              role: text(m, "role"),
+              role,
             });
           }
           break;

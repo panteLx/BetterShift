@@ -53,7 +53,16 @@ export async function POST(request: NextRequest, { params }: Params) {
   });
   if (existing) return NextResponse.json({ error: "Already a member", code: "already_member" }, { status: 409 });
 
-  await db.insert(member).values({ id: crypto.randomUUID(), organizationId: workspace.id, userId: ctx.target.id, role });
+  try {
+    await db.insert(member).values({ id: crypto.randomUUID(), organizationId: workspace.id, userId: ctx.target.id, role });
+  } catch (error) {
+    // The pre-check above has a race: two concurrent POSTs can both pass it, so the unique
+    // index on (organization_id, user_id) is the real guard against a duplicate membership.
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed: member.organization_id, member.user_id")) {
+      return NextResponse.json({ error: "Already a member", code: "already_member" }, { status: 409 });
+    }
+    throw error;
+  }
   void logAdminAction<AdminWorkspaceMembershipMetadata>({
     action: "admin.workspace_member_add",
     userId: ctx.admin.id,

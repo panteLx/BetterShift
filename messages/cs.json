@@ -1185,7 +1185,11 @@
       "workspaceJoinLinkCreated": "Vytvořil odkaz pro připojení k pracovnímu prostoru",
       "workspaceJoinLinkRevoked": "Zrušil odkaz pro připojení k pracovnímu prostoru",
       "adminWorkspaceMemberAdded": "Přidal uživatele {user} do „{workspace}“ jako {role}",
-      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Odebral uživatele {user} z „{workspace}“} other {Odebral uživatele {user} z „{workspace}“ a převedl # kalendářů}}"
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Odebral uživatele {user} z „{workspace}“} other {Odebral uživatele {user} z „{workspace}“ a převedl # kalendářů}}",
+      "role": {
+        "admin": "Správce",
+        "member": "Člen"
+      }
     }
   },
   "adminUsers": {

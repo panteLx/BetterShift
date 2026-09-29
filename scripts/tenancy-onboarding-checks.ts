@@ -380,6 +380,17 @@ async function checkAdminMemberships({ h, db, schema, eq, and, api, tryCheck }: 
   });
   await tryCheck("admin removes the membership", async () =>
     (await api(admin, host, "DELETE", `${path}?workspaceId=${betaId}`)).status === 200 && !(await role()));
+  await tryCheck("concurrent double-add races to exactly one 201 and one 409, one member row", async () => {
+    const target2 = await h.seedUser("admin-target-2@tenancy.test");
+    const path2 = `/api/admin/users/${target2.id}/workspaces`;
+    const [a, b] = await Promise.all([
+      api(admin, host, "POST", path2, { slug: "beta", role: "member" }),
+      api(admin, host, "POST", path2, { slug: "beta", role: "member" }),
+    ]);
+    const statuses = [a.status, b.status].sort();
+    const rows = await db.select().from(schema.member).where(and(eq(schema.member.organizationId, betaId), eq(schema.member.userId, target2.id)));
+    return statuses[0] === 201 && statuses[1] === 409 && rows.length === 1;
+  });
   await tryCheck("admin cannot remove a workspace owner (409)", async () =>
     (await api(admin, host, "DELETE", `/api/admin/users/${alphaOwner.id}/workspaces?workspaceId=${h.seeded.workspaces.alpha.id}`)).status === 409);
 }
