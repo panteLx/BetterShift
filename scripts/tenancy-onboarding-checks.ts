@@ -45,6 +45,7 @@ export async function runOnboardingChecks(h: OnboardingHarness): Promise<void> {
 
   await checkCreate(ctx);
   await checkJoinLinks(ctx);
+  await checkMembershipEnd(ctx);
 }
 
 type Ctx = {
@@ -219,4 +220,80 @@ async function checkJoinLinks({ h, db, schema, eq, and, api, tryCheck }: Ctx): P
     const rows = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "workspace.join"));
     return rows.length > 0 && rows.every((row) => !(row.metadata ?? "").includes(single.token));
   });
+}
+
+async function checkMembershipEnd({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
+  console.log("\nStage 4c: leaving and removing members");
+  const s = schema;
+  const [delta] = await db.insert(s.organization).values({ id: crypto.randomUUID(), name: "Delta", slug: "delta-end" }).returning();
+  const host = `delta-end.${h.baseDomain}`;
+  const dOwner = await h.seedUser("d-owner@tenancy.test");
+  const dAdmin = await h.seedUser("d-admin@tenancy.test");
+  const dLeaver = await h.seedUser("d-leaver@tenancy.test");
+  const dKicked = await h.seedUser("d-kicked@tenancy.test");
+  await db.insert(s.member).values([
+    { id: crypto.randomUUID(), organizationId: delta.id, userId: dOwner.id, role: "owner" },
+    { id: crypto.randomUUID(), organizationId: delta.id, userId: dAdmin.id, role: "admin" },
+    { id: crypto.randomUUID(), organizationId: delta.id, userId: dLeaver.id, role: "member" },
+    { id: crypto.randomUUID(), organizationId: delta.id, userId: dKicked.id, role: "member" },
+  ]);
+  // Owner's calendar shared with the leaver (share + subscription + feed token), and one the leaver owns.
+  const ownerCal = await h.seedCalendar(delta.id, dOwner.id, "Delta Owner Cal", dLeaver.id);
+  await db.insert(s.userCalendarSubscriptions).values({ userId: dLeaver.id, calendarId: ownerCal.id, status: "subscribed", source: "shared" });
+  const leaverFeed = await h.seedFeedToken(ownerCal.id, dLeaver.id);
+  const leaverCal = await h.seedCalendar(delta.id, dLeaver.id, "Delta Leaver Cal", dKicked.id);
+  const kickedShareCal = await h.seedCalendar(delta.id, dOwner.id, "Delta Kick Cal", dKicked.id);
+  const isMember = async (userId: string) =>
+    (await db.select().from(s.member).where(and(eq(s.member.organizationId, delta.id), eq(s.member.userId, userId)))).length === 1;
+  // GET /api/calendars returns a bare array; a non-200 also means "not visible".
+  const listsCalendar = async (as: SeedUser, calendarId: string) => {
+    const r = await api(as, host, "GET", "/api/calendars");
+    return r.status === 200 && Array.isArray(r.json) && (r.json as Array<{ id: string }>).some((c) => c.id === calendarId);
+  };
+
+  await tryCheck("members list is visible to a plain member", async () => {
+    const r = await api(dLeaver, host, "GET", "/api/workspace/members");
+    return r.status === 200 && (r.json?.members as unknown[]).length === 4 && r.json?.currentRole === "member";
+  });
+  await tryCheck("leaver sees the shared calendar before leaving", async () => listsCalendar(dLeaver, ownerCal.id));
+  await tryCheck("plain member cannot remove others (403)", async () =>
+    (await api(dLeaver, host, "DELETE", `/api/workspace/members/${dKicked.id}`)).status === 403 && (await isMember(dKicked.id)));
+  await tryCheck("workspace admin cannot remove the owner (409)", async () =>
+    (await api(dAdmin, host, "DELETE", `/api/workspace/members/${dOwner.id}`)).status === 409 && (await isMember(dOwner.id)));
+  await tryCheck("removing yourself via DELETE is 400", async () =>
+    (await api(dAdmin, host, "DELETE", `/api/workspace/members/${dAdmin.id}`)).status === 400);
+  await tryCheck("owner cannot leave (409)", async () =>
+    (await api(dOwner, host, "POST", "/api/workspace/leave")).status === 409 && (await isMember(dOwner.id)));
+  await tryCheck("removing a non-member id is 404", async () =>
+    (await api(dAdmin, host, "DELETE", `/api/workspace/members/${h.seeded.users.betaOwner.id}`)).status === 404);
+
+  await tryCheck("member leaves: 200, calendar transferred", async () => {
+    const r = await api(dLeaver, host, "POST", "/api/workspace/leave");
+    const cal = (await db.select().from(s.calendars).where(eq(s.calendars.id, leaverCal.id)))[0];
+    return r.status === 200 && r.json?.calendarsTransferred === 1 && cal.ownerId === dOwner.id && !(await isMember(dLeaver.id));
+  });
+  await tryCheck("leaver's share, subscription and feed token are gone", async () => {
+    const shares = await db.select().from(s.calendarShares).where(and(eq(s.calendarShares.userId, dLeaver.id), eq(s.calendarShares.calendarId, ownerCal.id)));
+    const subs = await db.select().from(s.userCalendarSubscriptions).where(eq(s.userCalendarSubscriptions.userId, dLeaver.id));
+    const feeds = await db.select().from(s.calendarFeedTokens).where(eq(s.calendarFeedTokens.userId, dLeaver.id));
+    return shares.length === 0 && subs.length === 0 && feeds.length === 0;
+  });
+  await tryCheck("leaver's old feed URL is 404", async () =>
+    (await api(null, host, "GET", `/api/feed/${leaverFeed}`)).status === 404);
+  await tryCheck("leaver no longer sees the formerly shared calendar", async () => !(await listsCalendar(dLeaver, ownerCal.id)));
+  await tryCheck("admin removes a member: 200 and share gone", async () => {
+    const r = await api(dAdmin, host, "DELETE", `/api/workspace/members/${dKicked.id}`);
+    const shares = await db.select().from(s.calendarShares).where(eq(s.calendarShares.userId, dKicked.id));
+    return r.status === 200 && !(await isMember(dKicked.id)) && shares.length === 0 && kickedShareCal.id.length > 0;
+  });
+  // Defence in depth: re-insert a share by hand and make sure the membership gate still refuses it.
+  await db.insert(s.calendarShares).values({ calendarId: kickedShareCal.id, userId: dKicked.id, bundleId: kickedShareCal.bundleId, sharedBy: dOwner.id });
+  await tryCheck("stale share row alone grants no access to a non-member", async () => {
+    const r = await api(dKicked, host, "GET", `/api/calendars/${kickedShareCal.id}`);
+    return r.status === 404 || r.status === 403;
+  });
+  await tryCheck("stale share row does not list the calendar for a non-member", async () =>
+    !(await listsCalendar(dKicked, kickedShareCal.id)));
+  await tryCheck("membership APIs are 404 on the portal", async () =>
+    (await api(dOwner, h.portalHost, "GET", "/api/workspace/members")).status === 404);
 }

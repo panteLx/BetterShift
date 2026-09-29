@@ -288,6 +288,12 @@ export interface WorkspaceJoinedMetadata {
   workspaceName: string;
 }
 
+export interface WorkspaceMembershipEndedMetadata {
+  targetUser: string;
+  calendarsTransferred: number;
+  removedBy: "self" | "workspace" | "admin";
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -327,7 +333,8 @@ export type AuditLogMetadata =
   | CustomFieldDeletedMetadata
   | WorkspaceCreatedMetadata
   | WorkspaceJoinLinkMetadata
-  | WorkspaceJoinedMetadata;
+  | WorkspaceJoinedMetadata
+  | WorkspaceMembershipEndedMetadata;
 
 // =====================================================
 // Audit Log Types

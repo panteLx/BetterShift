@@ -139,13 +139,14 @@ async function resolveCalendarAccess(
     return ownerAccess(calendar);
   }
 
-  const share = await db.query.calendarShares.findFirst({
-    where: and(
-      eq(calendarShares.calendarId, calendarId),
-      eq(calendarShares.userId, userId)
-    ),
-    with: { bundle: true },
-  });
+  // Shares only count for current members: a stale row must not outlive the membership.
+  const member = await isWorkspaceMember(userId, workspaceId);
+  const share = member
+    ? await db.query.calendarShares.findFirst({
+        where: and(eq(calendarShares.calendarId, calendarId), eq(calendarShares.userId, userId)),
+        with: { bundle: true },
+      })
+    : undefined;
   if (share?.bundle) {
     return bundleAccess(calendar, "share", sanitizeBundle(share.bundle));
   }
@@ -157,7 +158,7 @@ async function resolveCalendarAccess(
   }
 
   // Members reach subscribed public calendars regardless of allowGuestAccess(); non-members don't.
-  if (!guestBundle || !(await canReachPublicCalendars(userId, workspaceId))) return null;
+  if (!guestBundle || !(member || (await allowGuestAccess(workspaceId)))) return null;
   const subscription = await db.query.userCalendarSubscriptions.findFirst({
     where: and(
       eq(userCalendarSubscriptions.calendarId, calendarId),
@@ -471,6 +472,7 @@ export async function getUserAccessibleCalendars(
   }
 
   const results: Array<{ id: string; isOwner: boolean }> = [];
+  const member = await isWorkspaceMember(userId, workspace.id);
 
   const [ownedCalendars, subscriptions, sharedCalendars] = await Promise.all([
     db.query.calendars.findMany({
@@ -489,7 +491,7 @@ export async function getUserAccessibleCalendars(
 
   const existingIds = new Set(results.map((r) => r.id));
 
-  for (const share of sharedCalendars) {
+  for (const share of member ? sharedCalendars : []) {
     if (existingIds.has(share.calendarId)) continue;
     const isDismissed = subscriptions.find(
       (sub) => sub.calendarId === share.calendarId && sub.status === "dismissed"
@@ -500,7 +502,7 @@ export async function getUserAccessibleCalendars(
     }
   }
 
-  const reachPublic = await canReachPublicCalendars(userId, workspace.id);
+  const reachPublic = member || (await allowGuestAccess(workspace.id));
   const subscriptionGuestBundleIds = await existingBundleIds(
     subscriptions
       .map((sub) => sub.calendar.guestBundleId)
