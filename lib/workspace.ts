@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { organization, member } from "@/lib/db/schema";
@@ -53,7 +54,10 @@ interface CacheEntry {
 
 const HIT_TTL_MS = 30_000;
 const MISS_TTL_MS = 5_000;
-const slugCache = new Map<string, CacheEntry>();
+// On globalThis because proxy.ts and route handlers are separate bundles with their own module
+// instances in the same process; a module-level Map would make invalidation miss the proxy.
+const globalForSlugCache = globalThis as typeof globalThis & { __bsWorkspaceSlugCache?: Map<string, CacheEntry> };
+const slugCache = (globalForSlugCache.__bsWorkspaceSlugCache ??= new Map<string, CacheEntry>());
 // ":" never appears in a valid slug, so this key can't collide with one.
 const DEFAULT_CACHE_KEY = "id:default";
 
@@ -155,6 +159,18 @@ export async function requireRequestWorkspace(): Promise<Workspace> {
   return workspace;
 }
 
+// React cache() is a no-op in route handlers, so memoise on the request's headers object instead.
+const membershipByRequest = new WeakMap<object, Map<string, Promise<boolean>>>();
+
+async function requestScope(): Promise<object | null> {
+  try {
+    return await headers();
+  } catch (error) {
+    unstable_rethrow(error);
+    return null; // outside a request (background jobs): no memoisation
+  }
+}
+
 // Single-tenant: always true, since the fire-and-forget default membership insert may have failed.
 export async function isWorkspaceMember(
   userId: string,
@@ -162,11 +178,24 @@ export async function isWorkspaceMember(
 ): Promise<boolean> {
   if (!MULTI_TENANT) return true;
 
-  const row = await db.query.member.findFirst({
-    where: and(eq(member.userId, userId), eq(member.organizationId, workspaceId)),
-    columns: { id: true },
-  });
-  return !!row;
+  const scope = await requestScope();
+  let perRequest = scope ? membershipByRequest.get(scope) : undefined;
+  if (scope && !perRequest) {
+    perRequest = new Map();
+    membershipByRequest.set(scope, perRequest);
+  }
+  const key = `${userId}:${workspaceId}`;
+  const cached = perRequest?.get(key);
+  if (cached) return cached;
+
+  const lookup = db.query.member
+    .findFirst({
+      where: and(eq(member.userId, userId), eq(member.organizationId, workspaceId)),
+      columns: { id: true },
+    })
+    .then((row) => !!row);
+  perRequest?.set(key, lookup);
+  return lookup;
 }
 
 export async function getWorkspaceRole(
