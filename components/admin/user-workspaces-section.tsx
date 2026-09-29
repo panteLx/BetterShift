@@ -123,8 +123,8 @@ export function UserWorkspacesSection({ userId }: { userId: string }) {
         ))
       )}
 
-      <form onSubmit={handleAdd} className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-end">
-        <Field label={t("adminUsers.workspaceSlug")} htmlFor="user-workspace-slug" className="flex-1">
+      <form onSubmit={handleAdd} className="flex flex-col gap-3 pt-1">
+        <Field label={t("adminUsers.workspaceSlug")} htmlFor="user-workspace-slug">
           <Input
             id="user-workspace-slug"
             value={slug}
@@ -133,23 +133,26 @@ export function UserWorkspacesSection({ userId }: { userId: string }) {
             className={inputClass}
           />
         </Field>
-        <Select value={role} onValueChange={(v) => setRole(v as "member" | "admin")}>
-          <SelectTrigger className="h-10 w-full rounded-[9px] sm:w-[140px]" aria-label={t("adminUsers.addToWorkspace")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="member">{t("workspaces.roleMember")}</SelectItem>
-            <SelectItem value="admin">{t("workspaces.roleAdmin")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          type="submit"
-          disabled={addToWorkspace.isPending || !slug.trim()}
-          className="h-10 gap-2 font-semibold"
-        >
-          {addToWorkspace.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-          {t("adminUsers.addToWorkspace")}
-        </Button>
+        {/* Own row: at the panel's real (narrower than viewport) width, three inline controls squeeze the slug input to a few pixels. */}
+        <div className="flex items-center gap-3">
+          <Select value={role} onValueChange={(v) => setRole(v as "member" | "admin")}>
+            <SelectTrigger className="h-10 min-w-0 flex-1 rounded-[9px]" aria-label={t("adminUsers.addToWorkspace")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="member">{t("workspaces.roleMember")}</SelectItem>
+              <SelectItem value="admin">{t("workspaces.roleAdmin")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            type="submit"
+            disabled={addToWorkspace.isPending || !slug.trim()}
+            className="h-10 shrink-0 gap-2 font-semibold"
+          >
+            {addToWorkspace.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            {t("adminUsers.addToWorkspace")}
+          </Button>
+        </div>
       </form>
 
       <ConfirmationDialog
