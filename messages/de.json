@@ -661,7 +661,9 @@
       "calendarsToDelete": "Zu löschende Kalender",
       "andMore": "... und {count} weitere",
       "calendarsDeleted": "{count, plural, =1 {1 Kalender gelöscht} other {# Kalender gelöscht}}",
-      "calendarsTransferred": "{count, plural, =1 {1 Kalender übertragen} other {# Kalender übertragen}}"
+      "calendarsTransferred": "{count, plural, =1 {1 Kalender übertragen} other {# Kalender übertragen}}",
+      "transferJoinsWorkspace": "{user} wird dabei Mitglied im Workspace „{workspace}“.",
+      "transferJoinsWorkspacesBulk": "Nutzer, die noch kein Mitglied sind, werden dabei den betroffenen Workspaces als Mitglied hinzugefügt."
     },
     "allActions": "Alle Aktionen",
     "adminActions": "Admin-Aktionen",
@@ -1142,7 +1144,9 @@
       "userDeleted": "Konto {user} gelöscht",
       "userUpdated": "Konto {user} bearbeitet",
       "calendarTransferred": "Kalender „{calendar}“ an {user} übertragen",
+      "calendarTransferredAndJoined": "Kalender „{calendar}“ an {user} übertragen (wurde dabei Mitglied im Workspace „{workspace}“)",
       "calendarsTransferred": "{count, plural, one {# Kalender} other {# Kalender}} an {user} übertragen",
+      "calendarsTransferredAndJoined": "{count, plural, one {# Kalender} other {# Kalender}} an {user} übertragen (wurde dabei Mitglied in {count2, plural, one {einem Workspace} other {# Workspaces}})",
       "calendarsDeleted": "{count, plural, one {# Kalender} other {# Kalender}} gelöscht",
       "logsDeleted": "{count, plural, one {# Protokolleintrag} other {# Protokolleinträge}} gelöscht",
       "systemSettingsUpdated": "Systemeinstellungen geändert",
@@ -1211,7 +1215,7 @@
     "workspaceAdded": "Zum Workspace hinzugefügt",
     "workspaceNotFound": "Workspace nicht gefunden",
     "workspaceRemoved": "Aus dem Workspace entfernt",
-    "workspaceSlug": "Workspace-Adresse (Slug)",
+    "workspaceSlug": "Workspace (Slug)",
     "workspaces": "Workspaces",
     "workspacesEmpty": "In keinem Workspace"
   },

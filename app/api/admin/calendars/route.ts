@@ -159,6 +159,7 @@ export async function GET(request: NextRequest) {
       .select({
         id: calendars.id,
         name: calendars.name,
+        workspaceId: calendars.workspaceId,
         workspaceName: organization.name,
         color: calendars.color,
         ownerId: calendars.ownerId,
@@ -195,6 +196,7 @@ export async function GET(request: NextRequest) {
     const items = rows.map((row) => ({
       id: row.id,
       name: row.name,
+      workspaceId: row.workspaceId,
       workspaceName: row.workspaceName ?? "—",
       color: row.color,
       ownerId: row.ownerId,

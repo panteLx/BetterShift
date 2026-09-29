@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   calendars as calendarsTable,
+  organization,
   user as userTable,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAdmin, canTransferCalendar } from "@/lib/auth/admin";
-import { logAuditEvent } from "@/lib/audit-log";
+import { logAuditEvent, type AdminCalendarTransferMetadata } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
 import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { isWorkspaceMember } from "@/lib/workspace";
+import { MULTI_TENANT } from "@/lib/auth/env";
+import { ensureWorkspaceMember } from "@/lib/workspace-membership-end";
 
 /**
  * Admin Calendar Transfer API
@@ -24,6 +26,9 @@ import { isWorkspaceMember } from "@/lib/workspace";
  * - newOwnerId: string - User ID to transfer to
  * OR
  * - assignToSelf: boolean - Transfer to current admin (for orphaned calendars)
+ *
+ * Multi-tenant: a new owner outside the calendar's workspace joins it as `member`
+ * in the same transaction.
  *
  * Permission: Admin or Superadmin
  */
@@ -102,24 +107,26 @@ export async function POST(
       );
     }
 
-    if (!(await isWorkspaceMember(newOwnerId, calendar.workspaceId))) {
-      return NextResponse.json(
-        { error: "Target user is not a member of this calendar's workspace" },
-        { status: 400 }
-      );
-    }
-
     const previousOwnerId = calendar.ownerId;
 
-    // Transfer ownership
-    const [updatedCalendar] = await db
-      .update(calendarsTable)
-      .set({ ownerId: newOwnerId })
-      .where(eq(calendarsTable.id, calendarId))
-      .returning();
+    const { updatedCalendar, addedToWorkspace } = db.transaction((tx) => {
+      const added = MULTI_TENANT ? ensureWorkspaceMember(tx, calendar.workspaceId, newOwnerId) : false;
+      const [row] = tx
+        .update(calendarsTable)
+        .set({ ownerId: newOwnerId })
+        .where(eq(calendarsTable.id, calendarId))
+        .returning()
+        .all();
+      return { updatedCalendar: row, addedToWorkspace: added };
+    });
+
+    const workspace = await db.query.organization.findFirst({
+      where: eq(organization.id, calendar.workspaceId),
+      columns: { slug: true },
+    });
 
     // Audit log
-    await logAuditEvent({
+    await logAuditEvent<AdminCalendarTransferMetadata>({
       request,
       action: "admin.calendar.transfer",
       userId: currentUser.id,
@@ -132,12 +139,15 @@ export async function POST(
         newOwnerEmail: newOwner.email,
         transferredBy: currentUser.email,
         assignedToSelf: body.assignToSelf === true,
+        addedToWorkspace,
+        workspaceSlug: workspace?.slug ?? null,
       },
     });
 
     return NextResponse.json({
       message: "Calendar ownership transferred successfully",
       calendar: updatedCalendar,
+      addedToWorkspace,
     });
   } catch (error) {
     console.error("[Admin Calendar Transfer API] Error:", error);

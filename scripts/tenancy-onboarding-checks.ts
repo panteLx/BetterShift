@@ -49,6 +49,7 @@ export async function runOnboardingChecks(h: OnboardingHarness): Promise<void> {
   await checkMembershipEndScoping(ctx);
   await checkAdminMemberships(ctx);
   await checkNonMemberOwnership(ctx);
+  await checkAdminTransfer(ctx);
 }
 
 type Ctx = {
@@ -462,5 +463,86 @@ async function checkNonMemberOwnership({ h, db, schema, eq, and, api, tryCheck }
   await tryCheck("control: a member can create a calendar (201)", async () => {
     const r = await api(creatorMember, host, "POST", "/api/calendars", { name: "Member Cal" });
     return r.status === 201 && (await calendarsOwnedBy(creatorMember.id)).length === 1;
+  });
+}
+
+/** Instance admins may transfer a calendar to anyone; a non-member target joins the calendar's workspace as member. */
+async function checkAdminTransfer({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
+  console.log("\nStage 4f: admin calendar transfer across workspaces");
+  // The admin API lives on workspace hosts only; its calendar list spans every workspace.
+  const host = `alpha.${h.baseDomain}`;
+  const alphaId = h.seeded.workspaces.alpha.id;
+  const betaId = h.seeded.workspaces.beta.id;
+  const { admin: superadmin, alphaOwner, betaOwner, alphaMember, sharedMember } = h.seeded.users;
+  const outsider = await h.seedUser("tr-outsider@tenancy.test");
+  const bulkOutsider = await h.seedUser("tr-bulk-outsider@tenancy.test");
+  const alphaAdmin = await h.seedUser("tr-alpha-admin@tenancy.test");
+  await db.insert(schema.member).values({ id: crypto.randomUUID(), organizationId: alphaId, userId: alphaAdmin.id, role: "admin" });
+  const instanceAdmin = await h.seedUser("tr-instance-admin@tenancy.test", "admin");
+  const calA = await h.seedCalendar(alphaId, alphaOwner.id, "TR Alpha Cal", alphaMember.id);
+  const calB = await h.seedCalendar(betaId, betaOwner.id, "TR Beta Cal", sharedMember.id);
+  const bulkA = await h.seedCalendar(alphaId, alphaOwner.id, "TR Bulk Alpha", alphaMember.id);
+  const bulkB = await h.seedCalendar(betaId, betaOwner.id, "TR Bulk Beta", sharedMember.id);
+
+  const ownerOf = async (calendarId: string) =>
+    (await db.select({ ownerId: schema.calendars.ownerId }).from(schema.calendars).where(eq(schema.calendars.id, calendarId)))[0]?.ownerId;
+  const rows = async (workspaceId: string, userId: string) =>
+    db.select().from(schema.member).where(and(eq(schema.member.organizationId, workspaceId), eq(schema.member.userId, userId)));
+  const transfer = (as: SeedUser, calendarId: string, body: Record<string, unknown>) =>
+    api(as, host, "POST", `/api/admin/calendars/${calendarId}/transfer`, body);
+
+  await tryCheck("(a) superadmin transfers an alpha calendar to a non-member: 200, owner changed, member row added", async () => {
+    const r = await transfer(superadmin, calA.id, { newOwnerId: outsider.id });
+    const m = await rows(alphaId, outsider.id);
+    return r.status === 200 && (await ownerOf(calA.id)) === outsider.id && m.length === 1 && m[0].role === "member";
+  });
+  await tryCheck("(a) the transfer audit row records the added workspace membership", async () => {
+    const logs = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "admin.calendar.transfer"));
+    return logs.some((l) => {
+      const meta = JSON.parse(l.metadata ?? "{}");
+      return meta.calendarId === calA.id && meta.newOwnerId === outsider.id && meta.addedToWorkspace === true && meta.workspaceSlug === "alpha";
+    });
+  });
+  await tryCheck("(b) transfer to an existing workspace admin keeps exactly one row with role admin", async () => {
+    const r = await transfer(superadmin, calA.id, { newOwnerId: alphaAdmin.id });
+    const m = await rows(alphaId, alphaAdmin.id);
+    return r.status === 200 && (await ownerOf(calA.id)) === alphaAdmin.id && m.length === 1 && m[0].role === "admin";
+  });
+  await tryCheck("(b) transfer to an existing member keeps exactly one row with role member", async () => {
+    const r = await transfer(superadmin, calA.id, { newOwnerId: alphaMember.id });
+    const m = await rows(alphaId, alphaMember.id);
+    return r.status === 200 && (await ownerOf(calA.id)) === alphaMember.id && m.length === 1 && m[0].role === "member";
+  });
+  await tryCheck("(c) assignToSelf by a non-member instance admin: 200 and the admin joins beta as member", async () => {
+    const before = await rows(betaId, instanceAdmin.id);
+    const r = await transfer(instanceAdmin, calB.id, { assignToSelf: true });
+    const m = await rows(betaId, instanceAdmin.id);
+    return before.length === 0 && r.status === 200 && (await ownerOf(calB.id)) === instanceAdmin.id && m.length === 1 && m[0].role === "member";
+  });
+  await tryCheck("(d) bulk transfer across alpha and beta to a non-member: 200, owner of both, member of both", async () => {
+    const r = await api(superadmin, host, "POST", "/api/admin/calendars/bulk-transfer", { calendarIds: [bulkA.id, bulkB.id], newOwnerId: bulkOutsider.id });
+    const a = await rows(alphaId, bulkOutsider.id);
+    const b = await rows(betaId, bulkOutsider.id);
+    return r.status === 200 && (await ownerOf(bulkA.id)) === bulkOutsider.id && (await ownerOf(bulkB.id)) === bulkOutsider.id &&
+      a.length === 1 && a[0].role === "member" && b.length === 1 && b[0].role === "member";
+  });
+  await tryCheck("(d) the bulk transfer audit row lists both workspaces", async () => {
+    const logs = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "admin.calendar.bulk_transfer"));
+    return logs.some((l) => {
+      const meta = JSON.parse(l.metadata ?? "{}");
+      const added = (meta.addedToWorkspaces ?? []) as Array<{ id: string }>;
+      return meta.newOwnerId === bulkOutsider.id && added.length === 2 && [alphaId, betaId].every((id) => added.some((w) => w.id === id));
+    });
+  });
+  await tryCheck("(e) a non-admin still gets 403 on transfer, nothing changes", async () => {
+    const nobody = await h.seedUser("tr-nonadmin-target@tenancy.test");
+    const before = await ownerOf(bulkA.id);
+    const r = await transfer(alphaMember, bulkA.id, { newOwnerId: nobody.id });
+    return r.status === 403 && (await ownerOf(bulkA.id)) === before && (await rows(alphaId, nobody.id)).length === 0;
+  });
+  await tryCheck("(e) a non-admin still gets 403 on bulk transfer", async () => {
+    const before = await ownerOf(bulkA.id);
+    const r = await api(alphaMember, host, "POST", "/api/admin/calendars/bulk-transfer", { calendarIds: [bulkA.id], newOwnerId: alphaMember.id });
+    return r.status === 403 && (await ownerOf(bulkA.id)) === before;
   });
 }

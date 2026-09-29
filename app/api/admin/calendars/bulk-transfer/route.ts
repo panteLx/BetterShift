@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   calendars as calendarsTable,
+  organization,
   user as userTable,
 } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { requireAdmin, canTransferCalendar } from "@/lib/auth/admin";
-import { logAuditEvent } from "@/lib/audit-log";
+import { logAuditEvent, type AdminCalendarBulkTransferMetadata } from "@/lib/audit-log";
 import { rateLimit } from "@/lib/rate-limiter";
 import {
   getValidatedAdminUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
-import { isWorkspaceMember } from "@/lib/workspace";
+import { MULTI_TENANT } from "@/lib/auth/env";
+import { ensureWorkspaceMember } from "@/lib/workspace-membership-end";
 
 /**
  * Admin Calendar Bulk Transfer API
@@ -23,6 +25,9 @@ import { isWorkspaceMember } from "@/lib/workspace";
  * Body:
  * - calendarIds: string[] - Array of calendar IDs to transfer
  * - newOwnerId: string - User ID to transfer to
+ *
+ * Multi-tenant: the new owner joins every affected workspace they are not yet in as
+ * `member`, in the same transaction.
  *
  * Permission: Admin or Superadmin
  */
@@ -95,23 +100,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const workspaceIds = Array.from(new Set(calendars.map((c) => c.workspaceId)));
-    for (const workspaceId of workspaceIds) {
-      if (!(await isWorkspaceMember(newOwnerId, workspaceId))) {
-        return NextResponse.json(
-          { error: "Target user is not a member of every selected calendar's workspace" },
-          { status: 400 }
-        );
-      }
-    }
+    const foundIds = calendars.map((c) => c.id);
 
-    // Transfer ownership for all calendars
-    await db
-      .update(calendarsTable)
-      .set({ ownerId: newOwnerId })
-      .where(inArray(calendarsTable.id, calendarIds));
+    const addedIds = db.transaction((tx) => {
+      const added: string[] = [];
+      if (MULTI_TENANT) {
+        for (const workspaceId of workspaceIds) {
+          if (ensureWorkspaceMember(tx, workspaceId, newOwnerId)) added.push(workspaceId);
+        }
+      }
+      tx.update(calendarsTable)
+        .set({ ownerId: newOwnerId })
+        .where(inArray(calendarsTable.id, foundIds))
+        .run();
+      return added;
+    });
+
+    const addedToWorkspaces =
+      addedIds.length > 0
+        ? await db
+            .select({ id: organization.id, slug: organization.slug })
+            .from(organization)
+            .where(inArray(organization.id, addedIds))
+        : [];
 
     // Audit log
-    await logAuditEvent({
+    await logAuditEvent<AdminCalendarBulkTransferMetadata>({
       request,
       action: "admin.calendar.bulk_transfer",
       userId: currentUser.id,
@@ -127,6 +141,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           calendarId: c.id,
           previousOwnerId: c.ownerId,
         })),
+        addedToWorkspaces,
       },
     });
 
@@ -135,6 +150,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       transferredCount: calendars.length,
       calendarIds,
       newOwnerId,
+      addedToWorkspaces,
     });
   } catch (error) {
     console.error("[Admin Calendar Bulk Transfer API] Error:", error);

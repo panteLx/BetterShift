@@ -62,6 +62,13 @@ export function useAuditDescription() {
           break;
         case "admin.calendar.transfer":
           if (calendar && text(m, "newOwnerEmail")) {
+            if (field(m, "addedToWorkspace") === true && text(m, "workspaceSlug")) {
+              return t("adminAudit.describe.calendarTransferredAndJoined", {
+                calendar,
+                user: text(m, "newOwnerEmail"),
+                workspace: text(m, "workspaceSlug"),
+              });
+            }
             return t("adminAudit.describe.calendarTransferred", {
               calendar,
               user: text(m, "newOwnerEmail"),
@@ -70,6 +77,15 @@ export function useAuditDescription() {
           break;
         case "admin.calendar.bulk_transfer":
           if (text(m, "newOwnerEmail")) {
+            const added = field(m, "addedToWorkspaces");
+            const addedCount = Array.isArray(added) ? added.length : 0;
+            if (addedCount > 0) {
+              return t("adminAudit.describe.calendarsTransferredAndJoined", {
+                count: count(m, "count"),
+                user: text(m, "newOwnerEmail"),
+                count2: addedCount,
+              });
+            }
             return t("adminAudit.describe.calendarsTransferred", {
               count: count(m, "count"),
               user: text(m, "newOwnerEmail"),

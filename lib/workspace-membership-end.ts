@@ -9,6 +9,21 @@ import {
   userCalendarSubscriptions,
 } from "@/lib/db/schema";
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Adds the user to the workspace as `member` unless they already belong to it (any role).
+ * Returns whether a row was added; insert-or-ignore on the unique index absorbs a concurrent add.
+ */
+export function ensureWorkspaceMember(tx: Tx, workspaceId: string, userId: string): boolean {
+  const result = tx
+    .insert(member)
+    .values({ id: crypto.randomUUID(), organizationId: workspaceId, userId, role: "member" })
+    .onConflictDoNothing({ target: [member.organizationId, member.userId] })
+    .run();
+  return result.changes > 0;
+}
+
 export type EndMembershipResult =
   | { ok: true; calendarsTransferred: number }
   | { ok: false; reason: "not_member" | "owner" | "no_owner" };

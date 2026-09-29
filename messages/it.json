@@ -661,7 +661,9 @@
       "calendarsToDelete": "Calendari da eliminare",
       "andMore": "... e altri {count}",
       "calendarsDeleted": "{count, plural, =1 {1 calendario eliminato} other {# calendari eliminati}}",
-      "calendarsTransferred": "{count, plural, =1 {1 calendario trasferito} other {# calendari trasferiti}}"
+      "calendarsTransferred": "{count, plural, =1 {1 calendario trasferito} other {# calendari trasferiti}}",
+      "transferJoinsWorkspace": "{user} entrer\u00e0 anche a far parte del workspace \u00ab{workspace}\u00bb.",
+      "transferJoinsWorkspacesBulk": "Gli utenti che non sono ancora membri verranno aggiunti ai workspace interessati come membri."
     },
     "allActions": "Tutte le Azioni",
     "adminActions": "Azioni Admin",
@@ -1142,7 +1144,9 @@
       "userDeleted": "Account {user} eliminato",
       "userUpdated": "Account {user} modificato",
       "calendarTransferred": "Calendario «{calendar}» trasferito a {user}",
+      "calendarTransferredAndJoined": "Calendario «{calendar}» trasferito a {user} (entrato nel workspace «{workspace}»)",
       "calendarsTransferred": "{count, plural, one {# calendario trasferito} other {# calendari trasferiti}} a {user}",
+      "calendarsTransferredAndJoined": "{count, plural, one {# calendario trasferito} other {# calendari trasferiti}} a {user} (entrato in {count2, plural, one {un workspace} other {# workspace}})",
       "calendarsDeleted": "{count, plural, one {# calendario eliminato} other {# calendari eliminati}}",
       "logsDeleted": "{count, plural, one {# voce di log eliminata} other {# voci di log eliminate}}",
       "systemSettingsUpdated": "Impostazioni di sistema modificate",
@@ -1211,7 +1215,7 @@
     "workspaceAdded": "Aggiunto al workspace",
     "workspaceNotFound": "Workspace non trovato",
     "workspaceRemoved": "Rimosso dal workspace",
-    "workspaceSlug": "Indirizzo del workspace (slug)",
+    "workspaceSlug": "Workspace (slug)",
     "workspaces": "Workspaces",
     "workspacesEmpty": "Non appartiene a nessun workspace"
   },

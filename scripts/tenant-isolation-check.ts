@@ -1026,15 +1026,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 201,
     },
     // Admin routes stay instance-wide: the admin is a member of no workspace at all.
-    {
-      name: "admin transfer of alpha's calendar to the beta-only owner is refused",
-      as: seeded.users.admin,
-      host: alphaHost,
-      method: "POST",
-      path: `/api/admin/calendars/${alphaCal.id}/transfer`,
-      body: { newOwnerId: betaOwner.id },
-      expectStatus: 400,
-    },
+    // Transfers to non-members (which add a membership) are covered in Stage 4f.
     {
       name: "admin transfer of alpha's calendar back to its alpha owner is allowed, even via beta's host",
       as: seeded.users.admin,
@@ -1043,15 +1035,6 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       path: `/api/admin/calendars/${alphaCal.id}/transfer`,
       body: { newOwnerId: alphaOwner.id },
       expectStatus: 200,
-    },
-    {
-      name: "admin bulk transfer across workspaces to an alpha-only owner is refused",
-      as: seeded.users.admin,
-      host: alphaHost,
-      method: "POST",
-      path: "/api/admin/calendars/bulk-transfer",
-      body: { calendarIds: [alphaCal.id, betaCal.id], newOwnerId: alphaOwner.id },
-      expectStatus: 400,
     },
     {
       name: "admin bulk transfer of alpha's calendar back to its alpha owner is allowed",
@@ -1063,7 +1046,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 200,
     },
     {
-      name: "beta's calendar still belongs to the beta owner after the refused bulk transfer",
+      name: "beta's calendar still belongs to the beta owner after the alpha-only bulk transfer",
       as: betaOwner,
       host: betaHost,
       method: "GET",

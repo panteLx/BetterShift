@@ -155,9 +155,28 @@ export interface AdminUserDeleteMetadata {
 }
 
 export interface AdminCalendarTransferMetadata {
+  calendarId: string;
   calendarName: string;
-  fromUser: string;
-  toUser: string;
+  previousOwnerId: string | null;
+  newOwnerId: string;
+  newOwnerEmail: string;
+  transferredBy: string;
+  assignedToSelf: boolean;
+  /** True when the new owner was added to the calendar's workspace as part of the transfer. */
+  addedToWorkspace: boolean;
+  workspaceSlug: string | null;
+}
+
+export interface AdminCalendarBulkTransferMetadata {
+  count: number;
+  calendarIds: string[];
+  calendarNames: string[];
+  newOwnerId: string;
+  newOwnerEmail: string;
+  transferredBy: string;
+  previousOwners: Array<{ calendarId: string; previousOwnerId: string | null }>;
+  /** Workspaces the new owner was added to as part of the transfer. */
+  addedToWorkspaces: Array<{ id: string; slug: string | null }>;
 }
 
 export interface AdminPasswordResetMetadata {
@@ -324,6 +343,7 @@ export type AuditLogMetadata =
   | AdminUserDeleteMetadata
   | AdminUserCreateMetadata
   | AdminCalendarTransferMetadata
+  | AdminCalendarBulkTransferMetadata
   | AdminPasswordResetMetadata
   | AdminSystemSettingsUpdatedMetadata
   | AdminTelemetryConsentMetadata

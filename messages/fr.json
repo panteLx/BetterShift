@@ -661,7 +661,9 @@
       "calendarsToDelete": "Calendriers à supprimer",
       "andMore": "... et {count} de plus",
       "calendarsDeleted": "{count, plural, =1 {1 calendrier supprimé} other {# calendriers supprimés}}",
-      "calendarsTransferred": "{count, plural, =1 {1 calendrier transféré} other {# calendriers transférés}}"
+      "calendarsTransferred": "{count, plural, =1 {1 calendrier transféré} other {# calendriers transférés}}",
+      "transferJoinsWorkspace": "{user} rejoindra \u00e9galement le workspace \u00ab\u00a0{workspace}\u00a0\u00bb.",
+      "transferJoinsWorkspacesBulk": "Les utilisateurs qui ne sont pas encore membres seront ajout\u00e9s aux workspaces concern\u00e9s en tant que membres."
     },
     "allActions": "Toutes les actions",
     "adminActions": "Actions d'administration",
@@ -1142,7 +1144,9 @@
       "userDeleted": "Compte {user} supprimé",
       "userUpdated": "Compte {user} modifié",
       "calendarTransferred": "Calendrier « {calendar} » transféré à {user}",
+      "calendarTransferredAndJoined": "Calendrier « {calendar} » transféré à {user} (a rejoint le workspace « {workspace} »)",
       "calendarsTransferred": "{count, plural, one {# calendrier transféré} other {# calendriers transférés}} à {user}",
+      "calendarsTransferredAndJoined": "{count, plural, one {# calendrier transféré} other {# calendriers transférés}} à {user} (a rejoint {count2, plural, one {un workspace} other {# workspaces}})",
       "calendarsDeleted": "{count, plural, one {# calendrier supprimé} other {# calendriers supprimés}}",
       "logsDeleted": "{count, plural, one {# entrée de journal supprimée} other {# entrées de journal supprimées}}",
       "systemSettingsUpdated": "Paramètres système modifiés",
@@ -1211,7 +1215,7 @@
     "workspaceAdded": "Ajouté au workspace",
     "workspaceNotFound": "Workspace introuvable",
     "workspaceRemoved": "Retiré du workspace",
-    "workspaceSlug": "Adresse du workspace (slug)",
+    "workspaceSlug": "Workspace (slug)",
     "workspaces": "Workspaces",
     "workspacesEmpty": "N'appartient à aucun workspace"
   },

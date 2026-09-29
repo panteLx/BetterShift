@@ -661,7 +661,9 @@
       "calendarsToDelete": "Calendars to delete",
       "andMore": "... and {count} more",
       "calendarsDeleted": "{count, plural, =1 {1 calendar deleted} other {# calendars deleted}}",
-      "calendarsTransferred": "{count, plural, =1 {1 calendar transferred} other {# calendars transferred}}"
+      "calendarsTransferred": "{count, plural, =1 {1 calendar transferred} other {# calendars transferred}}",
+      "transferJoinsWorkspace": "{user} will also join the workspace \u201c{workspace}\u201d.",
+      "transferJoinsWorkspacesBulk": "Users who are not yet members will be added to the affected workspaces as members."
     },
     "allActions": "All Actions",
     "adminActions": "Admin Actions",
@@ -1142,7 +1144,9 @@
       "userDeleted": "Account {user} deleted",
       "userUpdated": "Account {user} edited",
       "calendarTransferred": "Calendar “{calendar}” transferred to {user}",
+      "calendarTransferredAndJoined": "Calendar “{calendar}” transferred to {user} (who joined workspace “{workspace}”)",
       "calendarsTransferred": "{count, plural, one {# calendar} other {# calendars}} transferred to {user}",
+      "calendarsTransferredAndJoined": "{count, plural, one {# calendar} other {# calendars}} transferred to {user} (who joined {count2, plural, one {one workspace} other {# workspaces}})",
       "calendarsDeleted": "{count, plural, one {# calendar} other {# calendars}} deleted",
       "logsDeleted": "{count, plural, one {# log entry} other {# log entries}} deleted",
       "systemSettingsUpdated": "System settings changed",
@@ -1211,7 +1215,7 @@
     "workspaceAdded": "Added to the workspace",
     "workspaceNotFound": "Workspace not found",
     "workspaceRemoved": "Removed from the workspace",
-    "workspaceSlug": "Workspace address (slug)",
+    "workspaceSlug": "Workspace (slug)",
     "workspaces": "Workspaces",
     "workspacesEmpty": "Not in any workspace"
   },
