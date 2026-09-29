@@ -1041,7 +1041,7 @@
     "guestTitle": "Žádný kalendář není veřejně sdílen",
     "guestDescription": "Bez účtu vidíte jen kalendáře, které byly výslovně otevřeny pro hosty. Pokud jste dostali přístupový odkaz, otevřete ho přímo – odkaz obsahuje přístup.",
     "noWorkspaceAccessTitle": "Žádný přístup k tomuto pracovnímu prostoru",
-    "noWorkspaceAccessDescription": "Jste přihlášeni na {workspace}, ale zatím nepatříte k žádnému zdejšímu pracovnímu prostoru. Požádejte prosím o pozvánku.",
+    "noWorkspaceAccessDescription": "Jste přihlášeni, ale nejste členem {workspace}. Požádejte člena nebo správce tohoto pracovního prostoru o pozvánku.",
     "pasteAccessLink": "Vložit přístupový odkaz",
     "accessLinkDescription": "Vložte odkaz, který jste dostali – nebo jen token z něj.",
     "accessLinkLabel": "Přístupový odkaz",

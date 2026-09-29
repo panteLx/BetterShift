@@ -1041,7 +1041,7 @@
     "guestTitle": "Aucun calendrier partagé publiquement",
     "guestDescription": "Sans compte, vous ne voyez que les calendriers explicitement ouverts aux invités. Si vous avez reçu un lien d'accès, ouvrez-le directement – le lien contient l'accès.",
     "noWorkspaceAccessTitle": "Aucun accès à cet espace de travail",
-    "noWorkspaceAccessDescription": "Vous êtes connecté(e) sur {workspace}, mais n'appartenez encore à aucun espace de travail ici. Merci de demander une invitation.",
+    "noWorkspaceAccessDescription": "Vous êtes connecté(e), mais vous n'êtes pas membre de {workspace}. Demandez une invitation à un membre ou à un administrateur de cet espace de travail.",
     "pasteAccessLink": "Coller un lien d'accès",
     "accessLinkDescription": "Collez le lien que vous avez reçu – ou seulement le jeton qu'il contient.",
     "accessLinkLabel": "Lien d'accès",

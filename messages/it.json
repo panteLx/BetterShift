@@ -1041,7 +1041,7 @@
     "guestTitle": "Nessun calendario condiviso pubblicamente",
     "guestDescription": "Senza account vedi solo i calendari aperti esplicitamente agli ospiti. Se hai ricevuto un link di accesso, aprilo direttamente: il link contiene l'accesso.",
     "noWorkspaceAccessTitle": "Nessun accesso a questo workspace",
-    "noWorkspaceAccessDescription": "Hai effettuato l'accesso su {workspace}, ma non appartieni ancora a nessun workspace qui. Richiedi un invito.",
+    "noWorkspaceAccessDescription": "Hai effettuato l'accesso, ma non sei membro di {workspace}. Chiedi un invito a un membro o a un amministratore di questo workspace.",
     "pasteAccessLink": "Incolla link di accesso",
     "accessLinkDescription": "Incolla il link che hai ricevuto, oppure solo il token che contiene.",
     "accessLinkLabel": "Link di accesso",

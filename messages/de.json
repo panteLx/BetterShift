@@ -1041,7 +1041,7 @@
     "guestTitle": "Kein Kalender öffentlich freigegeben",
     "guestDescription": "Ohne Konto siehst du nur Kalender, die ausdrücklich für Gäste geöffnet wurden. Wenn du einen Zugangslink bekommen hast, öffne ihn direkt – der Link enthält den Zugriff.",
     "noWorkspaceAccessTitle": "Kein Zugriff auf diesen Workspace",
-    "noWorkspaceAccessDescription": "Du bist bei {workspace} angemeldet, gehörst aber noch keinem Workspace hier an. Bitte eine Einladung anfordern.",
+    "noWorkspaceAccessDescription": "Du bist angemeldet, aber kein Mitglied von {workspace}. Bitte ein Mitglied oder einen Admin dieses Workspaces um eine Einladung.",
     "pasteAccessLink": "Zugangslink einfügen",
     "accessLinkDescription": "Füge den Link ein, den du bekommen hast – oder nur den Token daraus.",
     "accessLinkLabel": "Zugangslink",
