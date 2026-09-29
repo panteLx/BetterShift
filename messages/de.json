@@ -444,9 +444,7 @@
     "unavailable": "System nicht verfügbar",
     "unavailableDescription": "Das System ist derzeit durch einen kritischen Fehler nicht verfügbar. Bitte versuche es später erneut oder kontaktiere einen Administrator.",
     "workspaceNotFound": "Workspace nicht gefunden",
-    "workspaceNotFoundDescription": "Diese Subdomain gehört zu keinem Workspace.",
-    "noWorkspace": "Noch kein Workspace",
-    "noWorkspaceDescription": "Du bist noch kein Mitglied eines Workspaces. Bitte lass dich von einem Workspace-Admin einladen."
+    "workspaceNotFoundDescription": "Diese Subdomain gehört zu keinem Workspace."
   },
   "guest": {
     "viewingAsGuest": "Du betrachtest als Gast",
@@ -1394,5 +1392,38 @@
   },
   "announcements": {
     "dismiss": "Ankündigung ausblenden"
+  },
+  "workspaces": {
+    "portalTitle": "Deine Workspaces",
+    "portalDescription": "Öffne einen Workspace, erstelle einen neuen oder tritt per Einladungslink bei.",
+    "empty": "Du bist noch in keinem Workspace.",
+    "open": "Öffnen",
+    "create": "Workspace erstellen",
+    "createTitle": "Neuen Workspace erstellen",
+    "createDescription": "Der Workspace bekommt eine eigene Adresse. Sie kann später nicht geändert werden.",
+    "name": "Name",
+    "namePlaceholder": "z. B. Pflegeteam Station 3",
+    "address": "Adresse",
+    "slugHint": "3–32 Zeichen: Kleinbuchstaben, Ziffern, Bindestriche",
+    "slugAvailable": "Verfügbar",
+    "slugTaken": "Bereits vergeben",
+    "slugReserved": "Diese Adresse ist reserviert",
+    "slugInvalid": "Ungültige Adresse",
+    "limitReached": "Du besitzt bereits {max} Workspaces. Mehr sind nicht möglich.",
+    "nameInvalid": "Bitte gib einen Namen mit höchstens 64 Zeichen an.",
+    "createError": "Workspace konnte nicht erstellt werden",
+    "joinWithLink": "Einladungslink einlösen",
+    "joinLinkPlaceholder": "Einladungslink einfügen",
+    "joinLinkInvalidFormat": "Das ist kein gültiger Einladungslink.",
+    "joinTitle": "Workspace beitreten",
+    "joinDescription": "Du trittst {workspace} bei.",
+    "joinButton": "Beitreten",
+    "alreadyMember": "Du bist bereits Mitglied von {workspace}.",
+    "linkInvalid": "Link ungültig oder abgelaufen",
+    "linkInvalidDescription": "Bitte die Person, die dich eingeladen hat, um einen neuen Link.",
+    "backToOverview": "Zur Übersicht",
+    "roleOwner": "Owner",
+    "roleAdmin": "Admin",
+    "roleMember": "Mitglied"
   }
 }

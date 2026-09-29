@@ -444,9 +444,7 @@
     "unavailable": "Sistema no disponible",
     "unavailableDescription": "El sistema no está disponible actualmente debido a un error crítico. Por favor, inténtalo más tarde o contacta con un administrador.",
     "workspaceNotFound": "Espacio de trabajo no encontrado",
-    "workspaceNotFoundDescription": "Este subdominio no está vinculado a ningún espacio de trabajo.",
-    "noWorkspace": "Aún no hay espacio de trabajo",
-    "noWorkspaceDescription": "Todavía no eres miembro de ningún espacio de trabajo. Pide una invitación a un administrador."
+    "workspaceNotFoundDescription": "Este subdominio no está vinculado a ningún espacio de trabajo."
   },
   "guest": {
     "viewingAsGuest": "Estás viendo como invitado",
@@ -1394,5 +1392,38 @@
   },
   "announcements": {
     "dismiss": "Ocultar anuncio"
+  },
+  "workspaces": {
+    "portalTitle": "Tus espacios de trabajo",
+    "portalDescription": "Abre un espacio de trabajo, crea uno nuevo o únete con un enlace de invitación.",
+    "empty": "Todavía no perteneces a ningún espacio de trabajo.",
+    "open": "Abrir",
+    "create": "Crear espacio de trabajo",
+    "createTitle": "Crear un nuevo espacio de trabajo",
+    "createDescription": "El espacio de trabajo recibe su propia dirección. No se puede cambiar más adelante.",
+    "name": "Nombre",
+    "namePlaceholder": "p. ej. Equipo de enfermería planta 3",
+    "address": "Dirección",
+    "slugHint": "3–32 caracteres: letras minúsculas, dígitos, guiones",
+    "slugAvailable": "Disponible",
+    "slugTaken": "Ya está ocupada",
+    "slugReserved": "Esta dirección está reservada",
+    "slugInvalid": "Dirección no válida",
+    "limitReached": "Ya eres propietario de {max} espacios de trabajo. No puedes crear más.",
+    "nameInvalid": "Introduce un nombre de 64 caracteres como máximo.",
+    "createError": "No se pudo crear el espacio de trabajo",
+    "joinWithLink": "Usar un enlace de invitación",
+    "joinLinkPlaceholder": "Pega un enlace de invitación",
+    "joinLinkInvalidFormat": "No es un enlace de invitación válido.",
+    "joinTitle": "Unirse al espacio de trabajo",
+    "joinDescription": "Te estás uniendo a {workspace}.",
+    "joinButton": "Unirse",
+    "alreadyMember": "Ya eres miembro de {workspace}.",
+    "linkInvalid": "Enlace no válido o caducado",
+    "linkInvalidDescription": "Pide un enlace nuevo a la persona que te invitó.",
+    "backToOverview": "Volver a la vista general",
+    "roleOwner": "Propietario",
+    "roleAdmin": "Admin",
+    "roleMember": "Miembro"
   }
 }

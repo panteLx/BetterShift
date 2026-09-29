@@ -444,9 +444,7 @@
     "unavailable": "Sistema non disponibile",
     "unavailableDescription": "Il sistema è attualmente non disponibile a causa di un errore critico. Riprova più tardi o contatta un amministratore.",
     "workspaceNotFound": "Workspace non trovato",
-    "workspaceNotFoundDescription": "Questo sottodominio non è collegato a nessun workspace.",
-    "noWorkspace": "Nessun workspace",
-    "noWorkspaceDescription": "Non sei ancora membro di nessun workspace. Chiedi un invito a un amministratore del workspace."
+    "workspaceNotFoundDescription": "Questo sottodominio non è collegato a nessun workspace."
   },
   "guest": {
     "viewingAsGuest": "Stai visualizzando come ospite",
@@ -1394,5 +1392,38 @@
   },
   "announcements": {
     "dismiss": "Nascondi annuncio"
+  },
+  "workspaces": {
+    "portalTitle": "I tuoi workspace",
+    "portalDescription": "Apri un workspace, creane uno nuovo o unisciti con un link di invito.",
+    "empty": "Non fai ancora parte di nessun workspace.",
+    "open": "Apri",
+    "create": "Crea workspace",
+    "createTitle": "Crea un nuovo workspace",
+    "createDescription": "Il workspace riceve un proprio indirizzo. Non potrà essere modificato in seguito.",
+    "name": "Nome",
+    "namePlaceholder": "ad es. Team infermieristico reparto 3",
+    "address": "Indirizzo",
+    "slugHint": "3–32 caratteri: lettere minuscole, cifre, trattini",
+    "slugAvailable": "Disponibile",
+    "slugTaken": "Già in uso",
+    "slugReserved": "Questo indirizzo è riservato",
+    "slugInvalid": "Indirizzo non valido",
+    "limitReached": "Possiedi già {max} workspace. Non puoi crearne altri.",
+    "nameInvalid": "Inserisci un nome di al massimo 64 caratteri.",
+    "createError": "Impossibile creare il workspace",
+    "joinWithLink": "Usa un link di invito",
+    "joinLinkPlaceholder": "Incolla un link di invito",
+    "joinLinkInvalidFormat": "Questo non è un link di invito valido.",
+    "joinTitle": "Unisciti al workspace",
+    "joinDescription": "Stai per unirti a {workspace}.",
+    "joinButton": "Unisciti",
+    "alreadyMember": "Sei già membro di {workspace}.",
+    "linkInvalid": "Link non valido o scaduto",
+    "linkInvalidDescription": "Chiedi un nuovo link alla persona che ti ha invitato.",
+    "backToOverview": "Torna alla panoramica",
+    "roleOwner": "Proprietario",
+    "roleAdmin": "Admin",
+    "roleMember": "Membro"
   }
 }

@@ -19,7 +19,7 @@
  * a machine hostname that resolves to a VPN/Tailscale address) silently
  * binds it off localhost. Don't use HOSTNAME=127.0.0.1 either: Next reports a
  * loopback bind as "localhost" to the proxy and then fails its internal rewrites
- * (the workspace-not-found and no-workspace rows go 500), see docs/MULTI_TENANCY.md.
+ * (the workspace-not-found rows go 500), see docs/MULTI_TENANCY.md.
  *
  *   npm run build
  *   cp -r .next/static .next/standalone/.next/static
@@ -707,14 +707,58 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
         !!location && new URL(location, `http://${PORTAL_HOST}`).pathname === "/login",
     },
     {
-      name: "portal / for a signed-in user without any workspace renders the no-workspace page",
+      name: "portal / for a signed-in user without any workspace renders the overview with create and join",
       as: { email: "no-membership@tenancy.test", password: PASSWORD },
       host: PORTAL_HOST,
       method: "GET",
       path: "/",
       headers: { "accept-language": "en" },
       expectStatus: 200,
-      expectText: (text) => text.includes("No workspace yet"),
+      expectText: (text) => text.includes("Your workspaces") && text.includes("Create workspace"),
+    },
+    {
+      name: "portal / for a member renders the overview instead of redirecting",
+      as: { email: "shared-member@tenancy.test", password: PASSWORD },
+      host: PORTAL_HOST,
+      method: "GET",
+      path: "/",
+      headers: { "accept-language": "en" },
+      expectStatus: 200,
+      expectText: (text) => text.includes("Your workspaces"),
+    },
+    {
+      name: "portal /new without a session redirects to login with returnUrl",
+      as: "anonymous",
+      host: PORTAL_HOST,
+      method: "GET",
+      path: "/new",
+      expectStatus: [307, 308],
+      expectLocation: (location) => !!location && location.includes("/login?returnUrl=%2Fnew"),
+    },
+    {
+      name: "portal /join/<token> without a session redirects to login with returnUrl",
+      as: "anonymous",
+      host: PORTAL_HOST,
+      method: "GET",
+      path: "/join/abc",
+      expectStatus: [307, 308],
+      expectLocation: (location) => !!location && location.includes("/login?returnUrl=%2Fjoin%2Fabc"),
+    },
+    {
+      name: "/portal is 404 on a workspace host",
+      as: "anonymous",
+      host: `alpha.${BASE_DOMAIN}`,
+      method: "GET",
+      path: "/portal",
+      expectStatus: 404,
+    },
+    {
+      name: "/no-workspace no longer exists on the portal",
+      as: "anonymous",
+      host: PORTAL_HOST,
+      method: "GET",
+      path: "/no-workspace",
+      expectStatus: 404,
     },
     {
       name: "container health probe on localhost bypasses workspace resolution",

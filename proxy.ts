@@ -11,8 +11,8 @@ import { rateLimit } from "@/lib/rate-limiter";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/auth/admin";
 import { db } from "@/lib/db";
-import { eq, sql } from "drizzle-orm";
-import { member, user } from "@/lib/db/schema";
+import { sql } from "drizzle-orm";
+import { user } from "@/lib/db/schema";
 import {
   resolveWorkspaceFromHost,
   getTenancyConfigError,
@@ -114,15 +114,6 @@ function isPortalOnlyPath(pathname: string): boolean {
   );
 }
 
-async function earliestMembershipSlug(userId: string): Promise<string | null> {
-  const row = await db.query.member.findFirst({
-    where: eq(member.userId, userId),
-    orderBy: (m, { asc }) => [asc(m.createdAt)],
-    with: { organization: { columns: { slug: true } } },
-  });
-  return row?.organization.slug ?? null;
-}
-
 const IS_DEV = process.env.NODE_ENV === "development";
 const BYPASS_STRICT_DYNAMIC = process.env.CSP_STRICT_DYNAMIC_BYPASS === "true";
 
@@ -173,6 +164,20 @@ function nextWithNonce(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   if (nonce) requestHeaders.set("x-nonce", nonce);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+  return response;
+}
+
+function rewriteWithNonce(request: NextRequest, pathname: string) {
+  const nonce = BYPASS_STRICT_DYNAMIC
+    ? null
+    : Buffer.from(crypto.randomUUID()).toString("base64");
+
+  const requestHeaders = new Headers(request.headers);
+  if (nonce) requestHeaders.set("x-nonce", nonce);
+  const url = new URL(pathname, request.url);
+  url.search = request.nextUrl.search;
+  const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", buildCsp(nonce));
   return response;
 }
@@ -302,35 +307,24 @@ export async function proxy(request: NextRequest) {
         isPublicExempt ||
         pathname === "/login" ||
         pathname === "/register" ||
-        pathname === "/no-workspace" ||
         pathname === "/api/workspaces" ||
         pathname.startsWith("/api/workspaces/") ||
         pathname.startsWith("/api/join/")
       ) {
         return nextWithNonce(request);
       }
-      if (pathname === "/") {
+      const portalPage =
+        pathname === "/" ? "/portal"
+        : pathname === "/new" ? "/portal/new"
+        : /^\/join\/[^/]+$/.test(pathname) ? `/portal${pathname}`
+        : null;
+      if (portalPage) {
         const sessionToken =
           request.cookies.get("__Secure-better-auth.session_token") ||
           request.cookies.get("better-auth.session_token");
-        if (sessionToken) {
-          try {
-            const session = await auth.api.getSession({
-              headers: request.headers,
-            });
-            if (session?.user) {
-              const slug = await earliestMembershipSlug(session.user.id);
-              if (slug) {
-                return NextResponse.redirect(`${workspaceOrigin(slug)}/`);
-              }
-              // Signed in without any workspace: bouncing to /login would loop straight back here.
-              return NextResponse.rewrite(new URL("/no-workspace", request.url));
-            }
-          } catch (error) {
-            console.error("[Proxy] Portal session check failed:", error);
-          }
-        }
-        return NextResponse.redirect(new URL("/login", request.url));
+        // Cookie presence only; the pages validate the session themselves.
+        if (!sessionToken) return redirectToLogin(request);
+        return rewriteWithNonce(request, portalPage);
       }
       return new NextResponse(null, { status: 404 });
     }

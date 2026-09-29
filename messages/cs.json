@@ -444,9 +444,7 @@
     "unavailable": "Systém není dostupný",
     "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce.",
     "workspaceNotFound": "Pracovní prostor nenalezen",
-    "workspaceNotFoundDescription": "Tato subdoména nepatří k žádnému pracovnímu prostoru.",
-    "noWorkspace": "Zatím žádný pracovní prostor",
-    "noWorkspaceDescription": "Zatím nejste členem žádného pracovního prostoru. Požádejte správce o pozvánku."
+    "workspaceNotFoundDescription": "Tato subdoména nepatří k žádnému pracovnímu prostoru."
   },
   "guest": {
     "viewingAsGuest": "Prohlížíte si jako host",
@@ -1394,5 +1392,38 @@
   },
   "announcements": {
     "dismiss": "Skrýt oznámení"
+  },
+  "workspaces": {
+    "portalTitle": "Vaše pracovní prostory",
+    "portalDescription": "Otevřete pracovní prostor, vytvořte nový nebo se připojte pomocí pozvánky.",
+    "empty": "Zatím nejste v žádném pracovním prostoru.",
+    "open": "Otevřít",
+    "create": "Vytvořit pracovní prostor",
+    "createTitle": "Vytvořit nový pracovní prostor",
+    "createDescription": "Pracovní prostor dostane vlastní adresu. Později ji nelze změnit.",
+    "name": "Název",
+    "namePlaceholder": "např. Ošetřovatelský tým oddělení 3",
+    "address": "Adresa",
+    "slugHint": "3–32 znaků: malá písmena, číslice, pomlčky",
+    "slugAvailable": "Dostupná",
+    "slugTaken": "Již obsazená",
+    "slugReserved": "Tato adresa je rezervovaná",
+    "slugInvalid": "Neplatná adresa",
+    "limitReached": "Již vlastníte maximální počet pracovních prostorů ({max}). Další vytvořit nelze.",
+    "nameInvalid": "Zadejte název o délce nejvýše 64 znaků.",
+    "createError": "Pracovní prostor se nepodařilo vytvořit",
+    "joinWithLink": "Použít odkaz s pozvánkou",
+    "joinLinkPlaceholder": "Vložte odkaz s pozvánkou",
+    "joinLinkInvalidFormat": "Toto není platný odkaz s pozvánkou.",
+    "joinTitle": "Připojit se k pracovnímu prostoru",
+    "joinDescription": "Připojujete se k {workspace}.",
+    "joinButton": "Připojit se",
+    "alreadyMember": "Již jste členem {workspace}.",
+    "linkInvalid": "Odkaz je neplatný nebo vypršel",
+    "linkInvalidDescription": "Požádejte osobu, která vás pozvala, o nový odkaz.",
+    "backToOverview": "Zpět na přehled",
+    "roleOwner": "Vlastník",
+    "roleAdmin": "Admin",
+    "roleMember": "Člen"
   }
 }

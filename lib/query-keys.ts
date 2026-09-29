@@ -107,4 +107,12 @@ export const queryKeys = {
 
   // Multi-tenancy: current request's workspace
   workspace: ["workspace"] as const,
+  workspaces: {
+    mine: ["workspaces", "mine"] as const,
+    members: ["workspaces", "members"] as const,
+    joinLinks: ["workspaces", "join-links"] as const,
+    slug: (slug: string) => ["workspaces", "slug", slug] as const,
+    join: (token: string) => ["workspaces", "join", token] as const,
+    adminUser: (userId: string) => ["admin", "users", "workspaces", userId] as const,
+  },
 } as const;

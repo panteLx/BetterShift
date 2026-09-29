@@ -361,7 +361,11 @@ export default function LoginPage() {
           <p className="text-center text-[13.5px] text-fg-secondary">
             {t("auth.noAccountYet")}{" "}
             <Link
-              href="/register"
+              href={
+                searchParams.get("returnUrl")
+                  ? `/register?returnUrl=${encodeURIComponent(searchParams.get("returnUrl")!)}`
+                  : "/register"
+              }
               className="font-semibold text-brand-ink hover:underline"
             >
               {t("auth.register")}

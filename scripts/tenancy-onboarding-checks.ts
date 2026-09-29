@@ -222,6 +222,12 @@ async function checkJoinLinks({ h, db, schema, eq, and, api, tryCheck }: Ctx): P
     const rows = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "workspace.join"));
     return rows.length > 0 && rows.every((row) => !(row.metadata ?? "").includes(single.token));
   });
+  await tryCheck("GET of the join page does not consume a use", async () => {
+    const created = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: 1 });
+    const link = created.json?.link as { id: string; token: string };
+    const page = await api(joinerC, portal, "GET", `/join/${link.token}`);
+    return page.status === 200 && (await linkRow(link.id)).usageCount === 0 && !(await isMember(joinerC.id));
+  });
 }
 
 async function checkMembershipEnd({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {

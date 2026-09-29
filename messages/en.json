@@ -444,9 +444,7 @@
     "unavailable": "System Unavailable",
     "unavailableDescription": "The system is currently unavailable due to a critical error. Please try again later or contact an administrator.",
     "workspaceNotFound": "Workspace not found",
-    "workspaceNotFoundDescription": "This subdomain isn't connected to any workspace.",
-    "noWorkspace": "No workspace yet",
-    "noWorkspaceDescription": "You're not a member of any workspace yet. Ask a workspace admin for an invitation."
+    "workspaceNotFoundDescription": "This subdomain isn't connected to any workspace."
   },
   "guest": {
     "viewingAsGuest": "You are viewing as guest",
@@ -1394,5 +1392,38 @@
   },
   "announcements": {
     "dismiss": "Dismiss announcement"
+  },
+  "workspaces": {
+    "portalTitle": "Your workspaces",
+    "portalDescription": "Open a workspace, create a new one or join with an invite link.",
+    "empty": "You are not in any workspace yet.",
+    "open": "Open",
+    "create": "Create workspace",
+    "createTitle": "Create a new workspace",
+    "createDescription": "The workspace gets its own address. It cannot be changed later.",
+    "name": "Name",
+    "namePlaceholder": "e.g. Ward 3 nursing team",
+    "address": "Address",
+    "slugHint": "3–32 characters: lowercase letters, digits, hyphens",
+    "slugAvailable": "Available",
+    "slugTaken": "Already taken",
+    "slugReserved": "This address is reserved",
+    "slugInvalid": "Invalid address",
+    "limitReached": "You already own {max} workspaces. You cannot create more.",
+    "nameInvalid": "Please enter a name of at most 64 characters.",
+    "createError": "Could not create the workspace",
+    "joinWithLink": "Use an invite link",
+    "joinLinkPlaceholder": "Paste an invite link",
+    "joinLinkInvalidFormat": "That is not a valid invite link.",
+    "joinTitle": "Join workspace",
+    "joinDescription": "You are joining {workspace}.",
+    "joinButton": "Join",
+    "alreadyMember": "You are already a member of {workspace}.",
+    "linkInvalid": "Link invalid or expired",
+    "linkInvalidDescription": "Ask the person who invited you for a new link.",
+    "backToOverview": "Back to overview",
+    "roleOwner": "Owner",
+    "roleAdmin": "Admin",
+    "roleMember": "Member"
   }
 }

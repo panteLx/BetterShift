@@ -444,9 +444,7 @@
     "unavailable": "Système indisponible",
     "unavailableDescription": "Le système est actuellement indisponible en raison d'une erreur critique. Veuillez réessayer ultérieurement ou contacter un administrateur.",
     "workspaceNotFound": "Espace de travail introuvable",
-    "workspaceNotFoundDescription": "Ce sous-domaine n'est associé à aucun espace de travail.",
-    "noWorkspace": "Pas encore d'espace de travail",
-    "noWorkspaceDescription": "Vous n'êtes encore membre d'aucun espace de travail. Demandez une invitation à un administrateur."
+    "workspaceNotFoundDescription": "Ce sous-domaine n'est associé à aucun espace de travail."
   },
   "guest": {
     "viewingAsGuest": "Vous consultez en tant qu'invité",
@@ -1394,5 +1392,38 @@
   },
   "announcements": {
     "dismiss": "Masquer l'annonce"
+  },
+  "workspaces": {
+    "portalTitle": "Vos espaces de travail",
+    "portalDescription": "Ouvrez un espace de travail, créez-en un nouveau ou rejoignez-en un avec un lien d'invitation.",
+    "empty": "Vous ne faites encore partie d'aucun espace de travail.",
+    "open": "Ouvrir",
+    "create": "Créer un espace de travail",
+    "createTitle": "Créer un nouvel espace de travail",
+    "createDescription": "L'espace de travail reçoit sa propre adresse. Elle ne pourra plus être modifiée.",
+    "name": "Nom",
+    "namePlaceholder": "p. ex. Équipe soignante service 3",
+    "address": "Adresse",
+    "slugHint": "3 à 32 caractères : lettres minuscules, chiffres, tirets",
+    "slugAvailable": "Disponible",
+    "slugTaken": "Déjà prise",
+    "slugReserved": "Cette adresse est réservée",
+    "slugInvalid": "Adresse invalide",
+    "limitReached": "Vous possédez déjà {max} espaces de travail. Vous ne pouvez pas en créer davantage.",
+    "nameInvalid": "Saisissez un nom de 64 caractères maximum.",
+    "createError": "Impossible de créer l'espace de travail",
+    "joinWithLink": "Utiliser un lien d'invitation",
+    "joinLinkPlaceholder": "Collez un lien d'invitation",
+    "joinLinkInvalidFormat": "Ce n'est pas un lien d'invitation valide.",
+    "joinTitle": "Rejoindre l'espace de travail",
+    "joinDescription": "Vous rejoignez {workspace}.",
+    "joinButton": "Rejoindre",
+    "alreadyMember": "Vous êtes déjà membre de {workspace}.",
+    "linkInvalid": "Lien invalide ou expiré",
+    "linkInvalidDescription": "Demandez un nouveau lien à la personne qui vous a invité(e).",
+    "backToOverview": "Retour à l'aperçu",
+    "roleOwner": "Propriétaire",
+    "roleAdmin": "Admin",
+    "roleMember": "Membre"
   }
 }
