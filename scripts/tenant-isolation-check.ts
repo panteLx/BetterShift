@@ -53,7 +53,8 @@
 import http from "node:http";
 import path from "node:path";
 import { hashPassword } from "better-auth/crypto";
-import { isValidSlugFormat, isReservedSlug } from "../lib/workspace-slugs";
+import { isValidSlugFormat, isReservedSlug, parseReservedSlugs, suggestSlug } from "../lib/workspace-slugs";
+import { workspaceOrigin } from "../lib/workspace-url";
 
 function assertSafeDatabaseUrl(): void {
   const raw = process.env.DATABASE_URL;
@@ -214,6 +215,21 @@ function runPureChecks(): void {
   check("default is reserved", isReservedSlug("default"));
   check("bs-pr- prefix reserved", isReservedSlug("bs-pr-123"));
   check("ordinary slug not reserved", !isReservedSlug("alpha"));
+  check("slug of 3 chars is valid", isValidSlugFormat("abc"));
+  check("slug of 2 chars is invalid", !isValidSlugFormat("ab"));
+  check("slug of 32 chars is valid", isValidSlugFormat("a".repeat(32)));
+  check("slug of 33 chars is invalid", !isValidSlugFormat("a".repeat(33)));
+  check("slug with trailing hyphen is invalid", !isValidSlugFormat("abc-"));
+  check("parseReservedSlugs trims, lowercases and drops empties",
+    [...parseReservedSlugs(" Foo, bar ,,")].sort().join(",") === "bar,foo");
+  check("parseReservedSlugs(undefined) is empty", parseReservedSlugs(undefined).size === 0);
+  check("suggestSlug strips diacritics and punctuation", suggestSlug("Pflegeteam Süd!") === "pflegeteam-sud");
+  check("suggestSlug caps at 32 chars without a trailing hyphen",
+    suggestSlug("a".repeat(31) + " b") === "a".repeat(31));
+  check("workspaceOrigin keeps scheme and port of the portal URL",
+    workspaceOrigin("alpha", "http://app.tenancy.test:3107", "tenancy.test") === "http://alpha.tenancy.test:3107");
+  check("workspaceOrigin without port",
+    workspaceOrigin("alpha", "https://app.ssx.si", "ssx.si") === "https://alpha.ssx.si");
 }
 
 // =====================================================

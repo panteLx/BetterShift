@@ -49,6 +49,11 @@ export const MULTI_TENANT = process.env.MULTI_TENANT === "true"; // Default: fal
 
 export const TENANT_BASE_DOMAIN = process.env.TENANT_BASE_DOMAIN || "";
 
+export const TENANT_MAX_WORKSPACES_PER_USER = parseInt(
+  process.env.TENANT_MAX_WORKSPACES_PER_USER || "3",
+  10
+); // Owned workspaces per account; instance admins are exempt
+
 // =============================================================================
 // Session Settings
 // =============================================================================

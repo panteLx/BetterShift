@@ -24,6 +24,7 @@ import {
   TENANT_BASE_DOMAIN,
 } from "@/lib/auth/env";
 import { safeReturnUrl } from "@/lib/safe-return-url";
+import { workspaceOrigin as sharedWorkspaceOrigin } from "@/lib/workspace-url";
 
 // =====================================================
 // Health Check Cache (In-Memory)
@@ -97,11 +98,9 @@ function redirectToLogin(request: NextRequest) {
   return NextResponse.redirect(loginUrl);
 }
 
-// Scheme/port come from BETTER_AUTH_URL: behind a TLS-terminating proxy the request itself looks like plain http.
 // Parsed lazily, only after getTenancyConfigError() has vetted the URL, so a bad value can't break single-tenant imports.
 function workspaceOrigin(slug: string): string {
-  const portal = new URL(BETTER_AUTH_URL);
-  return `${portal.protocol}//${slug}.${TENANT_BASE_DOMAIN}${portal.port ? `:${portal.port}` : ""}`;
+  return sharedWorkspaceOrigin(slug, BETTER_AUTH_URL, TENANT_BASE_DOMAIN);
 }
 
 async function earliestMembershipSlug(userId: string): Promise<string | null> {
