@@ -42,7 +42,7 @@ function workspaceOriginPatterns(): string[] {
 const ORGANIZATION_PLUGIN_PATHS = [
   "accept-invitation", "add-team-member", "cancel-invitation", "check-slug", "create", "create-role",
   "create-team", "delete", "delete-role", "get-active-member", "get-active-member-role",
-  "get-full-organization", "get-invitation", "get-role", "invite-member", "leave", "list",
+  "get-full-organization", "get-invitation", "get-role", "has-permission", "invite-member", "leave", "list",
   "list-invitations", "list-members", "list-roles", "list-team-members", "list-teams",
   "list-user-invitations", "list-user-teams", "reject-invitation", "remove-member", "remove-team",
   "remove-team-member", "set-active", "set-active-team", "update", "update-member-role",
@@ -107,7 +107,8 @@ export const auth = betterAuth({
       roles,
     }),
 
-    // Workspaces. Creation stays instance-admin-only until self-service lands (sub-project 3).
+    // Workspaces. The plugin's HTTP paths are all disabled (see disabledPaths); creation goes through
+    // lib/workspaces.ts. The options and hooks below only guard server-side auth.api.* calls (none today).
     organization({
       disableOrganizationDeletion: true,
       requireEmailVerificationOnInvitation: true,

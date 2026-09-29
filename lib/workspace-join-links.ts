@@ -61,19 +61,22 @@ export function listJoinLinks(workspaceId: string): Promise<WorkspaceJoinLink[]>
 }
 
 /** Scoped to the workspace so a foreign link id behaves exactly like a missing one. */
-export async function revokeJoinLink(workspaceId: string, linkId: string): Promise<boolean> {
+/** "revoked" only when this call changed the row; an already revoked link is "unchanged", a foreign or unknown id "not_found". */
+export async function revokeJoinLink(
+  workspaceId: string,
+  linkId: string
+): Promise<"revoked" | "unchanged" | "not_found"> {
   const result = await db
     .update(workspaceJoinLinks)
     .set({ revokedAt: new Date() })
     .where(and(eq(workspaceJoinLinks.id, linkId), eq(workspaceJoinLinks.workspaceId, workspaceId), isNull(workspaceJoinLinks.revokedAt)))
     .returning({ id: workspaceJoinLinks.id });
-  if (result.length > 0) return true;
-  // Already revoked still counts as success; a foreign or unknown id does not.
+  if (result.length > 0) return "revoked";
   const existing = await db.query.workspaceJoinLinks.findFirst({
     where: and(eq(workspaceJoinLinks.id, linkId), eq(workspaceJoinLinks.workspaceId, workspaceId)),
     columns: { id: true },
   });
-  return !!existing;
+  return existing ? "unchanged" : "not_found";
 }
 
 export async function findJoinLink(token: string): Promise<{ link: WorkspaceJoinLink; workspace: Workspace } | null> {

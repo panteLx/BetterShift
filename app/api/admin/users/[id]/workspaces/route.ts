@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { member, organization } from "@/lib/db/schema";
 import { MULTI_TENANT } from "@/lib/auth/env";
-import { canManageWorkspaceMemberships } from "@/lib/auth/admin";
+import { canEditUser, canManageWorkspaceMemberships } from "@/lib/auth/admin";
 import { getValidatedAdminUser, getValidatedTargetUser, isErrorResponse } from "@/lib/auth/admin-helpers";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logAdminAction, type AdminWorkspaceMembershipMetadata } from "@/lib/audit-log";
@@ -26,6 +26,9 @@ async function guard(request: NextRequest, params: Params["params"], mutation: b
   }
   const target = await getValidatedTargetUser((await params).id);
   if (isErrorResponse(target)) return target;
+  if (mutation && !canEditUser(admin, target)) {
+    return NextResponse.json({ error: "Insufficient permissions for this user", code: "forbidden" }, { status: 403 });
+  }
   return { admin, target };
 }
 

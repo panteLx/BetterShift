@@ -7,9 +7,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const ctx = await requireWorkspaceMember(request, MANAGER_ROLES);
   if (ctx instanceof NextResponse) return ctx;
   const { id } = await params;
-  if (!(await revokeJoinLink(ctx.workspace.id, id))) {
+  const outcome = await revokeJoinLink(ctx.workspace.id, id);
+  if (outcome === "not_found") {
     return NextResponse.json({ error: "Not found", code: "not_found" }, { status: 404 });
   }
+  if (outcome === "unchanged") return NextResponse.json({ ok: true });
   void logUserAction<WorkspaceJoinLinkMetadata>({
     action: "workspace.join_link_revoke",
     userId: ctx.user.id,
