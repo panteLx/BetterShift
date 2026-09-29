@@ -9,9 +9,13 @@ This guide explains BetterShift's optional multi-tenant mode: one running instan
 3. [Environment Variables](#environment-variables)
 4. [The Portal: `BETTER_AUTH_URL` and OAuth Callbacks](#the-portal-better_auth_url-and-oauth-callbacks)
 5. [How a Request Resolves to a Workspace](#how-a-request-resolves-to-a-workspace)
-6. [Creating a Workspace](#creating-a-workspace)
-7. [Out of Scope in This Release](#out-of-scope-in-this-release)
-8. [Verifying Isolation](#verifying-isolation)
+6. [Onboarding: Creating and Joining a Workspace](#onboarding-creating-and-joining-a-workspace)
+7. [Invite Links](#invite-links)
+8. [Members](#members)
+9. [Instance Admins](#instance-admins)
+10. [Disabled Organization Plugin Endpoints](#disabled-organization-plugin-endpoints)
+11. [Out of Scope in This Release](#out-of-scope-in-this-release)
+12. [Verifying Isolation](#verifying-isolation)
 
 ---
 
@@ -31,6 +35,8 @@ If you're running BetterShift for yourself, your family, or a single team, you d
 | --- | --- | --- |
 | `MULTI_TENANT` | No (default `false`) | Turns on subdomain-per-workspace routing. |
 | `TENANT_BASE_DOMAIN` | Yes, when `MULTI_TENANT=true` | The domain workspaces live under, e.g. `bettershift.example`. A workspace with slug `acme` is served at `acme.bettershift.example`. |
+| `TENANT_MAX_WORKSPACES_PER_USER` | No (default `3`) | Workspaces a single user may own. Instance admins (`admin`/`superadmin`) are exempt. |
+| `TENANT_RESERVED_SLUGS` | No | Comma-separated extra reserved subdomains, on top of the built-in list and the `bs-pr-*` PR-preview prefix — e.g. hosts you already use on the same DNS zone. |
 
 `TENANT_BASE_DOMAIN` must be a domain dedicated to BetterShift. The proxy trusts every host under it as a valid workspace host (and it feeds better-auth's trusted-origins wildcard), so anything else sharing that domain — another app, a wildcard DNS entry you didn't intend — would be treated as trusted too. It must also differ from `PREVIEW_DOMAIN` if you run PR previews against the same DNS zone; the two serve different purposes and mixing them would let a preview deployment collide with a real workspace slug.
 
@@ -66,26 +72,56 @@ An unrecognized subdomain under `TENANT_BASE_DOMAIN` renders `/workspace-not-fou
 
 For public calendars, such a non-member is treated exactly like an anonymous guest: they can discover, subscribe to and open a workspace's public calendars only while that workspace allows guest access. Members keep seeing and subscribing to public calendars regardless of the guest-access setting.
 
-## Creating a Workspace
+## Onboarding: Creating and Joining a Workspace
 
-This core release has no self-service signup flow. An instance admin creates a workspace through better-auth's `organization` API (`POST /api/auth/organization/create`, or `auth.api.createOrganization` from a small admin script) with a chosen slug and name. The slug must match `^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$`, must not be reserved (`lib/workspace-slugs.ts`), and is immutable afterwards — `organization/update` refuses any request that carries a `slug`, since it is the workspace's subdomain.
+The portal's `/` shows the signed-in user's "My workspaces" overview: every workspace they belong to, a button to create a new one, and a field to paste an invite link. It is reached via proxy rewrites from `app/portal/**`, the same way `/login` and `/register` are — there is no separate landing route.
 
-Members join over HTTP by invitation: a workspace owner or admin calls `organization/invite-member`, and the invitee accepts with `organization/accept-invitation` (their email must be verified). better-auth's `addMember` is server-only — usable from an admin script via `auth.api.addMember`, not as an HTTP endpoint. There is no workspace-creation or invitation UI yet — see the next section.
+**Creating a workspace** happens at `/new` on the portal. A user picks a name and a slug (auto-suggested from the name, editable, checked live against `GET /api/workspaces/slug-availability`); the slug must be 3–32 characters, match `^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])$`, and not be reserved. Reserved means the built-in list in `lib/workspace-slugs.ts` (portal/infra subdomains such as `app`, `auth`, `admin`, `default`, …), the `bs-pr-*` PR-preview prefix, and anything listed in `TENANT_RESERVED_SLUGS`. The slug is immutable once the workspace exists — it is the subdomain. A user may own at most `TENANT_MAX_WORKSPACES_PER_USER` workspaces (default 3); instance admins are exempt. The creator becomes the workspace's owner. Workspace creation is rate-limited per user (`workspace-create`, default 5/hour) and the slug check separately (`slug-check`, default 60/minute).
 
-**Deleting users:** instance admins should delete accounts through the admin panel (`DELETE /api/admin/users/[id]`). better-auth's admin-plugin endpoint `/api/auth/admin/remove-user` bypasses BetterShift's checks — it would remove the sole owner of a workspace that still has other members, and it leaves a workspace behind with no members at all instead of cleaning it up.
+**Joining a workspace** happens only through an invite link — see below. `organization/invite-member` and `organization/accept-invitation` are disabled along with the rest of the organization plugin's HTTP surface (see [Disabled Organization Plugin Endpoints](#disabled-organization-plugin-endpoints)).
+
+Login and registration keep a `returnUrl` across the portal so a user who followed an invite link or a workspace-subdomain redirect lands back where they started once they've authenticated.
+
+## Invite Links
+
+A workspace owner or admin creates invite links from the workspace sheet's "Invite links" tab (`components/workspace-sheet.tsx`). Each link (`workspace_join_links` table, migration `0036`) has:
+
+- an **expiry**: never, or 1/7/30 days from creation;
+- a **max-use count**: unlimited, or a fixed number (the UI offers presets — 1, 5, 10, 25, 50, 100 — while the API accepts any integer 1–1000);
+- a **revoke** action, which invalidates it immediately.
+
+An expired, exhausted, revoked or unknown token all produce the same "invalid link" response — none of these states leak which one applies. Redeeming a link only ever happens on `POST`; visiting the confirmation page (`GET`) never consumes a use. There is no separate accept step: submitting the join form both confirms and joins in one request. Everyone who joins via a link becomes a plain `member`; links cannot grant `admin`. Join links always resolve to the portal (`/join/<token>`, never a workspace subdomain), since the joining user isn't necessarily signed in yet and the portal is where auth lives. Joining is rate-limited per user (`workspace-join`, default 20/15 min) and link creation separately (`workspace-link-create`, default 20/hour). Audit log entries for join-link actions record the link id only, never the token itself.
+
+## Members
+
+A workspace has two roles: `owner` (exactly one, the creator, until ownership transfer ships in a later sub-project) and `member`. Members and invite links are managed from the workspace sheet in the user menu; a workspace switcher there lists every workspace the signed-in user belongs to plus an "All workspaces" entry.
+
+**Leaving or being removed** (self-leave, owner/admin removing another member, or an instance admin removing someone) all go through the same `endMembership()` in `lib/workspace-membership-end.ts`:
+
+- the user's calendar shares, feed tokens and subscriptions on this workspace's calendars are deleted;
+- any calendars they owned are transferred to the workspace owner, and the new owner's now-redundant share/subscription rows on those calendars are dropped so they don't see their own calendar as "dismissed";
+- the membership row itself is removed.
+
+The **owner cannot leave and cannot be removed** by anyone, including instance admins, until ownership transfer exists. `resolveCalendarAccess()` and `getUserAccessibleCalendars()` ignore calendar shares belonging to users who are no longer members of the workspace — ending a membership is what actually revokes access, not just the UI hiding it.
+
+## Instance Admins
+
+From a user's details in the admin panel, an instance admin can add that user to a workspace by slug (as `member` or `admin`) or remove them from any workspace they don't own. This is the same `endMembership()` path as a self-service leave/remove. The API is `GET`/`POST`/`DELETE /api/admin/users/[id]/workspaces`, gated on `canManageWorkspaceMemberships` (`lib/auth/admin.ts`).
+
+## Disabled Organization Plugin Endpoints
+
+Every better-auth `/organization/*` HTTP path (`accept-invitation`, `create`, `invite-member`, `remove-member`, `update`, `leave`, …) is listed in `disabledPaths` in `lib/auth.ts`, in both single- and multi-tenant mode. All membership and workspace mutations go exclusively through BetterShift's own routes (`lib/workspaces.ts`, `lib/workspace-join-links.ts`, `lib/workspace-membership-end.ts`), which apply rate limits, audit logging and the cleanup rules above — the plugin's endpoints would bypass every one of them.
+
+**Deleting users:** instance admins should delete accounts through the admin panel (`DELETE /api/admin/users/[id]`). better-auth's admin-plugin endpoint `/api/auth/admin/remove-user` bypasses BetterShift's checks the same way.
 
 ## Out of Scope in This Release
 
-Multi-tenancy today is deliberately just the isolation core. The following are explicitly **out of scope** and planned for later sub-projects:
+The following are explicitly **out of scope** and planned for later sub-projects:
 
-- Self-service workspace creation (a portal/landing page with slug choice)
-- An invitations UI
-- A workspace switcher UI for users who belong to more than one workspace
+- Workspace ownership transfer (so an owner can eventually leave)
 - A per-workspace admin panel or per-workspace settings UI
 - Workspace branding, limits, or slug rename/redirect
 
-Until those ship, workspace management is an operator task performed directly against better-auth's `organization` tables/API.
-
 ## Verifying Isolation
 
-`scripts/tenant-isolation-check.ts` (`npm run test:tenancy`) is an executable regression check: it seeds two workspaces directly via Drizzle and makes real HTTP requests across them, asserting that every cross-workspace lookup 404s rather than leaking existence or data. Run it against a disposable database and a real (even if synthetic) `TENANT_BASE_DOMAIN` — the script's own header comment has the exact commands (migrate the throwaway DB, start the standalone server with `MULTI_TENANT=true` and `TENANT_BASE_DOMAIN` set, then run the script, then tear both down).
+`scripts/tenant-isolation-check.ts` (`npm run test:tenancy`) is an executable regression check: it seeds two workspaces directly via Drizzle and makes real HTTP requests across them, asserting that every cross-workspace lookup 404s rather than leaking existence or data, that the disabled organization plugin paths 404 (Stage 2e), and — via `scripts/tenancy-onboarding-checks.ts` (Stage 4) — the onboarding flow itself: slug validation and reservation, workspace creation and its per-user limit, invite-link creation/expiry/max-uses/revocation, join, and leave/remove membership cleanup. Run it against a disposable database and a real (even if synthetic) `TENANT_BASE_DOMAIN` — the script's own header comment has the exact commands (migrate the throwaway DB, start the standalone server with `MULTI_TENANT=true` and `TENANT_BASE_DOMAIN` set, then run the script, then tear both down). CI runs it against both portal layouts (base domain and `app.<TENANT_BASE_DOMAIN>`) with `TENANT_RESERVED_SLUGS=reserved-by-env` set, to cover the env-reserved-slug path too.

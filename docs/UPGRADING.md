@@ -42,6 +42,8 @@ The migration runs automatically on startup: it creates a `default` workspace an
 
 **Back up your `data/` directory before upgrading.** To make every calendar's workspace mandatory, the migration rebuilds the `calendars` table (copy, drop, rename) rather than altering it in place. It is tested, but if it is interrupted — the container is killed mid-start, the disk fills up — a backup is the only clean way back. Stop the container, copy `data/` (it holds the SQLite file), then pull the new image and start it.
 
+This release also adds self-service workspace onboarding (creation, invite links, membership management) on top of that core — its migration only adds a new `workspace_join_links` table, so it needs no extra care beyond the backup above.
+
 ---
 
 ## 3.3.0 (from 3.2.0)
