@@ -1473,6 +1473,9 @@ async function checkWorkspaceSlugs(seeded: SeedData): Promise<void> {
   await tryCheck("organization/invite-member is disabled (404)", async () =>
     (await orgCall(owner, "invite-member", { organizationId: alphaId, email: "x@tenancy.test", role: "member" })) === 404
   );
+  await tryCheck("organization/has-permission is disabled (404)", async () =>
+    (await orgCall(owner, "has-permission", { organizationId: alphaId, permissions: { member: ["create"] } })) === 404
+  );
 }
 
 // Destructive, so kept out of the shared matrix: every case seeds its own workspace and users.

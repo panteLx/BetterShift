@@ -48,6 +48,7 @@ export async function runOnboardingChecks(h: OnboardingHarness): Promise<void> {
   await checkMembershipEnd(ctx);
   await checkMembershipEndScoping(ctx);
   await checkAdminMemberships(ctx);
+  await checkNonMemberOwnership(ctx);
 }
 
 type Ctx = {
@@ -95,6 +96,9 @@ async function checkCreate({ h, db, schema, eq, api, tryCheck }: Ctx): Promise<v
     const r = await api(creator, portal, "POST", "/api/workspaces", { name: "Alpha 2", slug: "alpha" });
     return r.status === 409 && r.json?.code === "taken";
   });
+  // Warms the proxy's negative slug cache, so the post-create check proves the invalidation reaches it.
+  await tryCheck("unknown subdomain is 404 before the workspace exists", async () =>
+    (await api(null, `gamma-onb.${h.baseDomain}`, "GET", "/api/workspace")).status === 404);
   await tryCheck("valid create is 201 and makes the creator owner", async () => {
     const r = await api(creator, portal, "POST", "/api/workspaces", { name: "Gamma Team", slug: "gamma-onb" });
     const ws = (await db.select().from(schema.organization).where(eq(schema.organization.slug, "gamma-onb")))[0];
@@ -195,6 +199,16 @@ async function checkJoinLinks({ h, db, schema, eq, and, api, tryCheck }: Ctx): P
     const del = await api(alphaOwner, alphaHost, "DELETE", `/api/workspace/join-links/${link.id}`);
     const r = await api(joinerB, portal, "POST", `/api/join/${link.token}`);
     return del.status === 200 && r.status === 404 && !(await isMember(joinerB.id));
+  });
+  await tryCheck("revoking an already revoked link is 200 and audits once", async () => {
+    const created = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: null });
+    const link = created.json?.link as { id: string };
+    const first = await api(alphaOwner, alphaHost, "DELETE", `/api/workspace/join-links/${link.id}`);
+    const second = await api(alphaOwner, alphaHost, "DELETE", `/api/workspace/join-links/${link.id}`);
+    // Audit writes are fire-and-forget.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const rows = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "workspace.join_link_revoke"));
+    return first.status === 200 && second.status === 200 && rows.filter((row) => (row.metadata ?? "").includes(link.id)).length === 1;
   });
   await tryCheck("expired link is rejected", async () => {
     const created = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: 1, maxUses: null });
@@ -399,4 +413,54 @@ async function checkAdminMemberships({ h, db, schema, eq, and, api, tryCheck }: 
   });
   await tryCheck("admin cannot remove a workspace owner (409)", async () =>
     (await api(admin, host, "DELETE", `/api/admin/users/${alphaOwner.id}/workspaces?workspaceId=${h.seeded.workspaces.alpha.id}`)).status === 409);
+
+  // `admin` (not superadmin) must not touch a superadmin's memberships, like every other admin rule.
+  const plainAdmin = await h.seedUser("plain-instance-admin@tenancy.test", "admin");
+  const superTarget = await h.seedUser("super-target@tenancy.test", "superadmin");
+  const superPath = `/api/admin/users/${superTarget.id}/workspaces`;
+  const superRole = async () =>
+    (await db.select().from(schema.member).where(and(eq(schema.member.organizationId, betaId), eq(schema.member.userId, superTarget.id))))[0]?.role;
+  await tryCheck("instance admin cannot add a superadmin to a workspace (403)", async () =>
+    (await api(plainAdmin, host, "POST", superPath, { slug: "beta", role: "member" })).status === 403 && !(await superRole()));
+  await tryCheck("instance admin cannot remove a superadmin's membership (403)", async () => {
+    await h.seedMemberships(betaId, [[superTarget, "member"]]);
+    const r = await api(plainAdmin, host, "DELETE", `${superPath}?workspaceId=${betaId}`);
+    return r.status === 403 && (await superRole()) === "member";
+  });
+  await tryCheck("instance admin can still manage a regular user (201)", async () => {
+    const regular = await h.seedUser("admin-target-3@tenancy.test");
+    return (await api(plainAdmin, host, "POST", `/api/admin/users/${regular.id}/workspaces`, { slug: "beta", role: "member" })).status === 201;
+  });
+}
+
+/** Defence in depth: calendar ownership and creation both require membership of the calendar's workspace. */
+async function checkNonMemberOwnership({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
+  console.log("\nStage 4e: non-member ownership and calendar creation");
+  const host = `alpha.${h.baseDomain}`;
+  const alphaId = h.seeded.workspaces.alpha.id;
+  const outsider = await h.seedUser("nm-outsider@tenancy.test");
+  const exOwner = await h.seedUser("nm-ex-owner@tenancy.test");
+  const creatorMember = await h.seedUser("nm-member-creator@tenancy.test");
+  await h.seedMemberships(alphaId, [[creatorMember, "member"]]);
+  // Owned by a user without (or no longer with) an alpha membership row.
+  const orphanedByMembership = await h.seedCalendar(alphaId, exOwner.id, "NM Ex-Owner Cal", h.seeded.users.alphaMember.id);
+  const calendarsOwnedBy = async (userId: string) =>
+    db.select().from(schema.calendars).where(and(eq(schema.calendars.ownerId, userId), eq(schema.calendars.workspaceId, alphaId)));
+
+  await tryCheck("signed-in non-member cannot create a calendar in alpha (403, no row)", async () => {
+    const r = await api(outsider, host, "POST", "/api/calendars", { name: "Outsider Cal" });
+    return r.status === 403 && (await calendarsOwnedBy(outsider.id)).length === 0;
+  });
+  await tryCheck("non-member owner cannot open their calendar (404/403)", async () => {
+    const r = await api(exOwner, host, "GET", `/api/calendars/${orphanedByMembership.id}`);
+    return r.status === 404 || r.status === 403;
+  });
+  await tryCheck("non-member owner does not see their calendar in the list", async () => {
+    const r = await api(exOwner, host, "GET", "/api/calendars");
+    return r.status === 200 && Array.isArray(r.json) && !(r.json as Array<{ id: string }>).some((c) => c.id === orphanedByMembership.id);
+  });
+  await tryCheck("control: a member can create a calendar (201)", async () => {
+    const r = await api(creatorMember, host, "POST", "/api/calendars", { name: "Member Cal" });
+    return r.status === 201 && (await calendarsOwnedBy(creatorMember.id)).length === 1;
+  });
 }
