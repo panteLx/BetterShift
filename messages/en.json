@@ -167,7 +167,10 @@
     "publicTab": "Public",
     "hiddenTab": "Hidden",
     "publicBadge": "Public",
-    "showAgain": "Show Again"
+    "showAgain": "Show Again",
+    "workspaceTab": "Workspace",
+    "workspaceBadge": "Workspace",
+    "noWorkspaceCalendars": "No calendars shared with the whole workspace"
   },
   "color": {
     "custom": "Custom",
@@ -466,7 +469,10 @@
     "you": "You",
     "sharedWithYou": "Shared with you",
     "publicAccessDescriptionGuestsOn": "Control public access for signed-in users and visitors without an account.",
-    "publicAccessDescriptionGuestsOff": "Control public access for signed-in users of this instance."
+    "publicAccessDescriptionGuestsOff": "Control public access for signed-in users of this instance.",
+    "workspaceAccess": "Workspace access",
+    "workspaceAccessDescriptionGuestsOn": "Choose what every member of this workspace and visitors without an account can see.",
+    "workspaceAccessDescriptionGuestsOff": "Choose what every member of this workspace can see. They find the calendar under “Shared Calendars” and can subscribe to it."
   },
   "token": {
     "accessLinks": "Access Links",

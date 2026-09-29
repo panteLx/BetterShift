@@ -167,7 +167,10 @@
     "publicTab": "Veřejné",
     "hiddenTab": "Skryté",
     "publicBadge": "Veřejné",
-    "showAgain": "Zobrazit znovu"
+    "showAgain": "Zobrazit znovu",
+    "workspaceTab": "Pracovní prostor",
+    "workspaceBadge": "Pracovní prostor",
+    "noWorkspaceCalendars": "Žádné kalendáře sdílené s celým pracovním prostorem"
   },
   "color": {
     "custom": "Vlastní",
@@ -466,7 +469,10 @@
     "you": "Vy",
     "sharedWithYou": "Sdíleno s vámi",
     "publicAccessDescriptionGuestsOn": "Určete veřejný přístup pro přihlášené uživatele a návštěvníky bez účtu.",
-    "publicAccessDescriptionGuestsOff": "Určete veřejný přístup pro přihlášené uživatele této instance."
+    "publicAccessDescriptionGuestsOff": "Určete veřejný přístup pro přihlášené uživatele této instance.",
+    "workspaceAccess": "Přístup v pracovním prostoru",
+    "workspaceAccessDescriptionGuestsOn": "Určete, co uvidí všichni členové tohoto pracovního prostoru a návštěvníci bez účtu.",
+    "workspaceAccessDescriptionGuestsOff": "Určete, co uvidí všichni členové tohoto pracovního prostoru. Kalendář najdou v části „Sdílené kalendáře“ a mohou se k němu přihlásit k odběru."
   },
   "token": {
     "accessLinks": "Přístupové odkazy",

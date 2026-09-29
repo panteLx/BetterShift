@@ -167,7 +167,10 @@
     "publicBadge": "Öffentlich",
     "showAgain": "Wieder anzeigen",
     "noSharedCalendars": "Noch keine mit dir geteilten Kalender",
-    "noHiddenCalendars": "Keine ausgeblendeten Kalender"
+    "noHiddenCalendars": "Keine ausgeblendeten Kalender",
+    "workspaceTab": "Workspace",
+    "workspaceBadge": "Workspace",
+    "noWorkspaceCalendars": "Keine Kalender für den ganzen Workspace freigegeben"
   },
   "color": {
     "custom": "Eigene Farbe",
@@ -466,7 +469,10 @@
     "you": "Du",
     "sharedWithYou": "Mit dir geteilt",
     "publicAccessDescriptionGuestsOn": "Bestimme den öffentlichen Zugriff für angemeldete Nutzer und Besucher ohne Konto.",
-    "publicAccessDescriptionGuestsOff": "Bestimme den öffentlichen Zugriff für angemeldete Nutzer dieser Instanz."
+    "publicAccessDescriptionGuestsOff": "Bestimme den öffentlichen Zugriff für angemeldete Nutzer dieser Instanz.",
+    "workspaceAccess": "Zugriff im Workspace",
+    "workspaceAccessDescriptionGuestsOn": "Bestimme, was alle Mitglieder dieses Workspaces und Besucher ohne Konto sehen.",
+    "workspaceAccessDescriptionGuestsOff": "Bestimme, was alle Mitglieder dieses Workspaces sehen. Sie finden den Kalender unter „Geteilte Kalender“ und können ihn abonnieren."
   },
   "token": {
     "accessLinks": "Zugangslinks",

@@ -167,7 +167,10 @@
     "publicTab": "Público",
     "hiddenTab": "Oculto",
     "publicBadge": "Público",
-    "showAgain": "Mostrar de nuevo"
+    "showAgain": "Mostrar de nuevo",
+    "workspaceTab": "Espacio de trabajo",
+    "workspaceBadge": "Espacio de trabajo",
+    "noWorkspaceCalendars": "No hay calendarios compartidos con todo el espacio de trabajo"
   },
   "color": {
     "custom": "Personalizado",
@@ -466,7 +469,10 @@
     "you": "Tú",
     "sharedWithYou": "Compartido contigo",
     "publicAccessDescriptionGuestsOn": "Controla el acceso público para usuarios autenticados y visitantes sin cuenta.",
-    "publicAccessDescriptionGuestsOff": "Controla el acceso público para los usuarios autenticados de esta instancia."
+    "publicAccessDescriptionGuestsOff": "Controla el acceso público para los usuarios autenticados de esta instancia.",
+    "workspaceAccess": "Acceso en el espacio de trabajo",
+    "workspaceAccessDescriptionGuestsOn": "Decide qué pueden ver todos los miembros de este espacio de trabajo y los visitantes sin cuenta.",
+    "workspaceAccessDescriptionGuestsOff": "Decide qué pueden ver todos los miembros de este espacio de trabajo. Encontrarán el calendario en «Calendarios compartidos» y podrán suscribirse."
   },
   "token": {
     "accessLinks": "Enlaces de acceso",

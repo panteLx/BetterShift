@@ -167,7 +167,10 @@
     "publicBadge": "Pubblico",
     "showAgain": "Mostra di Nuovo",
     "noSharedCalendars": "Nessun calendario condiviso ancora",
-    "noHiddenCalendars": "Nessun calendario nascosto"
+    "noHiddenCalendars": "Nessun calendario nascosto",
+    "workspaceTab": "Workspace",
+    "workspaceBadge": "Workspace",
+    "noWorkspaceCalendars": "Nessun calendario condiviso con l'intero workspace"
   },
   "color": {
     "custom": "Personalizzato",
@@ -466,7 +469,10 @@
     "you": "Tu",
     "sharedWithYou": "Condiviso con te",
     "publicAccessDescriptionGuestsOn": "Controlla l’accesso pubblico per utenti autenticati e visitatori senza account.",
-    "publicAccessDescriptionGuestsOff": "Controlla l’accesso pubblico per gli utenti autenticati di questa istanza."
+    "publicAccessDescriptionGuestsOff": "Controlla l’accesso pubblico per gli utenti autenticati di questa istanza.",
+    "workspaceAccess": "Accesso nel workspace",
+    "workspaceAccessDescriptionGuestsOn": "Scegli cosa vedono tutti i membri di questo workspace e i visitatori senza account.",
+    "workspaceAccessDescriptionGuestsOff": "Scegli cosa vedono tutti i membri di questo workspace. Trovano il calendario in «Calendari Condivisi» e possono abbonarsi."
   },
   "token": {
     "accessLinks": "Link di Accesso",
