@@ -184,6 +184,33 @@ export const workspaceSettings = sqliteTable("workspace_settings", {
     .$onUpdate(() => new Date()),
 });
 
+export const workspaceJoinLinks = sqliteTable(
+  "workspace_join_links",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(), // base64url, 43 chars
+    name: text("name"),
+    role: text("role").notNull().default("member"),
+    expiresAt: integer("expires_at", { mode: "timestamp" }), // null = never
+    maxUses: integer("max_uses"), // null = unlimited
+    usageCount: integer("usage_count").notNull().default(0),
+    revokedAt: integer("revoked_at", { mode: "timestamp" }),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  },
+  (table) => [index("workspace_join_links_workspaceId_idx").on(table.workspaceId)]
+);
+
+export type WorkspaceJoinLink = typeof workspaceJoinLinks.$inferSelect;
+
 // =====================================================
 // BetterShift Application Tables
 // =====================================================

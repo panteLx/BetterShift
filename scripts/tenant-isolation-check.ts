@@ -1406,8 +1406,6 @@ async function checkWorkspaceSlugs(seeded: SeedData): Promise<void> {
   };
   const alphaRow = async () =>
     (await db.select().from(organization).where(eq(organization.id, alphaId)))[0];
-  const slugExists = async (slug: string) =>
-    (await db.select().from(organization).where(eq(organization.slug, slug))).length > 0;
   const tryCheck = async (name: string, fn: () => Promise<boolean>) => {
     try {
       check(name, await fn());

@@ -277,6 +277,17 @@ export interface WorkspaceCreatedMetadata {
   slug: string;
 }
 
+export interface WorkspaceJoinLinkMetadata {
+  linkId: string;
+  maxUses?: number | null;
+  expiresInDays?: number | null;
+}
+
+export interface WorkspaceJoinedMetadata {
+  linkId: string;
+  workspaceName: string;
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -314,7 +325,9 @@ export type AuditLogMetadata =
   | CustomFieldCreatedMetadata
   | CustomFieldUpdatedMetadata
   | CustomFieldDeletedMetadata
-  | WorkspaceCreatedMetadata;
+  | WorkspaceCreatedMetadata
+  | WorkspaceJoinLinkMetadata
+  | WorkspaceJoinedMetadata;
 
 // =====================================================
 // Audit Log Types

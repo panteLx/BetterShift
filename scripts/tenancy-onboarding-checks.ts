@@ -44,6 +44,7 @@ export async function runOnboardingChecks(h: OnboardingHarness): Promise<void> {
   const ctx = { h, db, schema, eq, and, api, tryCheck };
 
   await checkCreate(ctx);
+  await checkJoinLinks(ctx);
 }
 
 type Ctx = {
@@ -131,4 +132,91 @@ async function checkCreate({ h, db, schema, eq, api, tryCheck }: Ctx): Promise<v
   await tryCheck("better-auth organization create is disabled (404)", async () =>
     (await api(admin, alphaHost, "POST", "/api/auth/organization/create", { name: "X", slug: "via-plugin" })).status === 404 &&
     !(await slugExists("via-plugin")));
+}
+
+async function checkJoinLinks({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
+  console.log("\nStage 4b: join links");
+  const portal = h.portalHost;
+  const alphaHost = `alpha.${h.baseDomain}`;
+  const { alphaOwner, alphaMember, betaOwner } = h.seeded.users;
+  const joinerA = await h.seedUser("joiner-a@tenancy.test");
+  const joinerB = await h.seedUser("joiner-b@tenancy.test");
+  const joinerC = await h.seedUser("joiner-c@tenancy.test");
+  const alphaId = h.seeded.workspaces.alpha.id;
+  const isMember = async (userId: string) =>
+    (await db.select().from(schema.member).where(and(eq(schema.member.organizationId, alphaId), eq(schema.member.userId, userId)))).length === 1;
+  const linkRow = async (id: string) =>
+    (await db.select().from(schema.workspaceJoinLinks).where(eq(schema.workspaceJoinLinks.id, id)))[0];
+
+  let single = { id: "", token: "" };
+  await tryCheck("owner creates a single-use link", async () => {
+    const r = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { name: "One", expiresInDays: 7, maxUses: 1 });
+    const link = r.json?.link as { id: string; token: string; maxUses: number; status: string } | undefined;
+    if (link) single = link;
+    return r.status === 201 && link?.maxUses === 1 && link.status === "active" && link.token.length === 43;
+  });
+  await tryCheck("plain member cannot list links (403)", async () =>
+    (await api(alphaMember, alphaHost, "GET", "/api/workspace/join-links")).status === 403);
+  await tryCheck("plain member cannot create links (403)", async () =>
+    (await api(alphaMember, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: null })).status === 403);
+  await tryCheck("non-member cannot list alpha links (403)", async () =>
+    (await api(betaOwner, alphaHost, "GET", "/api/workspace/join-links")).status === 403);
+  await tryCheck("invalid expiry is 400", async () =>
+    (await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: 5, maxUses: null })).status === 400);
+  await tryCheck("GET /api/join/:token shows the workspace without consuming a use", async () => {
+    const a = await api(joinerA, portal, "GET", `/api/join/${single.token}`);
+    await api(joinerA, portal, "GET", `/api/join/${single.token}`);
+    const ws = a.json?.workspace as { slug: string } | undefined;
+    return a.status === 200 && ws?.slug === "alpha" && (await linkRow(single.id)).usageCount === 0 && !(await isMember(joinerA.id));
+  });
+  await tryCheck("anonymous redeem is 401", async () =>
+    (await api(null, portal, "POST", `/api/join/${single.token}`)).status === 401);
+  await tryCheck("first redeem joins as member", async () => {
+    const r = await api(joinerA, portal, "POST", `/api/join/${single.token}`);
+    const row = (await db.select().from(schema.member).where(and(eq(schema.member.organizationId, alphaId), eq(schema.member.userId, joinerA.id))))[0];
+    return r.status === 200 && row?.role === "member" && (await linkRow(single.id)).usageCount === 1;
+  });
+  await tryCheck("second user on an exhausted single-use link is 404 invalid_link", async () => {
+    const r = await api(joinerB, portal, "POST", `/api/join/${single.token}`);
+    return r.status === 404 && r.json?.code === "invalid_link" && !(await isMember(joinerB.id)) && (await linkRow(single.id)).usageCount === 1;
+  });
+  await tryCheck("existing member redeeming does not consume a use", async () => {
+    const multi = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: 5 });
+    const link = multi.json?.link as { id: string; token: string };
+    const r = await api(alphaMember, portal, "POST", `/api/join/${link.token}`);
+    return r.status === 200 && r.json?.alreadyMember === true && (await linkRow(link.id)).usageCount === 0;
+  });
+  await tryCheck("revoked link is rejected", async () => {
+    const created = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: null });
+    const link = created.json?.link as { id: string; token: string };
+    const del = await api(alphaOwner, alphaHost, "DELETE", `/api/workspace/join-links/${link.id}`);
+    const r = await api(joinerB, portal, "POST", `/api/join/${link.token}`);
+    return del.status === 200 && r.status === 404 && !(await isMember(joinerB.id));
+  });
+  await tryCheck("expired link is rejected", async () => {
+    const created = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: 1, maxUses: null });
+    const link = created.json?.link as { id: string; token: string };
+    await db.update(schema.workspaceJoinLinks).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(schema.workspaceJoinLinks.id, link.id));
+    return (await api(joinerC, portal, "POST", `/api/join/${link.token}`)).status === 404 && !(await isMember(joinerC.id));
+  });
+  await tryCheck("unknown token looks like any invalid token", async () => {
+    const r = await api(joinerC, portal, "GET", `/api/join/${"x".repeat(43)}`);
+    return r.status === 404 && r.json?.code === "invalid_link";
+  });
+  await tryCheck("beta owner cannot revoke an alpha link via beta's host (404)", async () => {
+    const created = await api(alphaOwner, alphaHost, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: null });
+    const link = created.json?.link as { id: string };
+    const r = await api(betaOwner, `beta.${h.baseDomain}`, "DELETE", `/api/workspace/join-links/${link.id}`);
+    return r.status === 404 && (await linkRow(link.id)).revokedAt === null;
+  });
+  await tryCheck("/api/join is 404 on a workspace host", async () =>
+    (await api(joinerC, alphaHost, "GET", `/api/join/${single.token}`)).status === 404);
+  await tryCheck("list never returns links of another workspace", async () => {
+    const r = await api(betaOwner, `beta.${h.baseDomain}`, "GET", "/api/workspace/join-links");
+    return r.status === 200 && Array.isArray(r.json?.links) && (r.json?.links as unknown[]).length === 0;
+  });
+  await tryCheck("audit log stores the link id, never the token", async () => {
+    const rows = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, "workspace.join"));
+    return rows.length > 0 && rows.every((row) => !(row.metadata ?? "").includes(single.token));
+  });
 }
