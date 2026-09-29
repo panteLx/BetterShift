@@ -38,10 +38,23 @@ function workspaceOriginPatterns(): string[] {
   return [`${portal.protocol}//*.${TENANT_BASE_DOMAIN}${portal.port ? `:${portal.port}` : ""}`];
 }
 
+// Every HTTP path the organization plugin registers in better-auth 1.6.33.
+const ORGANIZATION_PLUGIN_PATHS = [
+  "accept-invitation", "add-team-member", "cancel-invitation", "check-slug", "create", "create-role",
+  "create-team", "delete", "delete-role", "get-active-member", "get-active-member-role",
+  "get-full-organization", "get-invitation", "get-role", "invite-member", "leave", "list",
+  "list-invitations", "list-members", "list-roles", "list-team-members", "list-teams",
+  "list-user-invitations", "list-user-teams", "reject-invitation", "remove-member", "remove-team",
+  "remove-team-member", "set-active", "set-active-team", "update", "update-member-role",
+  "update-role", "update-team",
+].map((p) => `/organization/${p}`);
+
 export const auth = betterAuth({
   // Base URL configuration (critical for reverse proxy setups)
   baseURL: BETTER_AUTH_URL,
   basePath: "/api/auth",
+  // Membership changes go through our own routes, which clean up shares/feeds; see lib/workspace-membership-end.ts.
+  disabledPaths: ORGANIZATION_PLUGIN_PATHS,
 
   database: drizzleAdapter(db, {
     provider: "sqlite",

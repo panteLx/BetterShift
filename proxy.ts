@@ -103,6 +103,17 @@ function workspaceOrigin(slug: string): string {
   return sharedWorkspaceOrigin(slug, BETTER_AUTH_URL, TENANT_BASE_DOMAIN);
 }
 
+// Portal pages and APIs; on a workspace host they would act outside the host's workspace.
+function isPortalOnlyPath(pathname: string): boolean {
+  return (
+    pathname === "/api/workspaces" ||
+    pathname.startsWith("/api/workspaces/") ||
+    pathname.startsWith("/api/join/") ||
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/")
+  );
+}
+
 async function earliestMembershipSlug(userId: string): Promise<string | null> {
   const row = await db.query.member.findFirst({
     where: eq(member.userId, userId),
@@ -291,7 +302,10 @@ export async function proxy(request: NextRequest) {
         isPublicExempt ||
         pathname === "/login" ||
         pathname === "/register" ||
-        pathname === "/no-workspace"
+        pathname === "/no-workspace" ||
+        pathname === "/api/workspaces" ||
+        pathname.startsWith("/api/workspaces/") ||
+        pathname.startsWith("/api/join/")
       ) {
         return nextWithNonce(request);
       }
@@ -322,6 +336,10 @@ export async function proxy(request: NextRequest) {
     }
 
     requestWorkspaceId = resolution.workspace.id;
+
+    if (isPortalOnlyPath(pathname)) {
+      return new NextResponse(null, { status: 404 });
+    }
 
     // Sign-in lives on the portal; hand it the absolute workspace URL to come back to.
     if (pathname === "/login" || pathname === "/register") {

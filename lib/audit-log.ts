@@ -272,6 +272,11 @@ export interface CustomFieldDeletedMetadata {
   affectedPresets: number;
 }
 
+export interface WorkspaceCreatedMetadata {
+  workspaceName: string;
+  slug: string;
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -308,7 +313,8 @@ export type AuditLogMetadata =
   | CalendarBundleDeletedMetadata
   | CustomFieldCreatedMetadata
   | CustomFieldUpdatedMetadata
-  | CustomFieldDeletedMetadata;
+  | CustomFieldDeletedMetadata
+  | WorkspaceCreatedMetadata;
 
 // =====================================================
 // Audit Log Types

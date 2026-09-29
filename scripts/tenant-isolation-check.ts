@@ -81,15 +81,15 @@ function assertSafeDatabaseUrl(): void {
 
 assertSafeDatabaseUrl();
 
-const BASE_DOMAIN = "tenancy.test";
+export const BASE_DOMAIN = "tenancy.test";
 // Must be the host of the server's BETTER_AUTH_URL: the base domain itself or e.g. app.tenancy.test.
-const PORTAL_HOST = process.env.TENANCY_CHECK_PORTAL_HOST || BASE_DOMAIN;
+export const PORTAL_HOST = process.env.TENANCY_CHECK_PORTAL_HOST || BASE_DOMAIN;
 const APP_URL = process.env.TENANCY_CHECK_URL || "http://localhost:3000";
 
 let passed = 0;
 let failed = 0;
 
-function check(name: string, condition: boolean): void {
+export function check(name: string, condition: boolean): void {
   if (condition) {
     passed++;
     console.log(`  PASS  ${name}`);
@@ -291,9 +291,9 @@ export interface SeedCalendar {
   bundleId: string;
 }
 
-const PASSWORD = "tenancy-check-password-1!";
+export const PASSWORD = "tenancy-check-password-1!";
 
-async function seedUser(email: string, role?: string): Promise<SeedUser> {
+export async function seedUser(email: string, role?: string): Promise<SeedUser> {
   const id = crypto.randomUUID();
   await db.insert(user).values({
     id,
@@ -312,7 +312,7 @@ async function seedUser(email: string, role?: string): Promise<SeedUser> {
   return { id, email, password: PASSWORD };
 }
 
-async function seedCalendar(
+export async function seedCalendar(
   workspaceId: string,
   ownerId: string,
   name: string,
@@ -376,7 +376,7 @@ async function seedShareToken(calendar: SeedCalendar, createdBy: string, isActiv
   return token;
 }
 
-async function seedFeedToken(calendarId: string, userId: string): Promise<string> {
+export async function seedFeedToken(calendarId: string, userId: string): Promise<string> {
   const token = crypto.randomUUID().replace(/-/g, "");
   await db.insert(calendarFeedTokens).values({ calendarId, userId, token, createdAt: new Date() });
   return token;
@@ -507,7 +507,7 @@ interface HttpResponse {
 }
 
 // node:http, not fetch: undici silently replaces a caller-set Host header. Redirects are never followed.
-function httpRequest(
+export function httpRequest(
   path: string,
   method: string,
   headers: Record<string, string>,
@@ -530,7 +530,7 @@ function httpRequest(
 
 const sessionCookies = new Map<string, string>();
 
-async function signIn(email: string, password: string, host: string): Promise<string> {
+export async function signIn(email: string, password: string, host: string): Promise<string> {
   // Keyed by email alone: sessions are host-independent, and every extra sign-in eats into
   // better-auth's own sign-in limiter (3 per 10s per IP), which is retried below.
   const key = email;
@@ -1383,9 +1383,10 @@ async function checkForeignVsMissing(seeded: SeedData): Promise<void> {
   }
 }
 
-// Slugs are subdomains: validated on create, immutable afterwards (checked in the DB, not just the status).
+// The organization plugin's own mutation endpoints are disabled everywhere (see lib/auth.ts);
+// membership changes go through our own routes instead.
 async function checkWorkspaceSlugs(seeded: SeedData): Promise<void> {
-  console.log("\nStage 2e: workspace slug validation and immutability");
+  console.log("\nStage 2e: organization plugin paths are disabled");
   const alphaHost = `alpha.${BASE_DOMAIN}`;
   const alphaId = seeded.workspaces.alpha.id;
   const orgCall = async (as: SeedUser, endpoint: string, body: unknown) => {
@@ -1417,26 +1418,18 @@ async function checkWorkspaceSlugs(seeded: SeedData): Promise<void> {
   const owner = seeded.users.alphaOwner;
   const admin = seeded.users.admin;
 
-  await tryCheck("alpha owner's slug update is refused", async () =>
-    (await orgCall(owner, "update", { organizationId: alphaId, data: { slug: "admin" } })) === 400
+  await tryCheck("organization/update is disabled (404)", async () =>
+    (await orgCall(owner, "update", { organizationId: alphaId, data: { slug: "admin" } })) === 404
   );
   await tryCheck("alpha's slug is unchanged in the DB", async () => (await alphaRow())?.slug === "alpha");
-  await tryCheck("control: alpha owner can still rename the workspace", async () =>
-    (await orgCall(owner, "update", { organizationId: alphaId, data: { name: "Alpha renamed" } })) === 200 &&
-    (await alphaRow())?.name === "Alpha renamed" &&
-    (await alphaRow())?.slug === "alpha"
+  await tryCheck("organization/leave is disabled (404)", async () =>
+    (await orgCall(owner, "leave", { organizationId: alphaId })) === 404
   );
-  await tryCheck("admin create with a reserved slug is refused", async () =>
-    (await orgCall(admin, "create", { name: "Reserved", slug: "admin" })) === 400 && !(await slugExists("admin"))
+  await tryCheck("organization/remove-member is disabled (404)", async () =>
+    (await orgCall(admin, "remove-member", { organizationId: alphaId, memberIdOrEmail: owner.email })) === 404
   );
-  await tryCheck("admin create with an invalid slug is refused", async () =>
-    (await orgCall(admin, "create", { name: "Invalid", slug: "Bad_Slug" })) === 400 && !(await slugExists("Bad_Slug"))
-  );
-  await tryCheck("admin create with a bs-pr- preview slug is refused", async () =>
-    (await orgCall(admin, "create", { name: "Preview", slug: "bs-pr-42" })) === 400 && !(await slugExists("bs-pr-42"))
-  );
-  await tryCheck("control: admin create with a valid slug succeeds", async () =>
-    (await orgCall(admin, "create", { name: "Gamma", slug: "gamma-check" })) === 200 && (await slugExists("gamma-check"))
+  await tryCheck("organization/invite-member is disabled (404)", async () =>
+    (await orgCall(owner, "invite-member", { organizationId: alphaId, email: "x@tenancy.test", role: "member" })) === 404
   );
 }
 
@@ -1462,7 +1455,7 @@ async function deleteAccountRequest(account: SeedUser, host: string): Promise<nu
   return res.status;
 }
 
-async function seedMemberships(
+export async function seedMemberships(
   workspaceId: string,
   entries: Array<[SeedUser, "owner" | "member"]>
 ): Promise<void> {
@@ -1584,6 +1577,12 @@ async function main(): Promise<void> {
   await checkWorkspaceSlugs(seeded);
 
   await checkAccountDeletion(seeded);
+
+  const { runOnboardingChecks } = await import("./tenancy-onboarding-checks");
+  await runOnboardingChecks({
+    check, httpRequest, signIn, seedUser, seedCalendar, seedFeedToken, seedMemberships,
+    baseDomain: BASE_DOMAIN, portalHost: PORTAL_HOST, seeded,
+  });
 
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);

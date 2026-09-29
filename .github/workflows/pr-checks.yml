@@ -101,7 +101,7 @@ jobs:
       - name: Start the server and wait for it to become healthy
         run: |
           PORT=3107 HOSTNAME=0.0.0.0 MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test \
-            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 \
+            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 TENANT_RESERVED_SLUGS=reserved-by-env \
             DATABASE_URL="file:$(pwd)/data/tenancy-ci.sqlite.db" \
             BETTER_AUTH_URL=http://tenancy.test \
             BETTER_AUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") \
@@ -126,7 +126,7 @@ jobs:
         run: |
           DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" node scripts/migrate.mjs
           PORT=3108 HOSTNAME=0.0.0.0 MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test \
-            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 \
+            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 TENANT_RESERVED_SLUGS=reserved-by-env \
             DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" \
             BETTER_AUTH_URL=http://app.tenancy.test \
             BETTER_AUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") \
