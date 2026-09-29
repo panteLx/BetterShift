@@ -46,6 +46,7 @@ export async function runOnboardingChecks(h: OnboardingHarness): Promise<void> {
   await checkCreate(ctx);
   await checkJoinLinks(ctx);
   await checkMembershipEnd(ctx);
+  await checkMembershipEndScoping(ctx);
 }
 
 type Ctx = {
@@ -284,7 +285,7 @@ async function checkMembershipEnd({ h, db, schema, eq, and, api, tryCheck }: Ctx
   await tryCheck("admin removes a member: 200 and share gone", async () => {
     const r = await api(dAdmin, host, "DELETE", `/api/workspace/members/${dKicked.id}`);
     const shares = await db.select().from(s.calendarShares).where(eq(s.calendarShares.userId, dKicked.id));
-    return r.status === 200 && !(await isMember(dKicked.id)) && shares.length === 0 && kickedShareCal.id.length > 0;
+    return r.status === 200 && !(await isMember(dKicked.id)) && shares.length === 0;
   });
   // Defence in depth: re-insert a share by hand and make sure the membership gate still refuses it.
   await db.insert(s.calendarShares).values({ calendarId: kickedShareCal.id, userId: dKicked.id, bundleId: kickedShareCal.bundleId, sharedBy: dOwner.id });
@@ -296,4 +297,58 @@ async function checkMembershipEnd({ h, db, schema, eq, and, api, tryCheck }: Ctx
     !(await listsCalendar(dKicked, kickedShareCal.id)));
   await tryCheck("membership APIs are 404 on the portal", async () =>
     (await api(dOwner, h.portalHost, "GET", "/api/workspace/members")).status === 404);
+}
+
+/**
+ * endMembership only touches the leaving user's grants in the workspace they leave, and the
+ * new owner's stale grants on calendars transferred to them — everything else must survive.
+ */
+async function checkMembershipEndScoping({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
+  console.log("\nStage 4c-2: membership end cross-workspace scoping");
+  const s = schema;
+  const [epsilon] = await db.insert(s.organization).values({ id: crypto.randomUUID(), name: "Epsilon", slug: "epsilon-end" }).returning();
+  const [zeta] = await db.insert(s.organization).values({ id: crypto.randomUUID(), name: "Zeta", slug: "zeta-end" }).returning();
+  const epsilonHost = `epsilon-end.${h.baseDomain}`;
+  const eOwner = await h.seedUser("e-owner@tenancy.test");
+  const eOther = await h.seedUser("e-other@tenancy.test");
+  const eLeaver = await h.seedUser("e-leaver@tenancy.test");
+  const zOwner = await h.seedUser("z-owner@tenancy.test");
+  await h.seedMemberships(epsilon.id, [[eOwner, "owner"], [eOther, "member"], [eLeaver, "member"]]);
+  await h.seedMemberships(zeta.id, [[zOwner, "owner"], [eLeaver, "member"]]);
+
+  // Owner's calendar in epsilon, shared with the leaver (share + subscription + feed token).
+  const eOwnerCal = await h.seedCalendar(epsilon.id, eOwner.id, "Epsilon Owner Cal", eLeaver.id);
+  await db.insert(s.userCalendarSubscriptions).values({ userId: eLeaver.id, calendarId: eOwnerCal.id, status: "subscribed", source: "shared" });
+  await h.seedFeedToken(eOwnerCal.id, eLeaver.id);
+  // Leaver's own calendar in epsilon, shared with a third member who must keep their access.
+  const eLeaverCal = await h.seedCalendar(epsilon.id, eLeaver.id, "Epsilon Leaver Cal", eOther.id);
+  // Stale grant: the eventual new owner (eOwner) already has a share + subscription on the
+  // leaver's calendar; transfer must clean those up so eOwner doesn't see their own calendar as dismissed.
+  await db.insert(s.calendarShares).values({ calendarId: eLeaverCal.id, userId: eOwner.id, bundleId: eLeaverCal.bundleId, sharedBy: eLeaver.id });
+  await db.insert(s.userCalendarSubscriptions).values({ userId: eOwner.id, calendarId: eLeaverCal.id, status: "subscribed", source: "shared" });
+  // Owner's calendar in zeta, shared with the same leaver (share + subscription + feed token) — the "other workspace".
+  const zOwnerCal = await h.seedCalendar(zeta.id, zOwner.id, "Zeta Owner Cal", eLeaver.id);
+  await db.insert(s.userCalendarSubscriptions).values({ userId: eLeaver.id, calendarId: zOwnerCal.id, status: "subscribed", source: "shared" });
+  await h.seedFeedToken(zOwnerCal.id, eLeaver.id);
+
+  await tryCheck("leaver leaves epsilon: calendar transferred to the epsilon owner", async () => {
+    const r = await api(eLeaver, epsilonHost, "POST", "/api/workspace/leave");
+    const cal = (await db.select().from(s.calendars).where(eq(s.calendars.id, eLeaverCal.id)))[0];
+    return r.status === 200 && r.json?.calendarsTransferred === 1 && cal.ownerId === eOwner.id;
+  });
+  await tryCheck("leaver's share/subscription/feed token in the OTHER workspace (zeta) survive", async () => {
+    const shares = await db.select().from(s.calendarShares).where(and(eq(s.calendarShares.userId, eLeaver.id), eq(s.calendarShares.calendarId, zOwnerCal.id)));
+    const subs = await db.select().from(s.userCalendarSubscriptions).where(and(eq(s.userCalendarSubscriptions.userId, eLeaver.id), eq(s.userCalendarSubscriptions.calendarId, zOwnerCal.id)));
+    const feeds = await db.select().from(s.calendarFeedTokens).where(and(eq(s.calendarFeedTokens.userId, eLeaver.id), eq(s.calendarFeedTokens.calendarId, zOwnerCal.id)));
+    return shares.length === 1 && subs.length === 1 && feeds.length === 1;
+  });
+  await tryCheck("third member's share on the transferred calendar survives", async () => {
+    const shares = await db.select().from(s.calendarShares).where(and(eq(s.calendarShares.userId, eOther.id), eq(s.calendarShares.calendarId, eLeaverCal.id)));
+    return shares.length === 1;
+  });
+  await tryCheck("new owner's stale share and subscription on the transferred calendar are gone", async () => {
+    const shares = await db.select().from(s.calendarShares).where(and(eq(s.calendarShares.userId, eOwner.id), eq(s.calendarShares.calendarId, eLeaverCal.id)));
+    const subs = await db.select().from(s.userCalendarSubscriptions).where(and(eq(s.userCalendarSubscriptions.userId, eOwner.id), eq(s.userCalendarSubscriptions.calendarId, eLeaverCal.id)));
+    return shares.length === 0 && subs.length === 0;
+  });
 }

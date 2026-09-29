@@ -59,8 +59,10 @@ export function endMembership(workspaceId: string, userId: string): EndMembershi
     if (newOwnerId && owned.length > 0) {
       const ids = owned.map((c) => c.id);
       tx.update(calendars).set({ ownerId: newOwnerId }).where(inArray(calendars.id, ids)).run();
-      // The new owner no longer needs a share on calendars they now own.
+      // The new owner no longer needs a share or a subscription on calendars they now own,
+      // otherwise they'd see their own calendar as "dismissed" and re-subscribing would throw.
       tx.delete(calendarShares).where(and(eq(calendarShares.userId, newOwnerId), inArray(calendarShares.calendarId, ids))).run();
+      tx.delete(userCalendarSubscriptions).where(and(eq(userCalendarSubscriptions.userId, newOwnerId), inArray(userCalendarSubscriptions.calendarId, ids))).run();
     }
 
     tx.delete(member).where(eq(member.id, row.id)).run();
