@@ -200,6 +200,42 @@ export function useCreateJoinLink() {
   });
 }
 
+export function useAdminUserWorkspaces(userId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.workspaces.adminUser(userId),
+    queryFn: () =>
+      workspaceFetch<{ workspaces: MyWorkspace[] }>(`/api/admin/users/${encodeURIComponent(userId)}/workspaces`),
+    enabled,
+  });
+}
+
+export function useAdminAddUserToWorkspace(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { slug: string; role: "member" | "admin" }) =>
+      workspaceFetch<{ ok: true }>(`/api/admin/users/${encodeURIComponent(userId)}/workspaces`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.adminUser(userId) }),
+  });
+}
+
+export function useAdminRemoveUserFromWorkspace(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (workspaceId: string) =>
+      workspaceFetch<{ calendarsTransferred: number }>(
+        `/api/admin/users/${encodeURIComponent(userId)}/workspaces?workspaceId=${encodeURIComponent(workspaceId)}`,
+        { method: "DELETE" }
+      ),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.adminUser(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.detail(userId) });
+    },
+  });
+}
+
 export function useRevokeJoinLink() {
   const queryClient = useQueryClient();
   return useMutation({

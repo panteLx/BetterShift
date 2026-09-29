@@ -1192,10 +1192,13 @@
   },
   "adminUsers": {
     "actions": "Actions",
+    "addToWorkspace": "Add to workspace",
     "all": "All",
+    "alreadyMember": "Already a member",
     "ban": "Ban",
     "banReasonQuoted": "Reason: “{reason}”",
     "calendarCount": "{count, plural, one {# calendar} other {# calendars}}",
+    "cannotRemoveOwner": "The owner cannot be removed",
     "edit": "Edit",
     "filterLabel": "Filter users",
     "hidePassword": "Hide password",
@@ -1204,7 +1207,13 @@
     "moreFilters": "More filters",
     "numbers": "Numbers",
     "showPassword": "Show password",
-    "subtitle": "{count, plural, one {# account} other {# accounts}}{banned, plural, =0 {} other {, # banned}}"
+    "subtitle": "{count, plural, one {# account} other {# accounts}}{banned, plural, =0 {} other {, # banned}}",
+    "workspaceAdded": "Added to the workspace",
+    "workspaceNotFound": "Workspace not found",
+    "workspaceRemoved": "Removed from the workspace",
+    "workspaceSlug": "Workspace address (slug)",
+    "workspaces": "Workspaces",
+    "workspacesEmpty": "Not in any workspace"
   },
   "adminCalendars": {
     "content": "Content",

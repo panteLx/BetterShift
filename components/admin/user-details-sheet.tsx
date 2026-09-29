@@ -9,6 +9,7 @@ import { ListRow, Pill } from "@/components/form-kit";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminDetailPanel } from "@/components/admin/admin-detail-panel";
 import { DetailSection, RolePill, StatTile, StatusPill, UserAvatar } from "@/components/admin/admin-kit";
+import { UserWorkspacesSection } from "@/components/admin/user-workspaces-section";
 import { useBundleDisplayName } from "@/components/permission-bundle-picker";
 import { fetchAdminUserDetails } from "@/hooks/useAdminUsers";
 import { useUserPermissions } from "@/hooks/useAdminAccess";
@@ -230,6 +231,8 @@ export function UserDetailsSheet({
               ))}
             </DetailSection>
           )}
+
+          <UserWorkspacesSection userId={user.id} />
 
           {user.accounts.length > 0 && (
             <DetailSection label={t("common.auth.connectedAccounts")}>

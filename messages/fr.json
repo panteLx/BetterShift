@@ -1192,10 +1192,13 @@
   },
   "adminUsers": {
     "actions": "Actions",
+    "addToWorkspace": "Ajouter au workspace",
     "all": "Tous",
+    "alreadyMember": "Déjà membre",
     "ban": "Bloquer",
     "banReasonQuoted": "Motif : « {reason} »",
     "calendarCount": "{count, plural, one {# calendrier} other {# calendriers}}",
+    "cannotRemoveOwner": "Le propriétaire ne peut pas être retiré",
     "edit": "Modifier",
     "filterLabel": "Filtrer les utilisateurs",
     "hidePassword": "Masquer le mot de passe",
@@ -1204,7 +1207,13 @@
     "moreFilters": "Plus de filtres",
     "numbers": "Chiffres",
     "showPassword": "Afficher le mot de passe",
-    "subtitle": "{count, plural, one {# compte} other {# comptes}}{banned, plural, =0 {} one {, dont # bloqué} other {, dont # bloqués}}"
+    "subtitle": "{count, plural, one {# compte} other {# comptes}}{banned, plural, =0 {} one {, dont # bloqué} other {, dont # bloqués}}",
+    "workspaceAdded": "Ajouté au workspace",
+    "workspaceNotFound": "Workspace introuvable",
+    "workspaceRemoved": "Retiré du workspace",
+    "workspaceSlug": "Adresse du workspace (slug)",
+    "workspaces": "Workspaces",
+    "workspacesEmpty": "N'appartient à aucun workspace"
   },
   "adminCalendars": {
     "content": "Contenu",
