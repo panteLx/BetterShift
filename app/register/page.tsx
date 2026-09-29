@@ -142,9 +142,10 @@ export default function RegisterPage() {
     if (!isAuthEnabled) {
       router.replace("/");
     } else if (!allowRegistration) {
-      router.replace("/login");
+      const returnUrl = searchParams.get("returnUrl");
+      router.replace(returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : "/login");
     }
-  }, [isAuthEnabled, allowRegistration, router]);
+  }, [isAuthEnabled, allowRegistration, router, searchParams]);
 
   if (!isAuthEnabled || !allowRegistration) {
     return null;

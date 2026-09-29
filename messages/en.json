@@ -1430,6 +1430,8 @@
     "alreadyMember": "You are already a member of {workspace}.",
     "linkInvalid": "Link invalid or expired",
     "linkInvalidDescription": "Ask the person who invited you for a new link.",
+    "joinLoadError": "The invite link couldn't be checked right now. Please try again in a moment.",
+    "joinSignedOut": "Your session has expired. Sign in again to join.",
     "backToOverview": "Back to overview",
     "roleOwner": "Owner",
     "roleAdmin": "Admin",

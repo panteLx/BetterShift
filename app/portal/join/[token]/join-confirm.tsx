@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -30,16 +30,61 @@ function BackToOverview() {
   );
 }
 
+function errorStatus(error: unknown): number | null {
+  return error instanceof WorkspaceApiError ? error.status : null;
+}
+
 export function JoinConfirm({ token }: { token: string }) {
   const t = useTranslations();
   const href = useWorkspaceHref();
   const info = useJoinLinkInfo(token);
   const redeem = useRedeemJoinLink(token);
   const [invalidated, setInvalidated] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
+  const loginUrl = `/login?returnUrl=${encodeURIComponent(`/join/${token}`)}`;
+  const handledError = useRef<unknown>(null);
 
-  if (info.isError || invalidated) {
+  // The rate-limit toast reads the response body, so it must run once per error, not per render.
+  useEffect(() => {
+    const error = info.error;
+    if (!error || error === handledError.current) return;
+    handledError.current = error;
+    if (error instanceof WorkspaceApiError && error.rateLimitResponse) {
+      void handleRateLimitError(error.rateLimitResponse, t);
+    }
+  }, [info.error, t]);
+
+  // A link, not an automatic redirect: /login bounces a still-valid page session straight back here.
+  if (signedOut || (info.isError && errorStatus(info.error) === 401)) {
+    return (
+      <AuthShell title={t("common.error")} description={t("workspaces.joinSignedOut")}>
+        <Button asChild className={primaryButtonClass}>
+          <Link href={loginUrl}>{t("auth.login")}</Link>
+        </Button>
+      </AuthShell>
+    );
+  }
+
+  // Only a 404 means the link itself is bad; anything else (429, 5xx, network) is retryable.
+  if (invalidated || (info.isError && errorStatus(info.error) === 404)) {
     return (
       <AuthShell title={t("workspaces.linkInvalid")} description={t("workspaces.linkInvalidDescription")}>
+        <BackToOverview />
+      </AuthShell>
+    );
+  }
+
+  if (info.isError) {
+    return (
+      <AuthShell title={t("common.error")} description={t("workspaces.joinLoadError")}>
+        <Button
+          type="button"
+          className={primaryButtonClass}
+          onClick={() => void info.refetch()}
+          disabled={info.isFetching}
+        >
+          {info.isFetching ? t("common.loading") : t("calendarView.retry")}
+        </Button>
         <BackToOverview />
       </AuthShell>
     );
@@ -69,6 +114,10 @@ export function JoinConfirm({ token }: { token: string }) {
         }
         if (error instanceof WorkspaceApiError && error.status === 404) {
           setInvalidated(true);
+          return;
+        }
+        if (error instanceof WorkspaceApiError && error.status === 401) {
+          setSignedOut(true);
           return;
         }
         toast.error(t("common.error"));

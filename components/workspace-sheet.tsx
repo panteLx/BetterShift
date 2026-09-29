@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Ban, Copy, Link2, Loader2, LogOut, Plus, UserMinus } from "lucide-react";
+import { Ban, Copy, Link2, Loader2, LogOut, Plus, TriangleAlert, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +19,7 @@ import { PanelBody, PanelDialog, PanelFooter } from "@/components/panel-dialog";
 import { SegmentedControl } from "@/components/segmented-control";
 import { Field, InfoNote, ListRow, Pill, RowIconButton, SectionLabel, inputClass } from "@/components/form-kit";
 import { PersonRow } from "@/components/person-row";
+import { StatusBanner } from "@/components/status-banner";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -48,6 +49,24 @@ const EXPIRY_OPTIONS = ["never", "1", "7", "30"] as const;
 const MAX_USES_OPTIONS = ["unlimited", "1", "5", "10", "25", "50", "100"] as const;
 type ExpiryOption = (typeof EXPIRY_OPTIONS)[number];
 type MaxUsesOption = (typeof MAX_USES_OPTIONS)[number];
+
+function LoadErrorBanner({ item, onRetry }: { item: string; onRetry: () => void }) {
+  const t = useTranslations();
+  return (
+    <StatusBanner
+      tone="danger"
+      icon={TriangleAlert}
+      title={t("common.error")}
+      action={
+        <Button variant="outline" size="sm" className="h-9 font-semibold" onClick={onRetry}>
+          {t("calendarView.retry")}
+        </Button>
+      }
+    >
+      {t("common.fetchError", { item })}
+    </StatusBanner>
+  );
+}
 
 function useActionErrorHandler() {
   const t = useTranslations();
@@ -160,7 +179,7 @@ function MembersTab({
 }) {
   const t = useTranslations();
   const config = usePublicConfig();
-  const { data, isLoading } = useWorkspaceMembers(open);
+  const { data, isError, refetch } = useWorkspaceMembers(open);
   const removeMember = useRemoveMember();
   const leaveWorkspace = useLeaveWorkspace();
   const handleError = useActionErrorHandler();
@@ -189,7 +208,9 @@ function MembersTab({
   return (
     <>
       <PanelBody className="min-h-[260px]">
-        {isLoading || !data ? (
+        {isError && !data ? (
+          <LoadErrorBanner item={t("workspaces.membersTab")} onRetry={() => void refetch()} />
+        ) : !data ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-6 animate-spin text-fg-tertiary" />
           </div>
@@ -277,7 +298,7 @@ function MembersTab({
 
 function LinksTab({ open }: { open: boolean }) {
   const t = useTranslations();
-  const { data, isLoading } = useJoinLinks(open);
+  const { data, isError, refetch } = useJoinLinks(open);
   const createLink = useCreateJoinLink();
   const handleError = useActionErrorHandler();
   const linkUrl = useJoinLinkUrl();
@@ -354,7 +375,9 @@ function LinksTab({ open }: { open: boolean }) {
 
         <section>
           <SectionLabel>{t("workspaces.linksTab")}</SectionLabel>
-          {isLoading || !data ? (
+          {isError && !data ? (
+            <LoadErrorBanner item={t("workspaces.linksTab")} onRetry={() => void refetch()} />
+          ) : !data ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="size-5 animate-spin text-fg-tertiary" />
             </div>

@@ -1430,6 +1430,8 @@
     "alreadyMember": "Již jste členem {workspace}.",
     "linkInvalid": "Odkaz je neplatný nebo vypršel",
     "linkInvalidDescription": "Požádejte osobu, která vás pozvala, o nový odkaz.",
+    "joinLoadError": "Odkaz s pozvánkou se teď nepodařilo ověřit. Zkuste to za chvíli znovu.",
+    "joinSignedOut": "Vaše relace vypršela. Pro připojení se znovu přihlaste.",
     "backToOverview": "Zpět na přehled",
     "roleOwner": "Vlastník",
     "roleAdmin": "Admin",

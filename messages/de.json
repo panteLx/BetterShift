@@ -1430,6 +1430,8 @@
     "alreadyMember": "Du bist bereits Mitglied von {workspace}.",
     "linkInvalid": "Link ungültig oder abgelaufen",
     "linkInvalidDescription": "Bitte die Person, die dich eingeladen hat, um einen neuen Link.",
+    "joinLoadError": "Der Einladungslink konnte gerade nicht geprüft werden. Versuch es gleich noch einmal.",
+    "joinSignedOut": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um beizutreten.",
     "backToOverview": "Zur Übersicht",
     "roleOwner": "Owner",
     "roleAdmin": "Admin",

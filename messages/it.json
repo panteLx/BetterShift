@@ -1430,6 +1430,8 @@
     "alreadyMember": "Sei già membro di {workspace}.",
     "linkInvalid": "Link non valido o scaduto",
     "linkInvalidDescription": "Chiedi un nuovo link alla persona che ti ha invitato.",
+    "joinLoadError": "Al momento non è stato possibile verificare il link di invito. Riprova tra poco.",
+    "joinSignedOut": "La tua sessione è scaduta. Accedi di nuovo per unirti.",
     "backToOverview": "Torna alla panoramica",
     "roleOwner": "Proprietario",
     "roleAdmin": "Admin",
