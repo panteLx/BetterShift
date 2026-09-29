@@ -32,7 +32,8 @@ interface CalendarSwitcherProps {
   calendars: CalendarWithCount[];
   selectedId?: string;
   onSelect: (id: string) => void;
-  onCreateNew: () => void;
+  /** Omitted where the caller may not create calendars (e.g. a workspace non-member). */
+  onCreateNew?: () => void;
   onCompare?: () => void;
   size?: "desktop" | "mobile";
 }
@@ -179,14 +180,14 @@ export function CalendarSwitcher({
             })}
           </div>
         ))}
-        {(!isGuest || (onCompare && visible.length >= 2)) && <DropdownMenuSeparator />}
+        {((!isGuest && onCreateNew) || (onCompare && visible.length >= 2)) && <DropdownMenuSeparator />}
         {onCompare && visible.length >= 2 && (
           <DropdownMenuItem onClick={onCompare}>
             <Columns2 className="mr-2 h-4 w-4" />
             {t("calendar.compare")}
           </DropdownMenuItem>
         )}
-        {!isGuest && (
+        {!isGuest && onCreateNew && (
           <DropdownMenuItem onClick={onCreateNew}>
             <Plus className="mr-2 h-4 w-4" />
             {t("calendar.create")}

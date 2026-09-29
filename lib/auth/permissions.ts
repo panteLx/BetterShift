@@ -135,12 +135,12 @@ async function resolveCalendarAccess(
     return null;
   }
 
-  if (calendar.ownerId === userId) {
+  // Ownership and shares only count for current members: a stale row must not outlive the membership.
+  const member = await isWorkspaceMember(userId, workspaceId);
+  if (member && calendar.ownerId === userId) {
     return ownerAccess(calendar);
   }
 
-  // Shares only count for current members: a stale row must not outlive the membership.
-  const member = await isWorkspaceMember(userId, workspaceId);
   const share = member
     ? await db.query.calendarShares.findFirst({
         where: and(eq(calendarShares.calendarId, calendarId), eq(calendarShares.userId, userId)),
@@ -487,7 +487,7 @@ export async function getUserAccessibleCalendars(
       where: eq(calendarShares.userId, userId),
     }),
   ]);
-  results.push(...ownedCalendars.map((cal) => ({ id: cal.id, isOwner: true })));
+  if (member) results.push(...ownedCalendars.map((cal) => ({ id: cal.id, isOwner: true })));
 
   const existingIds = new Set(results.map((r) => r.id));
 

@@ -13,7 +13,7 @@ import {
 } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
-import { requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
+import { isWorkspaceMember, requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
 import {
@@ -38,6 +38,7 @@ export async function GET(request: Request) {
     // Get accessible calendar IDs with permissions
     const accessible = await getUserAccessibleCalendars(user?.id);
     const accessibleIds = accessible.map((a) => a.id);
+    const ownedIds = new Set(accessible.filter((a) => a.isOwner).map((a) => a.id));
 
     if (accessibleIds.length === 0) {
       return NextResponse.json([]);
@@ -102,10 +103,12 @@ export async function GET(request: Request) {
         ])
       );
 
-      // Get shares
-      const userShares = await db.query.calendarShares.findMany({
-        where: eq(sql`${calendarShares.userId}`, user.id),
-      });
+      // Stale shares of a former member must not show capabilities they no longer have.
+      const userShares = (await isWorkspaceMember(user.id, workspace.id))
+        ? await db.query.calendarShares.findMany({
+            where: eq(sql`${calendarShares.userId}`, user.id),
+          })
+        : [];
       shares = new Map(userShares.map((s) => [s.calendarId, s.bundleId]));
     }
 
@@ -146,7 +149,8 @@ export async function GET(request: Request) {
       const shareBundleId = shares.get(cal.id);
       const subscription = subscriptions.get(cal.id);
       const tokenBundleId = tokens.get(cal.id);
-      const isOwnerRow = !isAuthEnabled() || cal.ownerId === user?.id;
+      // Not ownerId === user.id: a non-member owner holds no owner rights (see resolveCalendarAccess).
+      const isOwnerRow = ownedIds.has(cal.id);
 
       let capabilities: Capability[];
       let bundle: CalendarBundleRef | null;
@@ -225,6 +229,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Authentication required to create calendars" },
         { status: 401 }
+      );
+    }
+
+    // Single-tenant this is always true; a non-member would own a calendar that grants them nothing.
+    if (user && !(await isWorkspaceMember(user.id, workspace.id))) {
+      return NextResponse.json(
+        { error: "Workspace membership required to create calendars" },
+        { status: 403 }
       );
     }
 

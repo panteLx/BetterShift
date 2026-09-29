@@ -59,6 +59,8 @@ function HomeContent() {
 
   const { isGuest } = useAuth();
   const { data: workspace } = useWorkspace();
+  // Signed in but not a member here: may browse public calendars, never create one.
+  const isWorkspaceNonMember = !!workspace?.multiTenant && workspace.role === null;
 
   const { versionInfo } = useVersionUpdateCheck();
   const telemetryPrompt = versionInfo?.telemetryPrompt;
@@ -490,7 +492,7 @@ function HomeContent() {
 
   if (calendars.length === 0) {
     if (isGuest) return <GuestEmptyState />;
-    if (workspace?.multiTenant && workspace.role === null) {
+    if (isWorkspaceNonMember) {
       return <NoWorkspaceAccessState workspaceName={workspace.name} />;
     }
     return (
@@ -513,7 +515,7 @@ function HomeContent() {
       canManageSync={can("manageExternalSync")}
       onDateChange={handleDateChange}
       onSelectCalendar={setSelectedCalendar}
-      onCreateCalendar={() => dialogStates.setShowCalendarDialog(true)}
+      onCreateCalendar={isWorkspaceNonMember ? undefined : () => dialogStates.setShowCalendarDialog(true)}
       onSettings={() => dialogStates.setShowCalendarSettingsDialog(true)}
       onSyncNotifications={() => dialogStates.setShowSyncNotificationDialog(true)}
       onCompare={openComparePicker}
