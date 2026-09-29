@@ -1177,7 +1177,15 @@
       "telemetrySent": "Telemetriedaten manuell gesendet",
       "telemetrySendFailed": "Manuelles Senden der Telemetriedaten fehlgeschlagen",
       "telemetryAutoSent": "Telemetriedaten automatisch gesendet",
-      "telemetryAutoSendFailed": "Automatisches Senden der Telemetriedaten fehlgeschlagen"
+      "telemetryAutoSendFailed": "Automatisches Senden der Telemetriedaten fehlgeschlagen",
+      "workspaceCreated": "Workspace „{workspace}“ erstellt",
+      "workspaceJoined": "Workspace „{workspace}“ beigetreten",
+      "workspaceLeft": "{count, plural, =0 {Workspace verlassen} other {Workspace verlassen, # Kalender übertragen}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {Mitglied aus dem Workspace entfernt} other {Mitglied aus dem Workspace entfernt, # Kalender übertragen}}",
+      "workspaceJoinLinkCreated": "Einladungslink erstellt",
+      "workspaceJoinLinkRevoked": "Einladungslink widerrufen",
+      "adminWorkspaceMemberAdded": "{user} als {role} zu „{workspace}“ hinzugefügt",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {{user} aus „{workspace}“ entfernt} other {{user} aus „{workspace}“ entfernt, # Kalender übertragen}}"
     }
   },
   "adminUsers": {

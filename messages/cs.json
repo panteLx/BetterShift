@@ -1177,7 +1177,15 @@
       "telemetrySent": "Telemetrie odeslána ručně",
       "telemetrySendFailed": "Ruční odeslání telemetrie se nezdařilo",
       "telemetryAutoSent": "Telemetrie odeslána automaticky",
-      "telemetryAutoSendFailed": "Automatické odeslání telemetrie se nezdařilo"
+      "telemetryAutoSendFailed": "Automatické odeslání telemetrie se nezdařilo",
+      "workspaceCreated": "Vytvořil pracovní prostor „{workspace}“",
+      "workspaceJoined": "Připojil se k pracovnímu prostoru „{workspace}“",
+      "workspaceLeft": "{count, plural, =0 {Opustil pracovní prostor} other {Opustil pracovní prostor a převedl # kalendářů}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {Odebral člena z pracovního prostoru} other {Odebral člena z pracovního prostoru a převedl # kalendářů}}",
+      "workspaceJoinLinkCreated": "Vytvořil odkaz pro připojení k pracovnímu prostoru",
+      "workspaceJoinLinkRevoked": "Zrušil odkaz pro připojení k pracovnímu prostoru",
+      "adminWorkspaceMemberAdded": "Přidal uživatele {user} do „{workspace}“ jako {role}",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Odebral uživatele {user} z „{workspace}“} other {Odebral uživatele {user} z „{workspace}“ a převedl # kalendářů}}"
     }
   },
   "adminUsers": {

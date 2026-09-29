@@ -357,3 +357,8 @@ export function canManageSystemSettings(
 ): boolean {
   return isAdmin(adminUser);
 }
+
+/** Add users to / remove them from any workspace (multi-tenant). Admin and superadmin. */
+export function canManageWorkspaceMemberships(adminUser: User | null | undefined): boolean {
+  return isAdmin(adminUser);
+}

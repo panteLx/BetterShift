@@ -1177,7 +1177,15 @@
       "telemetrySent": "Telemetry sent manually",
       "telemetrySendFailed": "Sending telemetry manually failed",
       "telemetryAutoSent": "Telemetry sent automatically",
-      "telemetryAutoSendFailed": "Sending telemetry automatically failed"
+      "telemetryAutoSendFailed": "Sending telemetry automatically failed",
+      "workspaceCreated": "Created workspace “{workspace}”",
+      "workspaceJoined": "Joined workspace “{workspace}”",
+      "workspaceLeft": "{count, plural, =0 {Left the workspace} other {Left the workspace, transferring # calendars}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {Removed a member from the workspace} other {Removed a member from the workspace, transferring # calendars}}",
+      "workspaceJoinLinkCreated": "Created a workspace join link",
+      "workspaceJoinLinkRevoked": "Revoked a workspace join link",
+      "adminWorkspaceMemberAdded": "Added {user} to “{workspace}” as {role}",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Removed {user} from “{workspace}”} other {Removed {user} from “{workspace}”, transferring # calendars}}"
     }
   },
   "adminUsers": {

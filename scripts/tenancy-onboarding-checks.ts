@@ -47,6 +47,7 @@ export async function runOnboardingChecks(h: OnboardingHarness): Promise<void> {
   await checkJoinLinks(ctx);
   await checkMembershipEnd(ctx);
   await checkMembershipEndScoping(ctx);
+  await checkAdminMemberships(ctx);
 }
 
 type Ctx = {
@@ -351,4 +352,34 @@ async function checkMembershipEndScoping({ h, db, schema, eq, and, api, tryCheck
     const subs = await db.select().from(s.userCalendarSubscriptions).where(and(eq(s.userCalendarSubscriptions.userId, eOwner.id), eq(s.userCalendarSubscriptions.calendarId, eLeaverCal.id)));
     return shares.length === 0 && subs.length === 0;
   });
+}
+
+async function checkAdminMemberships({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
+  console.log("\nStage 4d: instance admin workspace memberships");
+  const host = `alpha.${h.baseDomain}`;
+  const { admin, alphaOwner, alphaMember } = h.seeded.users;
+  const target = await h.seedUser("admin-target@tenancy.test");
+  const betaId = h.seeded.workspaces.beta.id;
+  const path = `/api/admin/users/${target.id}/workspaces`;
+  const role = async () =>
+    (await db.select().from(schema.member).where(and(eq(schema.member.organizationId, betaId), eq(schema.member.userId, target.id))))[0]?.role;
+
+  await tryCheck("non-admin cannot add memberships (403)", async () =>
+    (await api(alphaMember, host, "POST", path, { slug: "beta", role: "member" })).status === 403 && !(await role()));
+  await tryCheck("admin adds the user to beta as admin", async () =>
+    (await api(admin, host, "POST", path, { slug: "beta", role: "admin" })).status === 201 && (await role()) === "admin");
+  await tryCheck("adding twice is 409", async () =>
+    (await api(admin, host, "POST", path, { slug: "beta", role: "member" })).status === 409);
+  await tryCheck("owner role cannot be granted (400)", async () =>
+    (await api(admin, host, "POST", path, { slug: "alpha", role: "owner" })).status === 400);
+  await tryCheck("unknown slug is 404", async () =>
+    (await api(admin, host, "POST", path, { slug: "nope-nope", role: "member" })).status === 404);
+  await tryCheck("admin lists the memberships", async () => {
+    const r = await api(admin, host, "GET", path);
+    return r.status === 200 && ((r.json?.workspaces ?? []) as Array<{ slug: string }>).some((w) => w.slug === "beta");
+  });
+  await tryCheck("admin removes the membership", async () =>
+    (await api(admin, host, "DELETE", `${path}?workspaceId=${betaId}`)).status === 200 && !(await role()));
+  await tryCheck("admin cannot remove a workspace owner (409)", async () =>
+    (await api(admin, host, "DELETE", `/api/admin/users/${alphaOwner.id}/workspaces?workspaceId=${h.seeded.workspaces.alpha.id}`)).status === 409);
 }

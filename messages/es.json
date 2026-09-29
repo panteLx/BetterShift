@@ -1177,7 +1177,15 @@
       "telemetrySent": "Telemetría enviada manualmente",
       "telemetrySendFailed": "Error al enviar la telemetría manualmente",
       "telemetryAutoSent": "Telemetría enviada automáticamente",
-      "telemetryAutoSendFailed": "Error al enviar la telemetría automáticamente"
+      "telemetryAutoSendFailed": "Error al enviar la telemetría automáticamente",
+      "workspaceCreated": "Creó el espacio de trabajo «{workspace}»",
+      "workspaceJoined": "Se unió al espacio de trabajo «{workspace}»",
+      "workspaceLeft": "{count, plural, =0 {Abandonó el espacio de trabajo} other {Abandonó el espacio de trabajo, transfiriendo # calendarios}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {Eliminó a un miembro del espacio de trabajo} other {Eliminó a un miembro del espacio de trabajo, transfiriendo # calendarios}}",
+      "workspaceJoinLinkCreated": "Creó un enlace de invitación al espacio de trabajo",
+      "workspaceJoinLinkRevoked": "Revocó un enlace de invitación al espacio de trabajo",
+      "adminWorkspaceMemberAdded": "Añadió a {user} a «{workspace}» como {role}",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Eliminó a {user} de «{workspace}»} other {Eliminó a {user} de «{workspace}», transfiriendo # calendarios}}"
     }
   },
   "adminUsers": {

@@ -1177,7 +1177,15 @@
       "telemetrySent": "Télémétrie envoyée manuellement",
       "telemetrySendFailed": "Échec de l'envoi manuel de la télémétrie",
       "telemetryAutoSent": "Télémétrie envoyée automatiquement",
-      "telemetryAutoSendFailed": "Échec de l'envoi automatique de la télémétrie"
+      "telemetryAutoSendFailed": "Échec de l'envoi automatique de la télémétrie",
+      "workspaceCreated": "A créé l'espace de travail « {workspace} »",
+      "workspaceJoined": "A rejoint l'espace de travail « {workspace} »",
+      "workspaceLeft": "{count, plural, =0 {A quitté l'espace de travail} other {A quitté l'espace de travail, en transférant # calendriers}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {A retiré un membre de l'espace de travail} other {A retiré un membre de l'espace de travail, en transférant # calendriers}}",
+      "workspaceJoinLinkCreated": "A créé un lien d'invitation à l'espace de travail",
+      "workspaceJoinLinkRevoked": "A révoqué un lien d'invitation à l'espace de travail",
+      "adminWorkspaceMemberAdded": "A ajouté {user} à « {workspace} » en tant que {role}",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {A retiré {user} de « {workspace} »} other {A retiré {user} de « {workspace} », en transférant # calendriers}}"
     }
   },
   "adminUsers": {

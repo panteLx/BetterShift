@@ -93,6 +93,24 @@ export function useAuditDescription() {
           });
         case "admin.announcement.delete":
           return t("adminAudit.describe.announcementDeleted", { title: text(m, "title") });
+        case "admin.workspace_member_add":
+          if (target && text(m, "workspaceSlug")) {
+            return t("adminAudit.describe.adminWorkspaceMemberAdded", {
+              user: target,
+              workspace: text(m, "workspaceSlug"),
+              role: text(m, "role"),
+            });
+          }
+          break;
+        case "admin.workspace_member_remove":
+          if (target && text(m, "workspaceSlug")) {
+            return t("adminAudit.describe.adminWorkspaceMemberRemoved", {
+              user: target,
+              workspace: text(m, "workspaceSlug"),
+              count: count(m, "calendarsTransferred"),
+            });
+          }
+          break;
         case "admin.telemetry_consent":
           return field(m, "after") === true
             ? t("adminAudit.describe.telemetryEnabled")
@@ -116,6 +134,20 @@ export function useAuditDescription() {
         case "calendar.created":
           if (calendar) return t("adminAudit.describe.calendarCreated", { calendar });
           break;
+        case "workspace.create":
+          if (text(m, "workspaceName")) return t("adminAudit.describe.workspaceCreated", { workspace: text(m, "workspaceName") });
+          break;
+        case "workspace.join":
+          if (text(m, "workspaceName")) return t("adminAudit.describe.workspaceJoined", { workspace: text(m, "workspaceName") });
+          break;
+        case "workspace.leave":
+          return t("adminAudit.describe.workspaceLeft", { count: count(m, "calendarsTransferred") });
+        case "workspace.member_remove":
+          return t("adminAudit.describe.workspaceMemberRemoved", { count: count(m, "calendarsTransferred") });
+        case "workspace.join_link_create":
+          return t("adminAudit.describe.workspaceJoinLinkCreated");
+        case "workspace.join_link_revoke":
+          return t("adminAudit.describe.workspaceJoinLinkRevoked");
         case "calendar.shared":
           if (calendar && text(m, "sharedWith")) {
             return t("adminAudit.describe.calendarShared", { calendar, user: text(m, "sharedWith") });
