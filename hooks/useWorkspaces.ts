@@ -113,3 +113,113 @@ export function useRedeemJoinLink(token: string) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.mine }),
   });
 }
+
+export interface WorkspaceMemberDto {
+  userId: string;
+  name: string;
+  email: string;
+  image: string | null;
+  role: string;
+  joinedAt: string;
+}
+
+interface MembersResponse {
+  members: WorkspaceMemberDto[];
+  currentUserId: string;
+  currentRole: string;
+}
+
+export function useWorkspaceMembers(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.workspaces.members,
+    queryFn: () => workspaceFetch<MembersResponse>("/api/workspace/members"),
+    enabled,
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      workspaceFetch<{ calendarsTransferred: number }>(
+        `/api/workspace/members/${encodeURIComponent(userId)}`,
+        { method: "DELETE" }
+      ),
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.workspaces.members });
+      const snapshot = queryClient.getQueryData<MembersResponse>(queryKeys.workspaces.members);
+      if (snapshot) {
+        queryClient.setQueryData<MembersResponse>(queryKeys.workspaces.members, {
+          ...snapshot,
+          members: snapshot.members.filter((m) => m.userId !== userId),
+        });
+      }
+      return { snapshot };
+    },
+    onError: (_err, _userId, context) => {
+      if (context?.snapshot) queryClient.setQueryData(queryKeys.workspaces.members, context.snapshot);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendars.all });
+    },
+  });
+}
+
+/** Leaving navigates to the portal, so no cache handling is needed. */
+export function useLeaveWorkspace() {
+  return useMutation({
+    mutationFn: () =>
+      workspaceFetch<{ calendarsTransferred: number }>("/api/workspace/leave", { method: "POST" }),
+  });
+}
+
+export function useJoinLinks(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.workspaces.joinLinks,
+    queryFn: () => workspaceFetch<{ links: JoinLinkDto[] }>("/api/workspace/join-links"),
+    enabled,
+  });
+}
+
+export interface CreateJoinLinkInput {
+  name: string | null;
+  expiresInDays: 1 | 7 | 30 | null;
+  maxUses: number | null;
+}
+
+export function useCreateJoinLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateJoinLinkInput) =>
+      workspaceFetch<{ link: JoinLinkDto }>("/api/workspace/join-links", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.joinLinks }),
+  });
+}
+
+export function useRevokeJoinLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      workspaceFetch<{ ok: true }>(`/api/workspace/join-links/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.workspaces.joinLinks });
+      const snapshot = queryClient.getQueryData<{ links: JoinLinkDto[] }>(queryKeys.workspaces.joinLinks);
+      if (snapshot) {
+        queryClient.setQueryData<{ links: JoinLinkDto[] }>(queryKeys.workspaces.joinLinks, {
+          links: snapshot.links.map((l) => (l.id === id ? { ...l, status: "revoked" as const } : l)),
+        });
+      }
+      return { snapshot };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.snapshot) queryClient.setQueryData(queryKeys.workspaces.joinLinks, context.snapshot);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.joinLinks }),
+  });
+}

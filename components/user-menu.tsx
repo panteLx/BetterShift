@@ -24,8 +24,11 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
+  Users,
 } from "lucide-react";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
+import { WorkspaceSheet } from "@/components/workspace-sheet";
+import { WorkspaceSwitcherItems } from "@/components/workspace-switcher-items";
 import { InfoDialog } from "@/components/info-dialog";
 import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items";
 import { PhoneMenu } from "@/components/phone-menu";
@@ -51,6 +54,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
   const isAdmin = useIsAdmin();
   const { data: workspace } = useWorkspace();
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
 
@@ -109,6 +113,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
             )}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <WorkspaceSwitcherItems />
           <DropdownMenuItem onClick={() => router.push("/profile")}>
             <User className="mr-2 h-4 w-4" />
             {t("auth.profile")}
@@ -121,6 +126,12 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
             <Compass className="mr-2 h-4 w-4" />
             {t("calendar.browseCalendars")}
           </DropdownMenuItem>
+          {workspace?.multiTenant && workspace.role && (
+            <DropdownMenuItem onClick={() => setWorkspaceOpen(true)}>
+              <Users className="mr-2 h-4 w-4" />
+              {t("workspaces.menuEntry")}
+            </DropdownMenuItem>
+          )}
           {isAdmin && (
             <DropdownMenuItem onClick={() => router.push("/admin")}>
               <Shield className="mr-2 h-4 w-4" />
@@ -144,6 +155,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
       </DropdownMenu>
 
       <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />
+      {workspace?.multiTenant && <WorkspaceSheet open={workspaceOpen} onOpenChange={setWorkspaceOpen} />}
       <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
     </>
   );

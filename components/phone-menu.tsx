@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   ArrowLeft,
+  Building2,
   ChevronRight,
   Compass,
   FileText,
   Info,
   Languages,
+  LayoutGrid,
   Loader2,
   LogIn,
   LogOut,
@@ -18,6 +20,7 @@ import {
   SlidersHorizontal,
   SunMoon,
   User,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -32,11 +35,15 @@ import {
 } from "@/components/settings-dialog";
 import { InfoDialog } from "@/components/info-dialog";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
+import { WorkspaceSheet } from "@/components/workspace-sheet";
 import { setLocaleCookie } from "@/components/app-preferences-menu-items";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { useViewSettings } from "@/hooks/useViewSettings";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useMyWorkspaces, useWorkspaceHref } from "@/hooks/useWorkspaces";
 import { useSignOut } from "@/hooks/useSignOut";
 import { locales } from "@/lib/locales";
 import { CalendarWithCount } from "@/lib/types";
@@ -221,11 +228,17 @@ function PhoneMenuSheet({
   const { user, isGuest } = useAuth();
   const { isAuthEnabled } = useAuthFeatures();
   const isAdmin = useIsAdmin();
+  const config = usePublicConfig();
+  const { data: workspace } = useWorkspace();
+  const multiTenant = !!workspace?.multiTenant;
+  const { data: myWorkspaces } = useMyWorkspaces("workspace", multiTenant && open);
+  const workspaceHref = useWorkspaceHref();
   const [section, setSection] = useState<MenuSection | null>(null);
   const [dirty, setDirty] = useState(false);
 
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   // Every open starts at the list, however the sheet was closed last time
   const [wasOpen, setWasOpen] = useState(open);
@@ -253,6 +266,11 @@ function PhoneMenuSheet({
   const navigate = (href: string) => {
     close();
     router.push(href);
+  };
+  // Workspaces live on other origins, so switching is a full navigation
+  const navigateAway = (href: string) => {
+    close();
+    window.location.assign(href);
   };
 
   const calendarItem = calendarGroup?.items.find((item) => item.id === section);
@@ -374,6 +392,24 @@ function PhoneMenuSheet({
                   onClick={() => openSection("language")}
                 />
               </MenuGroup>
+              {signedIn && multiTenant && (
+                <MenuGroup label={t("workspaces.switchTo")}>
+                  {myWorkspaces?.workspaces.map((ws) => (
+                    <MenuRow
+                      key={ws.id}
+                      icon={Building2}
+                      title={ws.name}
+                      meta={ws.id === workspace.id ? t("workspaces.current") : undefined}
+                      onClick={() => (ws.id === workspace.id ? close() : navigateAway(workspaceHref(ws.slug)))}
+                    />
+                  ))}
+                  <MenuRow
+                    icon={LayoutGrid}
+                    title={t("workspaces.allWorkspaces")}
+                    onClick={() => navigateAway(config.auth.url)}
+                  />
+                </MenuGroup>
+              )}
               {signedIn ? (
                 <MenuGroup
                   label={
@@ -397,6 +433,14 @@ function PhoneMenuSheet({
                     title={t("calendar.browseCalendars")}
                     onClick={() => setDiscoveryOpen(true)}
                   />
+                  {multiTenant && workspace.role && (
+                    <MenuRow
+                      icon={Users}
+                      title={t("workspaces.menuEntry")}
+                      meta={workspace.name}
+                      onClick={() => setWorkspaceOpen(true)}
+                    />
+                  )}
                   {isAdmin && (
                     <MenuRow icon={Shield} title={t("admin.adminPanel")} onClick={() => navigate("/admin")} />
                   )}
@@ -417,6 +461,7 @@ function PhoneMenuSheet({
       </PanelDialog>
       <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
       {signedIn && <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />}
+      {signedIn && multiTenant && <WorkspaceSheet open={workspaceOpen} onOpenChange={setWorkspaceOpen} />}
       <ConfirmationDialog {...confirmProps} />
     </>
   );
