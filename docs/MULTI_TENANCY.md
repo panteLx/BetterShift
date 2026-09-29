@@ -94,7 +94,13 @@ An expired, exhausted, revoked or unknown token all produce the same "invalid li
 
 ## Members
 
-A workspace has two roles: `owner` (exactly one, the creator, until ownership transfer ships in a later sub-project) and `member`. Members and invite links are managed from the workspace sheet in the user menu; a workspace switcher there lists every workspace the signed-in user belongs to plus an "All workspaces" entry.
+A workspace has three roles:
+
+- `owner` — exactly one, the creator, until ownership transfer ships in a later sub-project;
+- `admin` — manages invite links and removes members (including other admins, never the owner); only instance admins can grant it, from the admin panel;
+- `member` — everyone who joins via an invite link.
+
+Members and invite links are managed from the workspace sheet in the user menu; a workspace switcher there lists every workspace the signed-in user belongs to plus an "All workspaces" entry.
 
 **Leaving or being removed** (self-leave, owner/admin removing another member, or an instance admin removing someone) all go through the same `endMembership()` in `lib/workspace-membership-end.ts`:
 
@@ -102,11 +108,11 @@ A workspace has two roles: `owner` (exactly one, the creator, until ownership tr
 - any calendars they owned are transferred to the workspace owner, and the new owner's now-redundant share/subscription rows on those calendars are dropped so they don't see their own calendar as "dismissed";
 - the membership row itself is removed.
 
-The **owner cannot leave and cannot be removed** by anyone, including instance admins, until ownership transfer exists. `resolveCalendarAccess()` and `getUserAccessibleCalendars()` ignore calendar shares belonging to users who are no longer members of the workspace — ending a membership is what actually revokes access, not just the UI hiding it.
+The **owner cannot leave and cannot be removed** by anyone, including instance admins, until ownership transfer exists. `resolveCalendarAccess()` and `getUserAccessibleCalendars()` ignore calendar ownership and shares of users who are not (or no longer) members of the workspace — ending a membership is what actually revokes access, not just the UI hiding it. For the same reason a signed-in non-member cannot create a calendar in a workspace (`POST /api/calendars` answers 403, and the "create calendar" action is hidden).
 
 ## Instance Admins
 
-From a user's details in the admin panel, an instance admin can add that user to a workspace by slug (as `member` or `admin`) or remove them from any workspace they don't own. This is the same `endMembership()` path as a self-service leave/remove. The API is `GET`/`POST`/`DELETE /api/admin/users/[id]/workspaces`, gated on `canManageWorkspaceMemberships` (`lib/auth/admin.ts`).
+From a user's details in the admin panel, an instance admin can add that user to a workspace by slug (as `member` or `admin`) or remove them from any workspace they don't own. This is the same `endMembership()` path as a self-service leave/remove. The API is `GET`/`POST`/`DELETE /api/admin/users/[id]/workspaces`, gated on `canManageWorkspaceMemberships` (`lib/auth/admin.ts`); adding and removing additionally require `canEditUser`, so an `admin` cannot change the memberships of another admin or a superadmin.
 
 ## Disabled Organization Plugin Endpoints
 
