@@ -8,6 +8,7 @@ import {
   MULTI_TENANT,
   TENANT_BASE_DOMAIN,
 } from "@/lib/auth/env";
+import { isReservedSlug } from "@/lib/workspace-slugs";
 
 export const DEFAULT_WORKSPACE_ID = "default";
 
@@ -18,19 +19,22 @@ export interface Workspace {
 }
 
 export type HostParseResult =
-  | { kind: "apex" }
+  | { kind: "portal" }
   | { kind: "workspace"; slug: string }
   | { kind: "invalid" };
 
 // Pure (no DB) so the isolation harness can check it without a server.
+// portalHost defaults to the base domain; when it is a subdomain, the bare base domain is invalid.
 export function parseWorkspaceHost(
   hostHeader: string | null,
-  baseDomain: string
+  baseDomain: string,
+  portalHost: string = baseDomain
 ): HostParseResult {
   if (!hostHeader || !baseDomain) return { kind: "invalid" };
   const host = hostHeader.split(":")[0].toLowerCase();
   const base = baseDomain.toLowerCase();
-  if (host === base) return { kind: "apex" };
+  if (host === portalHost.toLowerCase()) return { kind: "portal" };
+  if (host === base) return { kind: "invalid" };
   if (!host.endsWith(`.${base}`)) return { kind: "invalid" };
   const slug = host.slice(0, -(base.length + 1));
   if (slug.length === 0 || slug.includes(".")) return { kind: "invalid" };
@@ -39,7 +43,7 @@ export function parseWorkspaceHost(
 
 export type WorkspaceResolution =
   | { kind: "workspace"; workspace: Workspace }
-  | { kind: "apex" }
+  | { kind: "portal" }
   | { kind: "unknown" };
 
 interface CacheEntry {
@@ -81,15 +85,29 @@ export function invalidateWorkspaceCache(slug: string): void {
   slugCache.delete(slug);
 }
 
+// Pure. The portal is BETTER_AUTH_URL's host: the base domain itself or one reserved label below it,
+// so no workspace slug can ever shadow it.
+export function getPortalHostError(
+  betterAuthUrl: string,
+  baseDomain: string
+): string | null {
+  if (!URL.canParse(betterAuthUrl))
+    return "MULTI_TENANT=true requires BETTER_AUTH_URL to be a valid URL";
+  const host = new URL(betterAuthUrl).hostname.toLowerCase();
+  const base = baseDomain.toLowerCase();
+  if (host === base) return null;
+  const label = host.endsWith(`.${base}`) ? host.slice(0, -(base.length + 1)) : "";
+  if (label && !label.includes(".") && isReservedSlug(label)) return null;
+  return `BETTER_AUTH_URL must point at TENANT_BASE_DOMAIN (${baseDomain}) or a reserved subdomain of it, e.g. app.${baseDomain}`;
+}
+
 // Never throws: proxy.ts fails closed on a non-null result instead of serving without isolation.
 export function getTenancyConfigError(): string | null {
   if (!MULTI_TENANT) return null;
   if (!AUTH_ENABLED) return "MULTI_TENANT=true requires AUTH_ENABLED=true";
   if (!TENANT_BASE_DOMAIN)
     return "MULTI_TENANT=true requires TENANT_BASE_DOMAIN to be set";
-  if (!URL.canParse(BETTER_AUTH_URL))
-    return "MULTI_TENANT=true requires BETTER_AUTH_URL to be a valid URL";
-  return null;
+  return getPortalHostError(BETTER_AUTH_URL, TENANT_BASE_DOMAIN);
 }
 
 export async function resolveWorkspaceFromHost(
@@ -105,8 +123,12 @@ export async function resolveWorkspaceFromHost(
   }
   if (getTenancyConfigError()) return { kind: "unknown" };
 
-  const parsed = parseWorkspaceHost(hostHeader, TENANT_BASE_DOMAIN);
-  if (parsed.kind === "apex") return { kind: "apex" };
+  const parsed = parseWorkspaceHost(
+    hostHeader,
+    TENANT_BASE_DOMAIN,
+    new URL(BETTER_AUTH_URL).hostname
+  );
+  if (parsed.kind === "portal") return { kind: "portal" };
   if (parsed.kind === "invalid") return { kind: "unknown" };
 
   const workspace = await getWorkspaceBySlug(parsed.slug);

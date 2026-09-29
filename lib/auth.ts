@@ -34,8 +34,8 @@ import {
 // An unparsable URL adds nothing here; getTenancyConfigError() reports it and the proxy fails closed.
 function workspaceOriginPatterns(): string[] {
   if (!URL.canParse(BETTER_AUTH_URL)) return [];
-  const apex = new URL(BETTER_AUTH_URL);
-  return [`${apex.protocol}//*.${TENANT_BASE_DOMAIN}${apex.port ? `:${apex.port}` : ""}`];
+  const portal = new URL(BETTER_AUTH_URL);
+  return [`${portal.protocol}//*.${TENANT_BASE_DOMAIN}${portal.port ? `:${portal.port}` : ""}`];
 }
 
 export const auth = betterAuth({

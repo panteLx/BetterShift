@@ -128,7 +128,7 @@ export function sanitizeAnnouncementInput(
   return { ok: true, value };
 }
 
-/** workspaceId null (the apex) sees only instance-wide announcements. */
+/** workspaceId null (the portal) sees only instance-wide announcements. */
 export async function getVisibleAnnouncements(
   placement: AnnouncementPlacement,
   workspaceId: string | null

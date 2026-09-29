@@ -670,7 +670,7 @@ export const announcements = sqliteTable("announcements", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)
     .$onUpdate(() => new Date()),
-  // null = shown in every workspace and on the apex
+  // null = shown in every workspace and on the portal
   workspaceId: text("workspace_id").references(() => organization.id, {
     onDelete: "cascade",
   }),

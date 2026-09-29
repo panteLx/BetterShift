@@ -122,10 +122,37 @@ jobs:
           DATABASE_URL="file:$(pwd)/data/tenancy-ci.sqlite.db" TENANCY_CHECK_URL=http://localhost:3107 \
             npm run test:tenancy
 
-      - name: Print server log
-        if: always()
-        run: cat server.log || true
+      - name: Start a second server with the portal on a subdomain
+        run: |
+          DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" node scripts/migrate.mjs
+          PORT=3108 HOSTNAME=0.0.0.0 MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test \
+            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 \
+            DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" \
+            BETTER_AUTH_URL=http://app.tenancy.test \
+            BETTER_AUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") \
+            node .next/standalone/server.js > server-portal.log 2>&1 &
+          echo $! > server-portal.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3108/api/health > /dev/null; then
+              echo "Server is healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Server did not become healthy within 60s"
+          exit 1
 
-      - name: Stop the server
+      - name: Run the isolation check with the portal on a subdomain
+        run: |
+          DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" TENANCY_CHECK_URL=http://localhost:3108 \
+            TENANCY_CHECK_PORTAL_HOST=app.tenancy.test npm run test:tenancy
+
+      - name: Print server logs
         if: always()
-        run: kill $(cat server.pid) 2>/dev/null || true
+        run: |
+          cat server.log || true
+          cat server-portal.log || true
+
+      - name: Stop the servers
+        if: always()
+        run: kill $(cat server.pid) $(cat server-portal.pid) 2>/dev/null || true

@@ -100,8 +100,8 @@ function redirectToLogin(request: NextRequest) {
 // Scheme/port come from BETTER_AUTH_URL: behind a TLS-terminating proxy the request itself looks like plain http.
 // Parsed lazily, only after getTenancyConfigError() has vetted the URL, so a bad value can't break single-tenant imports.
 function workspaceOrigin(slug: string): string {
-  const apex = new URL(BETTER_AUTH_URL);
-  return `${apex.protocol}//${slug}.${TENANT_BASE_DOMAIN}${apex.port ? `:${apex.port}` : ""}`;
+  const portal = new URL(BETTER_AUTH_URL);
+  return `${portal.protocol}//${slug}.${TENANT_BASE_DOMAIN}${portal.port ? `:${portal.port}` : ""}`;
 }
 
 async function earliestMembershipSlug(userId: string): Promise<string | null> {
@@ -287,7 +287,7 @@ export async function proxy(request: NextRequest) {
       });
     }
 
-    if (resolution.kind === "apex") {
+    if (resolution.kind === "portal") {
       if (
         isPublicExempt ||
         pathname === "/login" ||
@@ -314,7 +314,7 @@ export async function proxy(request: NextRequest) {
               return NextResponse.rewrite(new URL("/no-workspace", request.url));
             }
           } catch (error) {
-            console.error("[Proxy] Apex session check failed:", error);
+            console.error("[Proxy] Portal session check failed:", error);
           }
         }
         return NextResponse.redirect(new URL("/login", request.url));
@@ -324,17 +324,17 @@ export async function proxy(request: NextRequest) {
 
     requestWorkspaceId = resolution.workspace.id;
 
-    // Sign-in lives on the apex; hand it the absolute workspace URL to come back to.
+    // Sign-in lives on the portal; hand it the absolute workspace URL to come back to.
     if (pathname === "/login" || pathname === "/register") {
       const target = safeReturnUrl(
         request.nextUrl.searchParams.get("returnUrl")
       );
-      const apexUrl = new URL(pathname, BETTER_AUTH_URL);
-      apexUrl.searchParams.set(
+      const portalUrl = new URL(pathname, BETTER_AUTH_URL);
+      portalUrl.searchParams.set(
         "returnUrl",
         `${workspaceOrigin(resolution.workspace.slug)}${target}`
       );
-      return NextResponse.redirect(apexUrl);
+      return NextResponse.redirect(portalUrl);
     }
     // Other workspace paths fall through to the auth guard; non-members get role: null from GET /api/workspace.
   }

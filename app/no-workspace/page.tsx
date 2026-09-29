@@ -3,7 +3,7 @@ import { Building2 } from "lucide-react";
 import { EmptyStateBlock } from "@/components/empty-state-block";
 import { SignOutButton } from "./sign-out-button";
 
-// Apex landing for a signed-in user without any membership; the proxy rewrites "/" here.
+// Portal landing for a signed-in user without any membership; the proxy rewrites "/" here.
 export default async function NoWorkspacePage() {
   const t = await getTranslations();
 

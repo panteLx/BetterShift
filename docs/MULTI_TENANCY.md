@@ -7,7 +7,7 @@ This guide explains BetterShift's optional multi-tenant mode: one running instan
 1. [What a Workspace Is](#what-a-workspace-is)
 2. [For Self-Hosters: It's Opt-In](#for-self-hosters-its-opt-in)
 3. [Environment Variables](#environment-variables)
-4. [`BETTER_AUTH_URL` and OAuth Callbacks](#better_auth_url-and-oauth-callbacks)
+4. [The Portal: `BETTER_AUTH_URL` and OAuth Callbacks](#the-portal-better_auth_url-and-oauth-callbacks)
 5. [How a Request Resolves to a Workspace](#how-a-request-resolves-to-a-workspace)
 6. [Creating a Workspace](#creating-a-workspace)
 7. [Out of Scope in This Release](#out-of-scope-in-this-release)
@@ -36,11 +36,22 @@ If you're running BetterShift for yourself, your family, or a single team, you d
 
 Bind the server to `0.0.0.0` (the Docker image's default `HOSTNAME`) or a non-loopback address, never `HOSTNAME=127.0.0.1` or `::1`. Next.js reports a loopback bind address to the proxy as `localhost`, and then treats the proxy's internal rewrites (the "workspace not found" and "no workspace" pages) as external and fails them with a 500. Redirects and API routes are not affected; this is Next.js behavior, not something BetterShift can work around from inside the proxy.
 
-`MULTI_TENANT=true` requires `AUTH_ENABLED=true`. Without accounts there's no way to know which workspace a request belongs to, and the backwards-compatible "everyone is owner" behavior of `AUTH_ENABLED=false` would otherwise leak every workspace's data to every visitor. A misconfiguration here — `MULTI_TENANT=true` with `AUTH_ENABLED=false`, or `MULTI_TENANT=true` without a usable `TENANT_BASE_DOMAIN` — fails closed: the instance treats itself as unhealthy and sends every request to `/system-unavailable` rather than silently serving requests without isolation. `docker compose`'s health check still works in this state — it probes `/api/health` on `localhost`, which is exempt from tenancy resolution and answers using the database connection alone.
+`MULTI_TENANT=true` requires `AUTH_ENABLED=true`. Without accounts there's no way to know which workspace a request belongs to, and the backwards-compatible "everyone is owner" behavior of `AUTH_ENABLED=false` would otherwise leak every workspace's data to every visitor. A misconfiguration here — `MULTI_TENANT=true` with `AUTH_ENABLED=false`, `MULTI_TENANT=true` without a usable `TENANT_BASE_DOMAIN`, or a `BETTER_AUTH_URL` that isn't a valid portal (see below) — fails closed: the instance treats itself as unhealthy and sends every request to `/system-unavailable` rather than silently serving requests without isolation. `docker compose`'s health check still works in this state — it probes `/api/health` on `localhost`, which is exempt from tenancy resolution and answers using the database connection alone.
 
-## `BETTER_AUTH_URL` and OAuth Callbacks
+## The Portal: `BETTER_AUTH_URL` and OAuth Callbacks
 
-Under multi-tenancy, `BETTER_AUTH_URL` must be the **apex origin**: `https://<TENANT_BASE_DOMAIN>`, with no workspace subdomain. This is the one fixed URL better-auth uses to build callback URLs, so every OAuth provider (Google, a custom OIDC provider, etc.) is configured with a single callback pinned to that apex origin — `https://<TENANT_BASE_DOMAIN>/api/auth/callback/<provider>` — regardless of which workspace subdomain a user actually started the sign-in from. Don't register a separate OAuth app or callback per workspace; there is only one, at the apex.
+The **portal** is where sign-in, registration and OAuth callbacks live; a workspace's `/login` and `/register` redirect there and come back afterwards. The portal is simply the host of `BETTER_AUTH_URL`, and it can take one of two shapes:
+
+| `BETTER_AUTH_URL` | Portal | Bare base domain |
+| --- | --- | --- |
+| `https://<TENANT_BASE_DOMAIN>` | the base domain itself | is the portal |
+| `https://app.<TENANT_BASE_DOMAIN>` | a subdomain | not served (404) |
+
+Use the subdomain form when the base domain itself can't point at BetterShift — for example because your tunnel or DNS setup only covers `*.<TENANT_BASE_DOMAIN>`, or because the base domain already hosts a website. The portal subdomain must be exactly one label below the base domain and one of the reserved slugs (`app`, `auth`, `portal`, … — see `lib/workspace-slugs.ts`), so no workspace can ever claim it. Anything else — a non-reserved label, two levels down, a host outside the base domain — is a configuration error, and the instance fails closed as described above.
+
+`BETTER_AUTH_URL` is the one fixed URL better-auth uses to build callback URLs, so every OAuth provider (Google, a custom OIDC provider, etc.) is configured with a single callback pinned to the portal origin — `<BETTER_AUTH_URL>/api/auth/callback/<provider>` — regardless of which workspace subdomain a user actually started the sign-in from. Don't register a separate OAuth app or callback per workspace; there is only one, on the portal.
+
+The session cookie is always scoped to `TENANT_BASE_DOMAIN`, so a sign-in on the portal is valid on every workspace subdomain in either shape.
 
 ## How a Request Resolves to a Workspace
 

@@ -34,6 +34,9 @@
  *   DATABASE_URL="file:$(pwd)/data/tenancy-check.sqlite.db" TENANCY_CHECK_URL=http://localhost:3107 \
  *     npm run test:tenancy
  *
+ * With the portal on a subdomain (BETTER_AUTH_URL=http://app.tenancy.test), pass
+ * TENANCY_CHECK_PORTAL_HOST=app.tenancy.test as well; CI runs both layouts.
+ *
  * The harness needs the SAME DATABASE_URL as the running server (it seeds
  * directly into that file) and talks to the server over HTTP at
  * TENANCY_CHECK_URL (default http://localhost:3000), sending a `Host` header
@@ -78,6 +81,8 @@ function assertSafeDatabaseUrl(): void {
 assertSafeDatabaseUrl();
 
 const BASE_DOMAIN = "tenancy.test";
+// Must be the host of the server's BETTER_AUTH_URL: the base domain itself or e.g. app.tenancy.test.
+const PORTAL_HOST = process.env.TENANCY_CHECK_PORTAL_HOST || BASE_DOMAIN;
 const APP_URL = process.env.TENANCY_CHECK_URL || "http://localhost:3000";
 
 let passed = 0;
@@ -122,6 +127,7 @@ let userCalendarSubscriptions: SchemaModule["userCalendarSubscriptions"];
 let calendarCustomFields: SchemaModule["calendarCustomFields"];
 let eq: typeof import("drizzle-orm")["eq"];
 let parseWorkspaceHost: WorkspaceModule["parseWorkspaceHost"];
+let getPortalHostError: WorkspaceModule["getPortalHostError"];
 
 async function loadDbBackedModules(): Promise<void> {
   const [dbModule, schemaModule, workspaceModule, drizzleModule] = await Promise.all([
@@ -154,6 +160,7 @@ async function loadDbBackedModules(): Promise<void> {
     calendarCustomFields,
   } = schemaModule);
   parseWorkspaceHost = workspaceModule.parseWorkspaceHost;
+  getPortalHostError = workspaceModule.getPortalHostError;
 }
 
 // =====================================================
@@ -161,11 +168,29 @@ async function loadDbBackedModules(): Promise<void> {
 // =====================================================
 function runPureChecks(): void {
   console.log("Stage 1: pure host/slug checks (no server)");
-  check("apex host", parseWorkspaceHost(BASE_DOMAIN, BASE_DOMAIN).kind === "apex");
+  check("base domain is the portal by default", parseWorkspaceHost(BASE_DOMAIN, BASE_DOMAIN).kind === "portal");
   check(
-    "apex host with port",
-    parseWorkspaceHost(`${BASE_DOMAIN}:3000`, BASE_DOMAIN).kind === "apex"
+    "portal host with port",
+    parseWorkspaceHost(`${BASE_DOMAIN}:3000`, BASE_DOMAIN).kind === "portal"
   );
+  check(
+    "portal on a subdomain",
+    parseWorkspaceHost(`app.${BASE_DOMAIN}`, BASE_DOMAIN, `app.${BASE_DOMAIN}`).kind === "portal"
+  );
+  check(
+    "bare base domain is invalid when the portal is a subdomain",
+    parseWorkspaceHost(BASE_DOMAIN, BASE_DOMAIN, `app.${BASE_DOMAIN}`).kind === "invalid"
+  );
+  check("workspace subdomain next to a subdomain portal", (() => {
+    const r = parseWorkspaceHost(`alpha.${BASE_DOMAIN}`, BASE_DOMAIN, `app.${BASE_DOMAIN}`);
+    return r.kind === "workspace" && r.slug === "alpha";
+  })());
+  check("portal on the base domain is valid config", getPortalHostError(`https://${BASE_DOMAIN}`, BASE_DOMAIN) === null);
+  check("portal on a reserved subdomain is valid config", getPortalHostError(`https://app.${BASE_DOMAIN}:8443`, BASE_DOMAIN) === null);
+  check("portal on a non-reserved subdomain is rejected", getPortalHostError(`https://alpha.${BASE_DOMAIN}`, BASE_DOMAIN) !== null);
+  check("portal two levels down is rejected", getPortalHostError(`https://a.app.${BASE_DOMAIN}`, BASE_DOMAIN) !== null);
+  check("portal outside the base domain is rejected", getPortalHostError("https://example.com", BASE_DOMAIN) !== null);
+  check("unparsable BETTER_AUTH_URL is rejected", getPortalHostError("not a url", BASE_DOMAIN) !== null);
   check("workspace subdomain", (() => {
     const r = parseWorkspaceHost(`alpha.${BASE_DOMAIN}`, BASE_DOMAIN);
     return r.kind === "workspace" && r.slug === "alpha";
@@ -599,7 +624,38 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     expectBody: (body) => JSON.stringify(body) === JSON.stringify({ error: "Not found" }),
   };
 
+  const subdomainPortalRows: MatrixRow[] =
+    PORTAL_HOST === BASE_DOMAIN
+      ? []
+      : [
+          {
+            name: "bare base domain returns 404 when the portal is a subdomain",
+            as: "anonymous",
+            host: BASE_DOMAIN,
+            method: "GET",
+            path: "/",
+            expectStatus: 404,
+          },
+          {
+            name: "bare base domain /login returns 404 when the portal is a subdomain",
+            as: "anonymous",
+            host: BASE_DOMAIN,
+            method: "GET",
+            path: "/login",
+            expectStatus: 404,
+          },
+          {
+            name: "bare base domain auth API returns 404 when the portal is a subdomain",
+            as: "anonymous",
+            host: BASE_DOMAIN,
+            method: "GET",
+            path: "/api/auth/get-session",
+            expectStatus: 404,
+          },
+        ];
+
   return [
+    ...subdomainPortalRows,
     {
       name: "unknown subdomain returns 404",
       as: "anonymous",
@@ -625,19 +681,19 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 200,
     },
     {
-      name: "apex / without a session redirects toward login",
+      name: "portal / without a session redirects toward login",
       as: "anonymous",
-      host: BASE_DOMAIN,
+      host: PORTAL_HOST,
       method: "GET",
       path: "/",
       expectStatus: [307, 308],
       expectLocation: (location) =>
-        !!location && new URL(location, `http://${BASE_DOMAIN}`).pathname === "/login",
+        !!location && new URL(location, `http://${PORTAL_HOST}`).pathname === "/login",
     },
     {
-      name: "apex / for a signed-in user without any workspace renders the no-workspace page",
+      name: "portal / for a signed-in user without any workspace renders the no-workspace page",
       as: { email: "no-membership@tenancy.test", password: PASSWORD },
-      host: BASE_DOMAIN,
+      host: PORTAL_HOST,
       method: "GET",
       path: "/",
       headers: { "accept-language": "en" },
@@ -653,7 +709,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 200,
     },
     {
-      name: "workspace /login forwards to apex login with the absolute workspace target",
+      name: "workspace /login forwards to portal login with the absolute workspace target",
       as: "anonymous",
       host: `alpha.${BASE_DOMAIN}`,
       method: "GET",
@@ -661,7 +717,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: [307, 308],
       expectLocation: (location) =>
         location ===
-        `http://${BASE_DOMAIN}/login?returnUrl=${encodeURIComponent(`http://alpha.${BASE_DOMAIN}/foo`)}`,
+        `http://${PORTAL_HOST}/login?returnUrl=${encodeURIComponent(`http://alpha.${BASE_DOMAIN}/foo`)}`,
     },
     {
       name: "workspace /login drops an off-site returnUrl",
@@ -964,7 +1020,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       expectStatus: 200,
     },
     { ...feedNotFound, name: "alpha's feed 404s on beta's host", host: betaHost, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
-    { ...feedNotFound, name: "alpha's feed 404s on the apex", host: BASE_DOMAIN, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
+    { ...feedNotFound, name: "alpha's feed 404s on the portal", host: PORTAL_HOST, path: `/api/feed/${seeded.tokens.alphaFeed}.ics` },
     { ...feedNotFound, name: "an unknown feed token 404s the same way on alpha's host", host: alphaHost, path: "/api/feed/does-not-exist.ics" },
     ...announcementRows(seeded),
     ...auditLogRows(seeded),
@@ -1141,7 +1197,7 @@ function announcementRows(seeded: SeedData): MatrixRow[] {
     row("an alpha-scoped announcement is invisible on beta's host", `beta.${BASE_DOMAIN}`, (t) =>
       t.includes(betaOnly) && t.includes(everywhere) && !t.includes(alphaOnly)
     ),
-    row("the apex shows only instance-wide announcements", BASE_DOMAIN, (t) =>
+    row("the portal shows only instance-wide announcements", PORTAL_HOST, (t) =>
       t.includes(everywhere) && !t.includes(alphaOnly) && !t.includes(betaOnly)
     ),
   ];
