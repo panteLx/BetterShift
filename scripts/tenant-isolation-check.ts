@@ -1632,6 +1632,12 @@ async function main(): Promise<void> {
     baseDomain: BASE_DOMAIN, portalHost: PORTAL_HOST, seeded,
   });
 
+  const { runAdminChecks } = await import("./tenancy-admin-checks");
+  await runAdminChecks({
+    check, httpRequest, signIn, seedUser, seedCalendar, seedFeedToken, seedMemberships,
+    baseDomain: BASE_DOMAIN, portalHost: PORTAL_HOST, seeded,
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }

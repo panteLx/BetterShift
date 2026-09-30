@@ -1,6 +1,6 @@
 import { and, count, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { calendars, member, organization, shifts, workspaceJoinLinks } from "@/lib/db/schema";
+import { announcements, auditLogs, calendars, member, organization, shifts, workspaceJoinLinks } from "@/lib/db/schema";
 import { TENANT_MAX_WORKSPACES_PER_USER } from "@/lib/auth/env";
 import { DEFAULT_WORKSPACE_ID, invalidateWorkspaceCache, type Workspace } from "@/lib/workspace";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/workspaces";
@@ -101,8 +101,12 @@ export async function deleteWorkspace(workspaceId: string) {
   });
   if (!workspace) return { ok: false, reason: "not_found" } as const;
   const counts = await getWorkspaceCounts(workspaceId);
-  // Every workspace table references organization with onDelete: "cascade".
-  await db.delete(organization).where(eq(organization.id, workspaceId));
+  // audit_logs and announcements got their workspace_id via ALTER TABLE without a DB-level cascade, so delete them explicitly.
+  db.transaction((tx) => {
+    tx.delete(auditLogs).where(eq(auditLogs.workspaceId, workspaceId)).run();
+    tx.delete(announcements).where(eq(announcements.workspaceId, workspaceId)).run();
+    tx.delete(organization).where(eq(organization.id, workspaceId)).run();
+  });
   invalidateWorkspaceCache(workspace.slug);
   return { ok: true, workspace, counts } as const;
 }

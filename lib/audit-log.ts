@@ -300,6 +300,7 @@ export interface WorkspaceJoinLinkMetadata {
   linkId: string;
   maxUses?: number | null;
   expiresInDays?: number | null;
+  role?: string;
 }
 
 export interface WorkspaceJoinedMetadata {

@@ -26,3 +26,12 @@ export async function requireWorkspaceMember(
   }
   return { user, workspace, role };
 }
+
+/** Maps a SQLITE_BUSY-style failure from a write transaction to a retryable 503; rethrows anything else. */
+export function busyResponse(error: unknown): NextResponse {
+  const code = (error as { code?: string } | null)?.code;
+  if (typeof code === "string" && code.startsWith("SQLITE_BUSY")) {
+    return NextResponse.json({ error: "Try again", code: "busy" }, { status: 503 });
+  }
+  throw error;
+}
