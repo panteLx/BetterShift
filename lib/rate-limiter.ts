@@ -262,6 +262,14 @@ const config = {
     requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_LINK_CREATE_REQUESTS || "20", 10),
     windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_LINK_CREATE_WINDOW || "3600", 10) * 1000,
   },
+  workspaceMutation: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_MUTATION_REQUESTS || "30", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_MUTATION_WINDOW || "900", 10) * 1000,
+  },
+  workspaceDelete: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_DELETE_REQUESTS || "5", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_DELETE_WINDOW || "3600", 10) * 1000,
+  },
 };
 
 /**
@@ -299,6 +307,8 @@ const limitsByType = {
   "slug-check": config.slugCheck,
   "workspace-join": config.workspaceJoin,
   "workspace-link-create": config.workspaceLinkCreate,
+  "workspace-mutation": config.workspaceMutation,
+  "workspace-delete": config.workspaceDelete,
 } as const;
 
 export type RateLimitType = keyof typeof limitsByType;

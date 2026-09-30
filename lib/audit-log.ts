@@ -320,6 +320,35 @@ export interface AdminWorkspaceMembershipMetadata {
   calendarsTransferred?: number;
 }
 
+export interface WorkspaceRoleChangedMetadata {
+  targetUser: string;
+  from: string;
+  to: string;
+}
+
+export interface WorkspaceOwnerTransferredMetadata {
+  fromUser: string;
+  toUser: string;
+  byInstanceAdmin: boolean;
+}
+
+export interface WorkspaceRenamedMetadata {
+  from: string;
+  to: string;
+}
+
+export interface WorkspaceSettingsMetadata {
+  allowGuestAccess: boolean | null;
+}
+
+export interface WorkspaceDeletedMetadata {
+  slug: string;
+  name: string;
+  members: number;
+  calendars: number;
+  byInstanceAdmin: boolean;
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -362,7 +391,12 @@ export type AuditLogMetadata =
   | WorkspaceJoinLinkMetadata
   | WorkspaceJoinedMetadata
   | WorkspaceMembershipEndedMetadata
-  | AdminWorkspaceMembershipMetadata;
+  | AdminWorkspaceMembershipMetadata
+  | WorkspaceRoleChangedMetadata
+  | WorkspaceOwnerTransferredMetadata
+  | WorkspaceRenamedMetadata
+  | WorkspaceSettingsMetadata
+  | WorkspaceDeletedMetadata;
 
 // =====================================================
 // Audit Log Types

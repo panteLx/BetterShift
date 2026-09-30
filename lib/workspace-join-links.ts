@@ -38,7 +38,12 @@ export function parseJoinLinkInput(body: unknown): JoinLinkInput | null {
   return { name, expiresInDays: expires as JoinLinkInput["expiresInDays"], maxUses: maxUses as number | null };
 }
 
-export async function createJoinLink(workspaceId: string, createdBy: string, input: JoinLinkInput): Promise<WorkspaceJoinLink> {
+export async function createJoinLink(
+  workspaceId: string,
+  createdBy: string,
+  input: JoinLinkInput,
+  role: "member" | "admin" = "member"
+): Promise<WorkspaceJoinLink> {
   const now = new Date();
   const [row] = await db
     .insert(workspaceJoinLinks)
@@ -46,7 +51,7 @@ export async function createJoinLink(workspaceId: string, createdBy: string, inp
       workspaceId,
       token: randomBytes(32).toString("base64url"),
       name: input.name,
-      role: "member",
+      role,
       expiresAt: input.expiresInDays ? new Date(now.getTime() + input.expiresInDays * 86_400_000) : null,
       maxUses: input.maxUses,
       createdBy,
@@ -54,6 +59,14 @@ export async function createJoinLink(workspaceId: string, createdBy: string, inp
     })
     .returning();
   return row;
+}
+
+export async function getJoinLinkRole(workspaceId: string, linkId: string): Promise<string | null> {
+  const row = await db.query.workspaceJoinLinks.findFirst({
+    where: and(eq(workspaceJoinLinks.id, linkId), eq(workspaceJoinLinks.workspaceId, workspaceId)),
+    columns: { role: true },
+  });
+  return row?.role ?? null;
 }
 
 export function listJoinLinks(workspaceId: string): Promise<WorkspaceJoinLink[]> {
