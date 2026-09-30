@@ -1045,12 +1045,12 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
       body: { userId: seeded.users.alphaMember.id, bundleId: alphaCal.bundleId },
       expectStatus: 201,
     },
-    // Admin routes stay instance-wide: the admin is a member of no workspace at all.
+    // Admin routes are instance-wide and portal-only: the admin is a member of no workspace at all.
     // Transfers to non-members (which add a membership) are covered in Stage 4f.
     {
-      name: "admin transfer of alpha's calendar back to its alpha owner is allowed, even via beta's host",
+      name: "admin transfer of alpha's calendar back to its alpha owner is allowed on the portal",
       as: seeded.users.admin,
-      host: betaHost,
+      host: PORTAL_HOST,
       method: "POST",
       path: `/api/admin/calendars/${alphaCal.id}/transfer`,
       body: { newOwnerId: alphaOwner.id },
@@ -1059,7 +1059,7 @@ export function buildMatrix(seeded: SeedData): MatrixRow[] {
     {
       name: "admin bulk transfer of alpha's calendar back to its alpha owner is allowed",
       as: seeded.users.admin,
-      host: alphaHost,
+      host: PORTAL_HOST,
       method: "POST",
       path: "/api/admin/calendars/bulk-transfer",
       body: { calendarIds: [alphaCal.id], newOwnerId: alphaOwner.id },
@@ -1571,9 +1571,9 @@ async function checkAccountDeletion(seeded: SeedData): Promise<void> {
   );
   await tryCheck("admin delete of that sole owner is blocked too", async () => {
     const res = await httpRequest(`/api/admin/users/${blockedOwner.id}`, "DELETE", {
-      host: sharedHost,
-      origin: `http://${sharedHost}`,
-      cookie: await signIn(seeded.users.admin.email, seeded.users.admin.password, sharedHost),
+      host: PORTAL_HOST,
+      origin: `http://${PORTAL_HOST}`,
+      cookie: await signIn(seeded.users.admin.email, seeded.users.admin.password, PORTAL_HOST),
     });
     console.log(`        admin delete ${blockedOwner.email} -> ${res.status} ${res.text}`);
     return res.status === 409;

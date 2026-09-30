@@ -377,7 +377,7 @@ async function checkMembershipEndScoping({ h, db, schema, eq, and, api, tryCheck
 
 async function checkAdminMemberships({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
   console.log("\nStage 4d: instance admin workspace memberships");
-  const host = `alpha.${h.baseDomain}`;
+  const host = h.portalHost;
   const { admin, alphaOwner, alphaMember } = h.seeded.users;
   const target = await h.seedUser("admin-target@tenancy.test");
   const betaId = h.seeded.workspaces.beta.id;
@@ -469,8 +469,8 @@ async function checkNonMemberOwnership({ h, db, schema, eq, and, api, tryCheck }
 /** Instance admins may transfer a calendar to anyone; a non-member target joins the calendar's workspace as member. */
 async function checkAdminTransfer({ h, db, schema, eq, and, api, tryCheck }: Ctx): Promise<void> {
   console.log("\nStage 4f: admin calendar transfer across workspaces");
-  // The admin API lives on workspace hosts only; its calendar list spans every workspace.
-  const host = `alpha.${h.baseDomain}`;
+  // The admin API lives on the portal only; its calendar list spans every workspace.
+  const host = h.portalHost;
   const alphaId = h.seeded.workspaces.alpha.id;
   const betaId = h.seeded.workspaces.beta.id;
   const { admin: superadmin, alphaOwner, betaOwner, alphaMember, sharedMember } = h.seeded.users;

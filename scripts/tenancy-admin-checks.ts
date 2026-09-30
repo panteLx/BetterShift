@@ -54,6 +54,7 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
   await checkGuards();
   await checkDelete();
   await checkInstanceApi();
+  await checkAdminGuard();
 
   async function checkRolesAndMembers() {
     console.log("\nStage 5a: role changes and member removal");
@@ -506,6 +507,80 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
         (await db.select().from(schema.calendars).where(eq(schema.calendars.workspaceId, ws.id))).length === 0 &&
         (await db.select().from(schema.member).where(eq(schema.member.organizationId, ws.id))).length === 0 &&
         rows.some((l) => l.workspaceId === null && JSON.parse(l.metadata ?? "{}").slug === "adm-inst" && JSON.parse(l.metadata ?? "{}").byInstanceAdmin === true);
+    });
+  }
+
+  async function checkAdminGuard() {
+    console.log("\nStage 5h: scope-aware admin guard in the proxy");
+    const portal = h.portalHost;
+    const ws = await newWorkspace("adm-proxy");
+    const wsHost = `adm-proxy.${h.baseDomain}`;
+    const owner = await h.seedUser("adm-x-owner@tenancy.test");
+    const wsAdmin = await h.seedUser("adm-x-admin@tenancy.test");
+    const member = await h.seedUser("adm-x-member@tenancy.test");
+    const plain = await h.seedUser("adm-x-plain@tenancy.test");
+    const instAdmin = await h.seedUser("adm-x-inst@tenancy.test", "admin");
+    const instMember = await h.seedUser("adm-x-instmember@tenancy.test", "admin");
+    await addMember(ws.id, owner, "owner");
+    await addMember(ws.id, wsAdmin, "admin");
+    await addMember(ws.id, member, "member");
+    await addMember(ws.id, instMember, "member");
+
+    const get = async (as: SeedUser | null, host: string, path: string) => {
+      const headers: Record<string, string> = { host };
+      if (as) headers.cookie = await h.signIn(as.email, as.password, host);
+      return h.httpRequest(path, "GET", headers);
+    };
+    const redirectsTo = (r: { status: number; headers: Record<string, unknown> }, pathname: string, error?: string) => {
+      const loc = r.headers.location;
+      if (![302, 307].includes(r.status) || typeof loc !== "string") return false;
+      const url = new URL(loc, "http://x");
+      return url.pathname === pathname && (error === undefined || url.searchParams.get("error") === error);
+    };
+    // The proxy's own 404 has an empty body; a Next.js 404 page (route not built yet) does not.
+    const hidden = (r: { status: number; text: string }) => r.status === 404 && r.text === "";
+    const served = (r: { status: number; text: string }) => r.status === 200 || (r.status === 404 && r.text !== "");
+    const denied = async (userId: string) => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return db.select().from(schema.auditLogs)
+        .where(and(eq(schema.auditLogs.action, "admin_access_denied"), eq(schema.auditLogs.userId, userId)));
+    };
+
+    await tryCheck("portal /admin without a cookie redirects to /login", async () =>
+      redirectsTo(await get(null, portal, "/admin"), "/login"));
+    await tryCheck("portal /admin as a plain user redirects with admin_access_required", async () =>
+      redirectsTo(await get(plain, portal, "/admin"), "/", "admin_access_required"));
+    await tryCheck("portal /admin, /admin/users, /admin/workspaces are served to an instance admin", async () =>
+      (await get(instAdmin, portal, "/admin")).status === 200 &&
+      (await get(instAdmin, portal, "/admin/users")).status === 200 &&
+      served(await get(instAdmin, portal, "/admin/workspaces")));
+    await tryCheck("portal /admin/members is 404 (workspace-only section)", async () =>
+      hidden(await get(instAdmin, portal, "/admin/members")));
+    await tryCheck("portal /api/admin/stats as instance admin is 200", async () =>
+      (await get(instAdmin, portal, "/api/admin/stats")).status === 200);
+
+    await tryCheck("workspace host /admin: owner 200, workspace admin 200", async () =>
+      (await get(owner, wsHost, "/admin")).status === 200 && (await get(wsAdmin, wsHost, "/admin")).status === 200);
+    await tryCheck("workspace host /admin: plain member redirects with admin_access_required", async () =>
+      redirectsTo(await get(member, wsHost, "/admin"), "/", "admin_access_required"));
+    await tryCheck("workspace host /admin: instance admin who is not a member gets no bypass", async () =>
+      redirectsTo(await get(instAdmin, wsHost, "/admin"), "/", "admin_access_required"));
+    await tryCheck("workspace host /admin: instance admin who is a plain member is redirected", async () =>
+      redirectsTo(await get(instMember, wsHost, "/admin"), "/", "admin_access_required"));
+    await tryCheck("workspace host hides instance-only sections from the owner", async () => {
+      for (const p of ["/admin/users", "/admin/workspaces", "/admin/calendars", "/admin/logs"]) {
+        if (!hidden(await get(owner, wsHost, p))) return false;
+      }
+      return true;
+    });
+    await tryCheck("workspace host /admin/settings is 404 for a workspace admin, served for the owner", async () =>
+      hidden(await get(wsAdmin, wsHost, "/admin/settings")) && served(await get(owner, wsHost, "/admin/settings")));
+    await tryCheck("workspace host /api/admin/stats is 404 for owner and instance admin", async () =>
+      hidden(await get(owner, wsHost, "/api/admin/stats")) && hidden(await get(instAdmin, wsHost, "/api/admin/stats")));
+    await tryCheck("denied attempts write admin_access_denied audit rows with scope", async () => {
+      const rows = [...(await denied(member.id)), ...(await denied(instAdmin.id))];
+      const scopes = rows.map((r) => JSON.parse(r.metadata ?? "{}").scope);
+      return (await denied(plain.id)).length > 0 && scopes.includes("workspace") && (await denied(instAdmin.id)).length > 0;
     });
   }
 }
