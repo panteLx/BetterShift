@@ -63,7 +63,9 @@ export default function AdminDashboardPage() {
   const { stats, isLoading: statsLoading } = useAdminStats();
   const { versionInfo } = useVersionUpdateCheck();
   const { settings, updateSettings, isUpdating } = useSystemSettings();
-  const [, usersArea, calendarsArea, logsArea] = useAdminSections();
+  const sections = useAdminSections();
+  const byKey = Object.fromEntries(sections.map((s) => [s.key, s]));
+  const { users: usersArea, calendars: calendarsArea, logs: logsArea } = byKey;
 
   // Resolved server-side: an env override wins over the stored value here too.
   const telemetryEnabled = settings?.telemetryResolved === true;
@@ -170,7 +172,7 @@ export default function AdminDashboardPage() {
       sub: stats ? t("adminDashboard.calendarsSub", { count: stats.calendars.total + orphaned, orphaned }) : "",
     },
     { ...logsArea, sub: stats ? t("adminDashboard.logsSub", { count: stats.auditLogs.total }) : "" },
-  ];
+  ].filter((row) => row.href);
 
   return (
     <div className="flex flex-col gap-[14px] lg:gap-[18px]">

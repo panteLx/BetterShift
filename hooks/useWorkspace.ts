@@ -18,10 +18,12 @@ async function fetchWorkspace(): Promise<WorkspaceInfo> {
   return response.json();
 }
 
-export function useWorkspace() {
+export function useWorkspace(enabled = true) {
   return useQuery({
     queryKey: queryKeys.workspace,
     queryFn: fetchWorkspace,
     staleTime: 60_000,
+    enabled,
+    retry: false,
   });
 }

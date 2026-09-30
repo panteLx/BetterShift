@@ -525,6 +525,18 @@
     "calendarsMenu": "Kalender",
     "auditLogs": "Audit-Logs",
     "announcementsMenu": "Ankündigungen",
+    "workspacesMenu": "Workspaces",
+    "settingsMenu": "Einstellungen",
+    "telemetryMenu": "Telemetrie",
+    "groups": {
+      "management": "Verwaltung",
+      "system": "System"
+    },
+    "scope": {
+      "instance": "Instanz",
+      "global": "Global · Portal",
+      "workspace": "Workspace: {name}"
+    },
     "backToApp": "Zurück zur App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Seitenleiste ausklappen",
@@ -1095,6 +1107,9 @@
     "severityWarning": "Warnung",
     "severityError": "Fehler",
     "severityCritical": "kritisch"
+  },
+  "adminWorkspace": {
+    "membersMenu": "Mitglieder"
   },
   "adminShell": {
     "logsShort": "Logs",
