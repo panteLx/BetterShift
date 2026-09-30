@@ -18,6 +18,7 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { ChoiceChips } from "@/components/form-kit";
 import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
 import { FilterMenuButton, type SortState } from "@/components/admin/admin-table-controls";
+import { WorkspaceFilter, ALL_WORKSPACES } from "@/components/admin/workspace-filter";
 import { UserTable } from "@/components/admin/user-table";
 import { UserCreateSheet } from "@/components/admin/user-create-sheet";
 import { UserEditSheet } from "@/components/admin/user-edit-sheet";
@@ -45,10 +46,11 @@ export default function AdminUsersPage() {
   const search = useDebouncedSearch();
   const [roleFilter, setRoleFilter] = useState<UserRoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>("all");
+  const [workspaceId, setWorkspaceId] = useState(ALL_WORKSPACES);
   const [sort, setSort] = useState<SortState<UserSortField>>({ column: "createdAt", direction: "desc" });
 
   // Any change to search, filters or sort starts over on the first page
-  const listKey = [search.query, roleFilter, statusFilter, sort.column, sort.direction].join("|");
+  const listKey = [search.query, roleFilter, statusFilter, workspaceId, sort.column, sort.direction].join("|");
   const [requestedPage, setPage] = useResettableState(listKey, 1);
 
   const params = useMemo<UserListParams>(
@@ -56,12 +58,13 @@ export default function AdminUsersPage() {
       search: search.query,
       role: roleFilter,
       status: statusFilter,
+      workspaceId: workspaceId === ALL_WORKSPACES ? undefined : workspaceId,
       sort: sort.column,
       order: sort.direction,
       page: requestedPage,
       limit: ADMIN_PAGE_SIZE,
     }),
-    [search.query, roleFilter, statusFilter, sort, requestedPage]
+    [search.query, roleFilter, statusFilter, workspaceId, sort, requestedPage]
   );
 
   const { users, total, counts, page, isLoading, isPlaceholderData } = useAdminUsers(params);
@@ -224,6 +227,7 @@ export default function AdminUsersPage() {
             </div>
             {filterMenu}
           </div>
+          <WorkspaceFilter value={workspaceId} onChange={setWorkspaceId} />
           <div className="hidden lg:block">{filterMenu}</div>
         </div>
 

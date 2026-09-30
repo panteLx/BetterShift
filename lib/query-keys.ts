@@ -66,6 +66,11 @@ export const queryKeys = {
       bundles: (calendarId: string) =>
         ["admin", "calendars", "bundles", calendarId] as const,
     },
+    workspaces: {
+      all: ["admin", "workspaces"] as const,
+      list: ["admin", "workspaces", "list"] as const,
+      members: (workspaceId: string) => ["admin", "workspaces", "members", workspaceId] as const,
+    },
     auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
     systemSettings: ["admin", "system-settings"] as const,

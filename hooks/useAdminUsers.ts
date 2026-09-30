@@ -36,6 +36,8 @@ export interface AdminUser extends User {
   banned: boolean;
   banReason: string | null;
   banExpires: Date | null;
+  /** Multi-tenant only */
+  workspaces?: Array<{ id: string; name: string; slug: string }>;
 }
 
 /**

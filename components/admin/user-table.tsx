@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { format, formatDistanceToNow } from "date-fns";
 import {
+  Building2,
   ChevronRight,
   Ellipsis,
   Eye,
@@ -37,6 +38,8 @@ import {
   type SortState,
 } from "@/components/admin/admin-table-controls";
 import { AdminPagination } from "@/components/admin/admin-pagination";
+import { Pill } from "@/components/form-kit";
+import { useAdminScope } from "@/hooks/useAdminScope";
 import { getDateLocale } from "@/lib/locales";
 import type { UserSortField } from "@/lib/admin-list";
 import type { AdminUser } from "@/hooks/useAdminUsers";
@@ -69,6 +72,7 @@ type RowHandlers = Pick<
 >;
 
 const TEMPLATE = "minmax(0,2.4fr) 120px 110px 130px 150px 90px 102px";
+const TEMPLATE_WORKSPACES = "minmax(0,2.4fr) 120px 110px 130px 150px 90px 100px 102px";
 
 function useDateFormatters() {
   const t = useTranslations();
@@ -107,14 +111,27 @@ function BannedPill({ user }: { user: AdminUser }) {
   );
 }
 
-function UserRow({ user, ...handlers }: { user: AdminUser } & RowHandlers) {
+function WorkspacesPill({ user }: { user: AdminUser }) {
+  const workspaces = user.workspaces ?? [];
+  return (
+    <Pill tone={workspaces.length ? "brand" : "neutral"} className="cursor-default">
+      <span title={workspaces.map((w) => w.name).join(", ") || undefined}>{workspaces.length}</span>
+    </Pill>
+  );
+}
+
+function UserRow({
+  user,
+  showWorkspaces,
+  ...handlers
+}: { user: AdminUser; showWorkspaces: boolean } & RowHandlers) {
   const t = useTranslations();
   const dates = useDateFormatters();
   const { canEdit, canBan, canDelete, canResetPassword } = useUserPermissions(user);
 
   return (
     <AdminTableRow
-      template={TEMPLATE}
+      template={showWorkspaces ? TEMPLATE_WORKSPACES : TEMPLATE}
       muted={user.banned ? "danger" : undefined}
       onClick={() => handlers.onUserClick(user)}
     >
@@ -134,6 +151,11 @@ function UserRow({ user, ...handlers }: { user: AdminUser } & RowHandlers) {
         {dates.lastActive(user.lastActivity)}
       </span>
       <Count value={user.calendarCount} />
+      {showWorkspaces && (
+        <div>
+          <WorkspacesPill user={user} />
+        </div>
+      )}
       {/* Stop clicks and Enter/Space from also opening the details panel */}
       <div
         className="flex items-center justify-end gap-1.5"
@@ -195,7 +217,15 @@ function UserRow({ user, ...handlers }: { user: AdminUser } & RowHandlers) {
   );
 }
 
-function UserCard({ user, onClick }: { user: AdminUser; onClick: () => void }) {
+function UserCard({
+  user,
+  showWorkspaces,
+  onClick,
+}: {
+  user: AdminUser;
+  showWorkspaces: boolean;
+  onClick: () => void;
+}) {
   const t = useTranslations();
   const dates = useDateFormatters();
   return (
@@ -208,6 +238,12 @@ function UserCard({ user, onClick }: { user: AdminUser; onClick: () => void }) {
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <RolePill role={user.role} />
             <StatusPill banned={user.banned} />
+            {showWorkspaces && (
+              <Pill tone={user.workspaces?.length ? "brand" : "neutral"}>
+                <Building2 className="size-3" />
+                {user.workspaces?.length ?? 0}
+              </Pill>
+            )}
             <span className="font-mono text-[11.5px] text-fg-faint">
               {t("adminUsers.calendarCount", { count: user.calendarCount })} ·{" "}
               {dates.lastActive(user.lastActivity)}
@@ -232,6 +268,7 @@ export function UserTable({
   ...handlers
 }: UserTableProps) {
   const t = useTranslations();
+  const showWorkspaces = useAdminScope().scope === "global";
 
   const header = (column: UserSortField, label: string) => (
     <SortHeader
@@ -261,7 +298,7 @@ export function UserTable({
     <div aria-busy={isStale || undefined} className={cn(isStale && "opacity-60")}>
       <AdminTableCard className="hidden lg:block" footer={total > 0 && pagination()}>
         <AdminTableHead
-          template={TEMPLATE}
+          template={showWorkspaces ? TEMPLATE_WORKSPACES : TEMPLATE}
           columns={[
             header("name", t("common.labels.user")),
             header("role", t("admin.role")),
@@ -269,6 +306,13 @@ export function UserTable({
             header("createdAt", t("common.stats.created")),
             header("lastActivity", t("common.time.lastActive")),
             header("calendarCount", t("admin.calendarsCount")),
+            ...(showWorkspaces
+              ? [
+                  <span key="workspaces" className="block text-fg-tertiary">
+                    {t("adminUsers.workspacesColumn")}
+                  </span>,
+                ]
+              : []),
             <span key="actions" className="block text-right">
               {t("adminUsers.actions")}
             </span>,
@@ -276,7 +320,9 @@ export function UserTable({
         />
         {users.length === 0
           ? empty
-          : users.map((user) => <UserRow key={user.id} user={user} {...handlers} />)}
+          : users.map((user) => (
+              <UserRow key={user.id} user={user} showWorkspaces={showWorkspaces} {...handlers} />
+            ))}
       </AdminTableCard>
 
       <div className="flex flex-col gap-[9px] lg:hidden">
@@ -284,7 +330,12 @@ export function UserTable({
           <div className="rounded-[11px] border border-line">{empty}</div>
         ) : (
           users.map((user) => (
-            <UserCard key={user.id} user={user} onClick={() => handlers.onUserClick(user)} />
+            <UserCard
+              key={user.id}
+              user={user}
+              showWorkspaces={showWorkspaces}
+              onClick={() => handlers.onUserClick(user)}
+            />
           ))
         )}
         {total > pageSize && pagination("pt-1 text-[12px] text-fg-tertiary")}
