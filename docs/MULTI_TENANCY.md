@@ -88,13 +88,14 @@ Login and registration keep a `returnUrl` across the portal so a user who follow
 
 ## Invite Links
 
-A workspace owner or admin creates invite links from the workspace sheet's "Invite links" tab (`components/workspace-sheet.tsx`). Each link (`workspace_join_links` table, migration `0036`) has:
+A workspace owner or admin creates invite links in the workspace dashboard's Members section (`/admin/members` on the workspace host). Each link (`workspace_join_links` table, migration `0036`) has:
 
+- a **join role**: `member`, or `admin` (only the owner may create or revoke `admin` links; admins manage `member` links);
 - an **expiry**: never, or 1/7/30 days from creation;
 - a **max-use count**: unlimited, or a fixed number (the UI offers presets — 1, 5, 10, 25, 50, 100 — while the API accepts any integer 1–1000);
 - a **revoke** action, which invalidates it immediately.
 
-An expired, exhausted, revoked or unknown token all produce the same "invalid link" response — none of these states leak which one applies. Redeeming a link only ever happens on `POST`; visiting the confirmation page (`GET`) never consumes a use. There is no separate accept step: submitting the join form both confirms and joins in one request. Everyone who joins via a link becomes a plain `member`; links cannot grant `admin`. Join links always resolve to the portal (`/join/<token>`, never a workspace subdomain), since the joining user isn't necessarily signed in yet and the portal is where auth lives. Joining is rate-limited per user (`workspace-join`, default 20/15 min) and link creation separately (`workspace-link-create`, default 20/hour). Audit log entries for join-link actions record the link id only, never the token itself.
+An expired, exhausted, revoked or unknown token all produce the same "invalid link" response — none of these states leak which one applies. Redeeming a link only ever happens on `POST`; visiting the confirmation page (`GET`) never consumes a use. There is no separate accept step: submitting the join form both confirms and joins in one request. Whoever joins via a link receives the link's role (`member` or `admin`; never `owner`). Join links always resolve to the portal (`/join/<token>`, never a workspace subdomain), since the joining user isn't necessarily signed in yet and the portal is where auth lives. Joining is rate-limited per user (`workspace-join`, default 20/15 min) and link creation separately (`workspace-link-create`, default 20/hour). Audit log entries for join-link actions record the link id only, never the token itself.
 
 ## Members
 
@@ -103,8 +104,8 @@ A workspace has three roles:
 | Role | Who | Can do |
 | --- | --- | --- |
 | `owner` | exactly one, the creator until ownership is transferred | everything below, plus change roles, rename, edit workspace settings, transfer ownership, delete the workspace, create/revoke `admin` invite links |
-| `admin` | granted by the owner (role change or an `admin` invite link) or by an instance admin | open the workspace dashboard, list members, remove `member`s, create/revoke `member` invite links |
-| `member` | everyone who joins via an invite link | use the workspace; no access to the dashboard |
+| `admin` | granted by the owner (role change or an `admin` invite link) | open the workspace dashboard, list members, remove `member`s, create/revoke `member` invite links |
+| `member` | joins via a `member` invite link | use the workspace; no access to the dashboard |
 
 The rules live in `lib/auth/workspace-permissions.ts` (`canRemoveMember`, `canChangeRole`, `canCreateJoinLink`, `canTransferOwnership`, …). Nobody can remove the owner or grant `owner` by a role change; ownership only moves through the transfer, after which the previous owner becomes `admin`. Workspace roles and calendar permission bundles are independent layers (see `docs/PERMISSIONS.md`).
 
@@ -130,7 +131,7 @@ The admin panel's scope is derived from the request host, never from a client va
 | --- | --- | --- | --- |
 | single-tenant instance | `instance` | instance admins | Overview, Users, Calendars, Announcements, Audit Logs, Settings, Telemetry |
 | portal (`BETTER_AUTH_URL` host) | `global` | instance admins | the same, plus Workspaces |
-| workspace host | `workspace` | workspace owner and admins; instance admins get no bypass unless they are members | Overview, Members, Settings (owner only) |
+| workspace host | `workspace` | workspace owner and admins only (an instance role grants nothing here; an instance admin who is a plain member is denied) | Overview, Members, Settings (owner only) |
 
 `proxy.ts` enforces the scope on `/admin/**`: a section outside the scope answers 404, a signed-in user without access is redirected with `admin_access_required` (and an `admin_access_denied` audit row is written). `/api/admin/**` answers 404 on workspace hosts; workspace routes are host-resolved under `/api/workspace/**`.
 
