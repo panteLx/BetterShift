@@ -29,7 +29,7 @@ import { getDateLocale } from "@/lib/locales";
 const ROLE_TONE = { owner: "warning", admin: "violet", member: "neutral" } as const;
 
 /** Member list with role and remove actions, each shown only when the viewer's role allows it. */
-export function WorkspaceMembersPanel({ enabled = true }: { enabled?: boolean }) {
+export function WorkspaceMembersPanel({ enabled = true, readOnly = false }: { enabled?: boolean; readOnly?: boolean }) {
   const t = useTranslations();
   const locale = useLocale();
   const { data, isError, refetch } = useWorkspaceMembers(enabled);
@@ -67,8 +67,8 @@ export function WorkspaceMembersPanel({ enabled = true }: { enabled?: boolean })
         {data.members.map((member) => {
           const isSelf = member.userId === data.currentUserId;
           const role: WorkspaceRole = isWorkspaceRole(member.role) ? member.role : "member";
-          const showRoleSelect = !isSelf && canChangeRole(actor, role, "admin");
-          const showRemove = !isSelf && canRemoveMember(actor, role);
+          const showRoleSelect = !readOnly && !isSelf && canChangeRole(actor, role, "admin");
+          const showRemove = !readOnly && !isSelf && canRemoveMember(actor, role);
           return (
             <PersonRow
               key={member.userId}

@@ -16,6 +16,7 @@ import {
   Loader2,
   LogIn,
   LogOut,
+  Settings2,
   Shield,
   SlidersHorizontal,
   SunMoon,
@@ -44,6 +45,7 @@ import { useViewSettings } from "@/hooks/useViewSettings";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useMyWorkspaces, useWorkspaceHref } from "@/hooks/useWorkspaces";
+import { isManagerRole } from "@/lib/workspace-access";
 import { useSignOut } from "@/hooks/useSignOut";
 import { locales } from "@/lib/locales";
 import { CalendarWithCount } from "@/lib/types";
@@ -441,8 +443,17 @@ function PhoneMenuSheet({
                       onClick={() => setWorkspaceOpen(true)}
                     />
                   )}
+                  {multiTenant && isManagerRole(workspace.role) && (
+                    <MenuRow icon={Settings2} title={t("workspaces.manageWorkspace")} onClick={() => navigate("/admin")} />
+                  )}
                   {isAdmin && (
-                    <MenuRow icon={Shield} title={t("admin.adminPanel")} onClick={() => navigate("/admin")} />
+                    <MenuRow
+                      icon={Shield}
+                      title={t("admin.adminPanel")}
+                      onClick={() =>
+                        multiTenant ? navigateAway(`${config.auth.url}/admin`) : navigate("/admin")
+                      }
+                    />
                   )}
                   {infoRow}
                   <MenuRow icon={LogOut} title={t("auth.logout")} danger onClick={handleSignOut} />

@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Building2, Loader2, Plus } from "lucide-react";
+import { ArrowRight, Building2, Loader2, Plus, Shield } from "lucide-react";
 import { AuthDivider, AuthShell, authInputClass } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useMyWorkspaces, useWorkspaceHref, type MyWorkspace } from "@/hooks/useWorkspaces";
 import { SignOutButton } from "./sign-out-button";
@@ -26,6 +27,7 @@ function extractJoinToken(value: string): string | null {
 export function PortalOverview() {
   const t = useTranslations();
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const { data, isPending, isError } = useMyWorkspaces("portal");
   const [joinValue, setJoinValue] = useState("");
   const [joinError, setJoinError] = useState(false);
@@ -117,7 +119,15 @@ export function PortalOverview() {
         )}
       </form>
 
-      <div className="flex justify-center border-t border-line pt-4">
+      <div className="flex flex-wrap justify-center gap-1 border-t border-line pt-4">
+        {isAdmin && (
+          <Button asChild variant="ghost" className="h-9 gap-2 rounded-[9px] text-[13.5px] font-medium text-fg-secondary">
+            <Link href="/admin">
+              <Shield className="size-4" />
+              {t("admin.adminPanel")}
+            </Link>
+          </Button>
+        )}
         <SignOutButton label={t("auth.logout")} />
       </div>
     </AuthShell>

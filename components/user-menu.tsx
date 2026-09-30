@@ -22,6 +22,7 @@ import {
   Compass,
   FileText,
   Settings,
+  Settings2,
   Shield,
   SlidersHorizontal,
   Users,
@@ -34,6 +35,8 @@ import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items
 import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { isManagerRole } from "@/lib/workspace-access";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getUserInitials } from "@/lib/utils";
 
@@ -52,11 +55,18 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isAdmin = useIsAdmin();
+  const config = usePublicConfig();
   const { data: workspace } = useWorkspace();
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
+
+  // On a workspace host the instance admin lives on the portal
+  const openInstanceAdmin = () => {
+    if (!workspace?.multiTenant) return router.push("/admin");
+    window.location.assign(new URL("/admin", config.auth.url).href);
+  };
 
   if (isLoading || !isAuthenticated || !user) {
     return null;
@@ -132,8 +142,14 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
               {t("workspaces.menuEntry")}
             </DropdownMenuItem>
           )}
-          {isAdmin && (
+          {workspace?.multiTenant && isManagerRole(workspace.role) && (
             <DropdownMenuItem onClick={() => router.push("/admin")}>
+              <Settings2 className="mr-2 h-4 w-4" />
+              {t("workspaces.manageWorkspace")}
+            </DropdownMenuItem>
+          )}
+          {isAdmin && (
+            <DropdownMenuItem onClick={openInstanceAdmin}>
               <Shield className="mr-2 h-4 w-4" />
               {t("admin.adminPanel")}
             </DropdownMenuItem>
