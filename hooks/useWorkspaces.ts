@@ -123,7 +123,7 @@ export interface WorkspaceMemberDto {
   joinedAt: string;
 }
 
-interface MembersResponse {
+export interface MembersResponse {
   members: WorkspaceMemberDto[];
   currentUserId: string;
   currentRole: string;
@@ -186,6 +186,7 @@ export interface CreateJoinLinkInput {
   name: string | null;
   expiresInDays: 1 | 7 | 30 | null;
   maxUses: number | null;
+  role?: "member" | "admin";
 }
 
 export function useCreateJoinLink() {
@@ -257,5 +258,104 @@ export function useRevokeJoinLink() {
       if (context?.snapshot) queryClient.setQueryData(queryKeys.workspaces.joinLinks, context.snapshot);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.joinLinks }),
+  });
+}
+
+export function useChangeMemberRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: "admin" | "member" }) =>
+      workspaceFetch<{ ok: true }>(`/api/workspace/members/${encodeURIComponent(userId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      }),
+    onMutate: async ({ userId, role }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.workspaces.members });
+      const snapshot = queryClient.getQueryData<MembersResponse>(queryKeys.workspaces.members);
+      if (snapshot) {
+        queryClient.setQueryData<MembersResponse>(queryKeys.workspaces.members, {
+          ...snapshot,
+          members: snapshot.members.map((m) => (m.userId === userId ? { ...m, role } : m)),
+        });
+      }
+      return { snapshot };
+    },
+    onError: (_e, _v, context) => {
+      if (context?.snapshot) queryClient.setQueryData(queryKeys.workspaces.members, context.snapshot);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members }),
+  });
+}
+
+export function useTransferOwnership() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      workspaceFetch<{ ok: true }>("/api/workspace/transfer", { method: "POST", body: JSON.stringify({ userId }) }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.members });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspace });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.mine });
+    },
+  });
+}
+
+export interface WorkspaceSettingsDto {
+  name: string;
+  slug: string;
+  allowGuestAccess: boolean;
+  inheritedGuestAccess: boolean;
+}
+
+export function useWorkspaceSettings(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.workspaces.settings,
+    queryFn: () => workspaceFetch<WorkspaceSettingsDto>("/api/workspace/settings"),
+    enabled,
+  });
+}
+
+export function useUpdateWorkspaceSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: { name?: string; allowGuestAccess?: boolean }) =>
+      workspaceFetch<{ ok: true }>("/api/workspace/settings", { method: "PATCH", body: JSON.stringify(patch) }),
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.workspaces.settings });
+      const snapshot = queryClient.getQueryData<WorkspaceSettingsDto>(queryKeys.workspaces.settings);
+      if (snapshot) queryClient.setQueryData(queryKeys.workspaces.settings, { ...snapshot, ...patch });
+      return { snapshot };
+    },
+    onError: (_e, _v, context) => {
+      if (context?.snapshot) queryClient.setQueryData(queryKeys.workspaces.settings, context.snapshot);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.settings });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspace });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.mine });
+    },
+  });
+}
+
+export interface WorkspaceStatsDto {
+  members: number;
+  calendars: number;
+  shifts: number;
+  activeJoinLinks: number;
+}
+
+export function useWorkspaceStats(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.workspaces.stats,
+    queryFn: () => workspaceFetch<WorkspaceStatsDto>("/api/workspace/stats"),
+    enabled,
+  });
+}
+
+/** Deleting navigates to the portal, so no cache handling is needed. */
+export function useDeleteWorkspace() {
+  return useMutation({
+    mutationFn: (confirmSlug: string) =>
+      workspaceFetch<{ ok: true }>("/api/workspace", { method: "DELETE", body: JSON.stringify({ confirmSlug }) }),
   });
 }

@@ -111,6 +111,8 @@ export const queryKeys = {
     mine: ["workspaces", "mine"] as const,
     members: ["workspaces", "members"] as const,
     joinLinks: ["workspaces", "join-links"] as const,
+    settings: ["workspaces", "settings"] as const,
+    stats: ["workspaces", "stats"] as const,
     slug: (slug: string) => ["workspaces", "slug", slug] as const,
     join: (token: string) => ["workspaces", "join", token] as const,
     adminUser: (userId: string) => ["admin", "users", "workspaces", userId] as const,

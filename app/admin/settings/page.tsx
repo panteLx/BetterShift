@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ChoiceChips, Field, InfoNote, ToggleRow } from "@/components/form-kit";
 import { AdminPageHeader } from "@/components/admin/admin-kit";
+import { WorkspaceSettingsPanel } from "@/components/admin/workspace-settings-panel";
 import { SystemInfoItems } from "@/components/admin/system-kit";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
@@ -18,8 +19,9 @@ const SECTION_BODY =
 
 export default function AdminSettingsPage() {
   const { scope } = useAdminScope();
-  // Workspace settings live in Task 9's panel; the instance hooks below would 404 there.
-  if (scope === null || scope === "workspace") return null;
+  if (scope === null) return null;
+  // The instance settings hooks would 404 on workspace hosts.
+  if (scope === "workspace") return <WorkspaceSettingsPanel />;
   return <InstanceSettings global={scope === "global"} />;
 }
 

@@ -10,6 +10,7 @@ import { StatusBanner } from "@/components/status-banner";
 import { AdminPageHeader, SeverityPill } from "@/components/admin/admin-kit";
 import { useAdminSections } from "@/components/admin/admin-sidebar";
 import { useAuditDescription } from "@/components/admin/audit-describe";
+import { WorkspaceOverviewPage } from "@/components/admin/workspace-overview";
 import { ScaleValue, SystemInfoItems } from "@/components/admin/system-kit";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { useAdminStats } from "@/hooks/useAdminStats";
@@ -17,7 +18,12 @@ import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { getDateLocale } from "@/lib/locales";
 import { useClientValue } from "@/hooks/useMediaQuery";
 
-export default function AdminDashboardPage() {
+export default function AdminPage() {
+  const { scope } = useAdminScope();
+  return scope === "workspace" ? <WorkspaceOverviewPage /> : <AdminDashboardPage />;
+}
+
+function AdminDashboardPage() {
   const t = useTranslations();
   const router = useRouter();
   const locale = useLocale();

@@ -1116,7 +1116,57 @@
     "severityCritical": "kritisch"
   },
   "adminWorkspace": {
-    "membersMenu": "Mitglieder"
+    "membersMenu": "Mitglieder",
+    "title": "Übersicht",
+    "overview": {
+      "members": "Mitglieder",
+      "calendars": "Kalender",
+      "shifts": "Schichten",
+      "activeLinks": "Aktive Einladungslinks"
+    },
+    "members": {
+      "role": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "member": "Mitglied"
+      },
+      "changeRole": "Rolle ändern",
+      "remove": "Entfernen"
+    },
+    "links": {
+      "title": "Einladungslinks",
+      "create": "Link erstellen",
+      "role": "Rolle beim Beitritt",
+      "roleMember": "Mitglied",
+      "roleAdmin": "Admin"
+    },
+    "settings": {
+      "title": "Allgemein",
+      "name": "Name",
+      "saved": "Gespeichert",
+      "slugImmutable": "Die Adresse kann nach dem Erstellen nicht geändert werden.",
+      "guestAccess": "Gastzugriff erlauben",
+      "guestInherited": "Aktuell wird die Einstellung der Instanz übernommen. Beim Ändern gilt sie nur für diesen Workspace."
+    },
+    "transfer": {
+      "title": "Besitz übertragen",
+      "description": "Ein anderes Mitglied wird Owner dieses Workspaces.",
+      "newOwner": "Neuer Owner",
+      "placeholder": "Mitglied wählen",
+      "button": "Besitz übertragen",
+      "confirmTitle": "Besitz an {name} übertragen?",
+      "confirm": "{name} wird Owner dieses Workspaces. Du wirst zum Admin und verlierst Zugriff auf die Einstellungen.",
+      "success": "Besitz übertragen"
+    },
+    "deleteTitle": "Workspace löschen",
+    "deleteDescription": "Löscht den Workspace mit allen Kalendern, Schichten und Einstellungen unwiderruflich.",
+    "deleteButton": "Löschen",
+    "deleteConfirmDescription": "Du löschst den Workspace {slug} endgültig.",
+    "deleteWarning": "Dabei gehen {members, plural, one {# Mitglied} other {# Mitglieder}} und {calendars, plural, one {# Kalender} other {# Kalender}} samt allen Schichten verloren. Das lässt sich nicht rückgängig machen.",
+    "deleteUnderstood": "Ich habe verstanden, dass alle Daten dieses Workspaces verloren gehen.",
+    "deleteConfirmation": "Gib zur Bestätigung „{slug}“ ein",
+    "deleteConfirmationHint": "Groß- und Kleinschreibung beachten.",
+    "deleteConfirm": "Endgültig löschen"
   },
   "adminShell": {
     "logsShort": "Logs",
@@ -1478,7 +1528,6 @@
     "leaveConfirmDescription": "Deine Freigaben und Abos hier werden gelöscht. Kalender, die dir hier gehören, gehen an den Owner über. Zurück kommst du nur mit einer neuen Einladung.",
     "ownerCannotLeave": "Als Owner kannst du den Workspace nicht verlassen.",
     "actionError": "Aktion fehlgeschlagen",
-    "linkCreate": "Link erstellen",
     "linkName": "Bezeichnung (optional)",
     "linkExpiry": "Gültig für",
     "linkExpiryNever": "Unbegrenzt",
@@ -1496,6 +1545,13 @@
     "linkCopied": "Link kopiert",
     "linkRevoke": "Widerrufen",
     "linksEmpty": "Noch keine Einladungslinks.",
-    "linksHint": "Jeder mit dem Link kann beitreten, solange er gültig ist. Teile ihn nur mit Personen, die du einladen willst."
+    "linksHint": "Jeder mit dem Link kann beitreten, solange er gültig ist. Teile ihn nur mit Personen, die du einladen willst.",
+    "errors": {
+      "forbidden": "Dafür fehlt dir die Berechtigung",
+      "owner": "Der Owner kann nicht geändert oder entfernt werden",
+      "not_member": "Diese Person ist kein Mitglied mehr",
+      "limit": "Das Limit für Workspaces ist erreicht",
+      "confirmation_mismatch": "Die Bestätigung stimmt nicht mit der Adresse überein"
+    }
   }
 }
