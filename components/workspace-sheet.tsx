@@ -12,7 +12,7 @@ import { WorkspaceMembersPanel } from "@/components/admin/workspace-members-pane
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useLeaveWorkspace, useWorkspaceMembers } from "@/hooks/useWorkspaces";
-import { isManagerRole } from "@/lib/workspace-access";
+import { isManagerRole } from "@/lib/auth/workspace-permissions";
 
 interface WorkspaceSheetProps {
   open: boolean;

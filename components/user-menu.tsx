@@ -36,7 +36,7 @@ import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
-import { isManagerRole } from "@/lib/workspace-access";
+import { isManagerRole } from "@/lib/auth/workspace-permissions";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getUserInitials } from "@/lib/utils";
 

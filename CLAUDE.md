@@ -76,6 +76,8 @@ Workspace creation, invite links and membership changes (leave/remove) go only t
 
 ### Admin
 
+The admin panel has three scopes, derived from the host by `adminScopeFor()` in `lib/admin-sections.ts` (never from client input): `instance` (single-tenant), `global` (the portal of a multi-tenant instance) and `workspace` (a workspace host, for its owner/admins). `ADMIN_SECTIONS` in that file is the single registry of sections (sidebar, bottom bar and `isAdminPathAllowed()` all read it; its `labelKey`s are picked up by `scripts/i18n-checks.ts`); `proxy.ts` enforces it, answering 404 for sections outside the scope and redirecting non-admins with `admin_access_required`. `/api/admin/**` is 404 on workspace hosts; the workspace dashboard talks to the host-resolved `/api/workspace/**` routes, and `/api/admin/workspaces/**` serves the portal. Workspace role rules (`canRemoveMember`, `canChangeRole`, `canTransferOwnership`, …) are pure functions in `lib/auth/workspace-permissions.ts`, independent of calendar bundles.
+
 Two separate permission layers, deliberately:
 
 - `lib/auth/access-control.ts` only exists to make better-auth's admin plugin accept the `admin` and `superadmin` roles; both get all plugin permissions.

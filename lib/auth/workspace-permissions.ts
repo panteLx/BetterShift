@@ -6,6 +6,12 @@ export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
   return typeof value === "string" && (WORKSPACE_ROLES as readonly string[]).includes(value);
 }
 
+export const MANAGER_ROLES: readonly WorkspaceRole[] = ["owner", "admin"];
+
+export function isManagerRole(role: string | null | undefined): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export const canManageMembers = (actor: Actor) => actor === "owner" || actor === "admin";
 
 export function canRemoveMember(actor: Actor, target: WorkspaceRole): boolean {

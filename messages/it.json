@@ -562,7 +562,8 @@
       "title": "Accesso ospite",
       "description": "Controlla se i calendari possono essere visualizzati senza accedere.",
       "toggleLabel": "Consenti accesso ospite",
-      "toggleHint": "Consente di visualizzare i calendari senza accedere, se il calendario lo consente."
+      "toggleHint": "Consente di visualizzare i calendari senza accedere, se il calendario lo consente.",
+      "perWorkspaceHint": "L'accesso ospite si imposta per workspace (dashboard del workspace → Impostazioni)."
     },
     "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
@@ -662,7 +663,7 @@
       "andMore": "... e altri {count}",
       "calendarsDeleted": "{count, plural, =1 {1 calendario eliminato} other {# calendari eliminati}}",
       "calendarsTransferred": "{count, plural, =1 {1 calendario trasferito} other {# calendari trasferiti}}",
-      "transferJoinsWorkspace": "{user} entrer\u00e0 anche a far parte del workspace \u00ab{workspace}\u00bb.",
+      "transferJoinsWorkspace": "{user} entrerà anche a far parte del workspace «{workspace}».",
       "transferJoinsWorkspacesBulk": "Gli utenti che non sono ancora membri verranno aggiunti ai workspace interessati come membri."
     },
     "allActions": "Tutte le Azioni",
@@ -767,6 +768,73 @@
       "deleteConfirmationLabel": "Digita il titolo per confermare",
       "deleteConfirmationHint": "Digita «{name}» per abilitare l'eliminazione.",
       "deleteConfirm": "Elimina definitivamente"
+    },
+    "workspacesMenu": "Workspace",
+    "settingsMenu": "Impostazioni",
+    "telemetryMenu": "Telemetria",
+    "groups": {
+      "management": "Gestione",
+      "system": "Sistema"
+    },
+    "scope": {
+      "instance": "Istanza",
+      "global": "Globale · Portale",
+      "workspace": "Workspace: {name}"
+    },
+    "settingsPage": {
+      "title": "Impostazioni"
+    },
+    "telemetryPage": {
+      "title": "Telemetria"
+    },
+    "workspaces": {
+      "subtitle": "{count, plural, one {# workspace} other {# workspace}}",
+      "searchPlaceholder": "Cerca per nome, slug o proprietario...",
+      "columnName": "Workspace",
+      "columnOwner": "Proprietario",
+      "columnMembers": "Membri",
+      "columnCalendars": "Calendari",
+      "counts": "{members, plural, one {# membro} other {# membri}} · {calendars, plural, one {# calendario} other {# calendari}}",
+      "empty": "Ancora nessun workspace",
+      "noSearchResults": "Nessun workspace corrisponde alla ricerca",
+      "filterLabel": "Filtra per workspace",
+      "filterAll": "Tutti i workspace",
+      "delete": "Elimina workspace",
+      "nameSection": "Nome",
+      "renamed": "Workspace rinominato",
+      "membersSection": "Membri ({count})",
+      "makeOwner": "Rendi proprietario",
+      "transferTitle": "Rendere {name} proprietario?",
+      "transferDescription": "Il proprietario precedente diventa amministratore di questo workspace.",
+      "ownerTransferred": "Proprietario cambiato",
+      "addMember": "Aggiungi membro",
+      "memberEmail": "Indirizzo email",
+      "addMemberButton": "Aggiungi",
+      "memberAdded": "Membro aggiunto",
+      "deleteTitle": "Elimina workspace",
+      "deleteDescription": "Elimina definitivamente il workspace con tutti i calendari, i turni e le impostazioni.",
+      "deleteConfirmDescription": "Stai per eliminare definitivamente il workspace {slug}.",
+      "deleteWarning": "Verranno eliminati {members, plural, one {# membro} other {# membri}} e {calendars, plural, one {# calendario} other {# calendari}} con tutti i turni. Questa azione non può essere annullata.",
+      "deleteUnderstood": "Ho capito che tutti i dati di questo workspace andranno persi.",
+      "deleteConfirmation": "Digita \"{slug}\" per confermare",
+      "deleteConfirmationHint": "Distingue tra maiuscole e minuscole.",
+      "deleteConfirm": "Elimina definitivamente",
+      "deleted": "Workspace eliminato",
+      "errors": {
+        "forbidden": "Non hai i permessi per farlo",
+        "default": "Il workspace predefinito non può essere eliminato",
+        "not_found": "Workspace non trovato",
+        "workspace_not_found": "Workspace non trovato",
+        "user_not_found": "Nessun account con questo indirizzo email",
+        "already_member": "Già membro",
+        "owner": "Il proprietario non può essere rimosso",
+        "self": "Questa persona è già proprietaria",
+        "not_member": "Questa persona non è un membro",
+        "invalid_name": "Nome non valido",
+        "invalid_email": "Indirizzo email non valido",
+        "confirmation_mismatch": "La conferma non corrisponde allo slug",
+        "busy": "Al momento occupato, riprova tra poco"
+      }
     }
   },
   "appearance": {
@@ -1217,7 +1285,8 @@
     "workspaceRemoved": "Rimosso dal workspace",
     "workspaceSlug": "Workspace (slug)",
     "workspaces": "Workspaces",
-    "workspacesEmpty": "Non appartiene a nessun workspace"
+    "workspacesEmpty": "Non appartiene a nessun workspace",
+    "workspacesColumn": "Workspace"
   },
   "adminCalendars": {
     "content": "Contenuto",
@@ -1445,7 +1514,6 @@
     "allWorkspaces": "Tutti i workspace",
     "current": "Attuale",
     "membersTab": "Membri",
-    "linksTab": "Link di invito",
     "you": "Tu",
     "removeMember": "Rimuovi",
     "removeMemberConfirmTitle": "Rimuovere {name}?",
@@ -1454,9 +1522,8 @@
     "leave": "Lascia il workspace",
     "leaveConfirmTitle": "Lasciare {workspace}?",
     "leaveConfirmDescription": "Le tue condivisioni e i tuoi abbonamenti qui vengono eliminati. I calendari di tua proprietà qui passano al proprietario. Potrai tornare solo con un nuovo invito.",
-    "ownerCannotLeave": "Come proprietario non puoi lasciare il workspace.",
+    "ownerCannotLeave": "Come proprietario non puoi lasciare il workspace. Trasferiscilo o eliminalo nelle impostazioni.",
     "actionError": "Azione non riuscita",
-    "linkCreate": "Crea link",
     "linkName": "Etichetta (facoltativa)",
     "linkExpiry": "Valido per",
     "linkExpiryNever": "Nessuna scadenza",
@@ -1474,6 +1541,67 @@
     "linkCopied": "Link copiato",
     "linkRevoke": "Revoca",
     "linksEmpty": "Ancora nessun link di invito.",
-    "linksHint": "Chiunque abbia il link può unirsi finché è valido. Condividilo solo con le persone che vuoi invitare."
+    "linksHint": "Chiunque abbia il link può unirsi finché è valido. Condividilo solo con le persone che vuoi invitare.",
+    "manageWorkspace": "Gestisci workspace",
+    "errors": {
+      "forbidden": "Non hai i permessi per farlo",
+      "owner": "Il proprietario non può essere modificato o rimosso",
+      "not_member": "Questa persona non è più un membro",
+      "limit": "Il limite di workspace è stato raggiunto",
+      "confirmation_mismatch": "La conferma non corrisponde all'indirizzo"
+    }
+  },
+  "adminWorkspace": {
+    "membersMenu": "Membri",
+    "title": "Panoramica",
+    "overview": {
+      "members": "Membri",
+      "calendars": "Calendari",
+      "shifts": "Turni",
+      "activeLinks": "Link di invito attivi"
+    },
+    "members": {
+      "role": {
+        "owner": "Proprietario",
+        "admin": "Amministratore",
+        "member": "Membro"
+      },
+      "changeRole": "Cambia ruolo",
+      "remove": "Rimuovi"
+    },
+    "links": {
+      "title": "Link di invito",
+      "create": "Crea link",
+      "role": "Ruolo all'ingresso",
+      "roleMember": "Membro",
+      "roleAdmin": "Amministratore"
+    },
+    "settings": {
+      "title": "Generale",
+      "name": "Nome",
+      "saved": "Salvato",
+      "slugImmutable": "L'indirizzo non può essere modificato dopo la creazione.",
+      "guestAccess": "Consenti accesso ospite",
+      "guestInherited": "Al momento vale l'impostazione dell'istanza. Se la modifichi, vale solo per questo workspace."
+    },
+    "transfer": {
+      "title": "Trasferisci la proprietà",
+      "description": "Un altro membro diventa proprietario di questo workspace.",
+      "newOwner": "Nuovo proprietario",
+      "placeholder": "Scegli un membro",
+      "button": "Trasferisci la proprietà",
+      "confirmTitle": "Trasferire la proprietà a {name}?",
+      "confirm": "{name} diventa proprietario di questo workspace. Tu diventi amministratore e perdi l'accesso alle impostazioni.",
+      "success": "Proprietà trasferita"
+    },
+    "deleteTitle": "Elimina workspace",
+    "deleteDescription": "Elimina definitivamente il workspace con tutti i calendari, i turni e le impostazioni.",
+    "deleteButton": "Elimina",
+    "deleteConfirmDescription": "Stai per eliminare definitivamente il workspace {slug}.",
+    "deleteWarning": "Verranno eliminati {members, plural, one {# membro} other {# membri}} e {calendars, plural, one {# calendario} other {# calendari}} con tutti i turni. Questa azione non può essere annullata.",
+    "deleteUnderstood": "Ho capito che tutti i dati di questo workspace andranno persi.",
+    "deleteConfirmation": "Digita \"{slug}\" per confermare",
+    "deleteConfirmationHint": "Distingue tra maiuscole e minuscole.",
+    "deleteConfirm": "Elimina definitivamente"
   }
 }

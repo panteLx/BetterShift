@@ -562,7 +562,8 @@
       "title": "Přístup pro hosty",
       "description": "Určuje, zda lze kalendáře zobrazit bez přihlášení.",
       "toggleLabel": "Povolit přístup pro hosty",
-      "toggleHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje."
+      "toggleHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje.",
+      "perWorkspaceHint": "Přístup hostů se nastavuje pro každý pracovní prostor zvlášť (přehled pracovního prostoru → Nastavení)."
     },
     "orphanedCalendarsWarning": "Zjištěny osiřelé kalendáře",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Existuje 1 kalendář bez vlastníka} few {Existují # kalendáře bez vlastníka} other {Existuje # kalendářů bez vlastníka}}. Přiřaďte je prosím uživatelům.",
@@ -662,8 +663,8 @@
       "andMore": "... a {count} dalších",
       "calendarsDeleted": "{count, plural, =1 {1 kalendář smazán} few {# kalendáře smazány} other {# kalendářů smazáno}}",
       "calendarsTransferred": "{count, plural, =1 {1 kalendář převeden} few {# kalendáře převedeny} other {# kalendářů převedeno}}",
-      "transferJoinsWorkspace": "{user} se t\u00edm st\u00e1v\u00e1 \u010dlenem workspace \u201e{workspace}\u201c.",
-      "transferJoinsWorkspacesBulk": "U\u017eivatel\u00e9, kte\u0159\u00ed je\u0161t\u011b nejsou \u010dleny, budou p\u0159id\u00e1ni do dot\u010den\u00fdch workspace\u016f jako \u010dlenov\u00e9."
+      "transferJoinsWorkspace": "{user} se tím stává členem workspace „{workspace}“.",
+      "transferJoinsWorkspacesBulk": "Uživatelé, kteří ještě nejsou členy, budou přidáni do dotčených workspaceů jako členové."
     },
     "allActions": "Všechny akce",
     "adminActions": "Akce správce",
@@ -767,6 +768,73 @@
       "deleteConfirmationLabel": "Zadejte titulek pro potvrzení",
       "deleteConfirmationHint": "Zadejte „{name}“ pro odemčení mazání.",
       "deleteConfirm": "Trvale smazat"
+    },
+    "workspacesMenu": "Pracovní prostory",
+    "settingsMenu": "Nastavení",
+    "telemetryMenu": "Telemetrie",
+    "groups": {
+      "management": "Správa",
+      "system": "Systém"
+    },
+    "scope": {
+      "instance": "Instance",
+      "global": "Globální · Portál",
+      "workspace": "Pracovní prostor: {name}"
+    },
+    "settingsPage": {
+      "title": "Nastavení"
+    },
+    "telemetryPage": {
+      "title": "Telemetrie"
+    },
+    "workspaces": {
+      "subtitle": "{count, plural, one {# pracovní prostor} few {# pracovní prostory} other {# pracovních prostorů}}",
+      "searchPlaceholder": "Hledat podle názvu, slugu nebo vlastníka...",
+      "columnName": "Pracovní prostor",
+      "columnOwner": "Vlastník",
+      "columnMembers": "Členové",
+      "columnCalendars": "Kalendáře",
+      "counts": "{members, plural, one {# člen} few {# členové} other {# členů}} · {calendars, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}",
+      "empty": "Zatím žádné pracovní prostory",
+      "noSearchResults": "Vašemu hledání neodpovídá žádný pracovní prostor",
+      "filterLabel": "Filtrovat podle pracovního prostoru",
+      "filterAll": "Všechny pracovní prostory",
+      "delete": "Smazat pracovní prostor",
+      "nameSection": "Název",
+      "renamed": "Pracovní prostor přejmenován",
+      "membersSection": "Členové ({count})",
+      "makeOwner": "Nastavit jako vlastníka",
+      "transferTitle": "Nastavit {name} jako vlastníka?",
+      "transferDescription": "Dosavadní vlastník se stane správcem tohoto pracovního prostoru.",
+      "ownerTransferred": "Vlastník změněn",
+      "addMember": "Přidat člena",
+      "memberEmail": "E-mailová adresa",
+      "addMemberButton": "Přidat",
+      "memberAdded": "Člen přidán",
+      "deleteTitle": "Smazat pracovní prostor",
+      "deleteDescription": "Trvale smaže pracovní prostor se všemi kalendáři, směnami a nastavením.",
+      "deleteConfirmDescription": "Pracovní prostor {slug} bude trvale smazán.",
+      "deleteWarning": "Přijdete o {members, plural, one {# člena} few {# členy} other {# členů}} a {calendars, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}} včetně všech směn. Tuto akci nelze vrátit zpět.",
+      "deleteUnderstood": "Beru na vědomí, že všechna data tohoto pracovního prostoru budou ztracena.",
+      "deleteConfirmation": "Pro potvrzení napište „{slug}“",
+      "deleteConfirmationHint": "Záleží na velikosti písmen.",
+      "deleteConfirm": "Trvale smazat",
+      "deleted": "Pracovní prostor smazán",
+      "errors": {
+        "forbidden": "K tomu nemáte oprávnění",
+        "default": "Výchozí pracovní prostor nelze smazat",
+        "not_found": "Pracovní prostor nenalezen",
+        "workspace_not_found": "Pracovní prostor nenalezen",
+        "user_not_found": "Žádný účet s touto e-mailovou adresou",
+        "already_member": "Již je členem",
+        "owner": "Vlastníka nelze odebrat",
+        "self": "Tato osoba už je vlastníkem",
+        "not_member": "Tato osoba není členem",
+        "invalid_name": "Neplatný název",
+        "invalid_email": "Neplatná e-mailová adresa",
+        "confirmation_mismatch": "Potvrzení neodpovídá slugu",
+        "busy": "Právě je obsazeno, zkuste to prosím za chvíli znovu"
+      }
     }
   },
   "appearance": {
@@ -1217,7 +1285,8 @@
     "workspaceRemoved": "Odebrán z workspace",
     "workspaceSlug": "Workspace (slug)",
     "workspaces": "Workspaces",
-    "workspacesEmpty": "Není v žádném workspace"
+    "workspacesEmpty": "Není v žádném workspace",
+    "workspacesColumn": "Pracovní prostory"
   },
   "adminCalendars": {
     "content": "Obsah",
@@ -1445,7 +1514,6 @@
     "allWorkspaces": "Všechny pracovní prostory",
     "current": "Aktuální",
     "membersTab": "Členové",
-    "linksTab": "Pozvánkové odkazy",
     "you": "Vy",
     "removeMember": "Odebrat",
     "removeMemberConfirmTitle": "Odebrat {name}?",
@@ -1454,9 +1522,8 @@
     "leave": "Opustit pracovní prostor",
     "leaveConfirmTitle": "Opustit {workspace}?",
     "leaveConfirmDescription": "Vaše sdílení a odběry zde budou smazány. Kalendáře, které vám zde patří, přejdou na vlastníka. Vrátit se můžete jen s novou pozvánkou.",
-    "ownerCannotLeave": "Jako vlastník nemůžete pracovní prostor opustit.",
+    "ownerCannotLeave": "Jako vlastník nemůžete pracovní prostor opustit. Předejte jej nebo jej smažte v nastavení.",
     "actionError": "Akce se nezdařila",
-    "linkCreate": "Vytvořit odkaz",
     "linkName": "Označení (volitelné)",
     "linkExpiry": "Platnost",
     "linkExpiryNever": "Bez omezení",
@@ -1474,6 +1541,67 @@
     "linkCopied": "Odkaz zkopírován",
     "linkRevoke": "Zrušit",
     "linksEmpty": "Zatím žádné pozvánkové odkazy.",
-    "linksHint": "Připojit se může kdokoli s odkazem, dokud je platný. Sdílejte ho jen s lidmi, které chcete pozvat."
+    "linksHint": "Připojit se může kdokoli s odkazem, dokud je platný. Sdílejte ho jen s lidmi, které chcete pozvat.",
+    "manageWorkspace": "Spravovat pracovní prostor",
+    "errors": {
+      "forbidden": "K tomu nemáte oprávnění",
+      "owner": "Vlastníka nelze změnit ani odebrat",
+      "not_member": "Tato osoba již není členem",
+      "limit": "Bylo dosaženo limitu pracovních prostorů",
+      "confirmation_mismatch": "Potvrzení neodpovídá adrese"
+    }
+  },
+  "adminWorkspace": {
+    "membersMenu": "Členové",
+    "title": "Přehled",
+    "overview": {
+      "members": "Členové",
+      "calendars": "Kalendáře",
+      "shifts": "Směny",
+      "activeLinks": "Aktivní pozvánkové odkazy"
+    },
+    "members": {
+      "role": {
+        "owner": "Vlastník",
+        "admin": "Správce",
+        "member": "Člen"
+      },
+      "changeRole": "Změnit roli",
+      "remove": "Odebrat"
+    },
+    "links": {
+      "title": "Pozvánkové odkazy",
+      "create": "Vytvořit odkaz",
+      "role": "Role při připojení",
+      "roleMember": "Člen",
+      "roleAdmin": "Správce"
+    },
+    "settings": {
+      "title": "Obecné",
+      "name": "Název",
+      "saved": "Uloženo",
+      "slugImmutable": "Adresu nelze po vytvoření změnit.",
+      "guestAccess": "Povolit přístup hostů",
+      "guestInherited": "Aktuálně platí nastavení instance. Po změně bude platit jen pro tento pracovní prostor."
+    },
+    "transfer": {
+      "title": "Předat vlastnictví",
+      "description": "Jiný člen se stane vlastníkem tohoto pracovního prostoru.",
+      "newOwner": "Nový vlastník",
+      "placeholder": "Vyberte člena",
+      "button": "Předat vlastnictví",
+      "confirmTitle": "Předat vlastnictví uživateli {name}?",
+      "confirm": "{name} se stane vlastníkem tohoto pracovního prostoru. Vy se stanete správcem a ztratíte přístup k nastavení.",
+      "success": "Vlastnictví předáno"
+    },
+    "deleteTitle": "Smazat pracovní prostor",
+    "deleteDescription": "Trvale smaže pracovní prostor se všemi kalendáři, směnami a nastavením.",
+    "deleteButton": "Smazat",
+    "deleteConfirmDescription": "Pracovní prostor {slug} bude trvale smazán.",
+    "deleteWarning": "Přijdete o {members, plural, one {# člena} few {# členy} other {# členů}} a {calendars, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}} včetně všech směn. Tuto akci nelze vrátit zpět.",
+    "deleteUnderstood": "Beru na vědomí, že všechna data tohoto pracovního prostoru budou ztracena.",
+    "deleteConfirmation": "Pro potvrzení napište „{slug}“",
+    "deleteConfirmationHint": "Záleží na velikosti písmen.",
+    "deleteConfirm": "Trvale smazat"
   }
 }

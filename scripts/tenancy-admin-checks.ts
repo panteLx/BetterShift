@@ -537,9 +537,8 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       const url = new URL(loc, "http://x");
       return url.pathname === pathname && (error === undefined || url.searchParams.get("error") === error);
     };
-    // The proxy's own 404 has an empty body; a Next.js 404 page (route not built yet) does not.
+    // The proxy's own 404 has an empty body; a Next.js 404 page does not.
     const hidden = (r: { status: number; text: string }) => r.status === 404 && r.text === "";
-    const served = (r: { status: number; text: string }) => r.status === 200 || (r.status === 404 && r.text !== "");
     const denied = async (userId: string) => {
       await new Promise((resolve) => setTimeout(resolve, 300));
       return db.select().from(schema.auditLogs)
@@ -550,17 +549,20 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       redirectsTo(await get(null, portal, "/admin"), "/login"));
     await tryCheck("portal /admin as a plain user redirects with admin_access_required", async () =>
       redirectsTo(await get(plain, portal, "/admin"), "/", "admin_access_required"));
-    await tryCheck("portal /admin, /admin/users, /admin/workspaces are served to an instance admin", async () =>
-      (await get(instAdmin, portal, "/admin")).status === 200 &&
-      (await get(instAdmin, portal, "/admin/users")).status === 200 &&
-      served(await get(instAdmin, portal, "/admin/workspaces")));
+    await tryCheck("portal /admin, /admin/users, /admin/workspaces, /admin/settings, /admin/telemetry are 200 for an instance admin", async () => {
+      for (const p of ["/admin", "/admin/users", "/admin/workspaces", "/admin/settings", "/admin/telemetry"]) {
+        if ((await get(instAdmin, portal, p)).status !== 200) return false;
+      }
+      return true;
+    });
     await tryCheck("portal /admin/members is 404 (workspace-only section)", async () =>
       hidden(await get(instAdmin, portal, "/admin/members")));
     await tryCheck("portal /api/admin/stats as instance admin is 200", async () =>
       (await get(instAdmin, portal, "/api/admin/stats")).status === 200);
 
-    await tryCheck("workspace host /admin: owner 200, workspace admin 200", async () =>
-      (await get(owner, wsHost, "/admin")).status === 200 && (await get(wsAdmin, wsHost, "/admin")).status === 200);
+    await tryCheck("workspace host /admin and /admin/members: owner 200, workspace admin 200", async () =>
+      (await get(owner, wsHost, "/admin")).status === 200 && (await get(wsAdmin, wsHost, "/admin")).status === 200 &&
+      (await get(owner, wsHost, "/admin/members")).status === 200 && (await get(wsAdmin, wsHost, "/admin/members")).status === 200);
     await tryCheck("workspace host /admin: plain member redirects with admin_access_required", async () =>
       redirectsTo(await get(member, wsHost, "/admin"), "/", "admin_access_required"));
     await tryCheck("workspace host /admin: instance admin who is not a member gets no bypass", async () =>
@@ -574,7 +576,18 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       return true;
     });
     await tryCheck("workspace host /admin/settings is 404 for a workspace admin, served for the owner", async () =>
-      hidden(await get(wsAdmin, wsHost, "/admin/settings")) && served(await get(owner, wsHost, "/admin/settings")));
+      hidden(await get(wsAdmin, wsHost, "/admin/settings")) && (await get(owner, wsHost, "/admin/settings")).status === 200);
+    await tryCheck("workspace host hides /admin/telemetry from the owner", async () =>
+      hidden(await get(owner, wsHost, "/admin/telemetry")));
+    await tryCheck("percent-encoded /%61dmin never reaches the admin shell for non-admins or across scopes", async () => {
+      const notServed = (r: { status: number; text: string }) => r.status !== 200;
+      return notServed(await get(member, wsHost, "/%61dmin")) &&
+        notServed(await get(plain, wsHost, "/%61dmin")) &&
+        notServed(await get(instAdmin, wsHost, "/%61dmin/users")) &&
+        notServed(await get(owner, wsHost, "/%61dmin/users")) &&
+        notServed(await get(plain, portal, "/%61dmin")) &&
+        notServed(await get(instAdmin, wsHost, "/%61pi/admin/stats"));
+    });
     await tryCheck("workspace host /api/admin/stats is 404 for owner and instance admin", async () =>
       hidden(await get(owner, wsHost, "/api/admin/stats")) && hidden(await get(instAdmin, wsHost, "/api/admin/stats")));
     await tryCheck("denied attempts write admin_access_denied audit rows with scope", async () => {

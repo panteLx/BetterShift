@@ -45,7 +45,7 @@ import { useViewSettings } from "@/hooks/useViewSettings";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useMyWorkspaces, useWorkspaceHref } from "@/hooks/useWorkspaces";
-import { isManagerRole } from "@/lib/workspace-access";
+import { isManagerRole } from "@/lib/auth/workspace-permissions";
 import { useSignOut } from "@/hooks/useSignOut";
 import { locales } from "@/lib/locales";
 import { CalendarWithCount } from "@/lib/types";

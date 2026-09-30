@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { MULTI_TENANT } from "@/lib/auth/env";
-import { type WorkspaceRole } from "@/lib/auth/workspace-permissions";
+import { isManagerRole, MANAGER_ROLES, type WorkspaceRole } from "@/lib/auth/workspace-permissions";
 import { getRequestWorkspace, getWorkspaceRole, type Workspace } from "@/lib/workspace";
 
+export { isManagerRole, MANAGER_ROLES };
 export type { WorkspaceRole };
-export const MANAGER_ROLES: readonly WorkspaceRole[] = ["owner", "admin"];
-
-export function isManagerRole(role: string | null | undefined): boolean {
-  return role === "owner" || role === "admin";
-}
 
 /** Guard for workspace-host membership APIs: 404 off multi-tenant or off a workspace host, 401, then 403. */
 export async function requireWorkspaceMember(

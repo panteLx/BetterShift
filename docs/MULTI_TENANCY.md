@@ -13,9 +13,11 @@ This guide explains BetterShift's optional multi-tenant mode: one running instan
 7. [Invite Links](#invite-links)
 8. [Members](#members)
 9. [Instance Admins](#instance-admins)
-10. [Disabled Organization Plugin Endpoints](#disabled-organization-plugin-endpoints)
-11. [Out of Scope in This Release](#out-of-scope-in-this-release)
-12. [Verifying Isolation](#verifying-isolation)
+10. [Admin Scopes and the Workspace Dashboard](#admin-scopes-and-the-workspace-dashboard)
+11. [Deleting a Workspace](#deleting-a-workspace)
+12. [Disabled Organization Plugin Endpoints](#disabled-organization-plugin-endpoints)
+13. [Out of Scope in This Release](#out-of-scope-in-this-release)
+14. [Verifying Isolation](#verifying-isolation)
 
 ---
 
@@ -36,6 +38,8 @@ If you're running BetterShift for yourself, your family, or a single team, you d
 | `MULTI_TENANT` | No (default `false`) | Turns on subdomain-per-workspace routing. |
 | `TENANT_BASE_DOMAIN` | Yes, when `MULTI_TENANT=true` | The domain workspaces live under, e.g. `bettershift.example`. A workspace with slug `acme` is served at `acme.bettershift.example`. |
 | `TENANT_MAX_WORKSPACES_PER_USER` | No (default `3`) | Workspaces a single user may own. Instance admins (`admin`/`superadmin`) are exempt. |
+| `RATE_LIMIT_WORKSPACE_MUTATION_REQUESTS` / `_WINDOW` | No (default `30` per `900` s) | Per-user limit on workspace mutations (role change, rename, transfer, member add/remove, settings). |
+| `RATE_LIMIT_WORKSPACE_DELETE_REQUESTS` / `_WINDOW` | No (default `5` per `3600` s) | Per-user limit on workspace deletion. |
 | `TENANT_RESERVED_SLUGS` | No | Comma-separated extra reserved subdomains, on top of the built-in list and the `bs-pr-*` PR-preview prefix — e.g. hosts you already use on the same DNS zone. |
 
 `TENANT_BASE_DOMAIN` must be a domain dedicated to BetterShift. The proxy trusts every host under it as a valid workspace host (and it feeds better-auth's trusted-origins wildcard), so anything else sharing that domain — another app, a wildcard DNS entry you didn't intend — would be treated as trusted too. It must also differ from `PREVIEW_DOMAIN` if you run PR previews against the same DNS zone; the two serve different purposes and mixing them would let a preview deployment collide with a real workspace slug.
@@ -96,11 +100,15 @@ An expired, exhausted, revoked or unknown token all produce the same "invalid li
 
 A workspace has three roles:
 
-- `owner` — exactly one, the creator, until ownership transfer ships in a later sub-project;
-- `admin` — manages invite links and removes members (including other admins, never the owner); only instance admins can grant it, from the admin panel;
-- `member` — everyone who joins via an invite link.
+| Role | Who | Can do |
+| --- | --- | --- |
+| `owner` | exactly one, the creator until ownership is transferred | everything below, plus change roles, rename, edit workspace settings, transfer ownership, delete the workspace, create/revoke `admin` invite links |
+| `admin` | granted by the owner (role change or an `admin` invite link) or by an instance admin | open the workspace dashboard, list members, remove `member`s, create/revoke `member` invite links |
+| `member` | everyone who joins via an invite link | use the workspace; no access to the dashboard |
 
-Members and invite links are managed from the workspace sheet in the user menu; a workspace switcher there lists every workspace the signed-in user belongs to plus an "All workspaces" entry.
+The rules live in `lib/auth/workspace-permissions.ts` (`canRemoveMember`, `canChangeRole`, `canCreateJoinLink`, `canTransferOwnership`, …). Nobody can remove the owner or grant `owner` by a role change; ownership only moves through the transfer, after which the previous owner becomes `admin`. Workspace roles and calendar permission bundles are independent layers (see `docs/PERMISSIONS.md`).
+
+Members and invite links are managed from the workspace dashboard (`/admin` on the workspace host); the user-menu workspace sheet is a slim switcher with a "Manage workspace" entry for owners and admins.
 
 **Leaving or being removed** (self-leave, owner/admin removing another member, or an instance admin removing someone) all go through the same `endMembership()` in `lib/workspace-membership-end.ts`:
 
@@ -108,11 +116,31 @@ Members and invite links are managed from the workspace sheet in the user menu; 
 - any calendars they owned are transferred to the workspace owner, and the new owner's now-redundant share/subscription rows on those calendars are dropped so they don't see their own calendar as "dismissed";
 - the membership row itself is removed.
 
-The **owner cannot leave and cannot be removed** by anyone, including instance admins, until ownership transfer exists. `resolveCalendarAccess()` and `getUserAccessibleCalendars()` ignore calendar ownership and shares of users who are not (or no longer) members of the workspace — ending a membership is what actually revokes access, not just the UI hiding it. For the same reason a signed-in non-member cannot create a calendar in a workspace (`POST /api/calendars` answers 403, and the "create calendar" action is hidden).
+The **owner cannot leave and cannot be removed** by anyone, including instance admins; transfer or delete the workspace first. `resolveCalendarAccess()` and `getUserAccessibleCalendars()` ignore calendar ownership and shares of users who are not (or no longer) members of the workspace — ending a membership is what actually revokes access, not just the UI hiding it. For the same reason a signed-in non-member cannot create a calendar in a workspace (`POST /api/calendars` answers 403, and the "create calendar" action is hidden).
 
 ## Instance Admins
 
 From a user's details in the admin panel, an instance admin can add that user to a workspace by slug (as `member` or `admin`) or remove them from any workspace they don't own. This is the same `endMembership()` path as a self-service leave/remove. The API is `GET`/`POST`/`DELETE /api/admin/users/[id]/workspaces`, gated on `canManageWorkspaceMemberships` (`lib/auth/admin.ts`); adding and removing additionally require `canEditUser`, so an `admin` cannot change the memberships of another admin or a superadmin.
+
+## Admin Scopes and the Workspace Dashboard
+
+The admin panel's scope is derived from the request host, never from a client value (`adminScopeFor()` in `lib/admin-sections.ts`):
+
+| Host | Scope | Who may enter | Sections |
+| --- | --- | --- | --- |
+| single-tenant instance | `instance` | instance admins | Overview, Users, Calendars, Announcements, Audit Logs, Settings, Telemetry |
+| portal (`BETTER_AUTH_URL` host) | `global` | instance admins | the same, plus Workspaces |
+| workspace host | `workspace` | workspace owner and admins; instance admins get no bypass unless they are members | Overview, Members, Settings (owner only) |
+
+`proxy.ts` enforces the scope on `/admin/**`: a section outside the scope answers 404, a signed-in user without access is redirected with `admin_access_required` (and an `admin_access_denied` audit row is written). `/api/admin/**` answers 404 on workspace hosts; workspace routes are host-resolved under `/api/workspace/**`.
+
+The workspace dashboard shows counts (members, calendars, shifts, active invite links) and provides member management, invite links with a join role, settings (name, guest access override; the slug is immutable) and ownership transfer. Instance admins manage all workspaces from the portal's **Workspaces** section (rename, add/remove members, make owner, delete); deleting is superadmin-only, and the `default` workspace cannot be deleted.
+
+## Deleting a Workspace
+
+The owner (or a superadmin on the portal) deletes a workspace by typing its slug to confirm. Deletion removes the organization row and cascades to members, calendars (with shifts, notes, shares, tokens, syncs), invite links and settings; it cannot be undone. An instance-level audit row (`workspace.delete`, no workspace id) records the slug and who did it.
+
+Known limitation: migration 0033 added `audit_logs.workspace_id` and `announcements.workspace_id` as plain `NO ACTION` foreign keys, so the database does not cascade to them. `deleteWorkspace()` removes those rows explicitly in the same transaction.
 
 ## Disabled Organization Plugin Endpoints
 
@@ -124,8 +152,7 @@ Every better-auth `/organization/*` HTTP path (`accept-invitation`, `create`, `i
 
 The following are explicitly **out of scope** and planned for later sub-projects:
 
-- Workspace ownership transfer (so an owner can eventually leave)
-- A per-workspace admin panel or per-workspace settings UI
+- A per-workspace audit log and recent-activity feed (sub-project 4b)
 - Workspace branding, limits, or slug rename/redirect
 
 ## Verifying Isolation
