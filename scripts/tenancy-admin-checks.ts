@@ -12,7 +12,7 @@ type Api = (as: SeedUser | null, host: string, method: string, path: string, bod
 export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
   const { db } = await import("../lib/db");
   const schema = await import("../lib/db/schema");
-  const { eq, and, count } = await import("drizzle-orm");
+  const { eq, and, count, sql } = await import("drizzle-orm");
 
   const api: Api = async (as, host, method, path, body) => {
     const headers: Record<string, string> = { host, origin: `http://${host}` };
@@ -191,6 +191,15 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       adminLink = link ?? null;
       return r.status === 201 && link?.role === "admin";
     });
+    await tryCheck("admin GET join links hides admin-role links (id and token), owner GET lists them", async () => {
+      if (!adminLink) return false;
+      const a = await api(admin, host, "GET", "/api/workspace/join-links");
+      const o = await api(owner, host, "GET", "/api/workspace/join-links");
+      const raw = JSON.stringify(a.json);
+      const ownerLinks = (o.json?.links ?? []) as { id: string; token: string }[];
+      return a.status === 200 && !raw.includes(adminLink.id) && !raw.includes(adminLink.token) &&
+        o.status === 200 && ownerLinks.some((l) => l.id === adminLink!.id && l.token === adminLink!.token);
+    });
     await tryCheck("redeeming the admin link makes the joiner an admin", async () => {
       if (!adminLink) return false;
       const r = await api(joiner, h.portalHost, "POST", `/api/join/${adminLink.token}`);
@@ -336,6 +345,11 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
     await api(owner, host, "POST", "/api/workspace/join-links", { expiresInDays: null, maxUses: null });
     await api(owner, host, "PATCH", "/api/workspace/settings", { allowGuestAccess: true });
     await db.insert(schema.announcements).values({ title: "ws", workspaceId: ws.id });
+    // Bundle FKs are ON DELETE restrict; the cascade from the workspace has to get past them.
+    const [bundle] = await db.insert(schema.calendarPermissionBundles)
+      .values({ calendarId: cal.id, name: "Del bundle", capabilities: ["viewShifts"] }).returning();
+    await db.insert(schema.calendarShares).values({ calendarId: cal.id, userId: admin.id, bundleId: bundle.id, sharedBy: owner.id });
+    await db.insert(schema.calendarAccessTokens).values({ calendarId: cal.id, token: "adm-delete-token", bundleId: bundle.id, createdBy: owner.id });
     await new Promise((resolve) => setTimeout(resolve, 300));
     const keepBefore = JSON.stringify([
       await db.select().from(schema.calendars).where(eq(schema.calendars.workspaceId, keep.id)),
@@ -367,6 +381,10 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
         (await gone(db.select().from(schema.member).where(eq(schema.member.organizationId, ws.id)))) &&
         (await gone(db.select().from(schema.workspaceJoinLinks).where(eq(schema.workspaceJoinLinks.workspaceId, ws.id)))) &&
         (await gone(db.select().from(schema.workspaceSettings).where(eq(schema.workspaceSettings.workspaceId, ws.id)))) &&
+        (await gone(db.select().from(schema.calendarShares).where(eq(schema.calendarShares.calendarId, cal.id)))) &&
+        (await gone(db.select().from(schema.calendarAccessTokens).where(eq(schema.calendarAccessTokens.calendarId, cal.id)))) &&
+        (await gone(db.select().from(schema.calendarPermissionBundles).where(eq(schema.calendarPermissionBundles.calendarId, cal.id)))) &&
+        db.all(sql`PRAGMA foreign_key_check`).length === 0 &&
         shiftsLeft === 0 && users.length === 1;
     });
     await tryCheck("the next request to the host is 404 (slug cache invalidated)", async () =>
@@ -474,11 +492,21 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       return r.status === 200 && items.length === 2 && items.every((c) => c.workspaceId === ws.id && c.workspaceSlug === "adm-inst");
     });
 
-    await tryCheck("admin transfer to a non-member is 404, unknown workspace without owner 409", async () => {
+    await tryCheck("admin transfer to a non-member is 404, unknown workspace id 404, ownerless workspace 409", async () => {
       const r = await api(admin2, portal, "POST", `${listPath}/${ws.id}/transfer`, { userId: stranger.id });
+      const ghost = await api(admin2, portal, "POST", `${listPath}/${crypto.randomUUID()}/transfer`, { userId: stranger.id });
       const bare = await newWorkspace("adm-inst-bare");
       const n = await api(admin2, portal, "POST", `${listPath}/${bare.id}/transfer`, { userId: stranger.id });
-      return r.status === 404 && n.status === 409 && n.json?.code === "no_owner";
+      return r.status === 404 && ghost.status === 404 && ghost.json?.code === "workspace_not_found" && n.status === 409 && n.json?.code === "no_owner";
+    });
+    await tryCheck("plain admin cannot transfer away a superadmin owner (403), superadmin can", async () => {
+      const sw = await newWorkspace("adm-inst-superowned");
+      await addMember(sw.id, superA, "owner");
+      await addMember(sw.id, iaMember, "member");
+      const denied = await api(admin2, portal, "POST", `${listPath}/${sw.id}/transfer`, { userId: iaMember.id });
+      const stillOwner = (await roleOf(sw.id, superA.id)) === "owner";
+      const ok = await api(superA, portal, "POST", `${listPath}/${sw.id}/transfer`, { userId: iaMember.id });
+      return denied.status === 403 && stillOwner && ok.status === 200 && (await roleOf(sw.id, iaMember.id)) === "owner";
     });
     await tryCheck("admin transfer to a member at the owner limit is 200 (exempt), old owner becomes admin", async () => {
       for (const slug of ["adm-icap-1", "adm-icap-2", "adm-icap-3"]) {

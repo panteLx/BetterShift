@@ -24,6 +24,7 @@ export function useWorkspace(enabled = true) {
     queryFn: fetchWorkspace,
     staleTime: 60_000,
     enabled,
-    retry: false,
+    // 404 is an answer (portal host), anything else is worth a second look.
+    retry: (failureCount, error) => !(error instanceof ApiError && error.status === 404) && failureCount < 2,
   });
 }

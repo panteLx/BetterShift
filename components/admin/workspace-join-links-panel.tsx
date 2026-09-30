@@ -254,7 +254,7 @@ function JoinLinkRow({
           )}
         </div>
       </div>
-      {active && (
+      {active && canRevoke && (
         <div className="flex shrink-0 items-center gap-0.5">
           <RowIconButton icon={Copy} label={t("workspaces.linkCopy")} onClick={onCopy} />
           {canRevoke && (

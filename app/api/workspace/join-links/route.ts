@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const ctx = await requireWorkspaceMember(request, MANAGER_ROLES);
   if (ctx instanceof NextResponse) return ctx;
   const links = await listJoinLinks(ctx.workspace.id);
-  return NextResponse.json({ links: links.map(toJoinLinkDto) });
+  // Admin-role tokens would let a workspace admin appoint admins, so only the owner sees those links.
+  const visible = ctx.role === "owner" ? links : links.filter((link) => link.role !== "admin");
+  return NextResponse.json({ links: visible.map(toJoinLinkDto) });
 }
 
 export async function POST(request: NextRequest) {

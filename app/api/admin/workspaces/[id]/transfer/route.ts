@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { member } from "@/lib/db/schema";
+import { member, organization, user } from "@/lib/db/schema";
 import { MULTI_TENANT } from "@/lib/auth/env";
-import { canManageWorkspaces } from "@/lib/auth/admin";
+import { canEditUser, canManageWorkspaces } from "@/lib/auth/admin";
 import { getValidatedAdminUser, isErrorResponse } from "@/lib/auth/admin-helpers";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logAdminAction, type WorkspaceOwnerTransferredMetadata } from "@/lib/audit-log";
@@ -27,11 +27,18 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (typeof body?.userId !== "string" || !body.userId) {
     return NextResponse.json({ error: "Invalid user", code: "invalid" }, { status: 400 });
   }
+  const workspace = await db.query.organization.findFirst({ where: eq(organization.id, id), columns: { id: true } });
+  if (!workspace) return NextResponse.json({ error: "Workspace not found", code: "workspace_not_found" }, { status: 404 });
   const owner = await db.query.member.findFirst({
     where: and(eq(member.organizationId, id), eq(member.role, "owner")),
     columns: { userId: true },
   });
   if (!owner) return NextResponse.json({ error: "Workspace has no owner", code: "no_owner" }, { status: 409 });
+  // Demoting the owner is an edit of that user, so a plain admin cannot touch a superadmin owner.
+  const ownerUser = await db.query.user.findFirst({ where: eq(user.id, owner.userId) });
+  if (!canEditUser(admin, ownerUser)) {
+    return NextResponse.json({ error: "Insufficient permissions for this user", code: "forbidden" }, { status: 403 });
+  }
 
   let result;
   try {

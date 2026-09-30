@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { getRequestWorkspace, getWorkspaceRole } from "@/lib/workspace";
 import { MULTI_TENANT } from "@/lib/auth/env";
-import { requireWorkspaceMember } from "@/lib/workspace-access";
+import { busyResponse, requireWorkspaceMember } from "@/lib/workspace-access";
 import { deleteWorkspace } from "@/lib/workspace-admin";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type WorkspaceDeletedMetadata } from "@/lib/audit-log";
@@ -39,7 +39,12 @@ export async function DELETE(request: NextRequest) {
   if (body?.confirmSlug !== ctx.workspace.slug) {
     return NextResponse.json({ error: "Confirmation does not match", code: "confirmation_mismatch" }, { status: 400 });
   }
-  const result = await deleteWorkspace(ctx.workspace.id);
+  let result;
+  try {
+    result = await deleteWorkspace(ctx.workspace.id);
+  } catch (error) {
+    return busyResponse(error);
+  }
   if (!result.ok) {
     return NextResponse.json(
       { error: result.reason, code: result.reason },
