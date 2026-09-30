@@ -574,7 +574,14 @@
       "title": "Gastzugang",
       "description": "Steuert, ob Kalender ohne Anmeldung angesehen werden können.",
       "toggleLabel": "Gastzugang erlauben",
-      "toggleHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt."
+      "toggleHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt.",
+      "perWorkspaceHint": "Der Gast-Zugriff wird pro Workspace eingestellt (Workspace-Dashboard → Einstellungen)."
+    },
+    "settingsPage": {
+      "title": "Einstellungen"
+    },
+    "telemetryPage": {
+      "title": "Telemetrie"
     },
     "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weise diese(n) Benutzern zu.",
