@@ -167,7 +167,7 @@ async function loadDbBackedModules(): Promise<void> {
 // =====================================================
 // Stage 1: pure checks, no server, no seeded DB content
 // =====================================================
-function runPureChecks(): void {
+async function runPureChecks(): Promise<void> {
   console.log("Stage 1: pure host/slug checks (no server)");
   check("base domain is the portal by default", parseWorkspaceHost(BASE_DOMAIN, BASE_DOMAIN).kind === "portal");
   check(
@@ -230,6 +230,26 @@ function runPureChecks(): void {
     workspaceOrigin("alpha", "http://app.tenancy.test:3107", "tenancy.test") === "http://alpha.tenancy.test:3107");
   check("workspaceOrigin without port",
     workspaceOrigin("alpha", "https://app.ssx.si", "ssx.si") === "https://alpha.ssx.si");
+
+  const perms = await import("../lib/auth/workspace-permissions");
+  const sections = await import("../lib/admin-sections");
+  check("admin cannot remove admin", !perms.canRemoveMember("admin", "admin"));
+  check("admin can remove member", perms.canRemoveMember("admin", "member"));
+  check("nobody removes the owner", !perms.canRemoveMember("owner", "owner") && !perms.canRemoveMember("admin", "owner"));
+  check("only owner changes roles", perms.canChangeRole("owner", "member", "admin") && !perms.canChangeRole("admin", "member", "admin"));
+  check("owner role cannot be changed", !perms.canChangeRole("owner", "owner", "member"));
+  check("role change cannot grant owner", !perms.canChangeRole("owner", "member", "owner" as never));
+  check("admin creates member links only", perms.canCreateJoinLink("admin", "member") && !perms.canCreateJoinLink("admin", "admin") && perms.canCreateJoinLink("owner", "admin"));
+  check("member manages nothing", !perms.canManageMembers("member") && !perms.canCreateJoinLink("member", "member"));
+  check("scope: single tenant is instance", sections.adminScopeFor(false, "unknown") === "instance");
+  check("scope: portal is global, workspace host is workspace", sections.adminScopeFor(true, "portal") === "global" && sections.adminScopeFor(true, "workspace") === "workspace");
+  check("scope: unknown host has no scope", sections.adminScopeFor(true, "unknown") === null);
+  check("workspace scope hides users", !sections.isAdminPathAllowed("workspace", "/admin/users", "owner"));
+  check("workspace scope allows members", sections.isAdminPathAllowed("workspace", "/admin/members", "admin"));
+  check("workspace settings are owner-only", sections.isAdminPathAllowed("workspace", "/admin/settings", "owner") && !sections.isAdminPathAllowed("workspace", "/admin/settings", "admin"));
+  check("instance scope has no workspaces section", !sections.isAdminPathAllowed("instance", "/admin/workspaces", null));
+  check("global scope has workspaces, not members", sections.isAdminPathAllowed("global", "/admin/workspaces", null) && !sections.isAdminPathAllowed("global", "/admin/members", null));
+  check("instance scope has settings and telemetry", sections.isAdminPathAllowed("instance", "/admin/settings", null) && sections.isAdminPathAllowed("instance", "/admin/telemetry", null));
 }
 
 // =====================================================
@@ -1586,7 +1606,7 @@ async function checkAccountDeletion(seeded: SeedData): Promise<void> {
 async function main(): Promise<void> {
   await loadDbBackedModules();
 
-  runPureChecks();
+  await runPureChecks();
 
   console.log("\nSeeding two workspaces via Drizzle...");
   const seeded = await seed();
