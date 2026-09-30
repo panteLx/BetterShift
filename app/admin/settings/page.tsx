@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ChoiceChips, Field, InfoNote, ToggleRow } from "@/components/form-kit";
@@ -18,10 +20,17 @@ const SECTION_BODY =
   "flex flex-col gap-4 rounded-[11px] border border-line bg-surface-card p-3 lg:rounded-none lg:border-0 lg:p-4";
 
 export default function AdminSettingsPage() {
-  const { scope } = useAdminScope();
-  if (scope === null) return null;
+  const { scope, workspaceRole, isLoading } = useAdminScope();
+  const router = useRouter();
+  const ownerOnlyBlocked = scope === "workspace" && !isLoading && workspaceRole !== "owner";
+
+  useEffect(() => {
+    if (ownerOnlyBlocked) router.replace("/admin");
+  }, [ownerOnlyBlocked, router]);
+
+  if (scope === null || isLoading) return null;
   // The instance settings hooks would 404 on workspace hosts.
-  if (scope === "workspace") return <WorkspaceSettingsPanel />;
+  if (scope === "workspace") return workspaceRole === "owner" ? <WorkspaceSettingsPanel /> : null;
   return <InstanceSettings global={scope === "global"} />;
 }
 

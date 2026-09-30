@@ -19,6 +19,7 @@ import { AdminPageHeader } from "@/components/admin/admin-kit";
 import { LoadErrorBanner } from "@/components/admin/load-error-banner";
 import { WorkspaceDangerZone } from "@/components/admin/workspace-danger-zone";
 import { useActionErrorHandler } from "@/components/admin/workspace-action-errors";
+import { useAdminScope } from "@/hooks/useAdminScope";
 import {
   useTransferOwnership,
   useUpdateWorkspaceSettings,
@@ -47,6 +48,7 @@ function SectionHead({ title, description }: { title: string; description?: stri
 export function WorkspaceSettingsPanel() {
   const t = useTranslations();
   const { data, isError, refetch } = useWorkspaceSettings(true);
+  const { workspace } = useAdminScope();
 
   return (
     <div className="flex flex-col gap-[14px] lg:gap-[18px]">
@@ -61,7 +63,8 @@ export function WorkspaceSettingsPanel() {
         <>
           <GeneralSection settings={data} />
           <TransferSection />
-          <WorkspaceDangerZone slug={data.slug} />
+          {/* lib/workspace.ts is server-only; the default workspace's id is "default" and it cannot be deleted. */}
+          {workspace?.id !== "default" && <WorkspaceDangerZone slug={data.slug} />}
         </>
       )}
     </div>
