@@ -109,6 +109,8 @@ function isPortalOnlyPath(pathname: string): boolean {
     pathname === "/api/workspaces" ||
     pathname.startsWith("/api/workspaces/") ||
     pathname.startsWith("/api/join/") ||
+    pathname === "/api/admin/workspaces" ||
+    pathname.startsWith("/api/admin/workspaces/") ||
     pathname === "/portal" ||
     pathname.startsWith("/portal/")
   );
@@ -309,7 +311,8 @@ export async function proxy(request: NextRequest) {
         pathname === "/register" ||
         pathname === "/api/workspaces" ||
         pathname.startsWith("/api/workspaces/") ||
-        pathname.startsWith("/api/join/")
+        pathname.startsWith("/api/join/") ||
+        pathname.startsWith("/api/admin/")
       ) {
         return nextWithNonce(request);
       }

@@ -53,6 +53,7 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
   await checkTransfer();
   await checkGuards();
   await checkDelete();
+  await checkInstanceApi();
 
   async function checkRolesAndMembers() {
     console.log("\nStage 5a: role changes and member removal");
@@ -382,5 +383,129 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
         await db.select().from(schema.calendars).where(eq(schema.calendars.workspaceId, keep.id)),
         await db.select().from(schema.member).where(eq(schema.member.organizationId, keep.id)),
       ]) === keepBefore);
+  }
+
+  async function checkInstanceApi() {
+    console.log("\nStage 5g: instance-scope workspace APIs");
+    const portal = h.portalHost;
+    const iaOwner = await h.seedUser("adm-i-owner@tenancy.test");
+    const iaMember = await h.seedUser("adm-i-member@tenancy.test");
+    const iaPlain = await h.seedUser("adm-i-plain@tenancy.test");
+    const cappedOwner = await h.seedUser("adm-i-capped@tenancy.test");
+    const stranger = await h.seedUser("adm-i-stranger@tenancy.test");
+    const admin = await h.seedUser("adm-i-admin@tenancy.test", "admin");
+    const admin2 = await h.seedUser("adm-i-admin2@tenancy.test", "admin");
+    const admin3 = await h.seedUser("adm-i-admin3@tenancy.test", "admin");
+    const superA = await h.seedUser("adm-i-super@tenancy.test", "superadmin");
+    const ws = await newWorkspace("adm-inst");
+    const wsHost = `adm-inst.${h.baseDomain}`;
+    await addMember(ws.id, iaOwner, "owner");
+    await addMember(ws.id, iaMember, "member");
+    await h.seedCalendar(ws.id, iaOwner.id, "Inst Cal", iaMember.id);
+    const listPath = "/api/admin/workspaces";
+    const audit = async (action: string) => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, action));
+    };
+
+    await tryCheck("portal GET workspaces as instance admin lists every workspace with owner and counts", async () => {
+      const r = await api(admin, portal, "GET", listPath);
+      const list = (r.json?.workspaces ?? []) as { id: string; slug: string; owner: { id: string } | null; memberCount: number; calendarCount: number }[];
+      const orgs = await db.select().from(schema.organization);
+      if (r.status !== 200 || list.length !== orgs.length) return false;
+      for (const o of orgs) {
+        const row = list.find((w) => w.id === o.id);
+        const ownerRow = (await owners(o.id))[0];
+        const cals = (await db.select({ n: count() }).from(schema.calendars).where(eq(schema.calendars.workspaceId, o.id)))[0].n;
+        if (!row || (row.owner?.id ?? null) !== (ownerRow?.userId ?? null) || row.memberCount !== (await memberCount(o.id)) || row.calendarCount !== cals) return false;
+      }
+      return list.find((w) => w.id === ws.id)?.calendarCount === 1;
+    });
+    await tryCheck("GET workspaces: non-admin 403, anonymous 401", async () =>
+      (await api(iaPlain, portal, "GET", listPath)).status === 403 && (await api(null, portal, "GET", listPath)).status === 401);
+    await tryCheck("a workspace host has no instance workspace routes (404), even for the instance admin", async () =>
+      (await api(admin, wsHost, "GET", listPath)).status === 404 &&
+      (await api(superA, wsHost, "DELETE", `${listPath}/${ws.id}`, { confirmSlug: "adm-inst" })).status === 404);
+
+    await tryCheck("admin PATCH name is 200 with an audit row for that workspace", async () => {
+      const r = await api(admin, portal, "PATCH", `${listPath}/${ws.id}`, { name: " Inst Renamed " });
+      const rows = await audit("workspace.rename");
+      return r.status === 200 && rows.some((l) => l.workspaceId === ws.id && JSON.parse(l.metadata ?? "{}").to === "Inst Renamed") &&
+        (await db.select().from(schema.organization).where(eq(schema.organization.id, ws.id)))[0].name === "Inst Renamed";
+    });
+    await tryCheck("admin PATCH empty or oversized name is 400, unknown workspace 404", async () =>
+      (await api(admin, portal, "PATCH", `${listPath}/${ws.id}`, { name: "  " })).status === 400 &&
+      (await api(admin, portal, "PATCH", `${listPath}/${ws.id}`, { name: "x".repeat(500) })).status === 400 &&
+      (await api(admin, portal, "PATCH", `${listPath}/${crypto.randomUUID()}`, { name: "Ghost" })).status === 404);
+
+    await tryCheck("members: GET lists, POST by email is 201 with the given role", async () => {
+      const g = await api(admin, portal, "GET", `${listPath}/${ws.id}/members`);
+      const a = await api(admin, portal, "POST", `${listPath}/${ws.id}/members`, { email: iaPlain.email, role: "admin" });
+      return g.status === 200 && (g.json?.members as unknown[]).length === 2 && a.status === 201 && (await roleOf(ws.id, iaPlain.id)) === "admin";
+    });
+    await tryCheck("members: duplicate 409, unknown email 404, bad role 400", async () =>
+      (await api(admin, portal, "POST", `${listPath}/${ws.id}/members`, { email: iaPlain.email, role: "member" })).status === 409 &&
+      (await api(admin, portal, "POST", `${listPath}/${ws.id}/members`, { email: "nobody-here@tenancy.test", role: "member" })).status === 404 &&
+      (await api(admin, portal, "POST", `${listPath}/${ws.id}/members`, { email: stranger.email, role: "owner" })).status === 400);
+    await tryCheck("members: DELETE removes the member and hands their calendars to the owner", async () => {
+      await h.seedCalendar(ws.id, iaPlain.id, "Plain Cal", iaPlain.id);
+      const r = await api(admin, portal, "DELETE", `${listPath}/${ws.id}/members?userId=${iaPlain.id}`);
+      const cals = await db.select().from(schema.calendars).where(and(eq(schema.calendars.workspaceId, ws.id), eq(schema.calendars.name, "Plain Cal")));
+      return r.status === 200 && r.json?.calendarsTransferred === 1 && (await roleOf(ws.id, iaPlain.id)) === null && cals[0]?.ownerId === iaOwner.id;
+    });
+    await tryCheck("members: DELETE of the owner is 409, of a non-member 404", async () =>
+      (await api(admin3, portal, "DELETE", `${listPath}/${ws.id}/members?userId=${iaOwner.id}`)).status === 409 &&
+      (await api(admin3, portal, "DELETE", `${listPath}/${ws.id}/members?userId=${stranger.id}`)).status === 404 &&
+      (await roleOf(ws.id, iaOwner.id)) === "owner");
+    await tryCheck("members: non-admin is 403", async () =>
+      (await api(iaMember, portal, "GET", `${listPath}/${ws.id}/members`)).status === 403);
+
+    await tryCheck("users?workspaceId returns only that workspace's members, each row with workspaces[]", async () => {
+      const r = await api(admin, portal, "GET", `/api/admin/users?workspaceId=${ws.id}&limit=100`);
+      const items = (r.json?.items ?? []) as { id: string; workspaces: { id: string; slug: string }[] }[];
+      const ids = items.map((u) => u.id).sort();
+      return r.status === 200 && r.json?.total === 2 && JSON.stringify(ids) === JSON.stringify([iaOwner.id, iaMember.id].sort()) &&
+        items.every((u) => Array.isArray(u.workspaces) && u.workspaces.some((w) => w.id === ws.id && w.slug === "adm-inst"));
+    });
+    await tryCheck("calendars?workspaceId returns only that workspace's calendars", async () => {
+      const r = await api(admin, portal, "GET", `/api/admin/calendars?workspaceId=${ws.id}&limit=100`);
+      const items = (r.json?.items ?? []) as { workspaceId: string; workspaceSlug: string }[];
+      return r.status === 200 && items.length === 2 && items.every((c) => c.workspaceId === ws.id && c.workspaceSlug === "adm-inst");
+    });
+
+    await tryCheck("admin transfer to a non-member is 404, unknown workspace without owner 409", async () => {
+      const r = await api(admin2, portal, "POST", `${listPath}/${ws.id}/transfer`, { userId: stranger.id });
+      const bare = await newWorkspace("adm-inst-bare");
+      const n = await api(admin2, portal, "POST", `${listPath}/${bare.id}/transfer`, { userId: stranger.id });
+      return r.status === 404 && n.status === 409 && n.json?.code === "no_owner";
+    });
+    await tryCheck("admin transfer to a member at the owner limit is 200 (exempt), old owner becomes admin", async () => {
+      for (const slug of ["adm-icap-1", "adm-icap-2", "adm-icap-3"]) {
+        const cw = await newWorkspace(slug);
+        await addMember(cw.id, cappedOwner, "owner");
+      }
+      await addMember(ws.id, cappedOwner, "member");
+      const r = await api(admin2, portal, "POST", `${listPath}/${ws.id}/transfer`, { userId: cappedOwner.id });
+      const o = await owners(ws.id);
+      const rows = await audit("workspace.owner_transfer");
+      return r.status === 200 && o.length === 1 && o[0].userId === cappedOwner.id && (await roleOf(ws.id, iaOwner.id)) === "admin" &&
+        rows.some((l) => l.workspaceId === null && JSON.parse(l.metadata ?? "{}").byInstanceAdmin === true);
+    });
+
+    await tryCheck("admin (not superadmin) DELETE is 403 and the workspace stays", async () =>
+      (await api(admin, portal, "DELETE", `${listPath}/${ws.id}`, { confirmSlug: "adm-inst" })).status === 403 &&
+      (await db.select().from(schema.organization).where(eq(schema.organization.id, ws.id))).length === 1);
+    await tryCheck("superadmin DELETE with a wrong slug is 400, on the default workspace 409", async () =>
+      (await api(superA, portal, "DELETE", `${listPath}/${ws.id}`, { confirmSlug: "nope" })).status === 400 &&
+      (await api(superA, portal, "DELETE", `${listPath}/default`, { confirmSlug: "default" })).status === 409);
+    await tryCheck("superadmin DELETE with the right slug is 200, cascade done, instance-level audit row kept", async () => {
+      const r = await api(superA, portal, "DELETE", `${listPath}/${ws.id}`, { confirmSlug: "adm-inst" });
+      const rows = await audit("workspace.delete");
+      return r.status === 200 &&
+        (await db.select().from(schema.organization).where(eq(schema.organization.id, ws.id))).length === 0 &&
+        (await db.select().from(schema.calendars).where(eq(schema.calendars.workspaceId, ws.id))).length === 0 &&
+        (await db.select().from(schema.member).where(eq(schema.member.organizationId, ws.id))).length === 0 &&
+        rows.some((l) => l.workspaceId === null && JSON.parse(l.metadata ?? "{}").slug === "adm-inst" && JSON.parse(l.metadata ?? "{}").byInstanceAdmin === true);
+    });
   }
 }
