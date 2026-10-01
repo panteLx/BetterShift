@@ -1581,7 +1581,7 @@
       "saved": "Uloženo",
       "slugImmutable": "Adresu nelze po vytvoření změnit.",
       "guestAccess": "Povolit přístup hostů",
-      "guestInherited": "Aktuálně platí nastavení instance. Po změně bude platit jen pro tento pracovní prostor."
+      "guestInherited": "Aktuálně platí výchozí nastavení této instance, které určuje provozovatel. Po změně bude platit jen pro tento pracovní prostor."
     },
     "transfer": {
       "title": "Předat vlastnictví",

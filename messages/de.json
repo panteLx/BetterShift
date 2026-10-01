@@ -1195,7 +1195,7 @@
       "saved": "Gespeichert",
       "slugImmutable": "Die Adresse kann nach dem Erstellen nicht geändert werden.",
       "guestAccess": "Gastzugriff erlauben",
-      "guestInherited": "Aktuell wird die Einstellung der Instanz übernommen. Beim Ändern gilt sie nur für diesen Workspace."
+      "guestInherited": "Aktuell gilt der Standard dieser Instanz, den der Betreiber festlegt. Beim Ändern gilt deine Einstellung nur für diesen Workspace."
     },
     "transfer": {
       "title": "Besitz übertragen",

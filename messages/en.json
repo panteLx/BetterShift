@@ -1581,7 +1581,7 @@
       "saved": "Saved",
       "slugImmutable": "The address cannot be changed after creation.",
       "guestAccess": "Allow guest access",
-      "guestInherited": "The instance setting currently applies. Changing it only affects this workspace."
+      "guestInherited": "The default of this instance, set by its operator, currently applies. Changing it only affects this workspace."
     },
     "transfer": {
       "title": "Transfer ownership",
