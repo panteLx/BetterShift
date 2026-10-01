@@ -1509,7 +1509,6 @@
     "roleOwner": "Proprietario",
     "roleAdmin": "Admin",
     "roleMember": "Membro",
-    "menuEntry": "Workspace",
     "switchTo": "Cambia workspace",
     "allWorkspaces": "Tutti i workspace",
     "current": "Attuale",

@@ -37,6 +37,7 @@ import {
 import { InfoDialog } from "@/components/info-dialog";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
 import { WorkspaceSheet } from "@/components/workspace-sheet";
+import { WorkspaceLeaveDialog } from "@/components/workspace-leave-dialog";
 import { setLocaleCookie } from "@/components/app-preferences-menu-items";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
@@ -241,6 +242,7 @@ function PhoneMenuSheet({
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   // Every open starts at the list, however the sheet was closed last time
   const [wasOpen, setWasOpen] = useState(open);
@@ -410,6 +412,15 @@ function PhoneMenuSheet({
                     title={t("workspaces.allWorkspaces")}
                     onClick={() => navigateAway(config.auth.url)}
                   />
+                  {workspace.role && (
+                    <MenuRow icon={Users} title={t("workspaces.membersTab")} onClick={() => setWorkspaceOpen(true)} />
+                  )}
+                  {isManagerRole(workspace.role) && (
+                    <MenuRow icon={Settings2} title={t("workspaces.manageWorkspace")} onClick={() => navigate("/admin")} />
+                  )}
+                  {workspace.role && workspace.role !== "owner" && (
+                    <MenuRow icon={LogOut} title={t("workspaces.leave")} danger onClick={() => setLeaveOpen(true)} />
+                  )}
                 </MenuGroup>
               )}
               {signedIn ? (
@@ -435,17 +446,6 @@ function PhoneMenuSheet({
                     title={t("calendar.browseCalendars")}
                     onClick={() => setDiscoveryOpen(true)}
                   />
-                  {multiTenant && workspace.role && (
-                    <MenuRow
-                      icon={Users}
-                      title={t("workspaces.menuEntry")}
-                      meta={workspace.name}
-                      onClick={() => setWorkspaceOpen(true)}
-                    />
-                  )}
-                  {multiTenant && isManagerRole(workspace.role) && (
-                    <MenuRow icon={Settings2} title={t("workspaces.manageWorkspace")} onClick={() => navigate("/admin")} />
-                  )}
                   {isAdmin && (
                     <MenuRow
                       icon={Shield}
@@ -472,7 +472,12 @@ function PhoneMenuSheet({
       </PanelDialog>
       <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
       {signedIn && <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />}
-      {signedIn && multiTenant && <WorkspaceSheet open={workspaceOpen} onOpenChange={setWorkspaceOpen} />}
+      {signedIn && multiTenant && (
+        <>
+          <WorkspaceSheet open={workspaceOpen} onOpenChange={setWorkspaceOpen} />
+          <WorkspaceLeaveDialog open={leaveOpen} onOpenChange={setLeaveOpen} />
+        </>
+      )}
       <ConfirmationDialog {...confirmProps} />
     </>
   );

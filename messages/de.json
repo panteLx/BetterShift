@@ -1562,7 +1562,6 @@
     "roleOwner": "Owner",
     "roleAdmin": "Admin",
     "roleMember": "Mitglied",
-    "menuEntry": "Workspace",
     "switchTo": "Workspace wechseln",
     "allWorkspaces": "Alle Workspaces",
     "current": "Aktuell",
