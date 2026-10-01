@@ -7,10 +7,11 @@ import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminScope } from "@/hooks/useAdminScope";
 import { ScopeBadge } from "@/components/admin/scope-badge";
+import { TelemetryConsentGate } from "@/components/telemetry-consent-gate";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: authLoading } = useAuth();
-  const { isLoading: scopeLoading } = useAdminScope();
+  const { isLoading: scopeLoading, scope } = useAdminScope();
   const isLoading = authLoading || scopeLoading;
   useRequireAdminScope("/");
 
@@ -32,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
       <AdminMobileNav />
+      {scope === "global" && <TelemetryConsentGate />}
     </div>
   );
 }

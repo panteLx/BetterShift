@@ -8,6 +8,7 @@ import { ArrowRight, Building2, Loader2, Plus, Shield } from "lucide-react";
 import { AuthDivider, AuthShell, authInputClass } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TelemetryConsentGate } from "@/components/telemetry-consent-gate";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useMyWorkspaces, useWorkspaceHref, type MyWorkspace } from "@/hooks/useWorkspaces";
@@ -130,6 +131,7 @@ export function PortalOverview() {
         )}
         <SignOutButton label={t("auth.logout")} />
       </div>
+      <TelemetryConsentGate />
     </AuthShell>
   );
 }
