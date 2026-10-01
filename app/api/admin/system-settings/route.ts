@@ -1,3 +1,4 @@
+import { MULTI_TENANT } from "@/lib/auth/env";
 import { NextRequest, NextResponse } from "next/server";
 import { getValidatedAdminUser, isErrorResponse } from "@/lib/auth/admin-helpers";
 import { canManageSystemSettings } from "@/lib/auth/admin";
@@ -144,8 +145,9 @@ export async function PATCH(request: NextRequest) {
 
     const { before, after } = await updateSystemSettings(patch);
 
-    // allowGuestAccess() reads workspace settings; mirror this toggle into the default workspace.
-    if (patch.allowGuestAccess !== undefined) {
+    // Single-tenant has one workspace and no per-workspace UI, so the toggle is mirrored into it;
+    // with MULTI_TENANT it is the default that workspaces without their own value follow.
+    if (patch.allowGuestAccess !== undefined && !MULTI_TENANT) {
       await updateWorkspaceSettings(DEFAULT_WORKSPACE_ID, {
         allowGuestAccess: patch.allowGuestAccess,
       });

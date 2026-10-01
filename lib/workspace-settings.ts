@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaceSettings, type WorkspaceSettings } from "@/lib/db/schema";
-import { ALLOW_GUEST_ACCESS } from "@/lib/auth/env";
+import { getSystemSettings } from "@/lib/system-settings";
 
 export type { WorkspaceSettings };
 
@@ -50,7 +50,7 @@ export async function updateWorkspaceSettings(
   return { before, after };
 }
 
-/** A workspace without its own value inherits the ALLOW_GUEST_ACCESS env seed. */
-export function effectiveAllowGuestAccess(settings: WorkspaceSettings): boolean {
-  return settings.allowGuestAccess ?? ALLOW_GUEST_ACCESS;
+/** A workspace without its own value follows the instance default from the system settings. */
+export async function effectiveAllowGuestAccess(settings: WorkspaceSettings): Promise<boolean> {
+  return settings.allowGuestAccess ?? (await getSystemSettings()).allowGuestAccess;
 }

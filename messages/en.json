@@ -563,7 +563,7 @@
       "description": "Controls whether calendars can be viewed without logging in.",
       "toggleLabel": "Allow guest access",
       "toggleHint": "Allows viewing calendars without logging in, where the calendar permits it.",
-      "perWorkspaceHint": "Guest access is set per workspace (workspace dashboard → Settings)."
+      "workspaceDefaultDescription": "Default for all workspaces without their own setting. Owners and admins can override it per workspace."
     },
     "orphanedCalendarsWarning": "Orphaned Calendars Detected",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {There is 1 calendar without an owner} other {There are # calendars without an owner}}. Please assign them to users.",
@@ -1581,7 +1581,9 @@
       "saved": "Saved",
       "slugImmutable": "The address cannot be changed after creation.",
       "guestAccess": "Allow guest access",
-      "guestInherited": "The instance setting currently applies. Changing it only affects this workspace."
+      "guestInherited": "The instance setting currently applies. Changing it only affects this workspace.",
+      "guestOverridden": "This workspace has its own setting.",
+      "guestReset": "Reset to instance default"
     },
     "transfer": {
       "title": "Transfer ownership",

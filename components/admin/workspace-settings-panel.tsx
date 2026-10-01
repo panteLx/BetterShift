@@ -119,11 +119,26 @@ function GeneralSection({ settings }: { settings: WorkspaceSettingsDto }) {
         <ToggleRow
           id="workspace-guest-access"
           title={t("adminWorkspace.settings.guestAccess")}
-          description={settings.inheritedGuestAccess ? t("adminWorkspace.settings.guestInherited") : undefined}
+          description={
+            settings.inheritedGuestAccess
+              ? t("adminWorkspace.settings.guestInherited")
+              : t("adminWorkspace.settings.guestOverridden")
+          }
           checked={settings.allowGuestAccess}
           onCheckedChange={(checked) => update.mutate({ allowGuestAccess: checked }, { onError: handleError })}
           disabled={update.isPending}
         />
+        {!settings.inheritedGuestAccess && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={update.isPending}
+            onClick={() => update.mutate({ allowGuestAccess: null }, { onError: handleError })}
+            className="h-9 self-start font-semibold"
+          >
+            {t("adminWorkspace.settings.guestReset")}
+          </Button>
+        )}
       </div>
     </section>
   );

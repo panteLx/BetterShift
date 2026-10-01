@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     name: ctx.workspace.name,
     slug: ctx.workspace.slug,
-    allowGuestAccess: effectiveAllowGuestAccess(settings),
+    allowGuestAccess: await effectiveAllowGuestAccess(settings),
     inheritedGuestAccess: settings.allowGuestAccess === null,
   });
 }
@@ -29,7 +29,8 @@ export async function PATCH(request: NextRequest) {
   if (body.name !== undefined && typeof body.name !== "string") {
     return NextResponse.json({ error: "Invalid name", code: "invalid_name" }, { status: 400 });
   }
-  if (body.allowGuestAccess !== undefined && typeof body.allowGuestAccess !== "boolean") {
+  // null clears the workspace's own value so it follows the instance default again
+  if (body.allowGuestAccess !== undefined && body.allowGuestAccess !== null && typeof body.allowGuestAccess !== "boolean") {
     return NextResponse.json({ error: "Invalid value", code: "invalid" }, { status: 400 });
   }
   if (typeof body.name === "string") {
@@ -47,7 +48,7 @@ export async function PATCH(request: NextRequest) {
       });
     }
   }
-  if (typeof body.allowGuestAccess === "boolean") {
+  if (body.allowGuestAccess !== undefined) {
     await updateWorkspaceSettings(ctx.workspace.id, { allowGuestAccess: body.allowGuestAccess });
     void logUserAction<WorkspaceSettingsMetadata>({
       action: "workspace.settings_update",

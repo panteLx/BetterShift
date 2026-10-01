@@ -563,7 +563,7 @@
       "description": "Určuje, zda lze kalendáře zobrazit bez přihlášení.",
       "toggleLabel": "Povolit přístup pro hosty",
       "toggleHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje.",
-      "perWorkspaceHint": "Přístup hostů se nastavuje pro každý pracovní prostor zvlášť (přehled pracovního prostoru → Nastavení)."
+      "workspaceDefaultDescription": "Výchozí hodnota pro všechny pracovní prostory bez vlastního nastavení. Vlastníci a správci ji mohou pro svůj prostor změnit."
     },
     "orphanedCalendarsWarning": "Zjištěny osiřelé kalendáře",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Existuje 1 kalendář bez vlastníka} few {Existují # kalendáře bez vlastníka} other {Existuje # kalendářů bez vlastníka}}. Přiřaďte je prosím uživatelům.",
@@ -1581,7 +1581,9 @@
       "saved": "Uloženo",
       "slugImmutable": "Adresu nelze po vytvoření změnit.",
       "guestAccess": "Povolit přístup hostů",
-      "guestInherited": "Aktuálně platí nastavení instance. Po změně bude platit jen pro tento pracovní prostor."
+      "guestInherited": "Aktuálně platí nastavení instance. Po změně bude platit jen pro tento pracovní prostor.",
+      "guestOverridden": "Tento pracovní prostor má vlastní nastavení.",
+      "guestReset": "Obnovit výchozí hodnotu instance"
     },
     "transfer": {
       "title": "Předat vlastnictví",

@@ -563,7 +563,7 @@
       "description": "Détermine si les calendriers peuvent être consultés sans connexion.",
       "toggleLabel": "Autoriser l'accès invité",
       "toggleHint": "Permet de consulter les calendriers sans connexion, si le calendrier l'autorise.",
-      "perWorkspaceHint": "L'accès invité se règle par espace de travail (tableau de bord de l'espace de travail → Paramètres)."
+      "workspaceDefaultDescription": "Valeur par défaut de tous les espaces de travail sans réglage propre. Les propriétaires et administrateurs peuvent la modifier pour chaque espace."
     },
     "orphanedCalendarsWarning": "Calendriers orphelins détectés",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {1 calendrier n'a pas de propriétaire} other {# calendriers n'ont pas de propriétaire}}. Veuillez les attribuer à des utilisateurs.",
@@ -1581,7 +1581,9 @@
       "saved": "Enregistré",
       "slugImmutable": "L'adresse ne peut plus être modifiée après la création.",
       "guestAccess": "Autoriser l'accès invité",
-      "guestInherited": "Le paramètre de l'instance s'applique actuellement. Le modifier ne concerne que cet espace de travail."
+      "guestInherited": "Le paramètre de l'instance s'applique actuellement. Le modifier ne concerne que cet espace de travail.",
+      "guestOverridden": "Cet espace de travail a son propre réglage.",
+      "guestReset": "Rétablir la valeur de l'instance"
     },
     "transfer": {
       "title": "Transférer la propriété",

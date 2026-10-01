@@ -575,7 +575,7 @@
       "description": "Steuert, ob Kalender ohne Anmeldung angesehen werden können.",
       "toggleLabel": "Gastzugang erlauben",
       "toggleHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt.",
-      "perWorkspaceHint": "Der Gast-Zugriff wird pro Workspace eingestellt (Workspace-Dashboard → Einstellungen)."
+      "workspaceDefaultDescription": "Standard für alle Workspaces ohne eigene Einstellung. Owner und Admins können pro Workspace davon abweichen."
     },
     "settingsPage": {
       "title": "Einstellungen"
@@ -1195,7 +1195,9 @@
       "saved": "Gespeichert",
       "slugImmutable": "Die Adresse kann nach dem Erstellen nicht geändert werden.",
       "guestAccess": "Gastzugriff erlauben",
-      "guestInherited": "Aktuell wird die Einstellung der Instanz übernommen. Beim Ändern gilt sie nur für diesen Workspace."
+      "guestInherited": "Aktuell wird die Einstellung der Instanz übernommen. Beim Ändern gilt sie nur für diesen Workspace.",
+      "guestOverridden": "Dieser Workspace hat eine eigene Einstellung.",
+      "guestReset": "Auf Instanz-Standard zurücksetzen"
     },
     "transfer": {
       "title": "Besitz übertragen",

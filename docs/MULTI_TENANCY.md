@@ -135,7 +135,7 @@ The admin panel's scope is derived from the request host, never from a client va
 
 `proxy.ts` enforces the scope on `/admin/**`: a section outside the scope answers 404, a signed-in user without access is redirected with `admin_access_required` (and an `admin_access_denied` audit row is written). `/api/admin/**` answers 404 on workspace hosts; workspace routes are host-resolved under `/api/workspace/**`.
 
-The workspace dashboard shows counts (members, calendars, shifts, active invite links) and provides member management, invite links with a join role, settings (name, guest access override; the slug is immutable) and ownership transfer. Instance admins manage all workspaces from the portal's **Workspaces** section (rename, add/remove members, make owner, delete); deleting is superadmin-only, and the `default` workspace cannot be deleted.
+The workspace dashboard shows counts (members, calendars, shifts, active invite links) and provides member management, invite links with a join role, settings (name, guest access override with a reset to the instance default; the slug is immutable) and ownership transfer. Instance admins manage all workspaces from the portal's **Workspaces** section (rename, add/remove members, make owner, delete); deleting is superadmin-only, and the `default` workspace cannot be deleted.
 
 ## Deleting a Workspace
 

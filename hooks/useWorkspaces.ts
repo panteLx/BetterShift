@@ -318,12 +318,20 @@ export function useWorkspaceSettings(enabled: boolean) {
 export function useUpdateWorkspaceSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: { name?: string; allowGuestAccess?: boolean }) =>
+    mutationFn: (patch: { name?: string; allowGuestAccess?: boolean | null }) =>
       workspaceFetch<{ ok: true }>("/api/workspace/settings", { method: "PATCH", body: JSON.stringify(patch) }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.workspaces.settings });
       const snapshot = queryClient.getQueryData<WorkspaceSettingsDto>(queryKeys.workspaces.settings);
-      if (snapshot) queryClient.setQueryData(queryKeys.workspaces.settings, { ...snapshot, ...patch });
+      if (snapshot) {
+        const { allowGuestAccess, ...rest } = patch;
+        queryClient.setQueryData(queryKeys.workspaces.settings, {
+          ...snapshot,
+          ...rest,
+          // null (reset) keeps the shown value until the refetch brings the inherited one
+          ...(allowGuestAccess === undefined ? {} : allowGuestAccess === null ? { inheritedGuestAccess: true } : { allowGuestAccess, inheritedGuestAccess: false }),
+        });
+      }
       return { snapshot };
     },
     onError: (_e, _v, context) => {

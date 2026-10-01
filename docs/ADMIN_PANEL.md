@@ -47,7 +47,7 @@ The sections are defined once in `lib/admin-sections.ts` and filtered by scope, 
 
 ### Settings and Telemetry
 
-`/admin/settings` holds the system settings and `/admin/telemetry` the telemetry controls; both were split off the dashboard into their own pages. In the global scope the guest-access toggle is hidden, because guest access is set per workspace.
+`/admin/settings` holds the system settings and `/admin/telemetry` the telemetry controls; both were split off the dashboard into their own pages. The guest-access toggle is the instance default in the global scope (workspaces without their own value follow it); a workspace owner can override it for their workspace in the workspace settings and reset it to the default again.
 
 ### Workspaces (global scope)
 

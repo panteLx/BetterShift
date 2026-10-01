@@ -50,7 +50,7 @@ export const allowGuestAccess = async (workspaceId?: string): Promise<boolean> =
   // Fail closed: an unresolvable workspace grants nothing
   if (!resolvedId) return false;
 
-  return effectiveAllowGuestAccess(await getWorkspaceSettings(resolvedId));
+  return await effectiveAllowGuestAccess(await getWorkspaceSettings(resolvedId));
 };
 
 /**

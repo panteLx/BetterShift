@@ -149,6 +149,33 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
         g.json?.allowGuestAccess === true && g.json?.inheritedGuestAccess === false &&
         JSON.stringify(await settingsRows("default")) === defaultBefore;
     });
+    await tryCheck("owner PATCH allowGuestAccess null clears the override and reports inherited", async () => {
+      const r = await api(owner, host, "PATCH", "/api/workspace/settings", { allowGuestAccess: null });
+      const own = await settingsRows(ws.id);
+      const g = await api(owner, host, "GET", "/api/workspace/settings");
+      return r.status === 200 && own[0]?.allowGuestAccess === null && g.json?.inheritedGuestAccess === true;
+    });
+    const instanceAdmin = await h.seedUser("adm-s-super@tenancy.test", "superadmin");
+    const setInstanceDefault = (value: boolean) =>
+      api(instanceAdmin, h.portalHost, "PATCH", "/api/admin/system-settings", { allowGuestAccess: value });
+    await tryCheck("instance default reaches a workspace without its own value and is not mirrored into default", async () => {
+      const defaultRows = JSON.stringify(await settingsRows("default"));
+      const on = await setInstanceDefault(true);
+      const gOn = await api(owner, host, "GET", "/api/workspace/settings");
+      const off = await setInstanceDefault(false);
+      const gOff = await api(owner, host, "GET", "/api/workspace/settings");
+      return on.status === 200 && off.status === 200 &&
+        gOn.json?.allowGuestAccess === true && gOn.json?.inheritedGuestAccess === true &&
+        gOff.json?.allowGuestAccess === false && gOff.json?.inheritedGuestAccess === true &&
+        JSON.stringify(await settingsRows("default")) === defaultRows;
+    });
+    await tryCheck("a workspace's own value wins over the instance default and only applies to that workspace", async () => {
+      await api(owner, host, "PATCH", "/api/workspace/settings", { allowGuestAccess: true });
+      await setInstanceDefault(false);
+      const own = await api(owner, host, "GET", "/api/workspace/settings");
+      await api(owner, host, "PATCH", "/api/workspace/settings", { allowGuestAccess: null });
+      return own.json?.allowGuestAccess === true && own.json?.inheritedGuestAccess === false;
+    });
     await tryCheck("PATCH with a non-boolean value or empty body is 400", async () => {
       const a = await api(owner, host, "PATCH", "/api/workspace/settings", { allowGuestAccess: "yes" });
       const b = await api(owner, host, "PATCH", "/api/workspace/settings", {});

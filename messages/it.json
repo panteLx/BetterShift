@@ -563,7 +563,7 @@
       "description": "Controlla se i calendari possono essere visualizzati senza accedere.",
       "toggleLabel": "Consenti accesso ospite",
       "toggleHint": "Consente di visualizzare i calendari senza accedere, se il calendario lo consente.",
-      "perWorkspaceHint": "L'accesso ospite si imposta per workspace (dashboard del workspace → Impostazioni)."
+      "workspaceDefaultDescription": "Valore predefinito per tutti i workspace senza impostazione propria. Owner e admin possono modificarlo per ogni workspace."
     },
     "orphanedCalendarsWarning": "Calendari Orfani Rilevati",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {C'è 1 calendario senza proprietario} other {Ci sono # calendari senza proprietario}}. Si prega di assegnarli agli utenti.",
@@ -1581,7 +1581,9 @@
       "saved": "Salvato",
       "slugImmutable": "L'indirizzo non può essere modificato dopo la creazione.",
       "guestAccess": "Consenti accesso ospite",
-      "guestInherited": "Al momento vale l'impostazione dell'istanza. Se la modifichi, vale solo per questo workspace."
+      "guestInherited": "Al momento vale l'impostazione dell'istanza. Se la modifichi, vale solo per questo workspace.",
+      "guestOverridden": "Questo workspace ha una propria impostazione.",
+      "guestReset": "Ripristina il valore dell'istanza"
     },
     "transfer": {
       "title": "Trasferisci la proprietà",

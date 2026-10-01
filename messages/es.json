@@ -563,7 +563,7 @@
       "description": "Controla si los calendarios se pueden ver sin iniciar sesión.",
       "toggleLabel": "Permitir acceso de invitado",
       "toggleHint": "Permite ver calendarios sin iniciar sesión, si el calendario lo permite.",
-      "perWorkspaceHint": "El acceso de invitados se configura por espacio de trabajo (panel del espacio de trabajo → Ajustes)."
+      "workspaceDefaultDescription": "Valor predeterminado para todos los espacios de trabajo sin ajuste propio. Los propietarios y administradores pueden cambiarlo en cada uno."
     },
     "orphanedCalendarsWarning": "Se han detectado calendarios huérfanos",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Hay 1 calendario sin propietario} other {Hay # calendarios sin propietario}}. Por favor, asígnalos a usuarios.",
@@ -1581,7 +1581,9 @@
       "saved": "Guardado",
       "slugImmutable": "La dirección no se puede cambiar después de crearla.",
       "guestAccess": "Permitir acceso de invitados",
-      "guestInherited": "Actualmente se aplica el ajuste de la instancia. Al cambiarlo, solo afecta a este espacio de trabajo."
+      "guestInherited": "Actualmente se aplica el ajuste de la instancia. Al cambiarlo, solo afecta a este espacio de trabajo.",
+      "guestOverridden": "Este espacio de trabajo tiene un ajuste propio.",
+      "guestReset": "Restablecer al valor de la instancia"
     },
     "transfer": {
       "title": "Transferir la propiedad",
