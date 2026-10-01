@@ -1581,7 +1581,7 @@
       "saved": "Enregistré",
       "slugImmutable": "L'adresse ne peut plus être modifiée après la création.",
       "guestAccess": "Autoriser l'accès invité",
-      "guestInherited": "La valeur par défaut de cette instance, définie par son exploitant, s'applique actuellement. La modifier ne concerne que cet espace de travail."
+      "guestInherited": "Le paramètre de l'instance s'applique actuellement. Le modifier ne concerne que cet espace de travail."
     },
     "transfer": {
       "title": "Transférer la propriété",

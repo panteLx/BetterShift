@@ -1581,7 +1581,7 @@
       "saved": "Guardado",
       "slugImmutable": "La dirección no se puede cambiar después de crearla.",
       "guestAccess": "Permitir acceso de invitados",
-      "guestInherited": "Actualmente se aplica el valor predeterminado de esta instancia, definido por su operador. Al cambiarlo, solo afecta a este espacio de trabajo."
+      "guestInherited": "Actualmente se aplica el ajuste de la instancia. Al cambiarlo, solo afecta a este espacio de trabajo."
     },
     "transfer": {
       "title": "Transferir la propiedad",
