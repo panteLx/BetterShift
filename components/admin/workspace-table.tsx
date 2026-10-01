@@ -27,7 +27,7 @@ interface WorkspaceTableProps {
   emptyMessage: string;
 }
 
-const TEMPLATE = "minmax(0,1.6fr) minmax(0,1.6fr) 100px 100px 48px";
+const TEMPLATE = "minmax(0,1.6fr) minmax(0,1.6fr) 100px 100px 102px";
 
 /** lib/workspace.ts is server-only; the default workspace's id is "default" and it cannot be deleted. */
 export const isDefaultWorkspace = (workspace: Pick<AdminWorkspaceRow, "id">) => workspace.id === "default";
