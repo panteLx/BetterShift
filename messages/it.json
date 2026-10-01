@@ -520,6 +520,7 @@
   "admin": {
     "title": "Pannello Admin",
     "adminPanel": "Pannello Admin",
+    "instanceAdminPanel": "Amministrazione istanza",
     "dashboard": "Dashboard",
     "usersMenu": "Utenti",
     "calendarsMenu": "Calendari",

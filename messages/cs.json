@@ -520,6 +520,7 @@
   "admin": {
     "title": "Panel správce",
     "adminPanel": "Panel správce",
+    "instanceAdminPanel": "Správa instance",
     "dashboard": "Přehled",
     "usersMenu": "Uživatelé",
     "calendarsMenu": "Kalendáře",

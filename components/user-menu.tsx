@@ -138,7 +138,7 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
           {isAdmin && (
             <DropdownMenuItem onClick={openInstanceAdmin}>
               <Shield className="mr-2 h-4 w-4" />
-              {t("admin.adminPanel")}
+              {workspace?.multiTenant ? t("admin.instanceAdminPanel") : t("admin.adminPanel")}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />

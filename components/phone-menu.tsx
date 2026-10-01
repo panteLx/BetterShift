@@ -449,7 +449,7 @@ function PhoneMenuSheet({
                   {isAdmin && (
                     <MenuRow
                       icon={Shield}
-                      title={t("admin.adminPanel")}
+                      title={multiTenant ? t("admin.instanceAdminPanel") : t("admin.adminPanel")}
                       onClick={() =>
                         multiTenant ? navigateAway(`${config.auth.url}/admin`) : navigate("/admin")
                       }
