@@ -36,6 +36,16 @@ export function WorkspaceSwitcherItems({ onOpenMembers, onLeave }: WorkspaceSwit
     <>
       <DropdownMenuLabel className="text-xs font-normal text-fg-tertiary">{t("workspaces.switchTo")}</DropdownMenuLabel>
       {data?.workspaces.map((ws) => {
+        if (ws.id === current.id && current.role === "owner") {
+          // Owners cannot leave, so the only action is the member list: no submenu
+          return (
+            <DropdownMenuItem key={ws.id} onClick={onOpenMembers}>
+              <Check className="mr-2 h-4 w-4" />
+              <span className="truncate">{ws.name}</span>
+              <Users className="ml-auto h-4 w-4 text-fg-tertiary" aria-label={t("workspaces.membersTab")} />
+            </DropdownMenuItem>
+          );
+        }
         if (ws.id === current.id && isMember) {
           return (
             <DropdownMenuSub key={ws.id}>
@@ -48,12 +58,10 @@ export function WorkspaceSwitcherItems({ onOpenMembers, onLeave }: WorkspaceSwit
                   <Users className="mr-2 h-4 w-4" />
                   {t("workspaces.membersTab")}
                 </DropdownMenuItem>
-                {current.role !== "owner" && (
-                  <DropdownMenuItem onClick={onLeave} className="text-danger focus:text-danger">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {t("workspaces.leave")}
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={onLeave} className="text-danger focus:text-danger">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {t("workspaces.leave")}
+                </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           );

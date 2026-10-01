@@ -84,7 +84,7 @@ export function AdminSidebar() {
   const adminLevel = useAdminLevel();
   const sections = useAdminSections();
   const [collapsed, setCollapsed] = useState(false);
-  const { scope } = useAdminScope();
+  const { scope, workspaceRole } = useAdminScope();
   const { stats } = useAdminStats(scope !== null && scope !== "workspace");
   const counts: Record<string, number | undefined> = {
     "/admin/users": stats?.users.total,
@@ -109,7 +109,11 @@ export function AdminSidebar() {
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-semibold text-fg-strong">{user?.name}</div>
-            {adminLevel === "superadmin" ? (
+            {scope === "workspace" && workspaceRole ? (
+              <Pill tone="violet" className="mt-[3px] px-[7px] text-[10.5px]">
+                {t(workspaceRole === "owner" ? "workspaces.roleOwner" : "workspaces.roleAdmin")}
+              </Pill>
+            ) : adminLevel === "superadmin" ? (
               <Pill tone="warning" className="mt-[3px] px-[7px] text-[10.5px]">
                 <Crown className="size-[11px]" />
                 {t("admin.superadminBadge")}
