@@ -72,7 +72,7 @@ type RowHandlers = Pick<
 >;
 
 const TEMPLATE = "minmax(0,2.4fr) 120px 110px 130px 150px 90px 102px";
-const TEMPLATE_WORKSPACES = "minmax(0,2.4fr) 120px 110px 130px 150px 90px 100px 102px";
+const TEMPLATE_WORKSPACES = "minmax(0,2.4fr) 96px 84px 104px 128px 72px 88px 100px";
 
 function useDateFormatters() {
   const t = useTranslations();
