@@ -49,7 +49,7 @@ function AdminDashboardPage() {
 
   const orphaned = stats?.calendars.orphaned ?? 0;
   const hasUpdate = !!versionInfo?.hasUpdate && !versionInfo.isDev;
-  const attentionCount = (orphaned > 0 ? 1 : 0) + (hasUpdate ? 1 : 0);
+  const attentionCount = (orphaned > 0 ? 1 : 0) + (hasUpdate ? 1 : 0) + (defaultNeedsOwner ? 1 : 0);
 
   const scaleRows = [
     {

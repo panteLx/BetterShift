@@ -273,7 +273,9 @@ function AddressSection({ workspace }: { workspace: AdminWorkspaceRow }) {
           </div>
         </Field>
         {hint && <p className={hint.ok ? "text-[12.5px] text-success" : "text-[12.5px] text-danger"}>{hint.text}</p>}
-        <p className="text-[12.5px] text-fg-tertiary">{t("admin.workspaces.addressWarning", { slug: slug || "…", domain: tenantBaseDomain ?? "" })}</p>
+        {slug !== workspace.slug && (
+          <p className="text-[12.5px] text-fg-tertiary">{t("admin.workspaces.addressWarning", { slug: slug || "…", domain: tenantBaseDomain ?? "" })}</p>
+        )}
         <Button type="submit" disabled={!canSave} className="h-10 self-start font-semibold">
           {changeSlug.isPending ? <Loader2 className="size-4 animate-spin" /> : t("common.save")}
         </Button>
