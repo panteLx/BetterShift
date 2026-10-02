@@ -10,6 +10,7 @@ import {
   calendarAccessTokens,
   calendarPermissionBundles,
   externalSyncs,
+  organization,
 } from "@/lib/db/schema";
 import { and, asc, count, desc, eq, or, sql, type SQL } from "drizzle-orm";
 import {
@@ -18,6 +19,7 @@ import {
   type SQLiteTable,
 } from "drizzle-orm/sqlite-core";
 import { isAdmin } from "@/lib/auth/admin";
+import { MULTI_TENANT } from "@/lib/auth/env";
 import {
   getValidatedAdminUser,
   isErrorResponse,
@@ -78,6 +80,7 @@ function countFor(table: SQLiteTable, column: SQLiteColumn) {
  * - order: asc | desc (default: desc)
  * - page: 1-based page, clamped to the last page (default: 1)
  * - limit: Page size (default: 25, max: 100)
+ * - workspaceId: Only calendars of this workspace (multi-tenant only)
  *
  * Response: { items, total, counts, page, limit } — see lib/admin-list.ts
  *
@@ -102,8 +105,11 @@ export async function GET(request: NextRequest) {
     const sort = pickParam(searchParams.get("sort"), CALENDAR_SORT_FIELDS, "createdAt");
     const order = pickParam(searchParams.get("order"), SORT_ORDERS, "desc");
     const paging = parsePaging(searchParams);
+    const workspaceId = MULTI_TENANT ? (searchParams.get("workspaceId") ?? "").trim() : "";
 
     const conditions: SQL[] = [];
+
+    if (workspaceId) conditions.push(eq(calendars.workspaceId, workspaceId));
 
     if (owner === "orphaned") conditions.push(orphaned);
     if (owner === "with-owner") conditions.push(sql`not ${orphaned}`);
@@ -158,6 +164,9 @@ export async function GET(request: NextRequest) {
       .select({
         id: calendars.id,
         name: calendars.name,
+        workspaceId: calendars.workspaceId,
+        workspaceName: organization.name,
+        workspaceSlug: organization.slug,
         color: calendars.color,
         ownerId: calendars.ownerId,
         guestBundleRowId: guestBundleTable.id,
@@ -180,6 +189,7 @@ export async function GET(request: NextRequest) {
       .from(calendars)
       .leftJoin(user, eq(calendars.ownerId, user.id))
       .leftJoin(guestBundleTable, eq(calendars.guestBundleId, guestBundleTable.id))
+      .leftJoin(organization, eq(calendars.workspaceId, organization.id))
       .where(where)
       .orderBy(
         asc(sql`case when ${orphaned} then 0 else 1 end`),
@@ -192,6 +202,9 @@ export async function GET(request: NextRequest) {
     const items = rows.map((row) => ({
       id: row.id,
       name: row.name,
+      workspaceId: row.workspaceId,
+      workspaceName: row.workspaceName ?? "—",
+      workspaceSlug: row.workspaceSlug,
       color: row.color,
       ownerId: row.ownerId,
       owner: row.ownerUserId

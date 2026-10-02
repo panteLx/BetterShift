@@ -14,6 +14,7 @@ import {
   canViewCalendar,
   canDeleteCalendar,
   getCalendarAccess,
+  findCalendarInWorkspace,
 } from "@/lib/auth/permissions";
 import {
   assertBundleWithinCallerCapabilities,
@@ -40,10 +41,7 @@ export async function GET(
     const { id } = await params;
     const user = await getSessionUser(request.headers);
 
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, id));
+    const calendar = await findCalendarInWorkspace(id);
 
     if (!calendar) {
       return NextResponse.json(
@@ -100,10 +98,7 @@ export async function PATCH(
     }
 
     // Fetch current calendar
-    const [existingCalendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, id));
+    const existingCalendar = await findCalendarInWorkspace(id);
 
     if (!existingCalendar) {
       return NextResponse.json(
@@ -297,10 +292,7 @@ export async function DELETE(
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, id));
+    const calendar = await findCalendarInWorkspace(id);
 
     if (!calendar) {
       return NextResponse.json(

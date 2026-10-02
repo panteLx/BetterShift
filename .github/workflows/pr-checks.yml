@@ -59,3 +59,100 @@ jobs:
           npm run db:migrate
           npm run db:generate
           git diff --exit-code drizzle/
+
+  # Separate job (not extra steps in `test`) so it runs in parallel rather than
+  # adding standalone-server boot + HTTP checks to `test`'s own 15-minute budget,
+  # and so a tenancy regression is attributed to its own job in the checks list.
+  # The trade-off is a second `npm ci` + `npm run build`, which costs runner
+  # minutes but not wall-clock time since both jobs run concurrently.
+  tenancy:
+    name: Multi-Tenant Isolation Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Assemble the standalone server
+        run: |
+          # `next start` does not work with output: "standalone" (see
+          # scripts/tenant-isolation-check.ts) -- run server.js directly, with
+          # the static assets and public dir copied next to it as the Dockerfile does.
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+
+      - name: Migrate the tenancy-check database
+        run: |
+          DATABASE_URL="file:$(pwd)/data/tenancy-ci.sqlite.db" node scripts/migrate.mjs
+
+      - name: Start the server and wait for it to become healthy
+        run: |
+          PORT=3107 HOSTNAME=0.0.0.0 MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test \
+            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 TENANT_RESERVED_SLUGS=reserved-by-env \
+            DATABASE_URL="file:$(pwd)/data/tenancy-ci.sqlite.db" \
+            BETTER_AUTH_URL=http://tenancy.test \
+            BETTER_AUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") \
+            node .next/standalone/server.js > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3107/api/health > /dev/null; then
+              echo "Server is healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Server did not become healthy within 60s"
+          exit 1
+
+      - name: Run the isolation check
+        run: |
+          DATABASE_URL="file:$(pwd)/data/tenancy-ci.sqlite.db" TENANCY_CHECK_URL=http://localhost:3107 \
+            npm run test:tenancy
+
+      - name: Start a second server with the portal on a subdomain
+        run: |
+          DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" node scripts/migrate.mjs
+          PORT=3108 HOSTNAME=0.0.0.0 MULTI_TENANT=true TENANT_BASE_DOMAIN=tenancy.test \
+            AUTH_ENABLED=true RATE_LIMIT_AUTH_REQUESTS=50 TENANT_RESERVED_SLUGS=reserved-by-env \
+            DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" \
+            BETTER_AUTH_URL=http://app.tenancy.test \
+            BETTER_AUTH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") \
+            node .next/standalone/server.js > server-portal.log 2>&1 &
+          echo $! > server-portal.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3108/api/health > /dev/null; then
+              echo "Server is healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Server did not become healthy within 60s"
+          exit 1
+
+      - name: Run the isolation check with the portal on a subdomain
+        run: |
+          DATABASE_URL="file:$(pwd)/data/tenancy-ci-portal.sqlite.db" TENANCY_CHECK_URL=http://localhost:3108 \
+            TENANCY_CHECK_PORTAL_HOST=app.tenancy.test npm run test:tenancy
+
+      - name: Print server logs
+        if: always()
+        run: |
+          cat server.log || true
+          cat server-portal.log || true
+
+      - name: Stop the servers
+        if: always()
+        run: kill $(cat server.pid) $(cat server-portal.pid) 2>/dev/null || true

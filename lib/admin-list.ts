@@ -44,6 +44,8 @@ export interface UserListParams {
   role: UserRoleFilter;
   status: UserStatusFilter;
   sort: UserSortField;
+  /** Multi-tenant only: restrict to members of this workspace */
+  workspaceId?: string;
   order: SortOrder;
   page: number;
   limit: number;
@@ -81,6 +83,8 @@ export interface CalendarListParams {
   content: CalendarContentFilter;
   owner: CalendarOwnerFilter;
   sort: CalendarSortField;
+  /** Multi-tenant only: restrict to this workspace */
+  workspaceId?: string;
   order: SortOrder;
   page: number;
   limit: number;

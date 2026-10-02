@@ -14,6 +14,7 @@ import {
   type DismissedCalendar,
 } from "@/hooks/useCalendarSubscriptions";
 import { useBundleDisplayName } from "@/components/permission-bundle-picker";
+import { usePublicConfig } from "@/components/public-config-provider";
 import type { BundleRef } from "@/lib/permission-bundles";
 import { cn } from "@/lib/utils";
 import { shiftVars } from "@/lib/shift-display";
@@ -30,6 +31,8 @@ export function CalendarDiscoverySheet({
   onOpenChange,
 }: CalendarDiscoverySheetProps) {
   const t = useTranslations();
+  // In a workspace, "public" mainly means visible to every member.
+  const multiTenant = usePublicConfig().auth.multiTenant;
   const [searchQuery, setSearchQuery] = useState("");
   const [tab, setTab] = useState<DiscoveryTab>("shared");
   const {
@@ -133,7 +136,7 @@ export function CalendarDiscoverySheet({
           {calendar.source === "shared" ? (
             <Pill>{t("share.sharedWithYou")}</Pill>
           ) : (
-            <Pill>{t("calendar.publicBadge")}</Pill>
+            <Pill>{multiTenant ? t("calendar.workspaceBadge") : t("calendar.publicBadge")}</Pill>
           )}
           {bundlePill(calendar.bundle)}
         </>
@@ -193,7 +196,7 @@ export function CalendarDiscoverySheet({
           label={t("calendar.browseCalendars")}
           options={[
             { value: "shared", label: t("calendar.sharedTab"), badge: count(sharedCalendars.length) },
-            { value: "public", label: t("calendar.publicTab"), badge: count(publicCalendars.length) },
+            { value: "public", label: multiTenant ? t("calendar.workspaceTab") : t("calendar.publicTab"), badge: count(publicCalendars.length) },
             { value: "hidden", label: t("calendar.hiddenTab"), badge: count(dismissedCalendars.length) },
           ]}
         />
@@ -211,7 +214,7 @@ export function CalendarDiscoverySheet({
           )
         ) : tab === "public" ? (
           visiblePublic.length === 0 ? (
-            emptyState(Globe, t("calendar.noPublicCalendars"))
+            emptyState(Globe, multiTenant ? t("calendar.noWorkspaceCalendars") : t("calendar.noPublicCalendars"))
           ) : (
             <div className="flex flex-col gap-2">{visiblePublic.map(renderAvailable)}</div>
           )

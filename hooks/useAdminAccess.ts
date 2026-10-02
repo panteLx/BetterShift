@@ -3,6 +3,7 @@
 import { useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminScope } from "@/hooks/useAdminScope";
 import {
   isAdmin,
   isSuperAdmin,
@@ -74,6 +75,26 @@ export function useRequireAdmin(redirectTo: string = "/"): void {
       router.push(url.toString());
     }
   }, [user, isLoading, router, redirectTo]);
+}
+
+/** Scope-aware variant of useRequireAdmin; the proxy is the real gate, this avoids a UI flash. */
+export function useRequireAdminScope(redirectTo: string = "/"): void {
+  const { user, isLoading: authLoading } = useAuth();
+  const { scope, workspaceRole, isLoading } = useAdminScope();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authLoading || isLoading || !scope) return;
+    const allowed =
+      scope === "workspace"
+        ? workspaceRole === "owner" || workspaceRole === "admin"
+        : isAdmin(user);
+    if (!allowed) {
+      const url = new URL(redirectTo, window.location.origin);
+      url.searchParams.set("error", "admin_access_required");
+      router.push(url.toString());
+    }
+  }, [user, authLoading, isLoading, scope, workspaceRole, router, redirectTo]);
 }
 
 /**

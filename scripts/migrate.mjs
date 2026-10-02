@@ -28,9 +28,20 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const sqlite = new Database(dbPath);
 
 try {
+  // SQLite ignores this pragma inside migrate()'s transaction; left ON, a rebuild of a
+  // referenced table (0035's calendars) cascade-deletes every child row on DROP TABLE.
+  sqlite.pragma("foreign_keys = OFF");
   migrate(drizzle(sqlite), {
     migrationsFolder: path.join(process.cwd(), "drizzle"),
   });
+  // Warn only: throwing here would crash-loop a container over legacy data.
+  const violations = sqlite.pragma("foreign_key_check");
+  if (violations.length > 0) {
+    console.warn(
+      `[Migrate] ${violations.length} foreign key violation(s) after migrating: ${JSON.stringify(violations.slice(0, 20))}`
+    );
+  }
+  sqlite.pragma("foreign_keys = ON");
   console.log(`[Migrate] Schema is up to date: ${path.resolve(dbPath)}`);
 } finally {
   sqlite.close();

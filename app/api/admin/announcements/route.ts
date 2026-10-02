@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         enabled: announcements.enabled,
         startsAt: announcements.startsAt,
         endsAt: announcements.endsAt,
+        workspaceId: announcements.workspaceId,
         createdAt: sql<unknown>`${announcements.createdAt}`,
         createdByName: userTable.name,
       })

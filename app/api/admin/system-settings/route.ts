@@ -1,3 +1,4 @@
+import { MULTI_TENANT } from "@/lib/auth/env";
 import { NextRequest, NextResponse } from "next/server";
 import { getValidatedAdminUser, isErrorResponse } from "@/lib/auth/admin-helpers";
 import { canManageSystemSettings } from "@/lib/auth/admin";
@@ -18,6 +19,8 @@ import {
 } from "@/lib/telemetry/config";
 import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 import { sendTelemetryInBackground } from "@/lib/telemetry/sender";
+import { updateWorkspaceSettings } from "@/lib/workspace-settings";
+import { DEFAULT_WORKSPACE_ID } from "@/lib/workspace";
 
 const VISIBILITY_VALUES: UpdateBannerVisibility[] = ["all", "admins"];
 
@@ -141,6 +144,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { before, after } = await updateSystemSettings(patch);
+
+    // Single-tenant has one workspace and no per-workspace UI, so the toggle is mirrored into it;
+    // with MULTI_TENANT it is the default that workspaces without their own value follow.
+    if (patch.allowGuestAccess !== undefined && !MULTI_TENANT) {
+      await updateWorkspaceSettings(DEFAULT_WORKSPACE_ID, {
+        allowGuestAccess: patch.allowGuestAccess,
+      });
+    }
 
     await logAdminAction<AdminSystemSettingsUpdatedMetadata>({
       action: "admin.system_settings.update",

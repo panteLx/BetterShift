@@ -5,6 +5,8 @@ import { isAdmin } from "@/lib/auth/admin";
 import { getSystemSettings } from "@/lib/system-settings";
 import { TELEMETRY_SCHEMA_VERSION } from "@/lib/telemetry/schema";
 import { isTelemetryForcedByEnv } from "@/lib/telemetry/config";
+import { MULTI_TENANT } from "@/lib/auth/env";
+import { resolveWorkspaceFromHost } from "@/lib/workspace";
 
 /**
  * Cache Strategy: 15 minutes for the GitHub release lookup.
@@ -131,7 +133,11 @@ export async function GET(request: NextRequest) {
 
   // Once an instance has answered for the current schema no prompt is possible,
   // so the session lookup is skipped unless a role-specific answer needs it.
+  // The answer is saved via /api/admin, which is portal-only, so workspace hosts never prompt.
+  const onWorkspaceHost =
+    MULTI_TENANT && (await resolveWorkspaceFromHost(request.headers.get("host"))).kind === "workspace";
   const telemetryPromptPossible =
+    !onWorkspaceHost &&
     !isTelemetryForcedByEnv() &&
     (settings.telemetryEnabled === null ||
       (settings.telemetryEnabled === true &&

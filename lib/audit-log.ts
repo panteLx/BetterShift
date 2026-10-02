@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { auditLogs } from "@/lib/db/schema";
+import { auditLogs, calendars } from "@/lib/db/schema";
 import { getClientIp } from "@/lib/ip-utils";
+import { getRequestWorkspace, resolveWorkspaceFromHost } from "@/lib/workspace";
 
 // =====================================================
 // Typed Metadata Interfaces
@@ -153,9 +155,28 @@ export interface AdminUserDeleteMetadata {
 }
 
 export interface AdminCalendarTransferMetadata {
+  calendarId: string;
   calendarName: string;
-  fromUser: string;
-  toUser: string;
+  previousOwnerId: string | null;
+  newOwnerId: string;
+  newOwnerEmail: string;
+  transferredBy: string;
+  assignedToSelf: boolean;
+  /** True when the new owner was added to the calendar's workspace as part of the transfer. */
+  addedToWorkspace: boolean;
+  workspaceSlug: string | null;
+}
+
+export interface AdminCalendarBulkTransferMetadata {
+  count: number;
+  calendarIds: string[];
+  calendarNames: string[];
+  newOwnerId: string;
+  newOwnerEmail: string;
+  transferredBy: string;
+  previousOwners: Array<{ calendarId: string; previousOwnerId: string | null }>;
+  /** Workspaces the new owner was added to as part of the transfer. */
+  addedToWorkspaces: Array<{ id: string; slug: string | null }>;
 }
 
 export interface AdminPasswordResetMetadata {
@@ -270,6 +291,71 @@ export interface CustomFieldDeletedMetadata {
   affectedPresets: number;
 }
 
+export interface WorkspaceCreatedMetadata {
+  workspaceName: string;
+  slug: string;
+}
+
+export interface WorkspaceJoinLinkMetadata {
+  linkId: string;
+  maxUses?: number | null;
+  expiresInDays?: number | null;
+  role?: string;
+}
+
+export interface WorkspaceJoinedMetadata {
+  linkId: string;
+  workspaceName: string;
+}
+
+export interface WorkspaceMembershipEndedMetadata {
+  targetUser: string;
+  calendarsTransferred: number;
+  removedBy: "self" | "workspace" | "admin";
+}
+
+export interface AdminWorkspaceMembershipMetadata {
+  targetUser: string;
+  workspaceSlug: string;
+  role?: string;
+  calendarsTransferred?: number;
+}
+
+export interface WorkspaceRoleChangedMetadata {
+  targetUser: string;
+  from: string;
+  to: string;
+}
+
+export interface WorkspaceOwnerTransferredMetadata {
+  /** null when an ownerless workspace got its first owner. */
+  fromUser: string | null;
+  toUser: string;
+  byInstanceAdmin: boolean;
+}
+
+export interface WorkspaceRenamedMetadata {
+  from: string;
+  to: string;
+}
+
+export interface WorkspaceSlugChangedMetadata {
+  from: string;
+  to: string;
+}
+
+export interface WorkspaceSettingsMetadata {
+  allowGuestAccess: boolean | null;
+}
+
+export interface WorkspaceDeletedMetadata {
+  slug: string;
+  name: string;
+  members: number;
+  calendars: number;
+  byInstanceAdmin: boolean;
+}
+
 // Union type for all metadata
 export type AuditLogMetadata =
   | LoginFailedMetadata
@@ -293,6 +379,7 @@ export type AuditLogMetadata =
   | AdminUserDeleteMetadata
   | AdminUserCreateMetadata
   | AdminCalendarTransferMetadata
+  | AdminCalendarBulkTransferMetadata
   | AdminPasswordResetMetadata
   | AdminSystemSettingsUpdatedMetadata
   | AdminTelemetryConsentMetadata
@@ -306,7 +393,18 @@ export type AuditLogMetadata =
   | CalendarBundleDeletedMetadata
   | CustomFieldCreatedMetadata
   | CustomFieldUpdatedMetadata
-  | CustomFieldDeletedMetadata;
+  | CustomFieldDeletedMetadata
+  | WorkspaceCreatedMetadata
+  | WorkspaceJoinLinkMetadata
+  | WorkspaceJoinedMetadata
+  | WorkspaceMembershipEndedMetadata
+  | AdminWorkspaceMembershipMetadata
+  | WorkspaceRoleChangedMetadata
+  | WorkspaceOwnerTransferredMetadata
+  | WorkspaceRenamedMetadata
+  | WorkspaceSlugChangedMetadata
+  | WorkspaceSettingsMetadata
+  | WorkspaceDeletedMetadata;
 
 // =====================================================
 // Audit Log Types
@@ -323,6 +421,8 @@ export interface LogAuditEventOptions<T = AuditLogMetadata> {
   request?: NextRequest | Request; // Support both types
   severity?: AuditLogSeverity;
   isUserVisible?: boolean;
+  /** Explicit workspace (null = instance-level); resolved automatically when omitted. */
+  workspaceId?: string | null;
 }
 
 // =====================================================
@@ -345,11 +445,18 @@ export async function logAuditEvent<T = AuditLogMetadata>(
     request,
     severity = "info",
     isUserVisible = false,
+    workspaceId: explicitWorkspaceId,
   } = options;
 
   // Extract IP and user agent from request if provided
   const ipAddress = request ? getClientIp(request) : null;
   const userAgent = request ? request.headers.get("user-agent") : null;
+  const workspaceId = await resolveAuditWorkspaceId(
+    explicitWorkspaceId,
+    resourceType,
+    resourceId,
+    request
+  );
 
   // Fire-and-forget: don't block the request
   queueMicrotask(async () => {
@@ -364,6 +471,7 @@ export async function logAuditEvent<T = AuditLogMetadata>(
         userAgent,
         severity,
         isUserVisible,
+        workspaceId,
         timestamp: new Date(),
       });
     } catch (error) {
@@ -371,6 +479,39 @@ export async function logAuditEvent<T = AuditLogMetadata>(
       console.error("Failed to log audit event:", error);
     }
   });
+}
+
+/**
+ * Explicit option → workspace of a calendar-typed resourceId → request host → null.
+ * Never throws: audit logging must not break a request or a background job.
+ */
+async function resolveAuditWorkspaceId(
+  explicit: string | null | undefined,
+  resourceType: string | null,
+  resourceId: string | null,
+  request: NextRequest | Request | undefined
+): Promise<string | null> {
+  if (explicit !== undefined) return explicit;
+
+  try {
+    if (resourceType === "calendar" && resourceId) {
+      const [row] = await db
+        .select({ workspaceId: calendars.workspaceId })
+        .from(calendars)
+        .where(eq(calendars.id, resourceId))
+        .limit(1);
+      if (row) return row.workspaceId;
+    }
+
+    // headers() is unavailable in proxy.ts and background jobs, so prefer the passed request.
+    if (request) {
+      const resolution = await resolveWorkspaceFromHost(request.headers.get("host"));
+      return resolution.kind === "workspace" ? resolution.workspace.id : null;
+    }
+    return (await getRequestWorkspace())?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // =====================================================

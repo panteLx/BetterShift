@@ -108,15 +108,6 @@ export async function POST(
       );
     }
 
-    // Rate limit: 10 tokens per hour per calendar
-    const rateLimitResponse = rateLimit(
-      request,
-      user.id,
-      "token-creation",
-      calendarId
-    );
-    if (rateLimitResponse) return rateLimitResponse;
-
     // Check permissions
     const access = await getCalendarAccess(user.id, calendarId);
 
@@ -126,6 +117,16 @@ export async function POST(
         { status: 403 }
       );
     }
+
+    // Rate limit: 10 tokens per hour per calendar. Keyed by calendar, so only
+    // after the access check — otherwise outsiders could drain the bucket.
+    const rateLimitResponse = rateLimit(
+      request,
+      user.id,
+      "token-creation",
+      calendarId
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     const body = await request.json();
     const {

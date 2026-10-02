@@ -17,6 +17,7 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
 import { FilterMenuButton, type SortState } from "@/components/admin/admin-table-controls";
+import { WorkspaceFilter, ALL_WORKSPACES } from "@/components/admin/workspace-filter";
 import { CalendarTable } from "@/components/admin/calendar-table";
 import { CalendarDetailsSheet } from "@/components/admin/calendar-details-sheet";
 import { CalendarEditSheet } from "@/components/admin/calendar-edit-sheet";
@@ -45,10 +46,11 @@ export default function AdminCalendarsPage() {
   const search = useDebouncedSearch();
   const [contentFilter, setContentFilter] = useState<CalendarContentFilter>("all");
   const [ownerFilter, setOwnerFilter] = useState<CalendarOwnerFilter>("all");
+  const [workspaceId, setWorkspaceId] = useState(ALL_WORKSPACES);
   const [sort, setSort] = useState<SortState<CalendarSortField>>({ column: "createdAt", direction: "desc" });
 
   // Any change to search, filters or sort starts over on the first page
-  const listKey = [search.query, contentFilter, ownerFilter, sort.column, sort.direction].join("|");
+  const listKey = [search.query, contentFilter, ownerFilter, workspaceId, sort.column, sort.direction].join("|");
   const [requestedPage, setPage] = useResettableState(listKey, 1);
 
   const params = useMemo<CalendarListParams>(
@@ -56,12 +58,13 @@ export default function AdminCalendarsPage() {
       search: search.query,
       content: contentFilter,
       owner: ownerFilter,
+      workspaceId: workspaceId === ALL_WORKSPACES ? undefined : workspaceId,
       sort: sort.column,
       order: sort.direction,
       page: requestedPage,
       limit: ADMIN_PAGE_SIZE,
     }),
-    [search.query, contentFilter, ownerFilter, sort, requestedPage]
+    [search.query, contentFilter, ownerFilter, workspaceId, sort, requestedPage]
   );
 
   const { calendars, total, counts, page, isLoading, isPlaceholderData } = useAdminCalendars(params);
@@ -198,6 +201,7 @@ export default function AdminCalendarsPage() {
               { value: "synced", label: t("adminCalendars.filterSynced") },
             ]}
           />
+          <WorkspaceFilter value={workspaceId} onChange={setWorkspaceId} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <FilterMenuButton

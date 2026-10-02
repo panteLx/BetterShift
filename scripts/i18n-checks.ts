@@ -302,6 +302,7 @@ function extractUsedKeys(content: string): Set<string> {
   const stringPatterns = [
     /\bt(?:\.\w+)?\s*\(\s*["']([^"']+)["']/g, // t("key") or t.rich("key")
     /\w+Ref\.current\s*\(\s*["']([^"']+)["']/g, // tRef.current("key")
+    /\b(?:labelKey|shortLabelKey)\s*:\s*["']([^"']+)["']/g, // lib/admin-sections.ts registry
   ];
 
   for (const pattern of stringPatterns) {

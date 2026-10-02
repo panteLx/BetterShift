@@ -66,6 +66,11 @@ export const queryKeys = {
       bundles: (calendarId: string) =>
         ["admin", "calendars", "bundles", calendarId] as const,
     },
+    workspaces: {
+      all: ["admin", "workspaces"] as const,
+      list: ["admin", "workspaces", "list"] as const,
+      members: (workspaceId: string) => ["admin", "workspaces", "members", workspaceId] as const,
+    },
     auditLogsAll: ["admin", "audit-logs"] as const,
     auditLogs: (filters?: object) => ["admin", "audit-logs", filters] as const,
     systemSettings: ["admin", "system-settings"] as const,
@@ -104,4 +109,17 @@ export const queryKeys = {
 
   // App version / update check
   version: ["version"] as const,
+
+  // Multi-tenancy: current request's workspace
+  workspace: ["workspace"] as const,
+  workspaces: {
+    mine: ["workspaces", "mine"] as const,
+    members: ["workspaces", "members"] as const,
+    joinLinks: ["workspaces", "join-links"] as const,
+    settings: ["workspaces", "settings"] as const,
+    stats: ["workspaces", "stats"] as const,
+    slug: (slug: string) => ["workspaces", "slug", slug] as const,
+    join: (token: string) => ["workspaces", "join", token] as const,
+    adminUser: (userId: string) => ["admin", "users", "workspaces", userId] as const,
+  },
 } as const;

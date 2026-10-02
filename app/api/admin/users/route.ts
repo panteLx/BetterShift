@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { user, calendars, session, calendarShares } from "@/lib/db/schema";
-import { and, asc, count, desc, eq, getTableColumns, getTableName, or, sql, type SQL } from "drizzle-orm";
+import { user, calendars, session, calendarShares, member, organization } from "@/lib/db/schema";
+import { MULTI_TENANT } from "@/lib/auth/env";
+import { and, asc, count, desc, eq, getTableColumns, getTableName, inArray, or, sql, type SQL } from "drizzle-orm";
 import { isAdmin, canCreateUser, ADMIN_ROLES } from "@/lib/auth/admin";
 import {
   getValidatedAdminUser,
@@ -38,6 +39,7 @@ import { APIError } from "better-auth/api";
  * - order: asc | desc (default: desc)
  * - page: 1-based page, clamped to the last page (default: 1)
  * - limit: Page size (default: 25, max: 100)
+ * - workspaceId: Only members of this workspace (multi-tenant only)
  *
  * Response: { items, total, counts, page, limit } — see lib/admin-list.ts
  *
@@ -62,6 +64,7 @@ export async function GET(request: NextRequest) {
     const sort = pickParam(searchParams.get("sort"), USER_SORT_FIELDS, "createdAt");
     const order = pickParam(searchParams.get("order"), SORT_ORDERS, "desc");
     const paging = parsePaging(searchParams);
+    const workspaceId = MULTI_TENANT ? (searchParams.get("workspaceId") ?? "").trim() : "";
 
     // Single-table selects render columns unqualified, so the outer row is named explicitly
     const userId = sql`${sql.identifier(getTableName(user))}.${sql.identifier(user.id.name)}`;
@@ -82,6 +85,12 @@ export async function GET(request: NextRequest) {
 
     if (status !== "all") {
       conditions.push(sql`${bannedFlag} = ${status === "banned" ? 1 : 0}`);
+    }
+
+    if (workspaceId) {
+      conditions.push(
+        inArray(user.id, db.select({ id: member.userId }).from(member).where(eq(member.organizationId, workspaceId)))
+      );
     }
 
     if (search) {
@@ -135,8 +144,22 @@ export async function GET(request: NextRequest) {
       .limit(paging.limit)
       .offset(offset);
 
+    const memberships = MULTI_TENANT && rows.length > 0
+      ? await db
+          .select({ userId: member.userId, id: organization.id, name: organization.name, slug: organization.slug })
+          .from(member)
+          .innerJoin(organization, eq(member.organizationId, organization.id))
+          .where(inArray(member.userId, rows.map((row) => row.id)))
+          .orderBy(asc(organization.name))
+      : [];
+    const workspacesByUser = new Map<string, { id: string; name: string; slug: string }[]>();
+    for (const { userId: uid, ...ws } of memberships) {
+      workspacesByUser.set(uid, [...(workspacesByUser.get(uid) ?? []), ws]);
+    }
+
     const items = rows.map((row) => ({
       ...row,
+      ...(MULTI_TENANT ? { workspaces: workspacesByUser.get(row.id) ?? [] } : {}),
       role: row.role || "user",
       banned: row.banned || false,
       calendarCount: Number(row.calendarCount),

@@ -357,3 +357,18 @@ export function canManageSystemSettings(
 ): boolean {
   return isAdmin(adminUser);
 }
+
+/** Add users to / remove them from any workspace (multi-tenant). Admin and superadmin. */
+export function canManageWorkspaceMemberships(adminUser: User | null | undefined): boolean {
+  return isAdmin(adminUser);
+}
+
+/** Settings, roles, ownership and rename of any workspace. Admin and superadmin. */
+export function canManageWorkspaces(adminUser: User | null | undefined): boolean {
+  return canManageWorkspaceMemberships(adminUser);
+}
+
+// Destructive like deleting a calendar, so superadmin only.
+export function canDeleteWorkspaces(adminUser: User | null | undefined): boolean {
+  return isSuperAdmin(adminUser);
+}

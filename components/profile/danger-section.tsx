@@ -42,6 +42,11 @@ export function DangerSection({ hasPasswordAuth }: { hasPasswordAuth: boolean })
         return;
       }
 
+      if (response.status === 409) {
+        toast.error(t("auth.deleteAccountSoleOwner"));
+        return;
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
