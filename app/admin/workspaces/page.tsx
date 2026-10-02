@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FullscreenLoader } from "@/components/fullscreen-loader";
 import { AdminPageHeader, AdminSearch } from "@/components/admin/admin-kit";
@@ -13,14 +13,22 @@ export default function AdminWorkspacesPage() {
   const t = useTranslations();
   const { data, isLoading, isError, refetch } = useAdminWorkspaces();
   const [search, setSearch] = useState("");
-  // ?open=<id> deep-links into a workspace's detail sheet (used by the dashboard banner).
-  const [selectedId, setSelectedId] = useState<string | null>(() =>
-    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("open")
-  );
-  const [detailsOpen, setDetailsOpen] = useState(selectedId !== null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const workspaces = useMemo(() => data?.workspaces ?? [], [data]);
+
+  // ?open=<id> deep-links into a workspace's detail sheet (used by the dashboard banner); read after mount, the URL is not final on first render.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("open");
+    if (!id || !workspaces.some((w) => w.id === id)) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setSelectedId(id);
+    setDetailsOpen(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [workspaces]);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return workspaces;
@@ -31,7 +39,6 @@ export default function AdminWorkspacesPage() {
         (w.owner?.email.toLowerCase().includes(q) ?? false)
     );
   }, [workspaces, search]);
-  // ?open=<id> deep-links into a workspace's detail sheet (used by the dashboard banner).
   const selected = workspaces.find((w) => w.id === selectedId) ?? null;
 
   if (isLoading) return <FullscreenLoader />;
