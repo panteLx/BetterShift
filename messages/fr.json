@@ -807,6 +807,7 @@
       "makeOwner": "Nommer propriétaire",
       "transferTitle": "Nommer {name} propriétaire ?",
       "transferDescription": "L'ancien propriétaire devient administrateur de cet espace de travail.",
+      "assignOwnerDescription": "Ce membre devient le premier propriétaire de cet espace de travail.",
       "ownerTransferred": "Propriétaire modifié",
       "addMember": "Ajouter un membre",
       "memberEmail": "Adresse e-mail",

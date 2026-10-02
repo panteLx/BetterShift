@@ -807,6 +807,7 @@
       "makeOwner": "Nastavit jako vlastníka",
       "transferTitle": "Nastavit {name} jako vlastníka?",
       "transferDescription": "Dosavadní vlastník se stane správcem tohoto pracovního prostoru.",
+      "assignOwnerDescription": "Tento člen se stane prvním vlastníkem tohoto pracovního prostoru.",
       "ownerTransferred": "Vlastník změněn",
       "addMember": "Přidat člena",
       "memberEmail": "E-mailová adresa",

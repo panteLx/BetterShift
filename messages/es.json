@@ -807,6 +807,7 @@
       "makeOwner": "Convertir en propietario",
       "transferTitle": "¿Convertir a {name} en propietario?",
       "transferDescription": "El propietario anterior pasa a ser administrador de este espacio de trabajo.",
+      "assignOwnerDescription": "Este miembro pasa a ser el primer propietario de este espacio de trabajo.",
       "ownerTransferred": "Propietario cambiado",
       "addMember": "Añadir miembro",
       "memberEmail": "Correo electrónico",

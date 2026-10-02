@@ -478,7 +478,7 @@ export function WorkspaceDetailSheet({ open, onOpenChange, workspace, onDelete }
           )
         }
         title={t("admin.workspaces.transferTitle", { name: promoting ? label(promoting) : "" })}
-        description={t("admin.workspaces.transferDescription")}
+        description={workspace.owner ? t("admin.workspaces.transferDescription") : t("admin.workspaces.assignOwnerDescription")}
         confirmText={t("admin.workspaces.makeOwner")}
       />
     </AdminDetailPanel>

@@ -807,6 +807,7 @@
       "makeOwner": "Rendi proprietario",
       "transferTitle": "Rendere {name} proprietario?",
       "transferDescription": "Il proprietario precedente diventa amministratore di questo workspace.",
+      "assignOwnerDescription": "Questo membro diventa il primo proprietario di questo workspace.",
       "ownerTransferred": "Proprietario cambiato",
       "addMember": "Aggiungi membro",
       "memberEmail": "Indirizzo email",

@@ -807,6 +807,7 @@
       "makeOwner": "Make owner",
       "transferTitle": "Make {name} the owner?",
       "transferDescription": "The previous owner becomes an admin of this workspace.",
+      "assignOwnerDescription": "This member becomes the first owner of this workspace.",
       "ownerTransferred": "Owner changed",
       "addMember": "Add member",
       "memberEmail": "Email address",
