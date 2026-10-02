@@ -51,7 +51,7 @@ The sections are defined once in `lib/admin-sections.ts` and filtered by scope, 
 
 ### Workspaces (global scope)
 
-`/admin/workspaces` lists every workspace with owner, member and calendar counts and offers search. A row opens a side panel to rename the workspace, add members by email, remove members, make a member the owner (the previous owner becomes admin) and delete the workspace (superadmin only; type the slug to confirm; the `default` workspace cannot be deleted). The Users and Calendars lists gain a workspace column and a workspace filter.
+`/admin/workspaces` lists every workspace with owner, member and calendar counts and offers search. A row opens a side panel to rename the workspace, add members by email, remove members, make a member the owner (the previous owner becomes admin) and delete the workspace (superadmin only; type the slug to confirm; the `default` workspace cannot be deleted). The panel of the `default` workspace has two extra sections: **Owner festlegen** (shown while it has no owner, e.g. right after enabling `MULTI_TENANT` on an existing instance; pick a member or enter an email) and **Adresse** (change its slug, which becomes the new subdomain; the old address stops working). Other workspaces' slugs cannot be changed. While `default` has calendars but no owner, the global dashboard shows a banner linking straight to that panel. The Users and Calendars lists gain a workspace column and a workspace filter.
 
 ---
 

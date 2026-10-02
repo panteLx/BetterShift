@@ -55,6 +55,8 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
   await checkDelete();
   await checkInstanceApi();
   await checkAdminGuard();
+  // Last: renaming the default slug is irreversible here, since "default" itself is reserved.
+  await checkDefaultWorkspace();
 
   async function checkRolesAndMembers() {
     console.log("\nStage 5a: role changes and member removal");
@@ -519,12 +521,14 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       return r.status === 200 && items.length === 2 && items.every((c) => c.workspaceId === ws.id && c.workspaceSlug === "adm-inst");
     });
 
-    await tryCheck("admin transfer to a non-member is 404, unknown workspace id 404, ownerless workspace 409", async () => {
+    await tryCheck("admin transfer to a non-member is 404, unknown workspace id 404, ownerless workspace gets its first owner", async () => {
       const r = await api(admin2, portal, "POST", `${listPath}/${ws.id}/transfer`, { userId: stranger.id });
       const ghost = await api(admin2, portal, "POST", `${listPath}/${crypto.randomUUID()}/transfer`, { userId: stranger.id });
       const bare = await newWorkspace("adm-inst-bare");
-      const n = await api(admin2, portal, "POST", `${listPath}/${bare.id}/transfer`, { userId: stranger.id });
-      return r.status === 404 && ghost.status === 404 && ghost.json?.code === "workspace_not_found" && n.status === 409 && n.json?.code === "no_owner";
+      const first = await h.seedUser("adm-i-bare@tenancy.test");
+      const n = await api(admin2, portal, "POST", `${listPath}/${bare.id}/transfer`, { userId: first.id });
+      return r.status === 404 && ghost.status === 404 && ghost.json?.code === "workspace_not_found" && n.status === 200 &&
+        (await roleOf(bare.id, first.id)) === "owner";
     });
     await tryCheck("plain admin cannot transfer away a superadmin owner (403), superadmin can", async () => {
       const sw = await newWorkspace("adm-inst-superowned");
@@ -562,6 +566,88 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
         (await db.select().from(schema.calendars).where(eq(schema.calendars.workspaceId, ws.id))).length === 0 &&
         (await db.select().from(schema.member).where(eq(schema.member.organizationId, ws.id))).length === 0 &&
         rows.some((l) => l.workspaceId === null && JSON.parse(l.metadata ?? "{}").slug === "adm-inst" && JSON.parse(l.metadata ?? "{}").byInstanceAdmin === true);
+    });
+  }
+
+  async function checkDefaultWorkspace() {
+    console.log("\nStage 5i: ownerless default workspace and its slug");
+    const portal = h.portalHost;
+    const admin = await h.seedUser("adm-dw-admin@tenancy.test", "admin");
+    const admin2 = await h.seedUser("adm-dw-admin2@tenancy.test", "admin");
+    const superA = await h.seedUser("adm-dw-super@tenancy.test", "superadmin");
+    const newOwner = await h.seedUser("adm-dw-owner@tenancy.test");
+    const emailOwner = await h.seedUser("adm-dw-email@tenancy.test");
+    const memberUser = await h.seedUser("adm-dw-member@tenancy.test");
+    const other = await newWorkspace("adm-dw-other");
+    const path = (id: string) => `/api/admin/workspaces/${id}`;
+    const existing = await db.select().from(schema.organization).where(eq(schema.organization.id, "default"));
+    if (existing.length === 0) await db.insert(schema.organization).values({ id: "default", name: "Default", slug: "default" });
+    await db.delete(schema.member).where(eq(schema.member.organizationId, "default"));
+    await addMember("default", memberUser, "member");
+    const audit = async (action: string) => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return db.select().from(schema.auditLogs).where(eq(schema.auditLogs.action, action));
+    };
+
+    await tryCheck("ownerless default: assigning a non-member by userId creates an owner membership (no owners before)", async () => {
+      if ((await owners("default")).length !== 0) return false;
+      const r = await api(admin, portal, "POST", `${path("default")}/transfer`, { userId: newOwner.id });
+      return r.status === 200 && (await roleOf("default", newOwner.id)) === "owner" && (await owners("default")).length === 1;
+    });
+    await tryCheck("assigning the first owner is audited with fromUser null", async () => {
+      const rows = await audit("workspace.owner_transfer");
+      return rows.some((l) => {
+        const m = JSON.parse(l.metadata ?? "{}");
+        return m.fromUser === null && m.toUser === newOwner.id;
+      });
+    });
+    await tryCheck("ownerless workspace: an existing member is promoted by email, unknown user 404", async () => {
+      await db.delete(schema.member).where(eq(schema.member.organizationId, "default"));
+      await addMember("default", memberUser, "member");
+      const unknown = await api(admin, portal, "POST", `${path("default")}/transfer`, { email: "nobody-here@tenancy.test" });
+      const r = await api(admin, portal, "POST", `${path("default")}/transfer`, { email: memberUser.email.toUpperCase() });
+      return unknown.status === 404 && r.status === 200 && (await roleOf("default", memberUser.id)) === "owner" && (await memberCount("default")) === 1;
+    });
+    await tryCheck("owned workspace takes the normal transfer path: member promoted, non-member 404, no extra owner", async () => {
+      await addMember("default", emailOwner, "member");
+      const notMember = await api(admin, portal, "POST", `${path("default")}/transfer`, { userId: newOwner.id });
+      const ok = await api(admin, portal, "POST", `${path("default")}/transfer`, { email: emailOwner.email });
+      const ownerRows = await owners("default");
+      return notMember.status === 404 && ok.status === 200 && ownerRows.length === 1 && ownerRows[0].userId === emailOwner.id &&
+        (await roleOf("default", memberUser.id)) === "admin";
+    });
+    await tryCheck("transfer without userId or email is 400", async () =>
+      (await api(admin, portal, "POST", `${path("default")}/transfer`, {})).status === 400);
+
+    await tryCheck("slug change on a non-default workspace is 400 slug_immutable", async () => {
+      const r = await api(admin, portal, "PATCH", path(other.id), { slug: "adm-dw-renamed" });
+      return r.status === 400 && r.json?.code === "slug_immutable" &&
+        (await db.select().from(schema.organization).where(eq(schema.organization.id, other.id)))[0].slug === "adm-dw-other";
+    });
+    await tryCheck("default slug change: reserved, invalid and taken are rejected, unchanged slug is a no-op", async () => {
+      const reserved = await api(admin, portal, "PATCH", path("default"), { slug: "admin" });
+      const invalid = await api(admin, portal, "PATCH", path("default"), { slug: "Bad Slug!" });
+      const taken = await api(admin2, portal, "PATCH", path("default"), { slug: "adm-dw-other" });
+      const same = await api(admin2, portal, "PATCH", path("default"), { slug: "default" });
+      return reserved.status === 400 && reserved.json?.code === "reserved" &&
+        invalid.status === 400 && invalid.json?.code === "invalid" &&
+        taken.status === 409 && taken.json?.code === "taken" &&
+        same.status === 200 && (await db.select().from(schema.organization).where(eq(schema.organization.id, "default")))[0].slug === "default";
+    });
+    await tryCheck("default slug change: non-admin is 403", async () =>
+      (await api(newOwner, portal, "PATCH", path("default"), { slug: "adm-dw-legacy" })).status === 403);
+    await tryCheck("default slug change works: old host stops resolving, new host resolves, audit row written", async () => {
+      const oldHost = `default.${h.baseDomain}`;
+      const newHost = `adm-dw-legacy.${h.baseDomain}`;
+      // Prime the server's slug cache so a missing invalidation would show up below.
+      const before = await api(emailOwner, oldHost, "GET", "/api/workspace");
+      const r = await api(superA, portal, "PATCH", path("default"), { slug: "adm-dw-legacy", name: "Legacy" });
+      const oldAfter = await api(emailOwner, oldHost, "GET", "/api/workspace");
+      const newAfter = await api(emailOwner, newHost, "GET", "/api/workspace");
+      const rows = await audit("workspace.slug_change");
+      return before.status === 200 && r.status === 200 && r.json?.slug === "adm-dw-legacy" &&
+        oldAfter.status === 404 && newAfter.status === 200 && newAfter.json?.id === "default" && newAfter.json?.role === "owner" &&
+        rows.some((l) => JSON.parse(l.metadata ?? "{}").from === "default" && JSON.parse(l.metadata ?? "{}").to === "adm-dw-legacy");
     });
   }
 
