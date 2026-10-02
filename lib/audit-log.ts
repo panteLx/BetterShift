@@ -328,12 +328,18 @@ export interface WorkspaceRoleChangedMetadata {
 }
 
 export interface WorkspaceOwnerTransferredMetadata {
-  fromUser: string;
+  /** null when an ownerless workspace got its first owner. */
+  fromUser: string | null;
   toUser: string;
   byInstanceAdmin: boolean;
 }
 
 export interface WorkspaceRenamedMetadata {
+  from: string;
+  to: string;
+}
+
+export interface WorkspaceSlugChangedMetadata {
   from: string;
   to: string;
 }
@@ -396,6 +402,7 @@ export type AuditLogMetadata =
   | WorkspaceRoleChangedMetadata
   | WorkspaceOwnerTransferredMetadata
   | WorkspaceRenamedMetadata
+  | WorkspaceSlugChangedMetadata
   | WorkspaceSettingsMetadata
   | WorkspaceDeletedMetadata;
 

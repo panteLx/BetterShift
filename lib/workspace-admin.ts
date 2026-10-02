@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { announcements, auditLogs, calendars, member, organization, shifts, workspaceJoinLinks } from "@/lib/db/schema";
 import { TENANT_MAX_WORKSPACES_PER_USER } from "@/lib/auth/env";
 import { DEFAULT_WORKSPACE_ID, invalidateWorkspaceCache, type Workspace } from "@/lib/workspace";
-import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/workspaces";
+import { WORKSPACE_NAME_MAX_LENGTH, checkSlugAvailability } from "@/lib/workspaces";
 
 export function changeMemberRole(workspaceId: string, userId: string, role: "admin" | "member") {
   return db.transaction((tx) => {
@@ -52,6 +52,50 @@ export function transferOwnership(
     tx.update(member).set({ role: "owner" }).where(eq(member.id, to.id)).run();
     return { ok: true } as const;
   });
+}
+
+/** Makes `userId` the owner of a workspace that has none; adds the membership when missing. */
+export function assignOwner(workspaceId: string, userId: string) {
+  return db.transaction((tx) => {
+    const existingOwner = tx
+      .select({ id: member.id })
+      .from(member)
+      .where(and(eq(member.organizationId, workspaceId), eq(member.role, "owner")))
+      .get();
+    if (existingOwner) return { ok: false, reason: "has_owner" } as const;
+    const row = tx
+      .select({ id: member.id })
+      .from(member)
+      .where(and(eq(member.organizationId, workspaceId), eq(member.userId, userId)))
+      .get();
+    if (row) tx.update(member).set({ role: "owner" }).where(eq(member.id, row.id)).run();
+    else tx.insert(member).values({ id: crypto.randomUUID(), organizationId: workspaceId, userId, role: "owner" }).run();
+    return { ok: true } as const;
+  });
+}
+
+/** Only the default workspace may change its slug: it is resolved by id, so nothing else depends on it. */
+export async function changeDefaultWorkspaceSlug(slug: string) {
+  const current = await db.query.organization.findFirst({
+    where: eq(organization.id, DEFAULT_WORKSPACE_ID),
+    columns: { slug: true },
+  });
+  if (!current) return { ok: false, reason: "not_found" } as const;
+  if (slug === current.slug) return { ok: true, changed: false, from: current.slug, to: slug } as const;
+  const availability = await checkSlugAvailability(slug);
+  if (availability !== "available") return { ok: false, reason: availability } as const;
+  try {
+    await db.update(organization).set({ slug }).where(eq(organization.id, DEFAULT_WORKSPACE_ID));
+  } catch (error) {
+    // The unique index on organization.slug is the real guard against a concurrent change.
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed: organization.slug")) {
+      return { ok: false, reason: "taken" } as const;
+    }
+    throw error;
+  }
+  invalidateWorkspaceCache(current.slug);
+  invalidateWorkspaceCache(slug);
+  return { ok: true, changed: true, from: current.slug, to: slug } as const;
 }
 
 export async function renameWorkspace(workspaceId: string, rawName: string) {
