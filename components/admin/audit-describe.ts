@@ -161,6 +161,18 @@ export function useAuditDescription() {
         case "workspace.create":
           if (text(m, "workspaceName")) return t("adminAudit.describe.workspaceCreated", { workspace: text(m, "workspaceName") });
           break;
+        case "workspace.owner_transfer":
+          if (text(m, "toUser")) {
+            return field(m, "fromUser")
+              ? t("adminAudit.describe.workspaceOwnerChanged")
+              : t("adminAudit.describe.workspaceOwnerAssigned");
+          }
+          break;
+        case "workspace.slug_change":
+          if (text(m, "from") && text(m, "to")) {
+            return t("adminAudit.describe.workspaceSlugChanged", { from: text(m, "from"), to: text(m, "to") });
+          }
+          break;
         case "workspace.join":
           if (text(m, "workspaceName")) return t("adminAudit.describe.workspaceJoined", { workspace: text(m, "workspaceName") });
           break;

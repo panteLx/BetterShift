@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowUpCircle, ChevronRight, FolderClosed } from "lucide-react";
+import { ArrowUpCircle, ChevronRight, FolderClosed, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBanner } from "@/components/status-banner";
 import { AdminPageHeader, SeverityPill } from "@/components/admin/admin-kit";
@@ -13,6 +13,7 @@ import { useAuditDescription } from "@/components/admin/audit-describe";
 import { WorkspaceOverviewPage } from "@/components/admin/workspace-overview";
 import { ScaleValue, SystemInfoItems } from "@/components/admin/system-kit";
 import { useAdminScope } from "@/hooks/useAdminScope";
+import { useAdminWorkspaces } from "@/hooks/useAdminWorkspaces";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import { useVersionUpdateCheck } from "@/hooks/useVersionUpdate";
 import { getDateLocale } from "@/lib/locales";
@@ -35,6 +36,9 @@ function AdminDashboardPage() {
   // The stats endpoint does not exist on workspace hosts.
   const { stats, isLoading: statsLoading } = useAdminStats(scope === "instance" || scope === "global");
   const { versionInfo } = useVersionUpdateCheck();
+  const { data: workspacesData } = useAdminWorkspaces(scope === "global");
+  const defaultWorkspace = workspacesData?.workspaces.find((w) => w.id === "default");
+  const defaultNeedsOwner = scope === "global" && !!defaultWorkspace && !defaultWorkspace.owner && defaultWorkspace.calendarCount > 0;
   const sections = useAdminSections();
   const byKey = Object.fromEntries(sections.map((s) => [s.key, s]));
   const { users: usersArea, calendars: calendarsArea, logs: logsArea } = byKey;
@@ -115,6 +119,21 @@ function AdminDashboardPage() {
           )
         }
       />
+
+      {defaultNeedsOwner && (
+        <StatusBanner
+          tone="warning"
+          icon={UserCog}
+          title={t("adminDashboard.defaultWorkspaceNoOwnerTitle")}
+          action={
+            <Button variant="outline" size="sm" asChild className="h-8 rounded-lg font-semibold">
+              <Link href="/admin/workspaces?open=default">{t("adminDashboard.defaultWorkspaceNoOwnerButton")}</Link>
+            </Button>
+          }
+        >
+          {t("adminDashboard.defaultWorkspaceNoOwner")}
+        </StatusBanner>
+      )}
 
       {orphaned > 0 && (
         <StatusBanner

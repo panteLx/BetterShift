@@ -834,8 +834,23 @@
         "invalid_name": "Ungültiger Name",
         "invalid_email": "Ungültige E-Mail-Adresse",
         "confirmation_mismatch": "Die Bestätigung stimmt nicht mit dem Slug überein",
-        "busy": "Gerade beschäftigt, bitte gleich nochmal versuchen"
-      }
+        "busy": "Gerade beschäftigt, bitte gleich nochmal versuchen",
+        "has_owner": "Dieser Workspace hat bereits einen Owner",
+        "slug_immutable": "Nur die Adresse des Standard-Workspaces lässt sich ändern",
+        "invalid": "Ungültige Adresse",
+        "reserved": "Diese Adresse ist reserviert",
+        "taken": "Bereits vergeben"
+      },
+      "ownerSection": "Owner festlegen",
+      "ownerSectionHint": "Dieser Workspace hat noch keinen Owner, deshalb kann niemand ihn verwalten. Lege fest, wer ihn übernimmt.",
+      "ownerPickMember": "Mitglied auswählen",
+      "ownerPickPlaceholder": "Mitglied wählen …",
+      "ownerByEmail": "Oder per E-Mail-Adresse",
+      "ownerSetButton": "Als Owner festlegen",
+      "ownerAssigned": "Owner festgelegt",
+      "addressSection": "Adresse",
+      "addressChanged": "Adresse geändert",
+      "addressWarning": "Die bisherige Adresse funktioniert danach nicht mehr. Der Workspace ist dann unter {slug}.{domain} erreichbar; gespeicherte Lesezeichen und Links müssen angepasst werden."
     }
   },
   "appearance": {
@@ -1240,7 +1255,10 @@
     "calendarsOrphaned": "{count, plural, one {# verwaist} other {# verwaist}}",
     "usersSub": "{count, plural, one {# Konto} other {# Konten}}",
     "calendarsSub": "{count, plural, one {# Kalender} other {# Kalender}}, {orphaned} verwaist",
-    "logsSub": "{count, plural, one {# Ereignis} other {# Ereignisse}}"
+    "logsSub": "{count, plural, one {# Ereignis} other {# Ereignisse}}",
+    "defaultWorkspaceNoOwnerTitle": "Bestehende Kalender ohne Workspace-Owner",
+    "defaultWorkspaceNoOwner": "Deine bestehenden Kalender gehören noch keinem Workspace-Owner. Lege fest, wer sie erreichen soll.",
+    "defaultWorkspaceNoOwnerButton": "Owner festlegen"
   },
   "adminAudit": {
     "subtitle": "{count, plural, one {# Eintrag} other {# Einträge}}",
@@ -1315,7 +1333,10 @@
       "role": {
         "admin": "Admin",
         "member": "Mitglied"
-      }
+      },
+      "workspaceOwnerChanged": "Workspace-Owner gewechselt",
+      "workspaceOwnerAssigned": "Workspace-Owner festgelegt",
+      "workspaceSlugChanged": "Workspace-Adresse von „{from}“ auf „{to}“ geändert"
     }
   },
   "adminUsers": {

@@ -834,8 +834,23 @@
         "invalid_name": "Invalid name",
         "invalid_email": "Invalid email address",
         "confirmation_mismatch": "The confirmation does not match the slug",
-        "busy": "Busy right now, please try again shortly"
-      }
+        "busy": "Busy right now, please try again shortly",
+        "has_owner": "This workspace already has an owner",
+        "slug_immutable": "Only the default workspace's address can be changed",
+        "invalid": "Invalid address",
+        "reserved": "This address is reserved",
+        "taken": "Already taken"
+      },
+      "ownerSection": "Set owner",
+      "ownerSectionHint": "This workspace has no owner yet, so nobody can manage it. Decide who takes it over.",
+      "ownerPickMember": "Pick a member",
+      "ownerPickPlaceholder": "Choose a member…",
+      "ownerByEmail": "Or by email address",
+      "ownerSetButton": "Set as owner",
+      "ownerAssigned": "Owner set",
+      "addressSection": "Address",
+      "addressChanged": "Address changed",
+      "addressWarning": "The current address stops working afterwards. The workspace is then reachable at {slug}.{domain}; saved bookmarks and links need to be updated."
     }
   },
   "appearance": {
@@ -1185,7 +1200,10 @@
     "calendarsOrphaned": "{count, plural, one {# without owner} other {# without owner}}",
     "usersSub": "{count, plural, one {# account} other {# accounts}}",
     "calendarsSub": "{count, plural, one {# calendar} other {# calendars}}, {orphaned} orphaned",
-    "logsSub": "{count, plural, one {# event} other {# events}}"
+    "logsSub": "{count, plural, one {# event} other {# events}}",
+    "defaultWorkspaceNoOwnerTitle": "Existing calendars have no workspace owner",
+    "defaultWorkspaceNoOwner": "Your existing calendars don't belong to a workspace owner yet. Decide who should be able to reach them.",
+    "defaultWorkspaceNoOwnerButton": "Set owner"
   },
   "adminAudit": {
     "subtitle": "{count, plural, one {# entry} other {# entries}}",
@@ -1260,7 +1278,10 @@
       "role": {
         "admin": "Admin",
         "member": "Member"
-      }
+      },
+      "workspaceOwnerChanged": "Changed the workspace owner",
+      "workspaceOwnerAssigned": "Set the workspace owner",
+      "workspaceSlugChanged": "Changed the workspace address from “{from}” to “{to}”"
     }
   },
   "adminUsers": {

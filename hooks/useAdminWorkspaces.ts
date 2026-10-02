@@ -77,9 +77,11 @@ export function useAdminRenameWorkspace() {
 export function useAdminTransferWorkspace() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, userId }: { id: string; userId: string }) =>
-      workspaceFetch<{ ok: true }>(`${base(id)}/transfer`, { method: "POST", body: JSON.stringify({ userId }) }),
+    // Exactly one of userId/email; email is resolved server-side and also covers non-members of an ownerless workspace.
+    mutationFn: ({ id, userId, email }: { id: string; userId?: string; email?: string }) =>
+      workspaceFetch<{ ok: true }>(`${base(id)}/transfer`, { method: "POST", body: JSON.stringify({ userId, email }) }),
     onMutate: async ({ id, userId }) => {
+      if (!userId) return { members: undefined };
       // The previous owner becomes an admin, mirroring the server.
       const members = await patchMembers(queryClient, id, (rows) =>
         rows.map((m) => (m.userId === userId ? { ...m, role: "owner" } : m.role === "owner" ? { ...m, role: "admin" } : m))
@@ -92,6 +94,20 @@ export function useAdminTransferWorkspace() {
     onSettled: (_d, _e, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.workspaces.members(id) });
       queryClient.invalidateQueries({ queryKey: listKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.all });
+    },
+  });
+}
+
+export function useAdminChangeWorkspaceSlug() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // No optimistic patch: the server validates availability.
+    mutationFn: ({ id, slug }: { id: string; slug: string }) =>
+      workspaceFetch<{ ok: true; slug: string }>(base(id), { method: "PATCH", body: JSON.stringify({ slug }) }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: listKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.mine });
     },
   });
 }
@@ -158,6 +174,7 @@ export function useAdminWorkspaceActions() {
   return {
     rename: useAdminRenameWorkspace(),
     transfer: useAdminTransferWorkspace(),
+    changeSlug: useAdminChangeWorkspaceSlug(),
     remove: useAdminDeleteWorkspace(),
     addMember: useAdminAddWorkspaceMember(),
     removeMember: useAdminRemoveWorkspaceMember(),

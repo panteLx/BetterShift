@@ -13,8 +13,11 @@ export default function AdminWorkspacesPage() {
   const t = useTranslations();
   const { data, isLoading, isError, refetch } = useAdminWorkspaces();
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // ?open=<id> deep-links into a workspace's detail sheet (used by the dashboard banner).
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("open")
+  );
+  const [detailsOpen, setDetailsOpen] = useState(selectedId !== null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const workspaces = useMemo(() => data?.workspaces ?? [], [data]);
@@ -28,6 +31,7 @@ export default function AdminWorkspacesPage() {
         (w.owner?.email.toLowerCase().includes(q) ?? false)
     );
   }, [workspaces, search]);
+  // ?open=<id> deep-links into a workspace's detail sheet (used by the dashboard banner).
   const selected = workspaces.find((w) => w.id === selectedId) ?? null;
 
   if (isLoading) return <FullscreenLoader />;

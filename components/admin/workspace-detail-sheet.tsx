@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Crown, Loader2, Plus, Trash2, UserMinus } from "lucide-react";
+import { Crown, ExternalLink, Loader2, Plus, Trash2, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,13 +24,21 @@ import { useIsSuperAdmin } from "@/hooks/useAdminAccess";
 import {
   useAdminDeleteWorkspace,
   useAdminAddWorkspaceMember,
+  useAdminChangeWorkspaceSlug,
   useAdminRemoveWorkspaceMember,
   useAdminRenameWorkspace,
   useAdminTransferWorkspace,
   useAdminWorkspaceMembers,
   type AdminWorkspaceRow,
 } from "@/hooks/useAdminWorkspaces";
-import { WorkspaceApiError, type WorkspaceMemberDto } from "@/hooks/useWorkspaces";
+import {
+  WorkspaceApiError,
+  useSlugAvailability,
+  useWorkspaceHref,
+  type WorkspaceMemberDto,
+} from "@/hooks/useWorkspaces";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { isValidSlugFormat } from "@/lib/workspace-slugs";
 import { handleRateLimitError } from "@/lib/rate-limit-client";
 
 const KNOWN_ERRORS = [
@@ -45,6 +53,11 @@ const KNOWN_ERRORS = [
   "not_member",
   "invalid_name",
   "invalid_email",
+  "has_owner",
+  "slug_immutable",
+  "invalid",
+  "reserved",
+  "taken",
   "confirmation_mismatch",
   "busy",
 ] as const;
@@ -114,6 +127,158 @@ export function WorkspaceDeleteDialog({
       confirmLabel={t("admin.workspaces.deleteConfirm")}
       onConfirm={handleDelete}
     />
+  );
+}
+
+const SLUG_DEBOUNCE_MS = 400;
+
+/** Ownerless workspace (the default one after enabling MULTI_TENANT): pick a member or enter an email. */
+function OwnerAssignSection({ workspace, members }: { workspace: AdminWorkspaceRow; members: WorkspaceMemberDto[] }) {
+  const t = useTranslations();
+  const handleError = useErrorHandler();
+  const transfer = useAdminTransferWorkspace();
+  const [memberId, setMemberId] = useState("");
+  const [email, setEmail] = useState("");
+  const trimmed = email.trim();
+  const canSubmit = (!!memberId || !!trimmed) && !transfer.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    transfer.mutate(
+      { id: workspace.id, ...(trimmed ? { email: trimmed } : { userId: memberId }) },
+      {
+        onSuccess: () => {
+          toast.success(t("admin.workspaces.ownerAssigned"));
+          setEmail("");
+          setMemberId("");
+        },
+        onError: handleError,
+      }
+    );
+  };
+
+  return (
+    <DetailSection label={t("admin.workspaces.ownerSection")}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-[11px] border border-warning-line bg-warning-surface p-3">
+        <p className="text-[13px] text-warning-title">{t("admin.workspaces.ownerSectionHint")}</p>
+        {members.length > 0 && (
+          <Field label={t("admin.workspaces.ownerPickMember")} htmlFor="admin-workspace-owner-member">
+            <Select
+              value={memberId}
+              onValueChange={(v) => {
+                setMemberId(v);
+                setEmail("");
+              }}
+            >
+              <SelectTrigger id="admin-workspace-owner-member" className="h-10 min-w-0 rounded-[9px]">
+                <SelectValue placeholder={t("admin.workspaces.ownerPickPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((m) => (
+                  <SelectItem key={m.userId} value={m.userId}>
+                    {m.name || m.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+        <Field label={t("admin.workspaces.ownerByEmail")} htmlFor="admin-workspace-owner-email">
+          <Input
+            id="admin-workspace-owner-email"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (e.target.value) setMemberId("");
+            }}
+            className={inputClass}
+          />
+        </Field>
+        <Button type="submit" disabled={!canSubmit} className="h-10 gap-2 self-start font-semibold">
+          {transfer.isPending ? <Loader2 className="size-4 animate-spin" /> : <Crown className="size-4" />}
+          {t("admin.workspaces.ownerSetButton")}
+        </Button>
+      </form>
+    </DetailSection>
+  );
+}
+
+/** The default workspace is the only one whose address can change. */
+function AddressSection({ workspace }: { workspace: AdminWorkspaceRow }) {
+  const t = useTranslations();
+  const handleError = useErrorHandler();
+  const href = useWorkspaceHref();
+  const { tenantBaseDomain } = usePublicConfig();
+  const changeSlug = useAdminChangeWorkspaceSlug();
+  const [slug, setSlug] = useState(workspace.slug);
+  const [debounced, setDebounced] = useState(slug);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(slug), SLUG_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [slug]);
+
+  const changed = slug !== workspace.slug;
+  const debouncedValid = isValidSlugFormat(debounced);
+  const availability = useSlugAvailability(debounced, changed && debouncedValid);
+  const settled = debounced === slug;
+  const status = changed && settled && debouncedValid ? availability.data?.status : undefined;
+  const hint = (() => {
+    if (!changed || !slug || !settled) return null;
+    if (!debouncedValid || status === "invalid") return { ok: false, text: t("workspaces.slugInvalid") };
+    if (status === "available") return { ok: true, text: t("workspaces.slugAvailable") };
+    if (status === "taken") return { ok: false, text: t("workspaces.slugTaken") };
+    if (status === "reserved") return { ok: false, text: t("workspaces.slugReserved") };
+    return null;
+  })();
+  const canSave = changed && isValidSlugFormat(slug) && status !== "taken" && status !== "reserved" && !changeSlug.isPending;
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSave) return;
+    changeSlug.mutate(
+      { id: workspace.id, slug },
+      { onSuccess: () => toast.success(t("admin.workspaces.addressChanged")), onError: handleError }
+    );
+  };
+
+  return (
+    <DetailSection label={t("admin.workspaces.addressSection")}>
+      <form onSubmit={handleSave} className="flex flex-col gap-3">
+        <a
+          href={href(workspace.slug)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 self-start break-all font-mono text-[12.5px] text-brand-ink hover:underline"
+        >
+          {href(workspace.slug).replace(/\/$/, "")}
+          <ExternalLink className="size-3.5 shrink-0" />
+        </a>
+        <Field label={t("workspaces.address")} htmlFor="admin-workspace-slug" hint={t("workspaces.slugHint")}>
+          <div className="flex items-stretch gap-2">
+            <Input
+              id="admin-workspace-slug"
+              autoComplete="off"
+              spellCheck={false}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase())}
+              maxLength={32}
+              className={`${inputClass} font-mono`}
+            />
+            {tenantBaseDomain && (
+              <span className="flex items-center font-mono text-[12.5px] text-fg-tertiary">.{tenantBaseDomain}</span>
+            )}
+          </div>
+        </Field>
+        {hint && <p className={hint.ok ? "text-[12.5px] text-success" : "text-[12.5px] text-danger"}>{hint.text}</p>}
+        <p className="text-[12.5px] text-fg-tertiary">{t("admin.workspaces.addressWarning", { slug: slug || "…", domain: tenantBaseDomain ?? "" })}</p>
+        <Button type="submit" disabled={!canSave} className="h-10 self-start font-semibold">
+          {changeSlug.isPending ? <Loader2 className="size-4 animate-spin" /> : t("common.save")}
+        </Button>
+      </form>
+    </DetailSection>
   );
 }
 
@@ -194,6 +359,12 @@ export function WorkspaceDetailSheet({ open, onOpenChange, workspace, onDelete }
           </Button>
         </form>
       </DetailSection>
+
+      {isDefaultWorkspace(workspace) && !workspace.owner && data && (
+        <OwnerAssignSection workspace={workspace} members={data.members} />
+      )}
+
+      {isDefaultWorkspace(workspace) && <AddressSection key={workspace.slug} workspace={workspace} />}
 
       <DetailSection label={t("admin.workspaces.membersSection", { count: workspace.memberCount })}>
         {isLoading || !data ? (

@@ -834,8 +834,23 @@
         "invalid_name": "Neplatný název",
         "invalid_email": "Neplatná e-mailová adresa",
         "confirmation_mismatch": "Potvrzení neodpovídá slugu",
-        "busy": "Právě je obsazeno, zkuste to prosím za chvíli znovu"
-      }
+        "busy": "Právě je obsazeno, zkuste to prosím za chvíli znovu",
+        "has_owner": "Tento pracovní prostor už vlastníka má",
+        "slug_immutable": "Změnit lze pouze adresu výchozího pracovního prostoru",
+        "invalid": "Neplatná adresa",
+        "reserved": "Tato adresa je vyhrazena",
+        "taken": "Již obsazeno"
+      },
+      "ownerSection": "Nastavit vlastníka",
+      "ownerSectionHint": "Tento pracovní prostor zatím nemá vlastníka, takže jej nemůže nikdo spravovat. Určete, kdo ho převezme.",
+      "ownerPickMember": "Vybrat člena",
+      "ownerPickPlaceholder": "Vyberte člena…",
+      "ownerByEmail": "Nebo podle e-mailové adresy",
+      "ownerSetButton": "Nastavit jako vlastníka",
+      "ownerAssigned": "Vlastník nastaven",
+      "addressSection": "Adresa",
+      "addressChanged": "Adresa změněna",
+      "addressWarning": "Dosavadní adresa poté přestane fungovat. Pracovní prostor bude dostupný na {slug}.{domain}; uložené záložky a odkazy je třeba upravit."
     }
   },
   "appearance": {
@@ -1185,7 +1200,10 @@
     "calendarsOrphaned": "{count, plural, one {# bez vlastníka} few {# bez vlastníka} other {# bez vlastníka}}",
     "usersSub": "{count, plural, one {# účet} few {# účty} other {# účtů}}",
     "calendarsSub": "{count, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}, {orphaned} bez vlastníka",
-    "logsSub": "{count, plural, one {# událost} few {# události} other {# událostí}}"
+    "logsSub": "{count, plural, one {# událost} few {# události} other {# událostí}}",
+    "defaultWorkspaceNoOwnerTitle": "Stávající kalendáře nemají vlastníka pracovního prostoru",
+    "defaultWorkspaceNoOwner": "Vaše stávající kalendáře zatím nepatří žádnému vlastníkovi pracovního prostoru. Určete, kdo k nim má mít přístup.",
+    "defaultWorkspaceNoOwnerButton": "Nastavit vlastníka"
   },
   "adminAudit": {
     "subtitle": "{count, plural, one {# záznam} few {# záznamy} other {# záznamů}}",
@@ -1260,7 +1278,10 @@
       "role": {
         "admin": "Správce",
         "member": "Člen"
-      }
+      },
+      "workspaceOwnerChanged": "Změnil vlastníka pracovního prostoru",
+      "workspaceOwnerAssigned": "Nastavil vlastníka pracovního prostoru",
+      "workspaceSlugChanged": "Změnil adresu pracovního prostoru z „{from}“ na „{to}“"
     }
   },
   "adminUsers": {

@@ -834,8 +834,23 @@
         "invalid_name": "Nom invalide",
         "invalid_email": "Adresse e-mail invalide",
         "confirmation_mismatch": "La confirmation ne correspond pas au slug",
-        "busy": "Occupé pour le moment, réessayez dans un instant"
-      }
+        "busy": "Occupé pour le moment, réessayez dans un instant",
+        "has_owner": "Cet espace de travail a déjà un propriétaire",
+        "slug_immutable": "Seule l'adresse de l'espace de travail par défaut peut être modifiée",
+        "invalid": "Adresse invalide",
+        "reserved": "Cette adresse est réservée",
+        "taken": "Déjà utilisée"
+      },
+      "ownerSection": "Définir le propriétaire",
+      "ownerSectionHint": "Cet espace de travail n'a pas encore de propriétaire, personne ne peut donc le gérer. Choisissez qui le prend en charge.",
+      "ownerPickMember": "Choisir un membre",
+      "ownerPickPlaceholder": "Choisir un membre…",
+      "ownerByEmail": "Ou par adresse e-mail",
+      "ownerSetButton": "Définir comme propriétaire",
+      "ownerAssigned": "Propriétaire défini",
+      "addressSection": "Adresse",
+      "addressChanged": "Adresse modifiée",
+      "addressWarning": "L'adresse actuelle cessera ensuite de fonctionner. L'espace de travail sera alors accessible à {slug}.{domain} ; les favoris et liens enregistrés doivent être mis à jour."
     }
   },
   "appearance": {
@@ -1185,7 +1200,10 @@
     "calendarsOrphaned": "{count, plural, one {# sans propriétaire} other {# sans propriétaire}}",
     "usersSub": "{count, plural, one {# compte} other {# comptes}}",
     "calendarsSub": "{count, plural, one {# calendrier} other {# calendriers}}, {orphaned} sans propriétaire",
-    "logsSub": "{count, plural, one {# événement} other {# événements}}"
+    "logsSub": "{count, plural, one {# événement} other {# événements}}",
+    "defaultWorkspaceNoOwnerTitle": "Calendriers existants sans propriétaire d'espace de travail",
+    "defaultWorkspaceNoOwner": "Vos calendriers existants n'appartiennent pas encore à un propriétaire d'espace de travail. Choisissez qui doit y avoir accès.",
+    "defaultWorkspaceNoOwnerButton": "Définir le propriétaire"
   },
   "adminAudit": {
     "subtitle": "{count, plural, one {# entrée} other {# entrées}}",
@@ -1260,7 +1278,10 @@
       "role": {
         "admin": "Administrateur",
         "member": "Membre"
-      }
+      },
+      "workspaceOwnerChanged": "A changé le propriétaire de l'espace de travail",
+      "workspaceOwnerAssigned": "A défini le propriétaire de l'espace de travail",
+      "workspaceSlugChanged": "A modifié l'adresse de l'espace de travail de « {from} » en « {to} »"
     }
   },
   "adminUsers": {
