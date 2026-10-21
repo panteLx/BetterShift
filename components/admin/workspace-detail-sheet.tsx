@@ -233,7 +233,7 @@ function AddressSection({ workspace }: { workspace: AdminWorkspaceRow }) {
     if (status === "reserved") return { ok: false, text: t("workspaces.slugReserved") };
     return null;
   })();
-  const canSave = changed && isValidSlugFormat(slug) && status !== "taken" && status !== "reserved" && !changeSlug.isPending;
+  const canSave = changed && settled && status === "available" && !changeSlug.isPending;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

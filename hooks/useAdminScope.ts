@@ -10,13 +10,20 @@ export function useAdminScope() {
   const config = usePublicConfig();
   const multiTenant = !!config.tenantBaseDomain;
   // /api/workspace answers 404 on the portal, which is how "global" is told apart.
-  const { data, isLoading } = useWorkspace(multiTenant);
+  const { data, isLoading, isError, refetch } = useWorkspace(multiTenant);
   const workspace = data ?? undefined;
   const isPortal = data === null;
   return useMemo(() => {
     const workspaceRole: WorkspaceRole | null = isWorkspaceRole(workspace?.role) ? workspace.role : null;
     const kind = !multiTenant ? "unknown" : workspace ? "workspace" : isPortal ? "portal" : null;
     const scope: AdminScope | null = kind === null ? null : adminScopeFor(multiTenant, kind);
-    return { scope, workspace: workspace ?? null, workspaceRole, isLoading: multiTenant && isLoading };
-  }, [multiTenant, workspace, isLoading, isPortal]);
+    return {
+      scope,
+      workspace: workspace ?? null,
+      workspaceRole,
+      isLoading: multiTenant && isLoading,
+      isError: multiTenant && isError && data === undefined,
+      refetch,
+    };
+  }, [multiTenant, workspace, isLoading, isPortal, isError, data, refetch]);
 }

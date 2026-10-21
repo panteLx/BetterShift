@@ -539,6 +539,21 @@ export async function runAdminChecks(h: OnboardingHarness): Promise<void> {
       const ok = await api(superA, portal, "POST", `${listPath}/${sw.id}/transfer`, { userId: iaMember.id });
       return denied.status === 403 && stillOwner && ok.status === 200 && (await roleOf(sw.id, iaMember.id)) === "owner";
     });
+    await tryCheck("plain admin can hand over a workspace they own, but not to a superadmin (403)", async () => {
+      const aw = await newWorkspace("adm-inst-adminowned");
+      await addMember(aw.id, admin3, "owner");
+      await addMember(aw.id, iaMember, "member");
+      await addMember(aw.id, superA, "member");
+      const denied = await api(admin3, portal, "POST", `${listPath}/${aw.id}/transfer`, { userId: superA.id });
+      const ok = await api(admin3, portal, "POST", `${listPath}/${aw.id}/transfer`, { userId: iaMember.id });
+      return denied.status === 403 && ok.status === 200 && (await roleOf(aw.id, iaMember.id)) === "owner";
+    });
+    await tryCheck("PATCH default with a taken slug is 409 and leaves the name unchanged", async () => {
+      const before = (await db.select().from(schema.organization).where(eq(schema.organization.id, "default")))[0];
+      const r = await api(superA, portal, "PATCH", `${listPath}/default`, { name: "Half Applied", slug: "adm-inst" });
+      const after = (await db.select().from(schema.organization).where(eq(schema.organization.id, "default")))[0];
+      return r.status === 409 && after.name === before.name && after.slug === before.slug;
+    });
     await tryCheck("admin transfer to a member at the owner limit is 200 (exempt), old owner becomes admin", async () => {
       for (const slug of ["adm-icap-1", "adm-icap-2", "adm-icap-3"]) {
         const cw = await newWorkspace(slug);

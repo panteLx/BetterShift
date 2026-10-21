@@ -34,15 +34,16 @@ export async function POST(request: NextRequest, { params }: Params) {
     columns: { userId: true },
   });
 
+  const [target] = userId
+    ? await db.select().from(user).where(eq(user.id, userId)).limit(1)
+    : await db.select().from(user).where(sql`lower(${user.email}) = ${email}`).limit(1);
+  if (!target) return NextResponse.json({ error: "User not found", code: "user_not_found" }, { status: 404 });
+  if (!canEditUser(admin, target)) {
+    return NextResponse.json({ error: "Insufficient permissions for this user", code: "forbidden" }, { status: 403 });
+  }
+
   if (!owner) {
     // Ownerless workspace (e.g. the default one after enabling MULTI_TENANT): the target becomes its first owner.
-    const [target] = userId
-      ? await db.select().from(user).where(eq(user.id, userId)).limit(1)
-      : await db.select().from(user).where(sql`lower(${user.email}) = ${email}`).limit(1);
-    if (!target) return NextResponse.json({ error: "User not found", code: "user_not_found" }, { status: 404 });
-    if (!canEditUser(admin, target)) {
-      return NextResponse.json({ error: "Insufficient permissions for this user", code: "forbidden" }, { status: 403 });
-    }
     let assigned;
     try {
       assigned = assignOwner(id, target.id);
@@ -62,17 +63,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ ok: true });
   }
 
-  // Demoting the owner is an edit of that user, so a plain admin cannot touch a superadmin owner.
+  // Demoting the owner is an edit of that user, so a plain admin cannot touch an admin or superadmin owner (their own account excepted).
   const ownerUser = await db.query.user.findFirst({ where: eq(user.id, owner.userId) });
-  if (!canEditUser(admin, ownerUser)) {
+  if (owner.userId !== admin.id && !canEditUser(admin, ownerUser)) {
     return NextResponse.json({ error: "Insufficient permissions for this user", code: "forbidden" }, { status: 403 });
   }
-  let targetId = userId;
-  if (!targetId) {
-    const [target] = await db.select({ id: user.id }).from(user).where(sql`lower(${user.email}) = ${email}`).limit(1);
-    if (!target) return NextResponse.json({ error: "User not found", code: "user_not_found" }, { status: 404 });
-    targetId = target.id;
-  }
+  const targetId = target.id;
 
   let result;
   try {

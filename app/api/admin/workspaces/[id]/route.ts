@@ -10,6 +10,7 @@ import { logAdminAction, type WorkspaceDeletedMetadata, type WorkspaceRenamedMet
 import { changeDefaultWorkspaceSlug, deleteWorkspace, renameWorkspace } from "@/lib/workspace-admin";
 import { DEFAULT_WORKSPACE_ID } from "@/lib/workspace";
 import { busyResponse } from "@/lib/workspace-access";
+import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/workspaces";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -43,23 +44,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const before = await db.query.organization.findFirst({ where: eq(organization.id, id), columns: { name: true } });
   if (!before) return NextResponse.json({ error: "Not found", code: "not_found" }, { status: 404 });
 
-  let name = before.name;
   if (hasName) {
-    const renamed = await renameWorkspace(id, body!.name as string);
-    if (!renamed.ok) {
-      return NextResponse.json({ error: renamed.reason, code: renamed.reason }, { status: renamed.reason === "not_found" ? 404 : 400 });
-    }
-    name = renamed.workspace.name;
-    if (name !== before.name) {
-      void logAdminAction<WorkspaceRenamedMetadata>({
-        action: "workspace.rename",
-        userId: ctx.admin.id,
-        resourceType: "workspace",
-        resourceId: id,
-        workspaceId: id,
-        metadata: { from: before.name, to: name },
-        request,
-      });
+    const trimmed = (body!.name as string).trim();
+    if (!trimmed || trimmed.length > WORKSPACE_NAME_MAX_LENGTH) {
+      return NextResponse.json({ error: "invalid_name", code: "invalid_name" }, { status: 400 });
     }
   }
 
@@ -83,6 +71,26 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       });
     }
   }
+  let name = before.name;
+  if (hasName) {
+    const renamed = await renameWorkspace(id, body!.name as string);
+    if (!renamed.ok) {
+      return NextResponse.json({ error: renamed.reason, code: renamed.reason }, { status: renamed.reason === "not_found" ? 404 : 400 });
+    }
+    name = renamed.workspace.name;
+    if (name !== before.name) {
+      void logAdminAction<WorkspaceRenamedMetadata>({
+        action: "workspace.rename",
+        userId: ctx.admin.id,
+        resourceType: "workspace",
+        resourceId: id,
+        workspaceId: id,
+        metadata: { from: before.name, to: name },
+        request,
+      });
+    }
+  }
+
   return NextResponse.json({ ok: true, name, ...(slug ? { slug } : {}) });
 }
 

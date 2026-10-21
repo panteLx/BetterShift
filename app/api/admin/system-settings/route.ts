@@ -145,12 +145,10 @@ export async function PATCH(request: NextRequest) {
 
     const { before, after } = await updateSystemSettings(patch);
 
-    // Single-tenant has one workspace and no per-workspace UI, so the toggle is mirrored into it;
-    // with MULTI_TENANT it is the default that workspaces without their own value follow.
+    // Single-tenant has no per-workspace UI: clear any override (older versions mirrored the toggle
+    // into it) so the default workspace keeps following the instance default after MULTI_TENANT.
     if (patch.allowGuestAccess !== undefined && !MULTI_TENANT) {
-      await updateWorkspaceSettings(DEFAULT_WORKSPACE_ID, {
-        allowGuestAccess: patch.allowGuestAccess,
-      });
+      await updateWorkspaceSettings(DEFAULT_WORKSPACE_ID, { allowGuestAccess: null });
     }
 
     await logAdminAction<AdminSystemSettingsUpdatedMetadata>({
