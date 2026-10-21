@@ -9,10 +9,26 @@ import {
   calendarShares as calendarSharesTable,
   userCalendarSubscriptions as userCalendarSubscriptionsTable,
 } from "@/lib/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type AccountDeletedMetadata } from "@/lib/audit-log";
+import {
+  assertNotSoleWorkspaceOwner,
+  deleteMemberlessWorkspaces,
+  invalidateDeletedWorkspaces,
+  SoleWorkspaceOwnerError,
+} from "@/lib/auth/account-deletion";
+
+function soleOwnerResponse() {
+  return NextResponse.json(
+    {
+      error:
+        "You are the only owner of a workspace with other members. Transfer ownership first.",
+    },
+    { status: 409 }
+  );
+}
 
 /**
  * Delete user account endpoint
@@ -20,7 +36,9 @@ import { logUserAction, type AccountDeletedMetadata } from "@/lib/audit-log";
  * DELETE /api/auth/delete-account
  * Body: { password?: string } (required if user has password-based login)
  *
- * Deletes user account and all associated data in the correct order:
+ * Refused with 409 while the user is the only owner of a workspace that has
+ * other members. Otherwise deletes, in one transaction:
+ * 0. Workspaces the user is the only member of
  * 1. Calendar shares (where user is participant or sharer)
  * 2. Calendar subscriptions
  * 3. Owned calendars (cascade deletes shifts, presets, notes, external syncs)
@@ -79,28 +97,17 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // Delete in the correct order to avoid foreign key constraint violations
+    try {
+      assertNotSoleWorkspaceOwner(userId);
+    } catch (error) {
+      if (error instanceof SoleWorkspaceOwnerError) return soleOwnerResponse();
+      throw error;
+    }
 
-    // 1. Delete calendar shares where user is sharer OR shared with
-    await db
-      .delete(calendarSharesTable)
-      .where(
-        or(
-          eq(calendarSharesTable.userId, userId),
-          eq(calendarSharesTable.sharedBy, userId)
-        )
-      );
-
-    // 2. Delete user's calendar subscriptions
-    await db
-      .delete(userCalendarSubscriptionsTable)
-      .where(eq(userCalendarSubscriptionsTable.userId, userId));
-
-    // 3. Delete user's calendars (cascade will delete shifts, presets, notes, external syncs)
-    const deletedCalendars = await db
-      .delete(calendarsTable)
-      .where(eq(calendarsTable.ownerId, userId))
-      .returning();
+    const [calendarCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(calendarsTable)
+      .where(eq(calendarsTable.ownerId, userId));
 
     // Log account deletion event BEFORE deleting the user
     await logUserAction<AccountDeletedMetadata>({
@@ -109,25 +116,43 @@ export async function DELETE(req: NextRequest) {
       resourceType: "user",
       resourceId: userId,
       metadata: {
-        calendarsDeleted: deletedCalendars.length,
+        calendarsDeleted: Number(calendarCount?.count || 0),
       },
       request: req,
     });
 
-    // 4. Delete user's sessions
-    await db.delete(sessionTable).where(eq(sessionTable.userId, userId));
+    // One transaction, in foreign-key-safe order
+    const deletedWorkspaceSlugs = db.transaction((tx) => {
+      const slugs = deleteMemberlessWorkspaces(tx, userId);
 
-    // 5. Delete user's accounts (OAuth + credential)
-    await db.delete(accountTable).where(eq(accountTable.userId, userId));
+      tx.delete(calendarSharesTable)
+        .where(
+          or(
+            eq(calendarSharesTable.userId, userId),
+            eq(calendarSharesTable.sharedBy, userId)
+          )
+        )
+        .run();
+      tx.delete(userCalendarSubscriptionsTable)
+        .where(eq(userCalendarSubscriptionsTable.userId, userId))
+        .run();
+      // Cascades to shifts, presets, notes, external syncs
+      tx.delete(calendarsTable).where(eq(calendarsTable.ownerId, userId)).run();
+      tx.delete(sessionTable).where(eq(sessionTable.userId, userId)).run();
+      tx.delete(accountTable).where(eq(accountTable.userId, userId)).run();
+      tx.delete(userTable).where(eq(userTable.id, userId)).run();
 
-    // 6. Delete user record
-    await db.delete(userTable).where(eq(userTable.id, userId));
+      return slugs;
+    });
+    invalidateDeletedWorkspaces(deletedWorkspaceSlugs);
 
     return NextResponse.json({
       success: true,
       message: "Account deleted successfully",
     });
   } catch (error) {
+    // The in-transaction re-check can still trip if membership changed since the pre-check
+    if (error instanceof SoleWorkspaceOwnerError) return soleOwnerResponse();
     console.error("Error deleting account:", error);
     return NextResponse.json(
       { error: "Failed to delete account" },

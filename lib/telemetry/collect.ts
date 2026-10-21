@@ -22,6 +22,7 @@ import {
   allowUserRegistration,
 } from "@/lib/auth/feature-flags";
 import { DEFAULT_TELEMETRY_ENDPOINT } from "@/lib/telemetry/config";
+import { DEFAULT_WORKSPACE_ID } from "@/lib/workspace";
 import {
   TELEMETRY_SCHEMA_VERSION,
   toBucket,
@@ -159,7 +160,8 @@ export async function collectTelemetryPayload(
     },
     config: {
       authEnabled: isAuthEnabled(),
-      guestAccess: await allowGuestAccess(),
+      // Background job: no request host to resolve, so report the default workspace.
+      guestAccess: await allowGuestAccess(DEFAULT_WORKSPACE_ID),
       registrationOpen: allowUserRegistration(),
       defaultLocale: process.env.DEFAULT_LOCALE ?? "en",
       updateCheckEnabled: settings.updateCheckEnabled,

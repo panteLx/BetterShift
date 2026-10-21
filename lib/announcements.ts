@@ -43,6 +43,8 @@ export interface AnnouncementInput {
   enabled: boolean;
   startsAt: Date | null;
   endsAt: Date | null;
+  /** null = shown in every workspace; omitted when the payload leaves it out, so an update keeps it. */
+  workspaceId?: string | null;
 }
 
 export type AnnouncementInputError =
@@ -54,7 +56,8 @@ export type AnnouncementInputError =
   | "NO_PLACEMENT"
   | "INVALID_STARTS_AT"
   | "INVALID_ENDS_AT"
-  | "INVALID_WINDOW";
+  | "INVALID_WINDOW"
+  | "INVALID_WORKSPACE_ID";
 
 /** undefined means "present but unparseable", which the caller rejects. */
 function parseTimestamp(value: unknown): Date | null | undefined {
@@ -101,14 +104,34 @@ export function sanitizeAnnouncementInput(
     return { ok: false, error: "INVALID_WINDOW" };
   }
 
-  return {
-    ok: true,
-    value: { title, body, tone, showOnAuth, showOnDashboard, enabled, startsAt, endsAt },
+  const value: AnnouncementInput = {
+    title,
+    body,
+    tone,
+    showOnAuth,
+    showOnDashboard,
+    enabled,
+    startsAt,
+    endsAt,
   };
+  // An unknown id is safe: the announcement just never matches a request's workspace.
+  if ("workspaceId" in input) {
+    if (input.workspaceId === null) {
+      value.workspaceId = null;
+    } else if (typeof input.workspaceId === "string" && input.workspaceId.trim() !== "") {
+      value.workspaceId = input.workspaceId.trim();
+    } else {
+      return { ok: false, error: "INVALID_WORKSPACE_ID" };
+    }
+  }
+
+  return { ok: true, value };
 }
 
+/** workspaceId null (the portal) sees only instance-wide announcements. */
 export async function getVisibleAnnouncements(
-  placement: AnnouncementPlacement
+  placement: AnnouncementPlacement,
+  workspaceId: string | null
 ): Promise<PublicAnnouncement[]> {
   const now = new Date();
   const placementColumn =
@@ -127,7 +150,10 @@ export async function getVisibleAnnouncements(
         eq(announcements.enabled, true),
         eq(placementColumn, true),
         or(isNull(announcements.startsAt), lte(announcements.startsAt, now)),
-        or(isNull(announcements.endsAt), gt(announcements.endsAt, now))
+        or(isNull(announcements.endsAt), gt(announcements.endsAt, now)),
+        workspaceId
+          ? or(isNull(announcements.workspaceId), eq(announcements.workspaceId, workspaceId))
+          : isNull(announcements.workspaceId)
       )
     )
     .orderBy(desc(announcements.createdAt));

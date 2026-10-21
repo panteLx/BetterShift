@@ -26,7 +26,12 @@ export async function findFeedToken(token: string): Promise<CalendarFeedToken | 
 }
 
 // Feeds carry no session, so the owner's ban and share-link cookies must be handled here.
-export async function canReadFeed(userId: string | null, calendarId: string): Promise<boolean> {
+// workspaceId defaults to the request workspace.
+export async function canReadFeed(
+  userId: string | null,
+  calendarId: string,
+  workspaceId?: string
+): Promise<boolean> {
   if (!userId) return !isAuthEnabled();
   const owner = await db.query.user.findFirst({
     where: eq(user.id, userId),
@@ -34,5 +39,8 @@ export async function canReadFeed(userId: string | null, calendarId: string): Pr
   });
   // Same rule as better-auth's admin plugin: an expired ban no longer counts.
   if (owner?.banned && (!owner.banExpires || owner.banExpires.getTime() > Date.now())) return false;
-  return hasCapability(userId, calendarId, "viewShifts", { ignoreTokenCookie: true });
+  return hasCapability(userId, calendarId, "viewShifts", {
+    ignoreTokenCookie: true,
+    workspaceId,
+  });
 }

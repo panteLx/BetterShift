@@ -62,6 +62,13 @@ export function useAuditDescription() {
           break;
         case "admin.calendar.transfer":
           if (calendar && text(m, "newOwnerEmail")) {
+            if (field(m, "addedToWorkspace") === true && text(m, "workspaceSlug")) {
+              return t("adminAudit.describe.calendarTransferredAndJoined", {
+                calendar,
+                user: text(m, "newOwnerEmail"),
+                workspace: text(m, "workspaceSlug"),
+              });
+            }
             return t("adminAudit.describe.calendarTransferred", {
               calendar,
               user: text(m, "newOwnerEmail"),
@@ -70,6 +77,15 @@ export function useAuditDescription() {
           break;
         case "admin.calendar.bulk_transfer":
           if (text(m, "newOwnerEmail")) {
+            const added = field(m, "addedToWorkspaces");
+            const addedCount = Array.isArray(added) ? added.length : 0;
+            if (addedCount > 0) {
+              return t("adminAudit.describe.calendarsTransferredAndJoined", {
+                count: count(m, "count"),
+                user: text(m, "newOwnerEmail"),
+                count2: addedCount,
+              });
+            }
             return t("adminAudit.describe.calendarsTransferred", {
               count: count(m, "count"),
               user: text(m, "newOwnerEmail"),
@@ -93,6 +109,32 @@ export function useAuditDescription() {
           });
         case "admin.announcement.delete":
           return t("adminAudit.describe.announcementDeleted", { title: text(m, "title") });
+        case "admin.workspace_member_add":
+          if (target && text(m, "workspaceSlug")) {
+            const rawRole = text(m, "role");
+            // One literal t() call per branch: the i18n checker only sees literal keys.
+            const role =
+              rawRole === "admin"
+                ? t("adminAudit.describe.role.admin")
+                : rawRole === "member"
+                  ? t("adminAudit.describe.role.member")
+                  : rawRole;
+            return t("adminAudit.describe.adminWorkspaceMemberAdded", {
+              user: target,
+              workspace: text(m, "workspaceSlug"),
+              role,
+            });
+          }
+          break;
+        case "admin.workspace_member_remove":
+          if (target && text(m, "workspaceSlug")) {
+            return t("adminAudit.describe.adminWorkspaceMemberRemoved", {
+              user: target,
+              workspace: text(m, "workspaceSlug"),
+              count: count(m, "calendarsTransferred"),
+            });
+          }
+          break;
         case "admin.telemetry_consent":
           return field(m, "after") === true
             ? t("adminAudit.describe.telemetryEnabled")
@@ -116,6 +158,32 @@ export function useAuditDescription() {
         case "calendar.created":
           if (calendar) return t("adminAudit.describe.calendarCreated", { calendar });
           break;
+        case "workspace.create":
+          if (text(m, "workspaceName")) return t("adminAudit.describe.workspaceCreated", { workspace: text(m, "workspaceName") });
+          break;
+        case "workspace.owner_transfer":
+          if (text(m, "toUser")) {
+            return field(m, "fromUser")
+              ? t("adminAudit.describe.workspaceOwnerChanged")
+              : t("adminAudit.describe.workspaceOwnerAssigned");
+          }
+          break;
+        case "workspace.slug_change":
+          if (text(m, "from") && text(m, "to")) {
+            return t("adminAudit.describe.workspaceSlugChanged", { from: text(m, "from"), to: text(m, "to") });
+          }
+          break;
+        case "workspace.join":
+          if (text(m, "workspaceName")) return t("adminAudit.describe.workspaceJoined", { workspace: text(m, "workspaceName") });
+          break;
+        case "workspace.leave":
+          return t("adminAudit.describe.workspaceLeft", { count: count(m, "calendarsTransferred") });
+        case "workspace.member_remove":
+          return t("adminAudit.describe.workspaceMemberRemoved", { count: count(m, "calendarsTransferred") });
+        case "workspace.join_link_create":
+          return t("adminAudit.describe.workspaceJoinLinkCreated");
+        case "workspace.join_link_revoke":
+          return t("adminAudit.describe.workspaceJoinLinkRevoked");
         case "calendar.shared":
           if (calendar && text(m, "sharedWith")) {
             return t("adminAudit.describe.calendarShared", { calendar, user: text(m, "sharedWith") });

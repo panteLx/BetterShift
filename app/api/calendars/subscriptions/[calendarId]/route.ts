@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { dismissCalendar } from "@/lib/auth/permissions";
+import { CalendarNotFoundError, dismissCalendar } from "@/lib/auth/permissions";
 
 /**
  * DELETE /api/calendars/subscriptions/[calendarId]
@@ -27,6 +27,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
+    if (error instanceof CalendarNotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     console.error("Error dismissing calendar:", error);
     const message =
       error instanceof Error ? error.message : "Failed to dismiss calendar";

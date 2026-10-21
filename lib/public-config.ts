@@ -15,6 +15,7 @@
  */
 
 import { allowGuestAccess } from "@/lib/auth/feature-flags";
+import { MULTI_TENANT, TENANT_BASE_DOMAIN } from "@/lib/auth/env";
 
 /**
  * Returns public configuration that can be safely exposed to the client.
@@ -59,7 +60,13 @@ export async function getPublicConfig() {
        * @default false
        */
       allowGuestAccess: guestAccess,
+
+      /** Whether this instance serves multiple workspaces on subdomains. */
+      multiTenant: MULTI_TENANT,
     },
+
+    /** Multi-tenant base domain, used to accept absolute workspace return URLs after login. */
+    tenantBaseDomain: MULTI_TENANT ? TENANT_BASE_DOMAIN : null,
 
     // =============================================================================
     // OAuth Providers (Social Login)
