@@ -18,7 +18,9 @@ import { ac, roles } from "@/lib/auth/access-control";
 export const authClient = createAuthClient({
   baseURL:
     typeof window !== "undefined" && window.__PUBLIC_CONFIG__
-      ? window.__PUBLIC_CONFIG__.auth.url
+      ? window.__PUBLIC_CONFIG__.auth.multiTenant
+        ? ""
+        : window.__PUBLIC_CONFIG__.auth.url
       : "",
   plugins: [
     genericOAuthClient(),

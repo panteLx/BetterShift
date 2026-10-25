@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { isAuthEnabled } from "@/lib/auth/feature-flags";
+import { isWorkspaceMember, requireRequestWorkspace, WorkspaceNotFoundError } from "@/lib/workspace";
 import { rateLimit } from "@/lib/rate-limiter";
 import { logUserAction, type CalendarCreatedMetadata } from "@/lib/audit-log";
 import {
@@ -32,10 +33,12 @@ import type { CalendarBundleRef } from "@/lib/types";
 export async function GET(request: Request) {
   try {
     const user = await getSessionUser(request.headers);
+    const workspace = await requireRequestWorkspace();
 
     // Get accessible calendar IDs with permissions
     const accessible = await getUserAccessibleCalendars(user?.id);
     const accessibleIds = accessible.map((a) => a.id);
+    const ownedIds = new Set(accessible.filter((a) => a.isOwner).map((a) => a.id));
 
     if (accessibleIds.length === 0) {
       return NextResponse.json([]);
@@ -60,7 +63,12 @@ export async function GET(request: Request) {
           ),
       })
       .from(calendars)
-      .where(or(...accessibleIds.map((id) => eq(calendars.id, id))))
+      .where(
+        and(
+          or(...accessibleIds.map((id) => eq(calendars.id, id))),
+          eq(calendars.workspaceId, workspace.id)
+        )
+      )
       .orderBy(calendars.createdAt);
 
     // If user is authenticated, fetch additional metadata
@@ -70,11 +78,11 @@ export async function GET(request: Request) {
 
     // Get token bundles (works for both guests and authenticated users)
     const tokens: Map<string, string> = new Map(); // calendarId -> bundleId
-    const userTokens = await getTokensFromCookie();
+    const userTokens = await getTokensFromCookie(workspace.id);
     for (const tokenData of userTokens) {
       // Validate token is still valid — use the freshly validated bundle,
       // not the cookie's own (possibly stale) copy
-      const validation = await validateAccessToken(tokenData.token);
+      const validation = await validateAccessToken(tokenData.token, workspace.id);
       if (validation && validation.calendarId === tokenData.calendarId) {
         tokens.set(tokenData.calendarId, validation.bundleId);
       }
@@ -95,10 +103,12 @@ export async function GET(request: Request) {
         ])
       );
 
-      // Get shares
-      const userShares = await db.query.calendarShares.findMany({
-        where: eq(sql`${calendarShares.userId}`, user.id),
-      });
+      // Stale shares of a former member must not show capabilities they no longer have.
+      const userShares = (await isWorkspaceMember(user.id, workspace.id))
+        ? await db.query.calendarShares.findMany({
+            where: eq(sql`${calendarShares.userId}`, user.id),
+          })
+        : [];
       shares = new Map(userShares.map((s) => [s.calendarId, s.bundleId]));
     }
 
@@ -139,7 +149,8 @@ export async function GET(request: Request) {
       const shareBundleId = shares.get(cal.id);
       const subscription = subscriptions.get(cal.id);
       const tokenBundleId = tokens.get(cal.id);
-      const isOwnerRow = !isAuthEnabled() || cal.ownerId === user?.id;
+      // Not ownerId === user.id: a non-member owner holds no owner rights (see resolveCalendarAccess).
+      const isOwnerRow = ownedIds.has(cal.id);
 
       let capabilities: Capability[];
       let bundle: CalendarBundleRef | null;
@@ -192,6 +203,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(enrichedCalendars);
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Failed to fetch calendars:", error);
     return NextResponse.json(
       { error: "Failed to fetch calendars" },
@@ -204,6 +218,7 @@ export async function GET(request: Request) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser(request.headers);
+    const workspace = await requireRequestWorkspace();
 
     // Rate limiting: 10 calendars per hour
     const rateLimitResponse = rateLimit(request, user?.id, "calendar-create");
@@ -214,6 +229,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Authentication required to create calendars" },
         { status: 401 }
+      );
+    }
+
+    // Single-tenant this is always true; a non-member would own a calendar that grants them nothing.
+    if (user && !(await isWorkspaceMember(user.id, workspace.id))) {
+      return NextResponse.json(
+        { error: "Workspace membership required to create calendars" },
+        { status: 403 }
       );
     }
 
@@ -239,6 +262,7 @@ export async function POST(request: NextRequest) {
           name,
           color: color || "#3b82f6",
           ownerId: user?.id || null, // Set current user as owner (or null if auth disabled)
+          workspaceId: workspace.id,
         })
         .returning()
         .get();
@@ -274,6 +298,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(calendar, { status: 201 });
   } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
     console.error("Failed to create calendar:", error);
     return NextResponse.json(
       { error: "Failed to create calendar" },

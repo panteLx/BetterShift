@@ -42,6 +42,19 @@ export const ALLOW_USER_REGISTRATION =
 export const ALLOW_GUEST_ACCESS = process.env.ALLOW_GUEST_ACCESS === "true"; // Default: false
 
 // =============================================================================
+// Multi-Tenancy (Workspaces)
+// =============================================================================
+
+export const MULTI_TENANT = process.env.MULTI_TENANT === "true"; // Default: false
+
+export const TENANT_BASE_DOMAIN = process.env.TENANT_BASE_DOMAIN || "";
+
+// Owned workspaces per account; instance admins are exempt. Non-numeric or < 1 falls back to 3.
+const parsedMaxWorkspaces = parseInt(process.env.TENANT_MAX_WORKSPACES_PER_USER || "", 10);
+export const TENANT_MAX_WORKSPACES_PER_USER =
+  Number.isFinite(parsedMaxWorkspaces) && parsedMaxWorkspaces >= 1 ? parsedMaxWorkspaces : 3;
+
+// =============================================================================
 // Session Settings
 // =============================================================================
 

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { readStorage, writeStorage, removeStorage } from "@/lib/utils";
 
-interface VersionInfo {
+export interface VersionInfo {
   version: string;
   commitHash: string;
   buildDate: string;

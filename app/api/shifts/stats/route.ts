@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import {
-  shifts,
-  externalSyncs,
-  shiftPresets,
-  calendars,
-} from "@/lib/db/schema";
+import { shifts, externalSyncs, shiftPresets } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { formatDateToLocal, parseLocalDate } from "@/lib/date-utils";
 import { withShiftSegments } from "@/lib/shift-time-ranges";
 import { toTimeRanges, sumRangeDurations } from "@/lib/time-ranges";
@@ -39,10 +34,7 @@ export async function GET(request: Request) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(

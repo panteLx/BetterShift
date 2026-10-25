@@ -5,6 +5,7 @@ import {
   type AnnouncementPlacement,
 } from "@/lib/announcements";
 import { rateLimit } from "@/lib/rate-limiter";
+import { resolveWorkspaceFromHost } from "@/lib/workspace";
 
 /**
  * Public Announcements API
@@ -24,7 +25,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const announcements = await getVisibleAnnouncements(placement as AnnouncementPlacement);
+    const resolution = await resolveWorkspaceFromHost(request.headers.get("host"));
+    const workspaceId = resolution.kind === "workspace" ? resolution.workspace.id : null;
+    const announcements = await getVisibleAnnouncements(
+      placement as AnnouncementPlacement,
+      workspaceId
+    );
     return NextResponse.json({ announcements });
   } catch (error) {
     console.error("Failed to load announcements:", error);

@@ -62,6 +62,9 @@ export const session = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     // Better Auth Admin Plugin field
     impersonatedBy: text("impersonated_by"),
+    // Organization plugin field; never read by our code, the workspace comes from the
+    // request host because the session cookie is shared across subdomains.
+    activeOrganizationId: text("active_organization_id"),
   },
   (table) => [index("session_userId_idx").on(table.userId)]
 );
@@ -109,6 +112,105 @@ export const verification = sqliteTable("verification", {
   ),
 });
 
+export const organization = sqliteTable("organization", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  logo: text("logo"),
+  metadata: text("metadata"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).$onUpdate(
+    () => new Date()
+  ),
+});
+
+export const member = sqliteTable(
+  "member",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull().default("member"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    index("member_organizationId_idx").on(table.organizationId),
+    index("member_userId_idx").on(table.userId),
+    uniqueIndex("member_organizationId_userId_idx").on(
+      table.organizationId,
+      table.userId
+    ),
+  ]
+);
+
+export const invitation = sqliteTable(
+  "invitation",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    status: text("status").notNull().default("pending"),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("invitation_organizationId_idx").on(table.organizationId)]
+);
+
+// Mirrors systemSettings but per workspace; getWorkspaceSettings() in lib/workspace-settings.ts.
+export const workspaceSettings = sqliteTable("workspace_settings", {
+  workspaceId: text("workspace_id")
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  allowGuestAccess: integer("allow_guest_access", { mode: "boolean" }),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`)
+    .$onUpdate(() => new Date()),
+});
+
+export const workspaceJoinLinks = sqliteTable(
+  "workspace_join_links",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(), // base64url, 43 chars
+    name: text("name"),
+    role: text("role").notNull().default("member"),
+    expiresAt: integer("expires_at", { mode: "timestamp" }), // null = never
+    maxUses: integer("max_uses"), // null = unlimited
+    usageCount: integer("usage_count").notNull().default(0),
+    revokedAt: integer("revoked_at", { mode: "timestamp" }),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  },
+  (table) => [index("workspace_join_links_workspaceId_idx").on(table.workspaceId)]
+);
+
+export type WorkspaceJoinLink = typeof workspaceJoinLinks.$inferSelect;
+
 // =====================================================
 // BetterShift Application Tables
 // =====================================================
@@ -142,6 +244,9 @@ export const calendars = sqliteTable(
     splitShiftsEnabled: integer("split_shifts_enabled", { mode: "boolean" })
       .notNull()
       .default(false),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
     // null = no own view; every user sees their personal view
     viewSettings: text("view_settings", {
       mode: "json",
@@ -153,7 +258,10 @@ export const calendars = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => [index("calendars_ownerId_idx").on(table.ownerId)]
+  (table) => [
+    index("calendars_ownerId_idx").on(table.ownerId),
+    index("calendars_workspaceId_idx").on(table.workspaceId),
+  ]
 );
 
 // Owner-defined, per-calendar capability bundle. Replaces the old fixed
@@ -589,6 +697,10 @@ export const announcements = sqliteTable("announcements", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`)
     .$onUpdate(() => new Date()),
+  // null = shown in every workspace and on the portal
+  workspaceId: text("workspace_id").references(() => organization.id, {
+    onDelete: "cascade",
+  }),
 });
 
 export const syncLogs = sqliteTable("sync_logs", {
@@ -636,6 +748,10 @@ export const auditLogs = sqliteTable(
     timestamp: integer("timestamp", { mode: "timestamp" })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    // null = instance-level event (sign-in, rate limit, system)
+    workspaceId: text("workspace_id").references(() => organization.id, {
+      onDelete: "cascade",
+    }),
   },
   (table) => [
     index("audit_logs_userId_timestamp_idx").on(table.userId, table.timestamp),
@@ -781,6 +897,10 @@ export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
+export type Organization = typeof organization.$inferSelect;
+export type Member = typeof member.$inferSelect;
+export type Invitation = typeof invitation.$inferSelect;
+export type WorkspaceSettings = typeof workspaceSettings.$inferSelect;
 export type CalendarShare = typeof calendarShares.$inferSelect;
 export type NewCalendarShare = typeof calendarShares.$inferInsert;
 export type UserPreferences = typeof userPreferences.$inferSelect;
@@ -798,6 +918,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   preferences: one(userPreferences),
   sessions: many(session),
   accounts: many(account),
+  memberships: many(member),
   ownedCalendars: many(calendars),
   calendarShares: many(calendarShares),
   calendarSubscriptions: many(userCalendarSubscriptions),
@@ -819,10 +940,38 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
+export const organizationRelations = relations(organization, ({ many }) => ({
+  members: many(member),
+  invitations: many(invitation),
+  calendars: many(calendars),
+}));
+
+export const memberRelations = relations(member, ({ one }) => ({
+  organization: one(organization, {
+    fields: [member.organizationId],
+    references: [organization.id],
+  }),
+  user: one(user, {
+    fields: [member.userId],
+    references: [user.id],
+  }),
+}));
+
+export const invitationRelations = relations(invitation, ({ one }) => ({
+  organization: one(organization, {
+    fields: [invitation.organizationId],
+    references: [organization.id],
+  }),
+}));
+
 export const calendarsRelations = relations(calendars, ({ one, many }) => ({
   owner: one(user, {
     fields: [calendars.ownerId],
     references: [user.id],
+  }),
+  workspace: one(organization, {
+    fields: [calendars.workspaceId],
+    references: [organization.id],
   }),
   shares: many(calendarShares),
   subscriptions: many(userCalendarSubscriptions),

@@ -43,6 +43,8 @@ export interface CalendarOwner {
 export interface AdminCalendar {
   id: string;
   name: string;
+  workspaceId: string | null;
+  workspaceName: string;
   color: string;
   guestBundle: BundleRef | null;
   createdAt: Date;
@@ -189,6 +191,7 @@ async function deleteCalendarApi(calendarId: string): Promise<void> {
 async function transferCalendarApi(
   calendarId: string,
   newOwnerId: string,
+  t: ReturnType<typeof useTranslations>,
 ): Promise<void> {
   const response = await fetch(`/api/admin/calendars/${calendarId}/transfer`, {
     method: "POST",
@@ -197,8 +200,10 @@ async function transferCalendarApi(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to transfer calendar");
+    const body = await response.json().catch(() => null);
+    if (response.status === 404) throw new Error(t("admin.userNotFound"));
+    if (response.status === 403) throw new Error(t("admin.accessDenied"));
+    throw new Error(body?.error || t("common.transferError", { item: t("common.labels.calendar") }));
   }
 }
 
@@ -228,6 +233,7 @@ async function bulkDeleteCalendarsApi(
 async function bulkTransferCalendarsApi(
   calendarIds: string[],
   newOwnerId: string,
+  t: ReturnType<typeof useTranslations>,
 ): Promise<{ transferredCount: number }> {
   const response = await fetch("/api/admin/calendars/bulk-transfer", {
     method: "POST",
@@ -236,8 +242,10 @@ async function bulkTransferCalendarsApi(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to transfer calendars");
+    const body = await response.json().catch(() => null);
+    if (response.status === 404) throw new Error(t("admin.userNotFound"));
+    if (response.status === 403) throw new Error(t("admin.accessDenied"));
+    throw new Error(body?.error || t("common.transferError", { item: t("common.labels.calendar") }));
   }
 
   return await response.json();
@@ -347,9 +355,13 @@ export function useAdminCalendarActions() {
     }: {
       calendarId: string;
       newOwnerId: string;
-    }) => transferCalendarApi(calendarId, newOwnerId),
-    onError: () => {
-      toast.error(t("common.transferError", { item: t("common.labels.calendar") }));
+    }) => transferCalendarApi(calendarId, newOwnerId, t),
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.transferError", { item: t("common.labels.calendar") }),
+      );
     },
     onSuccess: () => {
       toast.success(t("common.transferred", { item: t("common.labels.calendar") }));
@@ -381,9 +393,13 @@ export function useAdminCalendarActions() {
     }: {
       calendarIds: string[];
       newOwnerId: string;
-    }) => bulkTransferCalendarsApi(calendarIds, newOwnerId),
-    onError: () => {
-      toast.error(t("common.transferError", { item: t("common.labels.calendar") }));
+    }) => bulkTransferCalendarsApi(calendarIds, newOwnerId, t),
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("common.transferError", { item: t("common.labels.calendar") }),
+      );
     },
     onSuccess: (data) => {
       toast.success(

@@ -11,7 +11,8 @@ This guide explains how calendar permissions work in BetterShift, including shar
 5. [Guest Access](#guest-access)
 6. [Calendar Discovery](#calendar-discovery)
 7. [Permission Resolution](#permission-resolution)
-8. [Best Practices](#best-practices)
+8. [Workspace Roles vs. Calendar Bundles](#workspace-roles-vs-calendar-bundles)
+9. [Best Practices](#best-practices)
 
 ---
 
@@ -267,6 +268,17 @@ When a user accesses a calendar, BetterShift resolves their capabilities in this
 5. **No access**: None of the above → access denied.
 
 The first matching rule determines the bundle, and therefore the capabilities, that apply. Whatever the resolved bundle contains, a token or guest-bundle source additionally has the six guest-locked capabilities filtered out before anything is granted (see [Capabilities that can never reach a guest or a link](#capabilities-that-can-never-reach-a-guest-or-a-link)) — this happens regardless of what the bundle's saved contents claim.
+
+---
+
+## Workspace Roles vs. Calendar Bundles
+
+On a multi-tenant instance there are two independent layers:
+
+- **Workspace roles** (`owner`, `admin`, `member`) decide who may manage the workspace itself: members, invite links, settings, ownership and deletion. They grant no calendar capabilities.
+- **Calendar permission bundles** (everything above) decide what someone may do inside a single calendar.
+
+Being a workspace `admin` does not make you an owner or admin of any calendar, and a calendar's owner has no say over workspace membership. A calendar outside the request's workspace is treated as nonexistent regardless of either layer. See `docs/MULTI_TENANCY.md` for the role table.
 
 ---
 

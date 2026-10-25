@@ -17,6 +17,7 @@ import { useCalendarBundles } from "@/hooks/useCalendarBundles";
 import { useCalendars } from "@/hooks/useCalendars";
 import { useCalendarPermission } from "@/hooks/useCalendarPermission";
 import { useAuth } from "@/hooks/useAuth";
+import { usePublicConfig } from "@/components/public-config-provider";
 import type { usePermissionLinkForm } from "@/hooks/usePermissionLinkForm";
 import type { CalendarWithCount } from "@/lib/types";
 
@@ -37,6 +38,7 @@ export function PermissionAssignments({
   updateCalendar,
 }: PermissionAssignmentsProps) {
   const t = useTranslations();
+  const multiTenant = usePublicConfig().auth.multiTenant;
   const { user: currentUser } = useAuth();
   const { bundles, isError: bundlesError } = useCalendarBundles(calendarId);
   const { shares, updateShare, removeShare } = useCalendarShares(calendarId);
@@ -162,7 +164,9 @@ export function PermissionAssignments({
       </section>
 
       <section className="flex flex-col gap-3 border-t border-line pt-3.5">
-        <SectionLabel className="mb-0">{t("share.publicAccess")}</SectionLabel>
+        <SectionLabel className="mb-0">
+          {multiTenant ? t("share.workspaceAccess") : t("share.publicAccess")}
+        </SectionLabel>
         <section className={cardClass}>
           {canManageGuestAccess && bundlesError ? (
             <StatusBanner tone="danger" icon={TriangleAlert}>
@@ -171,9 +175,13 @@ export function PermissionAssignments({
           ) : (
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <p className="min-w-0 flex-1 text-[13px] text-fg-secondary">
-                {allowGuest
-                  ? t("share.publicAccessDescriptionGuestsOn")
-                  : t("share.publicAccessDescriptionGuestsOff")}
+                {multiTenant
+                  ? allowGuest
+                    ? t("share.workspaceAccessDescriptionGuestsOn")
+                    : t("share.workspaceAccessDescriptionGuestsOff")
+                  : allowGuest
+                    ? t("share.publicAccessDescriptionGuestsOn")
+                    : t("share.publicAccessDescriptionGuestsOff")}
               </p>
               <BundlePicker
                 bundles={bundles}
@@ -183,7 +191,7 @@ export function PermissionAssignments({
                 allowNone
                 noneLabel={t("sharingSheet.accessNone")}
                 disabled={!canManageGuestAccess || guestSaving}
-                triggerAriaLabel={t("share.publicAccess")}
+                triggerAriaLabel={multiTenant ? t("share.workspaceAccess") : t("share.publicAccess")}
               />
             </div>
           )}
