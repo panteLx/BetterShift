@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calendarNotes, calendars } from "@/lib/db/schema";
+import { calendarNotes } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
+import { hasCapability, hasOwnedCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { parseLocalDate, withCalendarDay } from "@/lib/date-utils";
 
 // GET calendar notes for a calendar (with optional date filter)
@@ -21,10 +21,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(
@@ -117,10 +114,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(

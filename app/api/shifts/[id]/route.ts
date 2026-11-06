@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shiftPresets, shifts } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
+import { hasCapability, hasOwnedCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { parseLocalDate, withCalendarDay } from "@/lib/date-utils";
 import { replaceShiftSegments, withShiftSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
@@ -50,7 +50,7 @@ export async function GET(
       .leftJoin(calendars, eq(shifts.calendarId, calendars.id))
       .where(eq(shifts.id, id));
 
-    if (!result[0]) {
+    if (!result[0] || !(await findCalendarInWorkspace(result[0].calendarId))) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
@@ -93,7 +93,7 @@ export async function DELETE(
     // Fetch shift to get calendar ID
     const [shift] = await db.select().from(shifts).where(eq(shifts.id, id));
 
-    if (!shift) {
+    if (!shift || !(await findCalendarInWorkspace(shift.calendarId))) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
@@ -145,7 +145,10 @@ export async function PUT(
     // Fetch shift to get calendar ID
     const [existingShift] = await db.select().from(shifts).where(eq(shifts.id, id));
 
-    if (!existingShift) {
+    const shiftCalendar = existingShift
+      ? await findCalendarInWorkspace(existingShift.calendarId)
+      : null;
+    if (!existingShift || !shiftCalendar) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
@@ -214,10 +217,7 @@ export async function PUT(
     let nextSegments: TimeRange[] | undefined;
     if (body.segments !== undefined) {
       const rawSegments: TimeRange[] = Array.isArray(body.segments) ? body.segments : [];
-      const [calendar] = await db
-        .select()
-        .from(calendars)
-        .where(eq(calendars.id, existingShift.calendarId));
+      const calendar = shiftCalendar;
       if (!nextIsAllDay) {
         if (rawSegments.length > 0 && !calendar?.splitShiftsEnabled) {
           return NextResponse.json(

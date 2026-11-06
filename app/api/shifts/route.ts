@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, shifts, shiftPresets, externalSyncs } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability, getCalendarAccess } from "@/lib/auth/permissions";
+import { hasCapability, getCalendarAccess, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { addShiftSignup, withSignups } from "@/lib/shift-signups";
 import { parseLocalDate, withCalendarDay } from "@/lib/date-utils";
 import type { CalendarMember } from "@/lib/types";
@@ -37,10 +37,7 @@ export async function GET(request: Request) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(
@@ -177,10 +174,7 @@ export async function POST(request: Request) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(

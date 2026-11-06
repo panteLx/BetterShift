@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { signUp } from "@/lib/auth/client";
 import { useAuth } from "@/hooks/useAuth";
+import { safeWorkspaceReturnUrl } from "@/lib/safe-return-url";
 import { useAuthFeatures } from "@/hooks/useAuthFeatures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +26,23 @@ import {
 } from "@/lib/rate-limit-client";
 import { useMounted } from "@/hooks/useMediaQuery";
 
+function getReturnUrl(searchParams: URLSearchParams): string {
+  return safeWorkspaceReturnUrl(
+    searchParams.get("returnUrl"),
+    window.__PUBLIC_CONFIG__?.tenantBaseDomain ?? null
+  );
+}
+
+// Absolute return URLs point at a workspace subdomain, which the Next router cannot navigate to.
+function navigateTo(url: string, router: ReturnType<typeof useRouter>): void {
+  if (/^https?:\/\//.test(url)) window.location.assign(url);
+  else router.replace(url);
+}
 
 export default function RegisterPage() {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { isAuthEnabled, allowRegistration } = useAuthFeatures();
   const [name, setName] = useState("");
@@ -120,17 +134,18 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (mounted && isAuthenticated) {
-      router.replace("/");
+      navigateTo(getReturnUrl(searchParams), router);
     }
-  }, [mounted, isAuthenticated, router]);
+  }, [mounted, isAuthenticated, searchParams, router]);
 
   useEffect(() => {
     if (!isAuthEnabled) {
       router.replace("/");
     } else if (!allowRegistration) {
-      router.replace("/login");
+      const returnUrl = searchParams.get("returnUrl");
+      router.replace(returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : "/login");
     }
-  }, [isAuthEnabled, allowRegistration, router]);
+  }, [isAuthEnabled, allowRegistration, router, searchParams]);
 
   if (!isAuthEnabled || !allowRegistration) {
     return null;
@@ -227,7 +242,14 @@ export default function RegisterPage() {
 
       <p className="border-t border-line pt-4 text-center text-[13.5px] text-fg-secondary">
         {t("authPage.haveAccount")}{" "}
-        <Link href="/login" className="font-semibold text-brand-ink hover:underline">
+        <Link
+          href={
+            searchParams.get("returnUrl")
+              ? `/login?returnUrl=${encodeURIComponent(searchParams.get("returnUrl")!)}`
+              : "/login"
+          }
+          className="font-semibold text-brand-ink hover:underline"
+        >
           {t("auth.login")}
         </Link>
       </p>

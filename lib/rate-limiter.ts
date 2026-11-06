@@ -33,6 +33,14 @@
  * - RATE_LIMIT_TELEMETRY_PAYLOAD_WINDOW
  * - RATE_LIMIT_TELEMETRY_SEND_REQUESTS - Admin "send telemetry now" button
  * - RATE_LIMIT_TELEMETRY_SEND_WINDOW
+ * - RATE_LIMIT_WORKSPACE_CREATE_REQUESTS - Workspace creation (per user)
+ * - RATE_LIMIT_WORKSPACE_CREATE_WINDOW
+ * - RATE_LIMIT_SLUG_CHECK_REQUESTS - Slug availability check (per user)
+ * - RATE_LIMIT_SLUG_CHECK_WINDOW
+ * - RATE_LIMIT_WORKSPACE_JOIN_REQUESTS - Workspace join via link (per user)
+ * - RATE_LIMIT_WORKSPACE_JOIN_WINDOW
+ * - RATE_LIMIT_WORKSPACE_LINK_CREATE_REQUESTS - Workspace join-link creation (per user)
+ * - RATE_LIMIT_WORKSPACE_LINK_CREATE_WINDOW
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -237,6 +245,31 @@ const config = {
     windowMs:
       parseInt(process.env.RATE_LIMIT_TELEMETRY_SEND_WINDOW || "3600", 10) * 1000,
   },
+  // Workspaces (multi-tenant only), all keyed per user
+  workspaceCreate: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_CREATE_REQUESTS || "5", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_CREATE_WINDOW || "3600", 10) * 1000,
+  },
+  slugCheck: {
+    requests: parseInt(process.env.RATE_LIMIT_SLUG_CHECK_REQUESTS || "60", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_SLUG_CHECK_WINDOW || "60", 10) * 1000,
+  },
+  workspaceJoin: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_JOIN_REQUESTS || "20", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_JOIN_WINDOW || "900", 10) * 1000,
+  },
+  workspaceLinkCreate: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_LINK_CREATE_REQUESTS || "20", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_LINK_CREATE_WINDOW || "3600", 10) * 1000,
+  },
+  workspaceMutation: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_MUTATION_REQUESTS || "30", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_MUTATION_WINDOW || "900", 10) * 1000,
+  },
+  workspaceDelete: {
+    requests: parseInt(process.env.RATE_LIMIT_WORKSPACE_DELETE_REQUESTS || "5", 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WORKSPACE_DELETE_WINDOW || "3600", 10) * 1000,
+  },
 };
 
 /**
@@ -270,6 +303,12 @@ const limitsByType = {
   "admin-announcement-mutations": config.adminAnnouncementMutations,
   "telemetry-payload": config.telemetryPayload,
   "telemetry-send": config.telemetrySend,
+  "workspace-create": config.workspaceCreate,
+  "slug-check": config.slugCheck,
+  "workspace-join": config.workspaceJoin,
+  "workspace-link-create": config.workspaceLinkCreate,
+  "workspace-mutation": config.workspaceMutation,
+  "workspace-delete": config.workspaceDelete,
 } as const;
 
 export type RateLimitType = keyof typeof limitsByType;

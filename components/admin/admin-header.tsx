@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
+import { ScopeBadge } from "@/components/admin/scope-badge";
 import { UserMenu } from "@/components/user-menu";
 import { isActiveSection, useAdminSections } from "@/components/admin/admin-sidebar";
 
@@ -29,6 +30,7 @@ export function AdminHeader() {
           </>
         )}
       </nav>
+      <ScopeBadge />
       <UserMenu />
     </header>
   );

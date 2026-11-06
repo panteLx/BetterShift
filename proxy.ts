@@ -13,6 +13,21 @@ import { isAdmin } from "@/lib/auth/admin";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { user } from "@/lib/db/schema";
+import {
+  resolveWorkspaceFromHost,
+  getWorkspaceRole,
+  getTenancyConfigError,
+  DEFAULT_WORKSPACE_ID,
+} from "@/lib/workspace";
+import {
+  BETTER_AUTH_URL,
+  MULTI_TENANT,
+  TENANT_BASE_DOMAIN,
+} from "@/lib/auth/env";
+import { isAdminPathAllowed, type AdminScope } from "@/lib/admin-sections";
+import type { WorkspaceRole } from "@/lib/auth/workspace-permissions";
+import { safeReturnUrl } from "@/lib/safe-return-url";
+import { workspaceOrigin as sharedWorkspaceOrigin } from "@/lib/workspace-url";
 
 // =====================================================
 // Health Check Cache (In-Memory)
@@ -33,7 +48,10 @@ const HEALTH_CACHE_TTL = 10000; // 10 seconds
 async function checkHealthInternal(): Promise<"healthy" | "unhealthy"> {
   try {
     // better-sqlite3 is synchronous, so this either resolves immediately or throws
-    await db.select({ count: sql<number>`count(*)` }).from(user).limit(1);
+    await db
+      .select({ count: sql<number>`count(*)` })
+      .from(user)
+      .limit(1);
 
     return "healthy";
   } catch (error) {
@@ -84,6 +102,23 @@ function redirectToLogin(request: NextRequest) {
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("returnUrl", pathname + search);
   return NextResponse.redirect(loginUrl);
+}
+
+// Parsed lazily, only after getTenancyConfigError() has vetted the URL, so a bad value can't break single-tenant imports.
+function workspaceOrigin(slug: string): string {
+  return sharedWorkspaceOrigin(slug, BETTER_AUTH_URL, TENANT_BASE_DOMAIN);
+}
+
+// Portal pages and APIs; on a workspace host they would act outside the host's workspace.
+function isPortalOnlyPath(pathname: string): boolean {
+  return (
+    pathname === "/api/workspaces" ||
+    pathname.startsWith("/api/workspaces/") ||
+    pathname.startsWith("/api/join/") ||
+    pathname.startsWith("/api/admin/") ||
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/")
+  );
 }
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -140,6 +175,22 @@ function nextWithNonce(request: NextRequest) {
   return response;
 }
 
+function rewriteWithNonce(request: NextRequest, pathname: string) {
+  const nonce = BYPASS_STRICT_DYNAMIC
+    ? null
+    : Buffer.from(crypto.randomUUID()).toString("base64");
+
+  const requestHeaders = new Headers(request.headers);
+  if (nonce) requestHeaders.set("x-nonce", nonce);
+  const url = new URL(pathname, request.url);
+  url.search = request.nextUrl.search;
+  const response = NextResponse.rewrite(url, {
+    request: { headers: requestHeaders },
+  });
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+  return response;
+}
+
 /**
  * Proxy for authentication and route protection (Next.js 16)
  *
@@ -175,8 +226,9 @@ export async function proxy(request: NextRequest) {
     try {
       const status = await getCachedHealthStatus();
 
-      // Only redirect to home if we have a definitive healthy result
-      if (status === "healthy") {
+      // Only redirect to home if we have a definitive healthy result; a tenancy
+      // misconfiguration redirects back here, so stay put to avoid a loop.
+      if (status === "healthy" && !getTenancyConfigError()) {
         return NextResponse.redirect(new URL("/", request.url));
       }
 
@@ -215,6 +267,128 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Single-tenant requests always belong to the default workspace.
+  let requestWorkspaceId = DEFAULT_WORKSPACE_ID;
+  let adminScope: AdminScope | null = null;
+
+  // =====================================================
+  // Multi-Tenant Workspace Routing (only when MULTI_TENANT=true)
+  // =====================================================
+  if (MULTI_TENANT) {
+    const configError = getTenancyConfigError();
+    if (configError) {
+      console.error(`[Proxy] Multi-tenant misconfiguration: ${configError}`);
+      if (!isHealthCheckExempt) {
+        return NextResponse.redirect(
+          new URL("/system-unavailable", request.url)
+        );
+      }
+      return nextWithNonce(request);
+    }
+
+    const publicExemptRoutes = [
+      "/api/auth",
+      "/api/version",
+      "/api/releases",
+      "/api/announcements",
+      "/api/health",
+      "/api/feed/",
+      "/manifest.json",
+    ];
+    const isPublicExempt = publicExemptRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    const resolution = await resolveWorkspaceFromHost(
+      request.headers.get("host")
+    );
+
+    if (resolution.kind === "unknown") {
+      // Container health probes hit localhost, which is never a workspace host.
+      if (isHealthCheckExempt) return nextWithNonce(request);
+      // Next turns a loopback HOSTNAME into "localhost" and then proxies this rewrite externally; see docs/MULTI_TENANCY.md.
+      return NextResponse.rewrite(
+        new URL("/workspace-not-found", request.url),
+        {
+          status: 404,
+        }
+      );
+    }
+
+    if (resolution.kind === "portal") {
+      const isAdminPage =
+        pathname === "/admin" || pathname.startsWith("/admin/");
+      if (isAdminPage) {
+        if (!isAdminPathAllowed("global", pathname)) {
+          return new NextResponse(null, { status: 404 });
+        }
+        adminScope = "global";
+      } else if (pathname.startsWith("/api/admin/")) {
+        adminScope = "global";
+        return nextWithNonce(request);
+      } else if (
+        isPublicExempt ||
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/api/workspaces" ||
+        pathname.startsWith("/api/workspaces/") ||
+        pathname.startsWith("/api/join/")
+      ) {
+        return nextWithNonce(request);
+      }
+      if (!isAdminPage) {
+        const portalPage =
+          pathname === "/"
+            ? "/portal"
+            : pathname === "/new"
+              ? "/portal/new"
+              : /^\/join\/[^/]+$/.test(pathname)
+                ? `/portal${pathname}`
+                : null;
+        if (portalPage) {
+          const sessionToken =
+            request.cookies.get("__Secure-better-auth.session_token") ||
+            request.cookies.get("better-auth.session_token");
+          // Cookie presence only; the pages validate the session themselves.
+          if (!sessionToken) return redirectToLogin(request);
+          return rewriteWithNonce(request, portalPage);
+        }
+        return new NextResponse(null, { status: 404 });
+      }
+    }
+
+    if (resolution.kind === "workspace") {
+      requestWorkspaceId = resolution.workspace.id;
+      adminScope = "workspace";
+
+      if (isPortalOnlyPath(pathname)) {
+        return new NextResponse(null, { status: 404 });
+      }
+
+      // Owner-only sections are hidden per role in the admin guard below.
+      if (
+        (pathname === "/admin" || pathname.startsWith("/admin/")) &&
+        !isAdminPathAllowed("workspace", pathname, "owner")
+      ) {
+        return new NextResponse(null, { status: 404 });
+      }
+
+      // Sign-in lives on the portal; hand it the absolute workspace URL to come back to.
+      if (pathname === "/login" || pathname === "/register") {
+        const target = safeReturnUrl(
+          request.nextUrl.searchParams.get("returnUrl")
+        );
+        const portalUrl = new URL(pathname, BETTER_AUTH_URL);
+        portalUrl.searchParams.set(
+          "returnUrl",
+          `${workspaceOrigin(resolution.workspace.slug)}${target}`
+        );
+        return NextResponse.redirect(portalUrl);
+      }
+      // Other workspace paths fall through to the auth guard; non-members get role: null from GET /api/workspace.
+    }
+  }
+
   // =====================================================
   // Access Token Handling (/share/token/[token])
   // =====================================================
@@ -226,8 +400,14 @@ export async function proxy(request: NextRequest) {
       const rateLimitResponse = rateLimit(request, null, "token-validation");
       if (rateLimitResponse) return rateLimitResponse;
 
-      // Validate the token
-      const validation = await validateAccessToken(token);
+      // Unknown, foreign-workspace and revoked tokens all take the invalid path below.
+      const resolution = await resolveWorkspaceFromHost(
+        request.headers.get("host")
+      );
+      const validation =
+        resolution.kind === "workspace"
+          ? await validateAccessToken(token, resolution.workspace.id)
+          : null;
 
       if (validation) {
         // Token is valid - store in cookie and redirect to calendar
@@ -304,9 +484,9 @@ export async function proxy(request: NextRequest) {
   ];
 
   // Check if the current route is public
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isPublicRoute =
+    publicRoutes.some((route) => pathname.startsWith(route)) ||
+    pathname === "/api/workspace"; // exact: anonymous callers get role: null
 
   // Allow public routes
   if (isPublicRoute) {
@@ -337,9 +517,34 @@ export async function proxy(request: NextRequest) {
         return redirectToLogin(request);
       }
 
-      // Check if user is admin
-      if (!isAdmin(session.user)) {
-        // Not an admin - redirect to home with error
+      const scope = adminScope ?? "instance";
+      let allowed = false;
+      let workspaceRole: string | null = null;
+      if (scope === "workspace") {
+        // Membership only: instance admins get no bypass on workspace hosts.
+        workspaceRole = await getWorkspaceRole(
+          session.user.id,
+          requestWorkspaceId
+        );
+        allowed = workspaceRole === "owner" || workspaceRole === "admin";
+        if (
+          allowed &&
+          !isAdminPathAllowed(
+            "workspace",
+            pathname,
+            workspaceRole as WorkspaceRole
+          )
+        ) {
+          return new NextResponse(null, { status: 404 });
+        }
+      } else {
+        if (!isAdminPathAllowed(scope, pathname)) {
+          return new NextResponse(null, { status: 404 });
+        }
+        allowed = isAdmin(session.user);
+      }
+
+      if (!allowed) {
         const homeUrl = new URL("/", request.url);
         homeUrl.searchParams.set("error", "admin_access_required");
 
@@ -352,6 +557,8 @@ export async function proxy(request: NextRequest) {
           metadata: {
             attemptedPath: pathname,
             userRole: session.user.role || "user",
+            scope,
+            workspaceRole,
           },
           request,
           severity: "warning",
@@ -376,7 +583,7 @@ export async function proxy(request: NextRequest) {
   // If no session token, check guest access
   if (!sessionToken) {
     // If guest access is enabled, allow viewing without login
-    if (await allowGuestAccess()) {
+    if (await allowGuestAccess(requestWorkspaceId)) {
       return nextWithNonce(request);
     }
 

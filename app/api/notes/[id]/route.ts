@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { withCalendarDay } from "@/lib/date-utils";
-import { calendarNotes, calendars } from "@/lib/db/schema";
+import { calendarNotes } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
+import { hasCapability, hasOwnedCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 
 // GET single calendar note
 export async function GET(
@@ -27,14 +27,11 @@ export async function GET(
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, result[0].calendarId));
+    const calendar = await findCalendarInWorkspace(result[0].calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "Calendar note not found" },
         { status: 404 }
       );
     }
@@ -91,14 +88,11 @@ export async function PUT(
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, existingNote.calendarId));
+    const calendar = await findCalendarInWorkspace(existingNote.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "Calendar note not found" },
         { status: 404 }
       );
     }
@@ -190,14 +184,11 @@ export async function DELETE(
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, existingNote.calendarId));
+    const calendar = await findCalendarInWorkspace(existingNote.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "Calendar note not found" },
         { status: 404 }
       );
     }

@@ -34,7 +34,7 @@ interface AppHeaderProps {
   canManageSync?: boolean;
   onDateChange: (date: Date) => void;
   onSelectCalendar: (id: string) => void;
-  onCreateCalendar: () => void;
+  onCreateCalendar?: () => void;
   onSettings: () => void;
   onSyncNotifications: () => void;
   onCompare?: () => void;

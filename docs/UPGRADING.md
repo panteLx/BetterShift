@@ -25,9 +25,26 @@ Breaking changes between BetterShift releases and the steps to get through them.
 
 ## Versions
 
+- [Unreleased](#unreleased-from-330) — from `3.3.0`
 - [3.3.0](#330-from-320) — from `3.2.0`
 - [3.1.0](#310-from-300) — from `3.0.0`
 - [3.0.0](#300-from-22x) — from `2.2.x`
+
+---
+
+## Unreleased (from 3.3.0)
+
+The next release adds optional multi-tenancy — one shared instance serving several isolated **workspaces**, each on its own subdomain. See the [Multi-Tenancy Guide](MULTI_TENANCY.md) for the full picture.
+
+### What to expect (Unreleased)
+
+The migration runs automatically on startup: it creates a `default` workspace and moves every existing calendar, announcement and audit log into it, with no manual step. `MULTI_TENANT` defaults to `false`, so a self-hosted instance that doesn't set it sees no behavior change at all — ignore the new "MULTI-TENANCY" section in `.env.example` entirely. Only an instance that deliberately sets `MULTI_TENANT=true` (and `TENANT_BASE_DOMAIN`) opts into the new subdomain-per-workspace behavior.
+
+**After enabling `MULTI_TENANT=true` on an existing instance:** the `default` workspace holds all your old calendars but has no owner yet, so nobody can reach or manage it. Sign in as an instance admin on the portal and open **Admin → Workspaces → default** (the dashboard shows a banner until this is done). Under *Owner festlegen* pick one of its members or enter an email address to make that account the owner. Optionally change the workspace's address in the same panel: the `default` workspace is the only one whose slug can be changed, and the new `<slug>.<TENANT_BASE_DOMAIN>` becomes its subdomain (the old address stops working).
+
+**Back up your `data/` directory before upgrading.** To make every calendar's workspace mandatory, the migration rebuilds the `calendars` table (copy, drop, rename) rather than altering it in place. It is tested, but if it is interrupted — the container is killed mid-start, the disk fills up — a backup is the only clean way back. Stop the container, copy `data/` (it holds the SQLite file), then pull the new image and start it.
+
+This release also adds self-service workspace onboarding (creation, invite links, membership management) on top of that core — its migration only adds a new `workspace_join_links` table, so it needs no extra care beyond the backup above.
 
 ---
 

@@ -30,3 +30,23 @@ export function safeReturnUrl(value: string | null | undefined): string {
 
   return value;
 }
+
+/** Multi-tenant only: an absolute URL on exactly one subdomain of baseDomain, else the relative fallback. */
+export function safeWorkspaceReturnUrl(
+  value: string | null | undefined,
+  baseDomain: string | null
+): string {
+  if (baseDomain && value && /^https?:\/\//.test(value) && value.length <= 2048) {
+    try {
+      const url = new URL(value);
+      const suffix = `.${baseDomain.toLowerCase()}`;
+      const host = url.hostname.toLowerCase();
+      if (host.endsWith(suffix) && !host.slice(0, -suffix.length).includes(".")) {
+        return url.origin + safeReturnUrl(url.pathname + url.search);
+      }
+    } catch {
+      // fall through to the relative check
+    }
+  }
+  return safeReturnUrl(value);
+}

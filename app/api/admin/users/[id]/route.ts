@@ -24,6 +24,19 @@ import {
   getValidatedTargetUser,
   isErrorResponse,
 } from "@/lib/auth/admin-helpers";
+import {
+  assertNotSoleWorkspaceOwner,
+  deleteMemberlessWorkspaces,
+  invalidateDeletedWorkspaces,
+  SoleWorkspaceOwnerError,
+} from "@/lib/auth/account-deletion";
+
+function soleOwnerResponse() {
+  return NextResponse.json(
+    { error: "This user is the only owner of a workspace that has other members" },
+    { status: 409 }
+  );
+}
 
 /**
  * Admin User Detail API
@@ -317,6 +330,13 @@ export async function DELETE(
       );
     }
 
+    try {
+      assertNotSoleWorkspaceOwner(targetUserId);
+    } catch (error) {
+      if (error instanceof SoleWorkspaceOwnerError) return soleOwnerResponse();
+      throw error;
+    }
+
     // Count calendars before deletion (for audit log)
     const [calendarCount] = await db
       .select({
@@ -327,22 +347,25 @@ export async function DELETE(
 
     const calendarsDeleted = Number(calendarCount?.count || 0);
 
-    await db
-      .delete(calendarSharesTable)
-      .where(
-        or(
-          eq(calendarSharesTable.userId, targetUserId),
-          eq(calendarSharesTable.sharedBy, targetUserId)
+    const deletedWorkspaceSlugs = db.transaction((tx) => {
+      const slugs = deleteMemberlessWorkspaces(tx, targetUserId);
+      tx.delete(calendarSharesTable)
+        .where(
+          or(
+            eq(calendarSharesTable.userId, targetUserId),
+            eq(calendarSharesTable.sharedBy, targetUserId)
+          )
         )
-      );
-
-    await db
-      .delete(userCalendarSubscriptionsTable)
-      .where(eq(userCalendarSubscriptionsTable.userId, targetUserId));
-
-    await db
-      .delete(calendarsTable)
-      .where(eq(calendarsTable.ownerId, targetUserId));
+        .run();
+      tx.delete(userCalendarSubscriptionsTable)
+        .where(eq(userCalendarSubscriptionsTable.userId, targetUserId))
+        .run();
+      tx.delete(calendarsTable)
+        .where(eq(calendarsTable.ownerId, targetUserId))
+        .run();
+      return slugs;
+    });
+    invalidateDeletedWorkspaces(deletedWorkspaceSlugs);
 
     // Audit log BEFORE deleting user
     await logAuditEvent({
@@ -373,6 +396,8 @@ export async function DELETE(
       calendarsDeleted,
     });
   } catch (error) {
+    // The in-transaction re-check can still trip if membership changed since the pre-check
+    if (error instanceof SoleWorkspaceOwnerError) return soleOwnerResponse();
     console.error("Failed to delete user:", error);
     return NextResponse.json(
       { error: "Failed to delete user" },

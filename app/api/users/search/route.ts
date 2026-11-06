@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/sessions";
 import { hasCapability } from "@/lib/auth/permissions";
-import { or, and, ne, sql } from "drizzle-orm";
-import { user as userTable } from "@/lib/db/schema";
+import { or, and, eq, ne, sql } from "drizzle-orm";
+import { member, user as userTable } from "@/lib/db/schema";
+import { getRequestWorkspace } from "@/lib/workspace";
 import { rateLimit } from "@/lib/rate-limiter";
+import { MULTI_TENANT } from "@/lib/auth/env";
 
 // `%` and `_` are LIKE wildcards, and without escaping them a query such as
 // "%%" passes the length check and turns into a match-all pattern that dumps
@@ -58,24 +60,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Search users by name or email (case-insensitive)
+    // Search users by name or email (case-insensitive), members of this workspace only
     const pattern = `%${escapeLikePattern(query)}%`;
-    let users = await db.query.user.findMany({
-      where: and(
-        or(
-          sql`${userTable.name} LIKE ${pattern} ESCAPE '\\'`,
-          sql`${userTable.email} LIKE ${pattern} ESCAPE '\\'`
-        ),
-        ne(userTable.id, currentUser.id) // Exclude current user
+    const conditions = and(
+      or(
+        sql`${userTable.name} LIKE ${pattern} ESCAPE '\\'`,
+        sql`${userTable.email} LIKE ${pattern} ESCAPE '\\'`
       ),
-      columns: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-      },
-      limit: 10,
-    });
+      ne(userTable.id, currentUser.id) // Exclude current user
+    );
+    const columns = {
+      id: userTable.id,
+      name: userTable.name,
+      email: userTable.email,
+      image: userTable.image,
+    };
+    let users;
+    if (MULTI_TENANT) {
+      const workspace = await getRequestWorkspace();
+      if (!workspace) {
+        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      }
+      users = await db
+        .select(columns)
+        .from(userTable)
+        .innerJoin(member, eq(member.userId, userTable.id))
+        .where(and(eq(member.organizationId, workspace.id), conditions))
+        .limit(10);
+    } else {
+      // Single-tenant keeps the old unfiltered search: a missing member row must not hide a user.
+      users = await db.select(columns).from(userTable).where(conditions).limit(10);
+    }
 
     // Exclude users who already have access to this calendar
     const existingShares = await db.query.calendarShares.findMany({

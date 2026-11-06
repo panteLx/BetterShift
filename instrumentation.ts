@@ -68,5 +68,16 @@ export async function register() {
     } catch (error) {
       console.error("[Instrumentation] Auth config validation failed:", error);
     }
+
+    // Warning only; proxy.ts is the real gate for a misconfigured MULTI_TENANT.
+    try {
+      const { getTenancyConfigError } = await import("@/lib/workspace");
+      const tenancyError = getTenancyConfigError();
+      if (tenancyError) {
+        console.error(`[Startup Config Warning] ${tenancyError}`);
+      }
+    } catch (error) {
+      console.error("[Instrumentation] Tenancy config validation failed:", error);
+    }
   }
 }

@@ -4,9 +4,11 @@ import {
   calendarShares,
   calendarPermissionBundles,
   userCalendarSubscriptions,
+  type Calendar,
   type CalendarPermissionBundle,
 } from "@/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, inArray } from "drizzle-orm";
+import { getRequestWorkspace, isWorkspaceMember } from "@/lib/workspace";
 import { allowGuestAccess, isAuthEnabled } from "@/lib/auth/feature-flags";
 import {
   getTokenBundleId,
@@ -21,6 +23,21 @@ import {
   type BundleDefinition,
   type Capability,
 } from "@/lib/permission-bundles";
+
+// A signed-in non-member reaches public calendars only where a guest could; always true single-tenant.
+export async function canReachPublicCalendars(
+  userId: string,
+  workspaceId: string
+): Promise<boolean> {
+  return (await isWorkspaceMember(userId, workspaceId)) || (await allowGuestAccess(workspaceId));
+}
+
+export class CalendarNotFoundError extends Error {
+  constructor() {
+    super("Calendar not found");
+    this.name = "CalendarNotFoundError";
+  }
+}
 
 async function getBundleById(
   bundleId: string
@@ -67,6 +84,8 @@ function bundleAccess(
 export interface AccessOptions {
   /** Skip the requester's share-link cookie, for callers acting as someone else (calendar feeds). */
   ignoreTokenCookie?: boolean;
+  /** Explicit workspace, for callers outside a request (background jobs). Defaults to getRequestWorkspace(). */
+  workspaceId?: string;
 }
 
 /**
@@ -80,6 +99,9 @@ async function resolveCalendarAccess(
   calendarId: string,
   options: AccessOptions = {}
 ): Promise<ResolvedCalendarAccess | null> {
+  const workspaceId = options.workspaceId ?? (await getRequestWorkspace())?.id;
+  if (!workspaceId) return null;
+
   // guestBundle fetched alongside the calendar (one hop via the relation)
   // since almost every branch below may need it.
   const calendar = await db.query.calendars.findFirst({
@@ -87,6 +109,7 @@ async function resolveCalendarAccess(
     with: { guestBundle: true },
   });
   if (!calendar) return null;
+  if (calendar.workspaceId !== workspaceId) return null;
 
   // If auth is disabled, grant full owner access (backwards compatibility)
   if (!isAuthEnabled()) {
@@ -100,41 +123,42 @@ async function resolveCalendarAccess(
   const guestBundle = calendar.guestBundle ? sanitizeBundle(calendar.guestBundle) : null;
 
   if (!userId) {
-    const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId);
+    const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId, workspaceId);
     if (tokenBundleId) {
       const bundle = await getBundleById(tokenBundleId);
       if (bundle) return bundleAccess(calendar, "token", bundle);
     }
     // Guest access only works when explicitly enabled
-    if ((await allowGuestAccess()) && guestBundle) {
+    if ((await allowGuestAccess(workspaceId)) && guestBundle) {
       return bundleAccess(calendar, "guestBundle", guestBundle);
     }
     return null;
   }
 
-  if (calendar.ownerId === userId) {
+  // Ownership and shares only count for current members: a stale row must not outlive the membership.
+  const member = await isWorkspaceMember(userId, workspaceId);
+  if (member && calendar.ownerId === userId) {
     return ownerAccess(calendar);
   }
 
-  const share = await db.query.calendarShares.findFirst({
-    where: and(
-      eq(calendarShares.calendarId, calendarId),
-      eq(calendarShares.userId, userId)
-    ),
-    with: { bundle: true },
-  });
+  const share = member
+    ? await db.query.calendarShares.findFirst({
+        where: and(eq(calendarShares.calendarId, calendarId), eq(calendarShares.userId, userId)),
+        with: { bundle: true },
+      })
+    : undefined;
   if (share?.bundle) {
     return bundleAccess(calendar, "share", sanitizeBundle(share.bundle));
   }
 
-  const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId);
+  const tokenBundleId = options.ignoreTokenCookie ? null : await getTokenBundleId(calendarId, workspaceId);
   if (tokenBundleId) {
     const bundle = await getBundleById(tokenBundleId);
     if (bundle) return bundleAccess(calendar, "token", bundle);
   }
 
-  // Authenticated users can always access public calendars they're
-  // subscribed to, regardless of the allowGuestAccess() setting.
+  // Members reach subscribed public calendars regardless of allowGuestAccess(); non-members don't.
+  if (!guestBundle || !(member || (await allowGuestAccess(workspaceId)))) return null;
   const subscription = await db.query.userCalendarSubscriptions.findFirst({
     where: and(
       eq(userCalendarSubscriptions.calendarId, calendarId),
@@ -142,11 +166,25 @@ async function resolveCalendarAccess(
       eq(userCalendarSubscriptions.status, "subscribed")
     ),
   });
-  if (subscription && guestBundle) {
+  if (subscription) {
     return bundleAccess(calendar, "guestBundle", guestBundle);
   }
 
   return null;
+}
+
+/** Workspace-scoped calendar lookup: a foreign-workspace id must 404 before any 403 can prove it exists. */
+export async function findCalendarInWorkspace(
+  calendarId: string,
+  workspaceId?: string
+): Promise<Calendar | null> {
+  const wsId = workspaceId ?? (await getRequestWorkspace())?.id;
+  if (!wsId) return null;
+  const [calendar] = await db
+    .select()
+    .from(calendars)
+    .where(and(eq(calendars.id, calendarId), eq(calendars.workspaceId, wsId)));
+  return calendar ?? null;
 }
 
 export interface CalendarAccess {
@@ -331,6 +369,20 @@ export async function getShiftSignupPermission(
   };
 }
 
+// Shares and subscriptions can name another workspace's calendar; also re-checks token ids.
+async function filterIdsToWorkspace(
+  ids: Iterable<string>,
+  workspaceId: string
+): Promise<Set<string>> {
+  const idList = Array.from(new Set(ids));
+  if (idList.length === 0) return new Set();
+  const rows = await db.query.calendars.findMany({
+    where: and(inArray(calendars.id, idList), eq(calendars.workspaceId, workspaceId)),
+    columns: { id: true },
+  });
+  return new Set(rows.map((row) => row.id));
+}
+
 /**
  * Resolves which of the given bundle ids still exist. guestBundleId has no
  * DB-level FK (see lib/db/schema.ts), so a bundle deletion (Stufe 2) can
@@ -359,8 +411,12 @@ async function existingBundleIds(
 export async function getUserAccessibleCalendars(
   userId: string | null | undefined
 ): Promise<Array<{ id: string; isOwner: boolean }>> {
+  const workspace = await getRequestWorkspace();
+  if (!workspace) return [];
+
   if (!isAuthEnabled()) {
     const allCalendars = await db.query.calendars.findMany({
+      where: eq(calendars.workspaceId, workspace.id),
       columns: { id: true },
     });
     return allCalendars.map((cal) => ({ id: cal.id, isOwner: true }));
@@ -373,13 +429,13 @@ export async function getUserAccessibleCalendars(
     // Token-based access and the guest-access flag don't depend on each
     // other, so resolve them concurrently instead of one after another.
     const [tokens, guestAccessEnabled] = await Promise.all([
-      getTokensFromCookie(),
-      allowGuestAccess(),
+      getTokensFromCookie(workspace.id),
+      allowGuestAccess(workspace.id),
     ]);
 
     // First, check for token-based access (always works, regardless of allowGuestAccess)
     for (const tokenData of tokens) {
-      const validation = await validateAccessToken(tokenData.token);
+      const validation = await validateAccessToken(tokenData.token, workspace.id);
       if (validation && validation.calendarId === tokenData.calendarId) {
         results.push({ id: tokenData.calendarId, isOwner: false });
         existingIds.add(tokenData.calendarId);
@@ -389,7 +445,10 @@ export async function getUserAccessibleCalendars(
     // Then, check for guest bundle access (only if guest access is enabled)
     if (guestAccessEnabled) {
       const guestAccessibleCalendars = await db.query.calendars.findMany({
-        where: (calendars, { isNotNull }) => isNotNull(calendars.guestBundleId),
+        where: and(
+          isNotNull(calendars.guestBundleId),
+          eq(calendars.workspaceId, workspace.id)
+        ),
         columns: { id: true, guestBundleId: true },
       });
       const liveBundleIds = await existingBundleIds(
@@ -403,14 +462,21 @@ export async function getUserAccessibleCalendars(
       }
     }
 
-    return results;
+    // Tokens are workspace-scoped by validateAccessToken and guest bundles by the
+    // query above; this is the belt-and-braces re-check (see filterIdsToWorkspace).
+    const workspaceIds = await filterIdsToWorkspace(
+      results.map((r) => r.id),
+      workspace.id
+    );
+    return results.filter((r) => workspaceIds.has(r.id));
   }
 
   const results: Array<{ id: string; isOwner: boolean }> = [];
+  const member = await isWorkspaceMember(userId, workspace.id);
 
   const [ownedCalendars, subscriptions, sharedCalendars] = await Promise.all([
     db.query.calendars.findMany({
-      where: eq(calendars.ownerId, userId),
+      where: and(eq(calendars.ownerId, userId), eq(calendars.workspaceId, workspace.id)),
       columns: { id: true },
     }),
     db.query.userCalendarSubscriptions.findMany({
@@ -421,11 +487,11 @@ export async function getUserAccessibleCalendars(
       where: eq(calendarShares.userId, userId),
     }),
   ]);
-  results.push(...ownedCalendars.map((cal) => ({ id: cal.id, isOwner: true })));
+  if (member) results.push(...ownedCalendars.map((cal) => ({ id: cal.id, isOwner: true })));
 
   const existingIds = new Set(results.map((r) => r.id));
 
-  for (const share of sharedCalendars) {
+  for (const share of member ? sharedCalendars : []) {
     if (existingIds.has(share.calendarId)) continue;
     const isDismissed = subscriptions.find(
       (sub) => sub.calendarId === share.calendarId && sub.status === "dismissed"
@@ -436,12 +502,14 @@ export async function getUserAccessibleCalendars(
     }
   }
 
+  const reachPublic = member || (await allowGuestAccess(workspace.id));
   const subscriptionGuestBundleIds = await existingBundleIds(
     subscriptions
       .map((sub) => sub.calendar.guestBundleId)
       .filter((id): id is string => id !== null)
   );
   for (const sub of subscriptions) {
+    if (!reachPublic) break;
     if (existingIds.has(sub.calendarId)) continue;
     if (!sub.calendar.guestBundleId) continue;
     if (!subscriptionGuestBundleIds.has(sub.calendar.guestBundleId)) continue;
@@ -451,17 +519,23 @@ export async function getUserAccessibleCalendars(
     existingIds.add(sub.calendarId);
   }
 
-  const tokens = await getTokensFromCookie();
+  const tokens = await getTokensFromCookie(workspace.id);
   for (const tokenData of tokens) {
     if (existingIds.has(tokenData.calendarId)) continue;
-    const validation = await validateAccessToken(tokenData.token);
+    const validation = await validateAccessToken(tokenData.token, workspace.id);
     if (validation && validation.calendarId === tokenData.calendarId) {
       results.push({ id: tokenData.calendarId, isOwner: false });
       existingIds.add(tokenData.calendarId);
     }
   }
 
-  return results;
+  // Shares and subscriptions can name a calendar in another workspace; owned ids and
+  // tokens (validateAccessToken) are already scoped — see filterIdsToWorkspace.
+  const workspaceIds = await filterIdsToWorkspace(
+    results.filter((r) => !r.isOwner).map((r) => r.id),
+    workspace.id
+  );
+  return results.filter((r) => r.isOwner || workspaceIds.has(r.id));
 }
 
 /**
@@ -492,12 +566,10 @@ export async function dismissCalendar(
   userId: string,
   calendarId: string
 ): Promise<void> {
-  const calendar = await db.query.calendars.findFirst({
-    where: eq(calendars.id, calendarId),
-  });
+  const calendar = await findCalendarInWorkspace(calendarId);
 
   if (!calendar) {
-    throw new Error("Calendar not found");
+    throw new CalendarNotFoundError();
   }
 
   if (calendar.ownerId === userId) {
@@ -546,12 +618,10 @@ export async function undismissCalendar(
   userId: string,
   calendarId: string
 ): Promise<void> {
-  const calendar = await db.query.calendars.findFirst({
-    where: eq(calendars.id, calendarId),
-  });
+  const calendar = await findCalendarInWorkspace(calendarId);
 
   if (!calendar) {
-    throw new Error("Calendar not found");
+    throw new CalendarNotFoundError();
   }
 
   if (calendar.ownerId === userId) {
@@ -564,6 +634,10 @@ export async function undismissCalendar(
       eq(calendarShares.userId, userId)
     ),
   });
+
+  if (!share && !(await canReachPublicCalendars(userId, calendar.workspaceId))) {
+    throw new CalendarNotFoundError();
+  }
 
   const hasLiveGuestBundle =
     !!calendar.guestBundleId &&

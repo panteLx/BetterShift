@@ -26,10 +26,15 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { CalendarDiscoverySheet } from "@/components/calendar-discovery-sheet";
+import { WorkspaceSheet } from "@/components/workspace-sheet";
+import { WorkspaceLeaveDialog } from "@/components/workspace-leave-dialog";
+import { WorkspaceSwitcherItems } from "@/components/workspace-switcher-items";
 import { InfoDialog } from "@/components/info-dialog";
 import { AppPreferencesMenuItems } from "@/components/app-preferences-menu-items";
 import { PhoneMenu } from "@/components/phone-menu";
 import { useIsAdmin } from "@/hooks/useAdminAccess";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { getUserInitials } from "@/lib/utils";
 
@@ -48,9 +53,19 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isAdmin = useIsAdmin();
+  const config = usePublicConfig();
+  const { data: workspace } = useWorkspace();
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
+
+  // On a workspace host the instance admin lives on the portal
+  const openInstanceAdmin = () => {
+    if (!workspace?.multiTenant) return router.push("/admin");
+    window.location.assign(new URL("/admin", config.auth.url).href);
+  };
 
   if (isLoading || !isAuthenticated || !user) {
     return null;
@@ -104,6 +119,10 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
             <p className="truncate text-xs text-fg-tertiary">{user.email}</p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <WorkspaceSwitcherItems
+            onOpenMembers={() => setWorkspaceOpen(true)}
+            onLeave={() => setLeaveOpen(true)}
+          />
           <DropdownMenuItem onClick={() => router.push("/profile")}>
             <User className="mr-2 h-4 w-4" />
             {t("auth.profile")}
@@ -117,9 +136,9 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
             {t("calendar.browseCalendars")}
           </DropdownMenuItem>
           {isAdmin && (
-            <DropdownMenuItem onClick={() => router.push("/admin")}>
+            <DropdownMenuItem onClick={openInstanceAdmin}>
               <Shield className="mr-2 h-4 w-4" />
-              {t("admin.adminPanel")}
+              {workspace?.multiTenant ? t("admin.instanceAdminPanel") : t("admin.adminPanel")}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
@@ -139,6 +158,12 @@ export function UserMenu({ onOpenViewSettings, onOpenPhoneMenu }: MenuProps) {
       </DropdownMenu>
 
       <CalendarDiscoverySheet open={discoveryOpen} onOpenChange={setDiscoveryOpen} />
+      {workspace?.multiTenant && (
+        <>
+          <WorkspaceSheet open={workspaceOpen} onOpenChange={setWorkspaceOpen} />
+          <WorkspaceLeaveDialog open={leaveOpen} onOpenChange={setLeaveOpen} />
+        </>
+      )}
       <InfoDialog open={changelogOpen} onOpenChange={setChangelogOpen} locale={locale} />
     </>
   );

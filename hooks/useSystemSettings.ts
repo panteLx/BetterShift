@@ -73,6 +73,11 @@ export function useSystemSettings() {
     onSettled: (_data, _error, patch) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.systemSettings });
       if ("telemetryEnabled" in patch) {
+        // /api/version carries the consent prompt flag; a stale copy would re-open the dialog elsewhere.
+        queryClient.setQueryData<{ telemetryPrompt?: boolean }>(queryKeys.version, (old) =>
+          old ? { ...old, telemetryPrompt: false } : old
+        );
+        queryClient.invalidateQueries({ queryKey: queryKeys.version });
         // The preview carries the instance id, which only exists once telemetry is on.
         queryClient.invalidateQueries({ queryKey: queryKeys.admin.telemetryPayload("telemetry") });
         queryClient.invalidateQueries({ queryKey: queryKeys.admin.telemetryPayload("diagnostics") });

@@ -28,6 +28,7 @@ import {
   type SortState,
 } from "@/components/admin/admin-table-controls";
 import { AdminPagination } from "@/components/admin/admin-pagination";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { getDateLocale } from "@/lib/locales";
 import type { CalendarSortField } from "@/lib/admin-list";
 import type { AdminCalendar } from "@/hooks/useAdminCalendars";
@@ -66,6 +67,9 @@ interface CalendarTableProps {
 }
 
 const TEMPLATE =
+  "18px minmax(0,1.2fr) minmax(0,2fr) 110px 90px 90px 70px 120px 100px 102px";
+// Single-tenant instances have exactly one workspace, so the column adds nothing there.
+const TEMPLATE_NO_WORKSPACE =
   "18px minmax(0,1.2fr) minmax(0,2fr) 110px 90px 90px 70px 120px 102px";
 
 // Dark enough for white initials in both themes
@@ -133,6 +137,8 @@ function OwnerCell({ calendar, compact }: { calendar: AdminCalendar; compact?: b
 function CalendarRow({
   calendar,
   isSelected,
+  template,
+  showWorkspace,
   onToggleSelect,
   onCalendarClick,
   onEditCalendar,
@@ -141,6 +147,8 @@ function CalendarRow({
 }: {
   calendar: AdminCalendar;
   isSelected: boolean;
+  template: string;
+  showWorkspace: boolean;
 } & Pick<
   CalendarTableProps,
   "onToggleSelect" | "onCalendarClick" | "onEditCalendar" | "onTransferCalendar" | "onDeleteCalendar"
@@ -153,7 +161,7 @@ function CalendarRow({
 
   return (
     <AdminTableRow
-      template={TEMPLATE}
+      template={template}
       muted={isSelected ? "panel" : undefined}
       onClick={() => onCalendarClick(calendar)}
     >
@@ -183,6 +191,9 @@ function CalendarRow({
       <div>
         <GuestBundlePill bundle={calendar.guestBundle} />
       </div>
+      {showWorkspace && (
+        <span className="truncate text-[12.5px] text-fg-secondary">{calendar.workspaceName}</span>
+      )}
       <div
         className="flex items-center justify-end gap-1.5"
         onClick={(e) => e.stopPropagation()}
@@ -231,11 +242,13 @@ function CalendarRow({
 function CalendarCard({
   calendar,
   isSelected,
+  showWorkspace,
   onToggleSelect,
   onClick,
 }: {
   calendar: AdminCalendar;
   isSelected: boolean;
+  showWorkspace: boolean;
   onToggleSelect: () => void;
   onClick: () => void;
 }) {
@@ -282,6 +295,14 @@ function CalendarCard({
           <ChevronRight className="size-[17px] shrink-0 text-fg-faint" />
         </div>
         <OwnerCell calendar={calendar} compact />
+        {showWorkspace && (
+          <div>
+            <div className="text-[11px] text-fg-tertiary">{t("admin.calendars.workspace")}</div>
+            <div className="mt-px truncate text-[13px] font-medium text-fg-strong">
+              {calendar.workspaceName}
+            </div>
+          </div>
+        )}
         <div className="flex w-full gap-4 border-t border-line-subtle pt-[9px]">
           {stat(t("common.labels.shifts"), calendar.shiftsCount)}
           {stat(t("common.labels.shares"), calendar.sharesCount)}
@@ -368,6 +389,8 @@ export function CalendarTable({
   ...rowHandlers
 }: CalendarTableProps) {
   const t = useTranslations();
+  const showWorkspace = usePublicConfig().auth.multiTenant;
+  const template = showWorkspace ? TEMPLATE : TEMPLATE_NO_WORKSPACE;
 
   const header = (column: CalendarSortField, label: string) => (
     <SortHeader
@@ -406,7 +429,7 @@ export function CalendarTable({
     <div aria-busy={isStale || undefined} className={cn(isStale && "opacity-60")}>
       <AdminTableCard className="hidden lg:block" footer={total > 0 && pagination(undefined, bulk)}>
         <AdminTableHead
-          template={TEMPLATE}
+          template={template}
           columns={[
             <Checkbox
               key="select-all"
@@ -422,6 +445,13 @@ export function CalendarTable({
             header("sharesCount", t("common.labels.shares")),
             header("externalSyncsCount", t("admin.calendars.externalSyncsShort")),
             header("guestBundle", t("adminCalendars.guestColumn")),
+            ...(showWorkspace
+              ? [
+                  <span key="workspace" className="block text-fg-tertiary">
+                    {t("admin.calendars.workspace")}
+                  </span>,
+                ]
+              : []),
             <span key="actions" className="block text-right">
               {t("adminUsers.actions")}
             </span>,
@@ -434,6 +464,8 @@ export function CalendarTable({
                 key={calendar.id}
                 calendar={calendar}
                 isSelected={selectedIds.includes(calendar.id)}
+                template={template}
+                showWorkspace={showWorkspace}
                 onToggleSelect={onToggleSelect}
                 {...rowHandlers}
               />
@@ -454,6 +486,7 @@ export function CalendarTable({
               key={calendar.id}
               calendar={calendar}
               isSelected={selectedIds.includes(calendar.id)}
+              showWorkspace={showWorkspace}
               onToggleSelect={() => onToggleSelect(calendar.id)}
               onClick={() => rowHandlers.onCalendarClick(calendar)}
             />

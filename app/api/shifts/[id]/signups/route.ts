@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { addShiftSignup, getShiftOrNull, getShiftSignupUsers } from "@/lib/shift-signups";
 
 // GET all signups for a shift
@@ -13,7 +13,7 @@ export async function GET(
     const user = await getSessionUser(request.headers);
 
     const shift = await getShiftOrNull(shiftId);
-    if (!shift) {
+    if (!shift || !(await findCalendarInWorkspace(shift.calendarId))) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
@@ -54,7 +54,7 @@ export async function POST(
     }
 
     const shift = await getShiftOrNull(shiftId);
-    if (!shift) {
+    if (!shift || !(await findCalendarInWorkspace(shift.calendarId))) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 

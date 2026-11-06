@@ -167,7 +167,10 @@
     "publicBadge": "Öffentlich",
     "showAgain": "Wieder anzeigen",
     "noSharedCalendars": "Noch keine mit dir geteilten Kalender",
-    "noHiddenCalendars": "Keine ausgeblendeten Kalender"
+    "noHiddenCalendars": "Keine ausgeblendeten Kalender",
+    "workspaceTab": "Workspace",
+    "workspaceBadge": "Workspace",
+    "noWorkspaceCalendars": "Keine Kalender für den ganzen Workspace freigegeben"
   },
   "color": {
     "custom": "Eigene Farbe",
@@ -423,6 +426,7 @@
     "logoutSuccess": "Erfolgreich abgemeldet",
     "passwordChanged": "Passwort erfolgreich geändert",
     "accountDeleted": "Konto erfolgreich gelöscht",
+    "deleteAccountSoleOwner": "Du bist der einzige Besitzer eines Workspaces mit weiteren Mitgliedern. Übertrage zuerst die Besitzerrolle.",
     "emailRequired": "E-Mail ist erforderlich",
     "nameRequired": "Name ist erforderlich",
     "emailAlreadyExists": "Diese E-Mail-Adresse wird bereits verwendet",
@@ -438,7 +442,9 @@
   },
   "system": {
     "unavailable": "System nicht verfügbar",
-    "unavailableDescription": "Das System ist derzeit durch einen kritischen Fehler nicht verfügbar. Bitte versuche es später erneut oder kontaktiere einen Administrator."
+    "unavailableDescription": "Das System ist derzeit durch einen kritischen Fehler nicht verfügbar. Bitte versuche es später erneut oder kontaktiere einen Administrator.",
+    "workspaceNotFound": "Workspace nicht gefunden",
+    "workspaceNotFoundDescription": "Diese Subdomain gehört zu keinem Workspace."
   },
   "guest": {
     "viewingAsGuest": "Du betrachtest als Gast",
@@ -461,7 +467,10 @@
     "you": "Du",
     "sharedWithYou": "Mit dir geteilt",
     "publicAccessDescriptionGuestsOn": "Bestimme den öffentlichen Zugriff für angemeldete Nutzer und Besucher ohne Konto.",
-    "publicAccessDescriptionGuestsOff": "Bestimme den öffentlichen Zugriff für angemeldete Nutzer dieser Instanz."
+    "publicAccessDescriptionGuestsOff": "Bestimme den öffentlichen Zugriff für angemeldete Nutzer dieser Instanz.",
+    "workspaceAccess": "Zugriff im Workspace",
+    "workspaceAccessDescriptionGuestsOn": "Bestimme, was alle Mitglieder dieses Workspaces und Besucher ohne Konto sehen.",
+    "workspaceAccessDescriptionGuestsOff": "Bestimme, was alle Mitglieder dieses Workspaces sehen. Sie finden den Kalender unter „Geteilte Kalender“ und können ihn abonnieren."
   },
   "token": {
     "accessLinks": "Zugangslinks",
@@ -511,11 +520,24 @@
   "admin": {
     "title": "Admin-Panel",
     "adminPanel": "Admin-Panel",
+    "instanceAdminPanel": "Instanz-Verwaltung",
     "dashboard": "Dashboard",
     "usersMenu": "Benutzer",
     "calendarsMenu": "Kalender",
     "auditLogs": "Audit-Logs",
     "announcementsMenu": "Ankündigungen",
+    "workspacesMenu": "Workspaces",
+    "settingsMenu": "Einstellungen",
+    "telemetryMenu": "Telemetrie",
+    "groups": {
+      "management": "Verwaltung",
+      "system": "System"
+    },
+    "scope": {
+      "instance": "Instanz",
+      "global": "Global · Portal",
+      "workspace": "Workspace: {name}"
+    },
     "backToApp": "Zurück zur App",
     "superadminBadge": "Superadmin",
     "expandSidebar": "Seitenleiste ausklappen",
@@ -553,7 +575,14 @@
       "title": "Gastzugang",
       "description": "Steuert, ob Kalender ohne Anmeldung angesehen werden können.",
       "toggleLabel": "Gastzugang erlauben",
-      "toggleHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt."
+      "toggleHint": "Erlaubt das Ansehen von Kalendern ohne Anmeldung, sofern der Kalender das zulässt.",
+      "workspaceDefaultDescription": "Standard für alle Workspaces ohne eigene Einstellung. Owner und Admins können pro Workspace davon abweichen."
+    },
+    "settingsPage": {
+      "title": "Einstellungen"
+    },
+    "telemetryPage": {
+      "title": "Telemetrie"
     },
     "orphanedCalendarsWarning": "Verwaiste Kalender erkannt",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Es gibt 1 Kalender ohne Besitzer} other {Es gibt # Kalender ohne Besitzer}}. Bitte weise diese(n) Benutzern zu.",
@@ -600,11 +629,13 @@
     "bannedUntil": "Gesperrt bis {date}",
     "bannedPermanently": "Dauerhaft gesperrt",
     "userNotFound": "Benutzer nicht gefunden",
+    "deleteUserSoleOwner": "Dieser Benutzer ist der einzige Besitzer eines Workspaces mit weiteren Mitgliedern und kann nicht gelöscht werden.",
     "namePlaceholder": "Vollständigen Namen eingeben",
     "emailPlaceholder": "benutzer@beispiel.de",
     "roleChangeWarning": "Eine Änderung der Benutzerrolle wirkt sich sofort auf die Berechtigungen aus",
     "calendars": {
       "owner": "Besitzer",
+      "workspace": "Workspace",
       "updated": "Aktualisiert",
       "guestPermission": "Gastberechtigung",
       "orphaned": "Verwaist",
@@ -650,7 +681,9 @@
       "calendarsToDelete": "Zu löschende Kalender",
       "andMore": "... und {count} weitere",
       "calendarsDeleted": "{count, plural, =1 {1 Kalender gelöscht} other {# Kalender gelöscht}}",
-      "calendarsTransferred": "{count, plural, =1 {1 Kalender übertragen} other {# Kalender übertragen}}"
+      "calendarsTransferred": "{count, plural, =1 {1 Kalender übertragen} other {# Kalender übertragen}}",
+      "transferJoinsWorkspace": "{user} wird dabei Mitglied im Workspace „{workspace}“.",
+      "transferJoinsWorkspacesBulk": "Nutzer, die noch kein Mitglied sind, werden dabei den betroffenen Workspaces als Mitglied hinzugefügt."
     },
     "allActions": "Alle Aktionen",
     "adminActions": "Admin-Aktionen",
@@ -754,6 +787,71 @@
       "deleteConfirmationLabel": "Titel zur Bestätigung eingeben",
       "deleteConfirmationHint": "Gib „{name}“ ein, um das Löschen freizuschalten.",
       "deleteConfirm": "Endgültig löschen"
+    },
+    "workspaces": {
+      "subtitle": "{count, plural, one {# Workspace} other {# Workspaces}}",
+      "searchPlaceholder": "Nach Name, Slug oder Owner suchen...",
+      "columnName": "Workspace",
+      "columnOwner": "Owner",
+      "columnMembers": "Mitglieder",
+      "columnCalendars": "Kalender",
+      "counts": "{members, plural, one {# Mitglied} other {# Mitglieder}} · {calendars, plural, one {# Kalender} other {# Kalender}}",
+      "empty": "Noch keine Workspaces",
+      "noSearchResults": "Keine Workspaces entsprechen deiner Suche",
+      "filterLabel": "Nach Workspace filtern",
+      "filterAll": "Alle Workspaces",
+      "delete": "Workspace löschen",
+      "nameSection": "Name",
+      "renamed": "Workspace umbenannt",
+      "membersSection": "Mitglieder ({count})",
+      "makeOwner": "Zum Owner machen",
+      "transferTitle": "{name} zum Owner machen?",
+      "transferDescription": "Der bisherige Owner wird Admin dieses Workspaces.",
+      "assignOwnerDescription": "Das Mitglied wird erster Owner dieses Workspaces.",
+      "ownerTransferred": "Owner gewechselt",
+      "addMember": "Mitglied hinzufügen",
+      "memberEmail": "E-Mail-Adresse",
+      "addMemberButton": "Hinzufügen",
+      "memberAdded": "Mitglied hinzugefügt",
+      "deleteTitle": "Workspace löschen",
+      "deleteDescription": "Löscht den Workspace mit allen Kalendern, Schichten und Einstellungen unwiderruflich.",
+      "deleteConfirmDescription": "Du löschst den Workspace {slug} endgültig.",
+      "deleteWarning": "Dabei gehen {members, plural, one {# Mitglied} other {# Mitglieder}} und {calendars, plural, one {# Kalender} other {# Kalender}} samt allen Schichten verloren. Das lässt sich nicht rückgängig machen.",
+      "deleteUnderstood": "Ich habe verstanden, dass alle Daten dieses Workspaces verloren gehen.",
+      "deleteConfirmation": "Gib zur Bestätigung „{slug}“ ein",
+      "deleteConfirmationHint": "Groß- und Kleinschreibung beachten.",
+      "deleteConfirm": "Endgültig löschen",
+      "deleted": "Workspace gelöscht",
+      "errors": {
+        "forbidden": "Dafür fehlt dir die Berechtigung",
+        "default": "Der Standard-Workspace kann nicht gelöscht werden",
+        "not_found": "Workspace nicht gefunden",
+        "workspace_not_found": "Workspace nicht gefunden",
+        "user_not_found": "Kein Konto mit dieser E-Mail-Adresse",
+        "already_member": "Bereits Mitglied",
+        "owner": "Der Owner kann nicht entfernt werden",
+        "self": "Diese Person ist bereits Owner",
+        "not_member": "Diese Person ist kein Mitglied",
+        "invalid_name": "Ungültiger Name",
+        "invalid_email": "Ungültige E-Mail-Adresse",
+        "confirmation_mismatch": "Die Bestätigung stimmt nicht mit dem Slug überein",
+        "busy": "Gerade beschäftigt, bitte gleich nochmal versuchen",
+        "has_owner": "Dieser Workspace hat bereits einen Owner",
+        "slug_immutable": "Nur die Adresse des Standard-Workspaces lässt sich ändern",
+        "invalid": "Ungültige Adresse",
+        "reserved": "Diese Adresse ist reserviert",
+        "taken": "Bereits vergeben"
+      },
+      "ownerSection": "Owner festlegen",
+      "ownerSectionHint": "Dieser Workspace hat noch keinen Owner, deshalb kann niemand ihn verwalten. Lege fest, wer ihn übernimmt.",
+      "ownerPickMember": "Mitglied auswählen",
+      "ownerPickPlaceholder": "Mitglied wählen …",
+      "ownerByEmail": "Oder per E-Mail-Adresse",
+      "ownerSetButton": "Als Owner festlegen",
+      "ownerAssigned": "Owner festgelegt",
+      "addressSection": "Adresse",
+      "addressChanged": "Adresse geändert",
+      "addressWarning": "Die bisherige Adresse funktioniert danach nicht mehr. Der Workspace ist dann unter {slug}.{domain} erreichbar; gespeicherte Lesezeichen und Links müssen angepasst werden."
     }
   },
   "appearance": {
@@ -1033,6 +1131,8 @@
     "browseShared": "Freigegebene durchsuchen",
     "guestTitle": "Kein Kalender öffentlich freigegeben",
     "guestDescription": "Ohne Konto siehst du nur Kalender, die ausdrücklich für Gäste geöffnet wurden. Wenn du einen Zugangslink bekommen hast, öffne ihn direkt – der Link enthält den Zugriff.",
+    "noWorkspaceAccessTitle": "Kein Zugriff auf diesen Workspace",
+    "noWorkspaceAccessDescription": "Du bist angemeldet, aber kein Mitglied von {workspace}. Bitte ein Mitglied oder einen Admin dieses Workspaces um eine Einladung.",
     "pasteAccessLink": "Zugangslink einfügen",
     "accessLinkDescription": "Füge den Link ein, den du bekommen hast – oder nur den Token daraus.",
     "accessLinkLabel": "Zugangslink",
@@ -1081,6 +1181,61 @@
     "severityError": "Fehler",
     "severityCritical": "kritisch"
   },
+  "adminWorkspace": {
+    "membersMenu": "Mitglieder",
+    "title": "Übersicht",
+    "overview": {
+      "members": "Mitglieder",
+      "calendars": "Kalender",
+      "shifts": "Schichten",
+      "activeLinks": "Aktive Einladungslinks"
+    },
+    "members": {
+      "role": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "member": "Mitglied"
+      },
+      "changeRole": "Rolle ändern",
+      "remove": "Entfernen"
+    },
+    "links": {
+      "title": "Einladungslinks",
+      "create": "Link erstellen",
+      "role": "Rolle beim Beitritt",
+      "roleMember": "Mitglied",
+      "roleAdmin": "Admin"
+    },
+    "settings": {
+      "title": "Allgemein",
+      "name": "Name",
+      "saved": "Gespeichert",
+      "slugImmutable": "Die Adresse kann nach dem Erstellen nicht geändert werden.",
+      "guestAccess": "Gastzugriff erlauben",
+      "guestInherited": "Aktuell wird die Einstellung der Instanz übernommen. Beim Ändern gilt sie nur für diesen Workspace.",
+      "guestOverridden": "Dieser Workspace hat eine eigene Einstellung.",
+      "guestReset": "Auf Instanz-Standard zurücksetzen"
+    },
+    "transfer": {
+      "title": "Besitz übertragen",
+      "description": "Ein anderes Mitglied wird Owner dieses Workspaces.",
+      "newOwner": "Neuer Owner",
+      "placeholder": "Mitglied wählen",
+      "button": "Besitz übertragen",
+      "confirmTitle": "Besitz an {name} übertragen?",
+      "confirm": "{name} wird Owner dieses Workspaces. Du wirst zum Admin und verlierst Zugriff auf die Einstellungen.",
+      "success": "Besitz übertragen"
+    },
+    "deleteTitle": "Workspace löschen",
+    "deleteDescription": "Löscht den Workspace mit allen Kalendern, Schichten und Einstellungen unwiderruflich.",
+    "deleteButton": "Löschen",
+    "deleteConfirmDescription": "Du löschst den Workspace {slug} endgültig.",
+    "deleteWarning": "Dabei gehen {members, plural, one {# Mitglied} other {# Mitglieder}} und {calendars, plural, one {# Kalender} other {# Kalender}} samt allen Schichten verloren. Das lässt sich nicht rückgängig machen.",
+    "deleteUnderstood": "Ich habe verstanden, dass alle Daten dieses Workspaces verloren gehen.",
+    "deleteConfirmation": "Gib zur Bestätigung „{slug}“ ein",
+    "deleteConfirmationHint": "Groß- und Kleinschreibung beachten.",
+    "deleteConfirm": "Endgültig löschen"
+  },
   "adminShell": {
     "logsShort": "Logs",
     "announcementsShort": "Ankündigungen",
@@ -1101,7 +1256,10 @@
     "calendarsOrphaned": "{count, plural, one {# verwaist} other {# verwaist}}",
     "usersSub": "{count, plural, one {# Konto} other {# Konten}}",
     "calendarsSub": "{count, plural, one {# Kalender} other {# Kalender}}, {orphaned} verwaist",
-    "logsSub": "{count, plural, one {# Ereignis} other {# Ereignisse}}"
+    "logsSub": "{count, plural, one {# Ereignis} other {# Ereignisse}}",
+    "defaultWorkspaceNoOwnerTitle": "Bestehende Kalender ohne Workspace-Owner",
+    "defaultWorkspaceNoOwner": "Deine bestehenden Kalender gehören noch keinem Workspace-Owner. Lege fest, wer sie erreichen soll.",
+    "defaultWorkspaceNoOwnerButton": "Owner festlegen"
   },
   "adminAudit": {
     "subtitle": "{count, plural, one {# Eintrag} other {# Einträge}}",
@@ -1129,7 +1287,9 @@
       "userDeleted": "Konto {user} gelöscht",
       "userUpdated": "Konto {user} bearbeitet",
       "calendarTransferred": "Kalender „{calendar}“ an {user} übertragen",
+      "calendarTransferredAndJoined": "Kalender „{calendar}“ an {user} übertragen (wurde dabei Mitglied im Workspace „{workspace}“)",
       "calendarsTransferred": "{count, plural, one {# Kalender} other {# Kalender}} an {user} übertragen",
+      "calendarsTransferredAndJoined": "{count, plural, one {# Kalender} other {# Kalender}} an {user} übertragen (wurde dabei Mitglied in {count2, plural, one {einem Workspace} other {# Workspaces}})",
       "calendarsDeleted": "{count, plural, one {# Kalender} other {# Kalender}} gelöscht",
       "logsDeleted": "{count, plural, one {# Protokolleintrag} other {# Protokolleinträge}} gelöscht",
       "systemSettingsUpdated": "Systemeinstellungen geändert",
@@ -1162,15 +1322,33 @@
       "telemetrySent": "Telemetriedaten manuell gesendet",
       "telemetrySendFailed": "Manuelles Senden der Telemetriedaten fehlgeschlagen",
       "telemetryAutoSent": "Telemetriedaten automatisch gesendet",
-      "telemetryAutoSendFailed": "Automatisches Senden der Telemetriedaten fehlgeschlagen"
+      "telemetryAutoSendFailed": "Automatisches Senden der Telemetriedaten fehlgeschlagen",
+      "workspaceCreated": "Workspace „{workspace}“ erstellt",
+      "workspaceJoined": "Workspace „{workspace}“ beigetreten",
+      "workspaceLeft": "{count, plural, =0 {Workspace verlassen} other {Workspace verlassen, # Kalender übertragen}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {Mitglied aus dem Workspace entfernt} other {Mitglied aus dem Workspace entfernt, # Kalender übertragen}}",
+      "workspaceJoinLinkCreated": "Einladungslink erstellt",
+      "workspaceJoinLinkRevoked": "Einladungslink widerrufen",
+      "adminWorkspaceMemberAdded": "{user} als {role} zu „{workspace}“ hinzugefügt",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {{user} aus „{workspace}“ entfernt} other {{user} aus „{workspace}“ entfernt, # Kalender übertragen}}",
+      "role": {
+        "admin": "Admin",
+        "member": "Mitglied"
+      },
+      "workspaceOwnerChanged": "Workspace-Owner gewechselt",
+      "workspaceOwnerAssigned": "Workspace-Owner festgelegt",
+      "workspaceSlugChanged": "Workspace-Adresse von „{from}“ auf „{to}“ geändert"
     }
   },
   "adminUsers": {
     "actions": "Aktionen",
+    "addToWorkspace": "Zu Workspace hinzufügen",
     "all": "Alle",
+    "alreadyMember": "Bereits Mitglied",
     "ban": "Sperren",
     "banReasonQuoted": "Grund: „{reason}“",
     "calendarCount": "{count, plural, one {# Kalender} other {# Kalender}}",
+    "cannotRemoveOwner": "Der Owner kann nicht entfernt werden",
     "edit": "Bearbeiten",
     "filterLabel": "Benutzer filtern",
     "hidePassword": "Passwort verbergen",
@@ -1179,7 +1357,14 @@
     "moreFilters": "Weitere Filter",
     "numbers": "Zahlen",
     "showPassword": "Passwort anzeigen",
-    "subtitle": "{count, plural, one {# Konto} other {# Konten}}{banned, plural, =0 {} other {, davon # gesperrt}}"
+    "subtitle": "{count, plural, one {# Konto} other {# Konten}}{banned, plural, =0 {} other {, davon # gesperrt}}",
+    "workspaceAdded": "Zum Workspace hinzugefügt",
+    "workspaceNotFound": "Workspace nicht gefunden",
+    "workspaceRemoved": "Aus dem Workspace entfernt",
+    "workspaceSlug": "Workspace (Slug)",
+    "workspaces": "Workspaces",
+    "workspacesEmpty": "In keinem Workspace",
+    "workspacesColumn": "Workspaces"
   },
   "adminCalendars": {
     "content": "Inhalt",
@@ -1367,5 +1552,80 @@
   },
   "announcements": {
     "dismiss": "Ankündigung ausblenden"
+  },
+  "workspaces": {
+    "portalTitle": "Deine Workspaces",
+    "portalDescription": "Öffne einen Workspace, erstelle einen neuen oder tritt per Einladungslink bei.",
+    "empty": "Du bist noch in keinem Workspace.",
+    "open": "Öffnen",
+    "create": "Workspace erstellen",
+    "createTitle": "Neuen Workspace erstellen",
+    "createDescription": "Der Workspace bekommt eine eigene Adresse. Sie kann später nicht geändert werden.",
+    "name": "Name",
+    "namePlaceholder": "z. B. Pflegeteam Station 3",
+    "address": "Adresse",
+    "slugHint": "3–32 Zeichen: Kleinbuchstaben, Ziffern, Bindestriche",
+    "slugAvailable": "Verfügbar",
+    "slugTaken": "Bereits vergeben",
+    "slugReserved": "Diese Adresse ist reserviert",
+    "slugInvalid": "Ungültige Adresse",
+    "limitReached": "Du besitzt bereits {max} Workspaces. Mehr sind nicht möglich.",
+    "nameInvalid": "Bitte gib einen Namen mit höchstens 64 Zeichen an.",
+    "createError": "Workspace konnte nicht erstellt werden",
+    "joinWithLink": "Einladungslink einlösen",
+    "joinLinkPlaceholder": "Einladungslink einfügen",
+    "joinLinkInvalidFormat": "Das ist kein gültiger Einladungslink.",
+    "joinTitle": "Workspace beitreten",
+    "joinDescription": "Du trittst {workspace} bei.",
+    "joinButton": "Beitreten",
+    "alreadyMember": "Du bist bereits Mitglied von {workspace}.",
+    "linkInvalid": "Link ungültig oder abgelaufen",
+    "linkInvalidDescription": "Bitte die Person, die dich eingeladen hat, um einen neuen Link.",
+    "joinLoadError": "Der Einladungslink konnte gerade nicht geprüft werden. Versuch es gleich noch einmal.",
+    "joinSignedOut": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um beizutreten.",
+    "backToOverview": "Zur Übersicht",
+    "roleOwner": "Owner",
+    "roleAdmin": "Admin",
+    "roleMember": "Mitglied",
+    "switchTo": "Workspace wechseln",
+    "allWorkspaces": "Alle Workspaces",
+    "current": "Aktuell",
+    "membersTab": "Mitglieder",
+    "you": "Du",
+    "removeMember": "Entfernen",
+    "removeMemberConfirmTitle": "{name} entfernen?",
+    "removeMemberConfirmDescription": "Freigaben und Kalender-Abos dieser Person in diesem Workspace werden gelöscht. Ihre Kalender gehen an den Owner über.",
+    "removeMemberSuccess": "Mitglied entfernt",
+    "leave": "Workspace verlassen",
+    "leaveConfirmTitle": "{workspace} verlassen?",
+    "leaveConfirmDescription": "Deine Freigaben und Abos hier werden gelöscht. Kalender, die dir hier gehören, gehen an den Owner über. Zurück kommst du nur mit einer neuen Einladung.",
+    "ownerCannotLeave": "Als Owner kannst du den Workspace nicht verlassen. Übertrage ihn oder lösche ihn in den Einstellungen.",
+    "manageWorkspace": "Workspace verwalten",
+    "actionError": "Aktion fehlgeschlagen",
+    "linkName": "Bezeichnung (optional)",
+    "linkExpiry": "Gültig für",
+    "linkExpiryNever": "Unbegrenzt",
+    "linkExpiryDays": "{days, plural, one {# Tag} other {# Tage}}",
+    "linkMaxUses": "Maximale Nutzungen",
+    "linkMaxUsesUnlimited": "Unbegrenzt",
+    "linkUsage": "{used} von {max} genutzt",
+    "linkUsageUnlimited": "{used}-mal genutzt",
+    "linkExpires": "Läuft ab am {date}",
+    "linkStatusActive": "Aktiv",
+    "linkStatusRevoked": "Widerrufen",
+    "linkStatusExpired": "Abgelaufen",
+    "linkStatusExhausted": "Aufgebraucht",
+    "linkCopy": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "linkRevoke": "Widerrufen",
+    "linksEmpty": "Noch keine Einladungslinks.",
+    "linksHint": "Jeder mit dem Link kann beitreten, solange er gültig ist. Teile ihn nur mit Personen, die du einladen willst.",
+    "errors": {
+      "forbidden": "Dafür fehlt dir die Berechtigung",
+      "owner": "Der Owner kann nicht geändert oder entfernt werden",
+      "not_member": "Diese Person ist kein Mitglied mehr",
+      "limit": "Das Limit für Workspaces ist erreicht",
+      "confirmation_mismatch": "Die Bestätigung stimmt nicht mit der Adresse überein"
+    }
   }
 }

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { syncLogs, calendars } from "@/lib/db/schema";
+import { syncLogs } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -21,10 +21,7 @@ export async function GET(request: NextRequest) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(
@@ -75,10 +72,7 @@ export async function PATCH(request: NextRequest) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(
@@ -137,10 +131,7 @@ export async function DELETE(request: NextRequest) {
     const user = await getSessionUser(request.headers);
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(

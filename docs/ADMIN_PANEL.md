@@ -29,9 +29,29 @@ Or navigate directly to `/admin`.
 
 ### Navigation
 
-- **Desktop**: a sidebar on the left links to Dashboard, Users, Calendars, Audit Logs, and Announcements.
-- **Phone**: the same five areas are reached through a bottom tab bar instead of a sidebar.
+- **Desktop**: a sidebar on the left, grouped into **Management** (Overview, Users, Calendars, Announcements, plus Workspaces or Members depending on scope) and **System** (Audit Logs, Settings, Telemetry). A scope badge shows where you are: Instance, Global · Portal, or Workspace: name.
+- **Phone**: the same areas are reached through a bottom tab bar instead of a sidebar.
 - Viewing or editing a single user or calendar opens as a side panel over the current list, not as a separate page — the list stays where you left it underneath.
+
+### Sections per Scope
+
+The sections are defined once in `lib/admin-sections.ts` and filtered by scope, which is derived from the host:
+
+| Scope | Where | Sections |
+| --- | --- | --- |
+| Instance | single-tenant instance | Overview, Users, Calendars, Announcements, Audit Logs, Settings, Telemetry |
+| Global | portal of a multi-tenant instance | as Instance, plus Workspaces |
+| Workspace | a workspace host, for its owner and admins | Overview, Members, Settings (owner only) |
+
+`proxy.ts` answers 404 for sections outside the current scope. Multi-tenancy details: `docs/MULTI_TENANCY.md`.
+
+### Settings and Telemetry
+
+`/admin/settings` holds the system settings and `/admin/telemetry` the telemetry controls; both were split off the dashboard into their own pages. The guest-access toggle is the instance default in the global scope (workspaces without their own value follow it); a workspace owner can override it for their workspace in the workspace settings and reset it to the default again.
+
+### Workspaces (global scope)
+
+`/admin/workspaces` lists every workspace with owner, member and calendar counts and offers search. A row opens a side panel to rename the workspace, add members by email, remove members, make a member the owner (the previous owner becomes admin) and delete the workspace (superadmin only; type the slug to confirm; the `default` workspace cannot be deleted). The panel of the `default` workspace has two extra sections: **Owner festlegen** (shown while it has no owner, e.g. right after enabling `MULTI_TENANT` on an existing instance; pick a member or enter an email) and **Adresse** (change its slug, which becomes the new subdomain; the old address stops working). Other workspaces' slugs cannot be changed. While `default` has calendars but no owner, the global dashboard shows a banner linking straight to that panel. The Users and Calendars lists gain a workspace column and a workspace filter.
 
 ---
 

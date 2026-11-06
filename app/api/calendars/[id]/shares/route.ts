@@ -13,6 +13,7 @@ import {
   handleBundleServiceError,
 } from "@/lib/auth/permission-bundles-service";
 import { eq, and } from "drizzle-orm";
+import { isWorkspaceMember } from "@/lib/workspace";
 import { logAuditEvent, type CalendarSharedMetadata } from "@/lib/audit-log";
 
 export async function GET(
@@ -130,6 +131,18 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    const calendar = await db.query.calendars.findFirst({
+      where: eq(calendars.id, calendarId),
+      columns: { name: true, workspaceId: true },
+    });
+    // Same 404 as a nonexistent user: no oracle for accounts in other workspaces.
+    if (
+      !calendar ||
+      !(await isWorkspaceMember(targetUserId, calendar.workspaceId))
+    ) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Check if share already exists
     const existingShare = await db.query.calendarShares.findFirst({
       where: and(
@@ -144,12 +157,6 @@ export async function POST(
         { status: 409 }
       );
     }
-
-    // Fetch calendar name for audit log
-    const calendar = await db.query.calendars.findFirst({
-      where: eq(calendars.id, calendarId),
-      columns: { name: true },
-    });
 
     // Fetch target user info for audit log
     const targetUser = await db.query.user.findFirst({

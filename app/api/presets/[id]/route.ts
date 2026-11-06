@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shiftPresets, shifts, calendars } from "@/lib/db/schema";
+import { shiftPresets, shifts } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability, hasOwnedCapability } from "@/lib/auth/permissions";
+import { hasCapability, hasOwnedCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import { trimOrNull } from "@/lib/utils";
 import { replacePresetSegments, replaceShiftSegments, withPresetSegments } from "@/lib/shift-time-ranges";
 import { normalizeTimeRanges, toTimeRanges, validateTimeRanges, type TimeRange } from "@/lib/time-ranges";
@@ -34,14 +34,11 @@ export async function GET(
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, preset.calendarId));
+    const calendar = await findCalendarInWorkspace(preset.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "Preset not found" },
         { status: 404 }
       );
     }
@@ -117,14 +114,11 @@ export async function PATCH(
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, existingPreset.calendarId));
+    const calendar = await findCalendarInWorkspace(existingPreset.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "Preset not found" },
         { status: 404 }
       );
     }
@@ -319,14 +313,11 @@ export async function DELETE(
     }
 
     // Fetch calendar
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, preset.calendarId));
+    const calendar = await findCalendarInWorkspace(preset.calendarId);
 
     if (!calendar) {
       return NextResponse.json(
-        { error: "Calendar not found" },
+        { error: "Preset not found" },
         { status: 404 }
       );
     }

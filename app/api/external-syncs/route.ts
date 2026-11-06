@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { externalSyncs, calendars } from "@/lib/db/schema";
+import { externalSyncs } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth/sessions";
-import { hasCapability } from "@/lib/auth/permissions";
+import { hasCapability, findCalendarInWorkspace } from "@/lib/auth/permissions";
 import {
   isValidCalendarUrl,
   detectCalendarSyncType,
@@ -26,10 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch calendar to verify it exists
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(
@@ -90,10 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch calendar to verify it exists
-    const [calendar] = await db
-      .select()
-      .from(calendars)
-      .where(eq(calendars.id, calendarId));
+    const calendar = await findCalendarInWorkspace(calendarId);
 
     if (!calendar) {
       return NextResponse.json(

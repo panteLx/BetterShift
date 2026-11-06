@@ -71,12 +71,13 @@ async function fetchAdminStats(): Promise<AdminStats> {
  * System-wide statistics for the dashboard and sidebar, polled. Several components
  * observe the same query; a failure still shows a single toast.
  */
-export function useAdminStats() {
+export function useAdminStats(enabled = true) {
   const t = useTranslations();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.admin.stats,
     queryFn: fetchAdminStats,
     refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+    enabled,
   });
 
   useAdminErrorToast(error, "admin-stats-error", t("admin.statsFetchError"));

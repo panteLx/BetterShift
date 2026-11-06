@@ -1,11 +1,14 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { genericOAuth, admin } from "better-auth/plugins";
+import { genericOAuth, admin, organization } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { auditLogPlugin } from "@/lib/auth/audit-plugin";
 import { handleFirstUserPromotion } from "@/lib/auth/first-user";
+import { handleSingleTenantMembership } from "@/lib/auth/workspace-membership";
 import { ac, roles } from "@/lib/auth/access-control";
+import { isReservedSlug, isValidSlugFormat } from "@/lib/workspace-slugs";
 import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -23,12 +26,35 @@ import {
   BETTER_AUTH_TRUSTED_ORIGINS,
   BETTER_AUTH_URL,
   ALLOW_USER_REGISTRATION,
+  MULTI_TENANT,
+  TENANT_BASE_DOMAIN,
 } from "@/lib/auth/env";
+
+// Scheme and port follow BETTER_AUTH_URL, matching the workspace URLs proxy.ts redirects to.
+// An unparsable URL adds nothing here; getTenancyConfigError() reports it and the proxy fails closed.
+function workspaceOriginPatterns(): string[] {
+  if (!URL.canParse(BETTER_AUTH_URL)) return [];
+  const portal = new URL(BETTER_AUTH_URL);
+  return [`${portal.protocol}//*.${TENANT_BASE_DOMAIN}${portal.port ? `:${portal.port}` : ""}`];
+}
+
+// Every HTTP path the organization plugin registers in better-auth 1.6.33.
+const ORGANIZATION_PLUGIN_PATHS = [
+  "accept-invitation", "add-team-member", "cancel-invitation", "check-slug", "create", "create-role",
+  "create-team", "delete", "delete-role", "get-active-member", "get-active-member-role",
+  "get-full-organization", "get-invitation", "get-role", "has-permission", "invite-member", "leave", "list",
+  "list-invitations", "list-members", "list-roles", "list-team-members", "list-teams",
+  "list-user-invitations", "list-user-teams", "reject-invitation", "remove-member", "remove-team",
+  "remove-team-member", "set-active", "set-active-team", "update", "update-member-role",
+  "update-role", "update-team",
+].map((p) => `/organization/${p}`);
 
 export const auth = betterAuth({
   // Base URL configuration (critical for reverse proxy setups)
   baseURL: BETTER_AUTH_URL,
   basePath: "/api/auth",
+  // Membership changes go through our own routes, which clean up shares/feeds; see lib/workspace-membership-end.ts.
+  disabledPaths: ORGANIZATION_PLUGIN_PATHS,
 
   database: drizzleAdapter(db, {
     provider: "sqlite",
@@ -81,6 +107,29 @@ export const auth = betterAuth({
       roles,
     }),
 
+    // Workspaces. The plugin's HTTP paths are all disabled (see disabledPaths); creation goes through
+    // lib/workspaces.ts. The options and hooks below only guard server-side auth.api.* calls (none today).
+    organization({
+      disableOrganizationDeletion: true,
+      requireEmailVerificationOnInvitation: true,
+      allowUserToCreateOrganization: async (user) =>
+        user.role === "admin" || user.role === "superadmin",
+      organizationHooks: {
+        beforeCreateOrganization: async ({ organization }) => {
+          const slug = organization.slug ?? "";
+          if (!isValidSlugFormat(slug) || isReservedSlug(slug)) {
+            throw new APIError("BAD_REQUEST", { message: "Invalid workspace slug" });
+          }
+        },
+        // The slug is the workspace's subdomain; renaming it would strand every link to it.
+        beforeUpdateOrganization: async ({ organization }) => {
+          if ("slug" in organization) {
+            throw new APIError("BAD_REQUEST", { message: "Workspace slug cannot be changed" });
+          }
+        },
+      },
+    }),
+
     // Custom OIDC
     genericOAuth({
       config: [
@@ -122,6 +171,9 @@ export const auth = betterAuth({
       secure: BETTER_AUTH_URL.startsWith("https://"), // Only send over HTTPS
       httpOnly: true, // Prevent XSS attacks (already default, but explicit)
     },
+    ...(MULTI_TENANT && TENANT_BASE_DOMAIN
+      ? { crossSubDomainCookies: { enabled: true, domain: TENANT_BASE_DOMAIN } }
+      : {}),
   },
 
   // User registration settings
@@ -131,8 +183,9 @@ export const auth = betterAuth({
       enabled: true,
       updateEmailWithoutVerification: true,
     },
+    // Off: better-auth's /delete-user would bypass app/api/auth/delete-account's cleanup.
     deleteUser: {
-      enabled: true,
+      enabled: false,
     },
     additionalFields: {
       // Set on admin-created accounts (see POST /api/admin/users); input: false
@@ -179,6 +232,14 @@ export const auth = betterAuth({
             handleFirstUserPromotion(user.id).catch((error) => {
               console.error("Failed to promote first user:", error);
             });
+            if (!MULTI_TENANT) {
+              handleSingleTenantMembership(user.id).catch((error) => {
+                console.error(
+                  "Failed to create default workspace membership:",
+                  error
+                );
+              });
+            }
           }
         },
       },
@@ -186,7 +247,10 @@ export const auth = betterAuth({
   },
 
   // Trust host for deployment
-  trustedOrigins: BETTER_AUTH_TRUSTED_ORIGINS,
+  trustedOrigins:
+    MULTI_TENANT && TENANT_BASE_DOMAIN
+      ? [...BETTER_AUTH_TRUSTED_ORIGINS, ...workspaceOriginPatterns()]
+      : BETTER_AUTH_TRUSTED_ORIGINS,
 });
 
 export type Session = typeof auth.$Infer.Session.session;

@@ -167,7 +167,10 @@
     "publicTab": "Veřejné",
     "hiddenTab": "Skryté",
     "publicBadge": "Veřejné",
-    "showAgain": "Zobrazit znovu"
+    "showAgain": "Zobrazit znovu",
+    "workspaceTab": "Pracovní prostor",
+    "workspaceBadge": "Pracovní prostor",
+    "noWorkspaceCalendars": "Žádné kalendáře sdílené s celým pracovním prostorem"
   },
   "color": {
     "custom": "Vlastní",
@@ -424,6 +427,7 @@
     "logoutSuccess": "Úspěšně odhlášeno",
     "passwordChanged": "Heslo bylo úspěšně změněno",
     "accountDeleted": "Účet byl úspěšně smazán",
+    "deleteAccountSoleOwner": "Jste jediným vlastníkem pracovního prostoru s dalšími členy. Nejprve převeďte vlastnictví.",
     "emailRequired": "E-mail je povinný",
     "nameRequired": "Jméno je povinné",
     "emailAlreadyExists": "Tento e-mail se již používá",
@@ -438,7 +442,9 @@
   },
   "system": {
     "unavailable": "Systém není dostupný",
-    "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce."
+    "unavailableDescription": "Systém je momentálně nedostupný kvůli kritické chybě. Zkuste to prosím znovu později nebo kontaktujte správce.",
+    "workspaceNotFound": "Pracovní prostor nenalezen",
+    "workspaceNotFoundDescription": "Tato subdoména nepatří k žádnému pracovnímu prostoru."
   },
   "guest": {
     "viewingAsGuest": "Prohlížíte si jako host",
@@ -461,7 +467,10 @@
     "you": "Vy",
     "sharedWithYou": "Sdíleno s vámi",
     "publicAccessDescriptionGuestsOn": "Určete veřejný přístup pro přihlášené uživatele a návštěvníky bez účtu.",
-    "publicAccessDescriptionGuestsOff": "Určete veřejný přístup pro přihlášené uživatele této instance."
+    "publicAccessDescriptionGuestsOff": "Určete veřejný přístup pro přihlášené uživatele této instance.",
+    "workspaceAccess": "Přístup v pracovním prostoru",
+    "workspaceAccessDescriptionGuestsOn": "Určete, co uvidí všichni členové tohoto pracovního prostoru a návštěvníci bez účtu.",
+    "workspaceAccessDescriptionGuestsOff": "Určete, co uvidí všichni členové tohoto pracovního prostoru. Kalendář najdou v části „Sdílené kalendáře“ a mohou se k němu přihlásit k odběru."
   },
   "token": {
     "accessLinks": "Přístupové odkazy",
@@ -511,6 +520,7 @@
   "admin": {
     "title": "Panel správce",
     "adminPanel": "Panel správce",
+    "instanceAdminPanel": "Správa instance",
     "dashboard": "Přehled",
     "usersMenu": "Uživatelé",
     "calendarsMenu": "Kalendáře",
@@ -553,7 +563,8 @@
       "title": "Přístup pro hosty",
       "description": "Určuje, zda lze kalendáře zobrazit bez přihlášení.",
       "toggleLabel": "Povolit přístup pro hosty",
-      "toggleHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje."
+      "toggleHint": "Umožňuje zobrazit kalendáře bez přihlášení, pokud to kalendář povoluje.",
+      "workspaceDefaultDescription": "Výchozí hodnota pro všechny pracovní prostory bez vlastního nastavení. Vlastníci a správci ji mohou pro svůj prostor změnit."
     },
     "orphanedCalendarsWarning": "Zjištěny osiřelé kalendáře",
     "orphanedCalendarsWarningDescription": "{count, plural, =1 {Existuje 1 kalendář bez vlastníka} few {Existují # kalendáře bez vlastníka} other {Existuje # kalendářů bez vlastníka}}. Přiřaďte je prosím uživatelům.",
@@ -600,11 +611,13 @@
     "bannedUntil": "Zablokováno do {date}",
     "bannedPermanently": "Zablokováno trvale",
     "userNotFound": "Uživatel nenalezen",
+    "deleteUserSoleOwner": "Tento uživatel je jediným vlastníkem pracovního prostoru s dalšími členy a nelze jej smazat.",
     "namePlaceholder": "Zadejte celé jméno uživatele",
     "emailPlaceholder": "uzivatel@example.com",
     "roleChangeWarning": "Změna role uživatele okamžitě ovlivní jeho oprávnění",
     "calendars": {
       "owner": "Vlastník",
+      "workspace": "Pracovní prostor",
       "updated": "Aktualizováno",
       "guestPermission": "Oprávnění hosta",
       "orphaned": "Osiřelé",
@@ -650,7 +663,9 @@
       "calendarsToDelete": "Kalendáře ke smazání",
       "andMore": "... a {count} dalších",
       "calendarsDeleted": "{count, plural, =1 {1 kalendář smazán} few {# kalendáře smazány} other {# kalendářů smazáno}}",
-      "calendarsTransferred": "{count, plural, =1 {1 kalendář převeden} few {# kalendáře převedeny} other {# kalendářů převedeno}}"
+      "calendarsTransferred": "{count, plural, =1 {1 kalendář převeden} few {# kalendáře převedeny} other {# kalendářů převedeno}}",
+      "transferJoinsWorkspace": "{user} se tím stává členem workspace „{workspace}“.",
+      "transferJoinsWorkspacesBulk": "Uživatelé, kteří ještě nejsou členy, budou přidáni do dotčených workspaceů jako členové."
     },
     "allActions": "Všechny akce",
     "adminActions": "Akce správce",
@@ -754,6 +769,89 @@
       "deleteConfirmationLabel": "Zadejte titulek pro potvrzení",
       "deleteConfirmationHint": "Zadejte „{name}“ pro odemčení mazání.",
       "deleteConfirm": "Trvale smazat"
+    },
+    "workspacesMenu": "Pracovní prostory",
+    "settingsMenu": "Nastavení",
+    "telemetryMenu": "Telemetrie",
+    "groups": {
+      "management": "Správa",
+      "system": "Systém"
+    },
+    "scope": {
+      "instance": "Instance",
+      "global": "Globální · Portál",
+      "workspace": "Pracovní prostor: {name}"
+    },
+    "settingsPage": {
+      "title": "Nastavení"
+    },
+    "telemetryPage": {
+      "title": "Telemetrie"
+    },
+    "workspaces": {
+      "subtitle": "{count, plural, one {# pracovní prostor} few {# pracovní prostory} other {# pracovních prostorů}}",
+      "searchPlaceholder": "Hledat podle názvu, slugu nebo vlastníka...",
+      "columnName": "Pracovní prostor",
+      "columnOwner": "Vlastník",
+      "columnMembers": "Členové",
+      "columnCalendars": "Kalendáře",
+      "counts": "{members, plural, one {# člen} few {# členové} other {# členů}} · {calendars, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}",
+      "empty": "Zatím žádné pracovní prostory",
+      "noSearchResults": "Vašemu hledání neodpovídá žádný pracovní prostor",
+      "filterLabel": "Filtrovat podle pracovního prostoru",
+      "filterAll": "Všechny pracovní prostory",
+      "delete": "Smazat pracovní prostor",
+      "nameSection": "Název",
+      "renamed": "Pracovní prostor přejmenován",
+      "membersSection": "Členové ({count})",
+      "makeOwner": "Nastavit jako vlastníka",
+      "transferTitle": "Nastavit {name} jako vlastníka?",
+      "transferDescription": "Dosavadní vlastník se stane správcem tohoto pracovního prostoru.",
+      "assignOwnerDescription": "Tento člen se stane prvním vlastníkem tohoto pracovního prostoru.",
+      "ownerTransferred": "Vlastník změněn",
+      "addMember": "Přidat člena",
+      "memberEmail": "E-mailová adresa",
+      "addMemberButton": "Přidat",
+      "memberAdded": "Člen přidán",
+      "deleteTitle": "Smazat pracovní prostor",
+      "deleteDescription": "Trvale smaže pracovní prostor se všemi kalendáři, směnami a nastavením.",
+      "deleteConfirmDescription": "Pracovní prostor {slug} bude trvale smazán.",
+      "deleteWarning": "Přijdete o {members, plural, one {# člena} few {# členy} other {# členů}} a {calendars, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}} včetně všech směn. Tuto akci nelze vrátit zpět.",
+      "deleteUnderstood": "Beru na vědomí, že všechna data tohoto pracovního prostoru budou ztracena.",
+      "deleteConfirmation": "Pro potvrzení napište „{slug}“",
+      "deleteConfirmationHint": "Záleží na velikosti písmen.",
+      "deleteConfirm": "Trvale smazat",
+      "deleted": "Pracovní prostor smazán",
+      "errors": {
+        "forbidden": "K tomu nemáte oprávnění",
+        "default": "Výchozí pracovní prostor nelze smazat",
+        "not_found": "Pracovní prostor nenalezen",
+        "workspace_not_found": "Pracovní prostor nenalezen",
+        "user_not_found": "Žádný účet s touto e-mailovou adresou",
+        "already_member": "Již je členem",
+        "owner": "Vlastníka nelze odebrat",
+        "self": "Tato osoba už je vlastníkem",
+        "not_member": "Tato osoba není členem",
+        "invalid_name": "Neplatný název",
+        "invalid_email": "Neplatná e-mailová adresa",
+        "confirmation_mismatch": "Potvrzení neodpovídá slugu",
+        "busy": "Právě je obsazeno, zkuste to prosím za chvíli znovu",
+        "has_owner": "Tento pracovní prostor už vlastníka má",
+        "slug_immutable": "Změnit lze pouze adresu výchozího pracovního prostoru",
+        "invalid": "Neplatná adresa",
+        "reserved": "Tato adresa je vyhrazena",
+        "taken": "Již obsazeno"
+      },
+      "ownerSection": "Nastavit vlastníka",
+      "ownerSectionHint": "Tento pracovní prostor zatím nemá vlastníka, takže jej nemůže nikdo spravovat. Určete, kdo ho převezme.",
+      "ownerPickMember": "Vybrat člena",
+      "ownerPickPlaceholder": "Vyberte člena…",
+      "ownerByEmail": "Nebo podle e-mailové adresy",
+      "ownerSetButton": "Nastavit jako vlastníka",
+      "ownerAssigned": "Vlastník nastaven",
+      "addressSection": "Adresa",
+      "addressChanged": "Adresa změněna",
+      "addressWarning": "Dosavadní adresa poté přestane fungovat. Pracovní prostor bude dostupný na {slug}.{domain}; uložené záložky a odkazy je třeba upravit."
     }
   },
   "appearance": {
@@ -1033,6 +1131,8 @@
     "browseShared": "Procházet sdílené",
     "guestTitle": "Žádný kalendář není veřejně sdílen",
     "guestDescription": "Bez účtu vidíte jen kalendáře, které byly výslovně otevřeny pro hosty. Pokud jste dostali přístupový odkaz, otevřete ho přímo – odkaz obsahuje přístup.",
+    "noWorkspaceAccessTitle": "Žádný přístup k tomuto pracovnímu prostoru",
+    "noWorkspaceAccessDescription": "Jste přihlášeni, ale nejste členem {workspace}. Požádejte člena nebo správce tohoto pracovního prostoru o pozvánku.",
     "pasteAccessLink": "Vložit přístupový odkaz",
     "accessLinkDescription": "Vložte odkaz, který jste dostali – nebo jen token z něj.",
     "accessLinkLabel": "Přístupový odkaz",
@@ -1101,7 +1201,10 @@
     "calendarsOrphaned": "{count, plural, one {# bez vlastníka} few {# bez vlastníka} other {# bez vlastníka}}",
     "usersSub": "{count, plural, one {# účet} few {# účty} other {# účtů}}",
     "calendarsSub": "{count, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}, {orphaned} bez vlastníka",
-    "logsSub": "{count, plural, one {# událost} few {# události} other {# událostí}}"
+    "logsSub": "{count, plural, one {# událost} few {# události} other {# událostí}}",
+    "defaultWorkspaceNoOwnerTitle": "Stávající kalendáře nemají vlastníka pracovního prostoru",
+    "defaultWorkspaceNoOwner": "Vaše stávající kalendáře zatím nepatří žádnému vlastníkovi pracovního prostoru. Určete, kdo k nim má mít přístup.",
+    "defaultWorkspaceNoOwnerButton": "Nastavit vlastníka"
   },
   "adminAudit": {
     "subtitle": "{count, plural, one {# záznam} few {# záznamy} other {# záznamů}}",
@@ -1129,7 +1232,9 @@
       "userDeleted": "Účet {user} smazán",
       "userUpdated": "Účet {user} upraven",
       "calendarTransferred": "Kalendář „{calendar}“ převeden na {user}",
+      "calendarTransferredAndJoined": "Kalendář „{calendar}“ převeden na {user} (stal se členem workspace „{workspace}“)",
       "calendarsTransferred": "{count, plural, one {# kalendář převeden} few {# kalendáře převedeny} other {# kalendářů převedeno}} na {user}",
+      "calendarsTransferredAndJoined": "{count, plural, one {# kalendář převeden} few {# kalendáře převedeny} other {# kalendářů převedeno}} na {user} (stal se členem {count2, plural, one {jednoho workspace} other {# workspaceů}})",
       "calendarsDeleted": "{count, plural, one {# kalendář smazán} few {# kalendáře smazány} other {# kalendářů smazáno}}",
       "logsDeleted": "{count, plural, one {# záznam protokolu smazán} few {# záznamy protokolu smazány} other {# záznamů protokolu smazáno}}",
       "systemSettingsUpdated": "Systémová nastavení změněna",
@@ -1162,15 +1267,33 @@
       "telemetrySent": "Telemetrie odeslána ručně",
       "telemetrySendFailed": "Ruční odeslání telemetrie se nezdařilo",
       "telemetryAutoSent": "Telemetrie odeslána automaticky",
-      "telemetryAutoSendFailed": "Automatické odeslání telemetrie se nezdařilo"
+      "telemetryAutoSendFailed": "Automatické odeslání telemetrie se nezdařilo",
+      "workspaceCreated": "Vytvořil pracovní prostor „{workspace}“",
+      "workspaceJoined": "Připojil se k pracovnímu prostoru „{workspace}“",
+      "workspaceLeft": "{count, plural, =0 {Opustil pracovní prostor} other {Opustil pracovní prostor a převedl # kalendářů}}",
+      "workspaceMemberRemoved": "{count, plural, =0 {Odebral člena z pracovního prostoru} other {Odebral člena z pracovního prostoru a převedl # kalendářů}}",
+      "workspaceJoinLinkCreated": "Vytvořil odkaz pro připojení k pracovnímu prostoru",
+      "workspaceJoinLinkRevoked": "Zrušil odkaz pro připojení k pracovnímu prostoru",
+      "adminWorkspaceMemberAdded": "Přidal uživatele {user} do „{workspace}“ jako {role}",
+      "adminWorkspaceMemberRemoved": "{count, plural, =0 {Odebral uživatele {user} z „{workspace}“} other {Odebral uživatele {user} z „{workspace}“ a převedl # kalendářů}}",
+      "role": {
+        "admin": "Správce",
+        "member": "Člen"
+      },
+      "workspaceOwnerChanged": "Změnil vlastníka pracovního prostoru",
+      "workspaceOwnerAssigned": "Nastavil vlastníka pracovního prostoru",
+      "workspaceSlugChanged": "Změnil adresu pracovního prostoru z „{from}“ na „{to}“"
     }
   },
   "adminUsers": {
     "actions": "Akce",
+    "addToWorkspace": "Přidat do workspace",
     "all": "Vše",
+    "alreadyMember": "Již je členem",
     "ban": "Zablokovat",
     "banReasonQuoted": "Důvod: „{reason}“",
     "calendarCount": "{count, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}}",
+    "cannotRemoveOwner": "Vlastníka nelze odebrat",
     "edit": "Upravit",
     "filterLabel": "Filtrovat uživatele",
     "hidePassword": "Skrýt heslo",
@@ -1179,7 +1302,14 @@
     "moreFilters": "Další filtry",
     "numbers": "Čísla",
     "showPassword": "Zobrazit heslo",
-    "subtitle": "{count, plural, one {# účet} few {# účty} other {# účtů}}{banned, plural, =0 {} one {, z toho # zablokovaný} few {, z toho # zablokované} other {, z toho # zablokovaných}}"
+    "subtitle": "{count, plural, one {# účet} few {# účty} other {# účtů}}{banned, plural, =0 {} one {, z toho # zablokovaný} few {, z toho # zablokované} other {, z toho # zablokovaných}}",
+    "workspaceAdded": "Přidán do workspace",
+    "workspaceNotFound": "Workspace nenalezen",
+    "workspaceRemoved": "Odebrán z workspace",
+    "workspaceSlug": "Workspace (slug)",
+    "workspaces": "Workspaces",
+    "workspacesEmpty": "Není v žádném workspace",
+    "workspacesColumn": "Pracovní prostory"
   },
   "adminCalendars": {
     "content": "Obsah",
@@ -1367,5 +1497,135 @@
   },
   "announcements": {
     "dismiss": "Skrýt oznámení"
+  },
+  "workspaces": {
+    "portalTitle": "Vaše pracovní prostory",
+    "portalDescription": "Otevřete pracovní prostor, vytvořte nový nebo se připojte pomocí pozvánky.",
+    "empty": "Zatím nejste v žádném pracovním prostoru.",
+    "open": "Otevřít",
+    "create": "Vytvořit pracovní prostor",
+    "createTitle": "Vytvořit nový pracovní prostor",
+    "createDescription": "Pracovní prostor dostane vlastní adresu. Později ji nelze změnit.",
+    "name": "Název",
+    "namePlaceholder": "např. Ošetřovatelský tým oddělení 3",
+    "address": "Adresa",
+    "slugHint": "3–32 znaků: malá písmena, číslice, pomlčky",
+    "slugAvailable": "Dostupná",
+    "slugTaken": "Již obsazená",
+    "slugReserved": "Tato adresa je rezervovaná",
+    "slugInvalid": "Neplatná adresa",
+    "limitReached": "Již vlastníte maximální počet pracovních prostorů ({max}). Další vytvořit nelze.",
+    "nameInvalid": "Zadejte název o délce nejvýše 64 znaků.",
+    "createError": "Pracovní prostor se nepodařilo vytvořit",
+    "joinWithLink": "Použít odkaz s pozvánkou",
+    "joinLinkPlaceholder": "Vložte odkaz s pozvánkou",
+    "joinLinkInvalidFormat": "Toto není platný odkaz s pozvánkou.",
+    "joinTitle": "Připojit se k pracovnímu prostoru",
+    "joinDescription": "Připojujete se k {workspace}.",
+    "joinButton": "Připojit se",
+    "alreadyMember": "Již jste členem {workspace}.",
+    "linkInvalid": "Odkaz je neplatný nebo vypršel",
+    "linkInvalidDescription": "Požádejte osobu, která vás pozvala, o nový odkaz.",
+    "joinLoadError": "Odkaz s pozvánkou se teď nepodařilo ověřit. Zkuste to za chvíli znovu.",
+    "joinSignedOut": "Vaše relace vypršela. Pro připojení se znovu přihlaste.",
+    "backToOverview": "Zpět na přehled",
+    "roleOwner": "Vlastník",
+    "roleAdmin": "Admin",
+    "roleMember": "Člen",
+    "switchTo": "Přepnout pracovní prostor",
+    "allWorkspaces": "Všechny pracovní prostory",
+    "current": "Aktuální",
+    "membersTab": "Členové",
+    "you": "Vy",
+    "removeMember": "Odebrat",
+    "removeMemberConfirmTitle": "Odebrat {name}?",
+    "removeMemberConfirmDescription": "Sdílení a odběry kalendářů této osoby v tomto pracovním prostoru budou smazány. Její kalendáře přejdou na vlastníka.",
+    "removeMemberSuccess": "Člen odebrán",
+    "leave": "Opustit pracovní prostor",
+    "leaveConfirmTitle": "Opustit {workspace}?",
+    "leaveConfirmDescription": "Vaše sdílení a odběry zde budou smazány. Kalendáře, které vám zde patří, přejdou na vlastníka. Vrátit se můžete jen s novou pozvánkou.",
+    "ownerCannotLeave": "Jako vlastník nemůžete pracovní prostor opustit. Předejte jej nebo jej smažte v nastavení.",
+    "actionError": "Akce se nezdařila",
+    "linkName": "Označení (volitelné)",
+    "linkExpiry": "Platnost",
+    "linkExpiryNever": "Bez omezení",
+    "linkExpiryDays": "{days, plural, one {# den} few {# dny} other {# dní}}",
+    "linkMaxUses": "Maximální počet použití",
+    "linkMaxUsesUnlimited": "Neomezeně",
+    "linkUsage": "Použito {used} z {max}",
+    "linkUsageUnlimited": "Použito {used}×",
+    "linkExpires": "Vyprší {date}",
+    "linkStatusActive": "Aktivní",
+    "linkStatusRevoked": "Zrušený",
+    "linkStatusExpired": "Vypršelý",
+    "linkStatusExhausted": "Vyčerpaný",
+    "linkCopy": "Kopírovat odkaz",
+    "linkCopied": "Odkaz zkopírován",
+    "linkRevoke": "Zrušit",
+    "linksEmpty": "Zatím žádné pozvánkové odkazy.",
+    "linksHint": "Připojit se může kdokoli s odkazem, dokud je platný. Sdílejte ho jen s lidmi, které chcete pozvat.",
+    "manageWorkspace": "Spravovat pracovní prostor",
+    "errors": {
+      "forbidden": "K tomu nemáte oprávnění",
+      "owner": "Vlastníka nelze změnit ani odebrat",
+      "not_member": "Tato osoba již není členem",
+      "limit": "Bylo dosaženo limitu pracovních prostorů",
+      "confirmation_mismatch": "Potvrzení neodpovídá adrese"
+    }
+  },
+  "adminWorkspace": {
+    "membersMenu": "Členové",
+    "title": "Přehled",
+    "overview": {
+      "members": "Členové",
+      "calendars": "Kalendáře",
+      "shifts": "Směny",
+      "activeLinks": "Aktivní pozvánkové odkazy"
+    },
+    "members": {
+      "role": {
+        "owner": "Vlastník",
+        "admin": "Správce",
+        "member": "Člen"
+      },
+      "changeRole": "Změnit roli",
+      "remove": "Odebrat"
+    },
+    "links": {
+      "title": "Pozvánkové odkazy",
+      "create": "Vytvořit odkaz",
+      "role": "Role při připojení",
+      "roleMember": "Člen",
+      "roleAdmin": "Správce"
+    },
+    "settings": {
+      "title": "Obecné",
+      "name": "Název",
+      "saved": "Uloženo",
+      "slugImmutable": "Adresu nelze po vytvoření změnit.",
+      "guestAccess": "Povolit přístup hostů",
+      "guestInherited": "Aktuálně platí nastavení instance. Po změně bude platit jen pro tento pracovní prostor.",
+      "guestOverridden": "Tento pracovní prostor má vlastní nastavení.",
+      "guestReset": "Obnovit výchozí hodnotu instance"
+    },
+    "transfer": {
+      "title": "Předat vlastnictví",
+      "description": "Jiný člen se stane vlastníkem tohoto pracovního prostoru.",
+      "newOwner": "Nový vlastník",
+      "placeholder": "Vyberte člena",
+      "button": "Předat vlastnictví",
+      "confirmTitle": "Předat vlastnictví uživateli {name}?",
+      "confirm": "{name} se stane vlastníkem tohoto pracovního prostoru. Vy se stanete správcem a ztratíte přístup k nastavení.",
+      "success": "Vlastnictví předáno"
+    },
+    "deleteTitle": "Smazat pracovní prostor",
+    "deleteDescription": "Trvale smaže pracovní prostor se všemi kalendáři, směnami a nastavením.",
+    "deleteButton": "Smazat",
+    "deleteConfirmDescription": "Pracovní prostor {slug} bude trvale smazán.",
+    "deleteWarning": "Přijdete o {members, plural, one {# člena} few {# členy} other {# členů}} a {calendars, plural, one {# kalendář} few {# kalendáře} other {# kalendářů}} včetně všech směn. Tuto akci nelze vrátit zpět.",
+    "deleteUnderstood": "Beru na vědomí, že všechna data tohoto pracovního prostoru budou ztracena.",
+    "deleteConfirmation": "Pro potvrzení napište „{slug}“",
+    "deleteConfirmationHint": "Záleží na velikosti písmen.",
+    "deleteConfirm": "Trvale smazat"
   }
 }

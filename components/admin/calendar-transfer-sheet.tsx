@@ -2,15 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Search, X } from "lucide-react";
+import { Check, Info, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Field, ListRow, Pill, SectionLabel, inputClass } from "@/components/form-kit";
+import { Field, InfoNote, ListRow, Pill, SectionLabel, inputClass } from "@/components/form-kit";
 import { AdminFormPanel } from "@/components/admin/admin-form-panel";
 import { RolePill, UserAvatar } from "@/components/admin/admin-kit";
 import { isOrphaned } from "@/components/admin/calendar-table";
 import { useAdminCalendarActions, type AdminCalendar } from "@/hooks/useAdminCalendars";
 import { fetchAdminUsers } from "@/hooks/useAdminUsers";
 import { useCanTransferCalendar } from "@/hooks/useAdminAccess";
+import { useAdminUserWorkspaces } from "@/hooks/useWorkspaces";
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { cn } from "@/lib/utils";
 import { shiftVars } from "@/lib/shift-display";
 
@@ -52,6 +54,7 @@ export function CalendarTransferSheet({
   const t = useTranslations();
   const { transferCalendar, bulkTransferCalendars, isTransferring } = useAdminCalendarActions();
   const canTransfer = useCanTransferCalendar();
+  const multiTenant = usePublicConfig().auth.multiTenant;
 
   const [query, setQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
@@ -60,6 +63,18 @@ export function CalendarTransferSheet({
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isBulk = calendars.length > 1;
+
+  const { data: targetWorkspaces } = useAdminUserWorkspaces(
+    selectedUser?.id ?? "",
+    multiTenant && !!selectedUser,
+  );
+  const memberWorkspaceIds = new Set((targetWorkspaces?.workspaces ?? []).map((w) => w.id));
+  const affectedWorkspaceIds = Array.from(new Set(calendars.map((c) => c.workspaceId).filter((id): id is string => !!id)));
+  const showJoinNotice =
+    multiTenant &&
+    !!selectedUser &&
+    !!targetWorkspaces &&
+    affectedWorkspaceIds.some((id) => !memberWorkspaceIds.has(id));
 
   useEffect(() => () => clearTimeout(searchTimeout.current ?? undefined), []);
 
@@ -237,6 +252,17 @@ export function CalendarTransferSheet({
             <UserRow user={selectedUser} selected />
           </ListRow>
         </section>
+      )}
+
+      {showJoinNotice && (
+        <InfoNote icon={Info}>
+          {isBulk
+            ? t("admin.calendars.transferJoinsWorkspacesBulk")
+            : t("admin.calendars.transferJoinsWorkspace", {
+                user: selectedUser!.name || selectedUser!.email,
+                workspace: calendars[0]?.workspaceName ?? "",
+              })}
+        </InfoNote>
       )}
     </AdminFormPanel>
   );
